@@ -69,7 +69,7 @@ export class Editor {
   constructor(board: Board, opts: { presence?: Presence; storageKey?: string } = {}) {
     this.board = board;
     this.presence = opts.presence;
-    this.camKey = opts.storageKey ?? 'mira-cam';
+    this.camKey = opts.storageKey ?? 'planx-cam';
     const saved = readJSON<Camera>(this.camKey);
     this.needsFit = !saved;
     if (saved) this.cam = saved;
@@ -401,7 +401,7 @@ export class Editor {
 
   private stopEditing(): void {
     // The overlay listens for this and commits its value.
-    if (this.editingId) window.dispatchEvent(new CustomEvent('mira:commit-edit'));
+    if (this.editingId) window.dispatchEvent(new CustomEvent('planx:commit-edit'));
   }
 
   /* ---------- pointer input ---------- */
@@ -696,7 +696,7 @@ export class Editor {
       return;
     }
     if (e.key === 'Delete' || e.key === 'Backspace') { if (this.selection.size) { e.preventDefault(); this.deleteSelection(); } return; }
-    if (e.key === 'Escape') { this.setSelection([]); this.setTool('select'); window.dispatchEvent(new CustomEvent('mira:close-popovers')); return; }
+    if (e.key === 'Escape') { this.setSelection([]); this.setTool('select'); window.dispatchEvent(new CustomEvent('planx:close-popovers')); return; }
     if (e.key === 'Enter' && this.selection.size === 1) { e.preventDefault(); this.startEditing([...this.selection][0]); return; }
     if (e.shiftKey && e.code === 'Digit1') { this.fit(); return; }
     if (e.shiftKey && e.code === 'Digit0') { this.zoomCenter(1 / this.cam.z); return; }
@@ -711,7 +711,7 @@ export class Editor {
       return;
     }
     const tools: Record<string, Tool> = { KeyV: 'select', KeyH: 'hand', KeyN: 'sticky', KeyS: 'sticky', KeyT: 'text', KeyR: 'rect', KeyO: 'ellipse', KeyC: 'link', KeyL: 'link', KeyF: 'frame' };
-    if (e.code === 'KeyI') { window.dispatchEvent(new CustomEvent('mira:toggle-icons')); return; }
+    if (e.code === 'KeyI') { window.dispatchEvent(new CustomEvent('planx:toggle-icons')); return; }
     if (tools[e.code]) this.setTool(tools[e.code]);
   }
 }

@@ -15,10 +15,10 @@ const STATUS_TEXT = { online: 'Сохранено и синхронизиров�
 export function App({ boardId }: { boardId: string }) {
   const conn = useMemo(() => new Connection(boardId), [boardId]);
   const board = useMemo(() => new Board(conn.doc), [conn]);
-  const editor = useMemo(() => new Editor(board, { presence: conn, storageKey: `mira-cam-${boardId}` }), [board, conn, boardId]);
+  const editor = useMemo(() => new Editor(board, { presence: conn, storageKey: `planx-cam-${boardId}` }), [board, conn, boardId]);
   useEffect(() => () => conn.destroy(), [conn]);
   // Handy in the browser console and for end-to-end checks.
-  useEffect(() => { Object.assign(window, { mira: { board, editor, conn } }); }, [board, editor, conn]);
+  useEffect(() => { Object.assign(window, { planx: { board, editor, conn } }); }, [board, editor, conn]);
 
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => editor.mount(canvas.current!), [editor]);
@@ -34,11 +34,11 @@ export function App({ boardId }: { boardId: string }) {
   useEffect(() => {
     const close = () => setPop(null);
     const icons = () => toggle('icons');
-    window.addEventListener('mira:close-popovers', close);
-    window.addEventListener('mira:toggle-icons', icons);
+    window.addEventListener('planx:close-popovers', close);
+    window.addEventListener('planx:toggle-icons', icons);
     return () => {
-      window.removeEventListener('mira:close-popovers', close);
-      window.removeEventListener('mira:toggle-icons', icons);
+      window.removeEventListener('planx:close-popovers', close);
+      window.removeEventListener('planx:toggle-icons', icons);
     };
   }, []);
 
@@ -50,7 +50,7 @@ export function App({ boardId }: { boardId: string }) {
 
   const [title, setTitle] = useState(board.title);
   useEffect(() => setTitle(board.title), [board.title]);
-  useEffect(() => { document.title = board.title ? `${board.title} · Mira` : 'Mira'; }, [board.title]);
+  useEffect(() => { document.title = board.title ? `${board.title} · PlanX` : 'PlanX'; }, [board.title]);
 
   const selItems = ui.selection.map((id) => board.get(id)).filter((i) => !!i);
   const linkCount = ui.selection.filter((id) => board.getLink(id)).length;
@@ -72,7 +72,7 @@ export function App({ boardId }: { boardId: string }) {
       <canvas ref={canvas} className="board-canvas" data-tool={ui.tool} aria-label="Доска" onPointerDown={() => setPop(null)} />
 
       <header className="bar topbar">
-        <div className="logo"><i /><span>Mira</span></div>
+        <div className="logo"><i /><span>PlanX</span></div>
         <div className="sep" />
         <input className="title-input" id="board-title" aria-label="Название доски" spellCheck={false} placeholder="Без названия"
           value={title} onChange={(e) => setTitle(e.target.value)}

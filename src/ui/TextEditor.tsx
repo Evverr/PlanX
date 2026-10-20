@@ -24,9 +24,9 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
     el.focus();
     el.select();
     const onCommit = () => commit();
-    window.addEventListener('mira:commit-edit', onCommit);
+    window.addEventListener('planx:commit-edit', onCommit);
     return () => {
-      window.removeEventListener('mira:commit-edit', onCommit);
+      window.removeEventListener('planx:commit-edit', onCommit);
       commit();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
