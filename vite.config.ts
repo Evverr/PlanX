@@ -2,7 +2,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-const SYNC_PORT = Number(process.env.MIRA_PORT ?? 1234);
+const SYNC_PORT = Number(process.env.PLANX_PORT ?? 1234);
 
 export default defineConfig({
   plugins: [react()],

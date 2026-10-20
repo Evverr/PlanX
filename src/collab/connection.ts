@@ -24,14 +24,14 @@ export function newBoardId(): string {
 
 function loadMe(): Me {
   try {
-    const saved = JSON.parse(localStorage.getItem('mira-me') ?? 'null') as Me | null;
+    const saved = JSON.parse(localStorage.getItem('planx-me') ?? 'null') as Me | null;
     if (saved?.name && saved.color) return saved;
   } catch { /* fall through */ }
   const me = {
     name: ANIMALS[Math.floor(Math.random() * ANIMALS.length)],
     color: PEER_COLORS[Math.floor(Math.random() * PEER_COLORS.length)],
   };
-  try { localStorage.setItem('mira-me', JSON.stringify(me)); } catch { /* not remembered */ }
+  try { localStorage.setItem('planx-me', JSON.stringify(me)); } catch { /* not remembered */ }
   return me;
 }
 
@@ -50,7 +50,7 @@ export class Connection implements Presence {
 
   constructor(readonly boardId: string, serverUrl = defaultServerUrl()) {
     this.me = loadMe();
-    this.local = new IndexeddbPersistence(`mira-${boardId}`, this.doc);
+    this.local = new IndexeddbPersistence(`planx-${boardId}`, this.doc);
     this.provider = new WebsocketProvider(serverUrl, boardId, this.doc);
     const aw = this.provider.awareness;
     aw.setLocalState({ user: this.me, cursor: null, selection: [] });
@@ -92,7 +92,7 @@ export class Connection implements Presence {
 
   rename(name: string): void {
     this.me = { ...this.me, name: name.trim().slice(0, 24) || this.me.name };
-    try { localStorage.setItem('mira-me', JSON.stringify(this.me)); } catch { /* not remembered */ }
+    try { localStorage.setItem('planx-me', JSON.stringify(this.me)); } catch { /* not remembered */ }
     this.provider.awareness.setLocalStateField('user', this.me);
     this.notify();
   }

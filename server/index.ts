@@ -1,5 +1,5 @@
 /**
- * Mira sync server.
+ * PlanX sync server.
  *
  * Speaks the y-websocket protocol (sync + awareness), keeps one Yjs document per
  * board in memory and saves it to DATA_DIR/<board>.bin. In production it also
@@ -19,7 +19,7 @@ import { Board } from '../src/model/board';
 import { sampleBoard } from '../src/model/sample';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PORT = Number(process.env.PORT ?? process.env.MIRA_PORT ?? 1234);
+const PORT = Number(process.env.PORT ?? process.env.PLANX_PORT ?? 1234);
 const DATA_DIR = path.resolve(process.env.DATA_DIR ?? path.join(ROOT, 'data'));
 const DIST = path.join(ROOT, 'dist');
 const SERVE_APP = process.env.NODE_ENV === 'production';
@@ -168,7 +168,7 @@ const server = http.createServer((req, res) => {
   }
   if (!SERVE_APP) {
     res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-    res.end('Mira sync server. Open the app at http://localhost:5173');
+    res.end('PlanX sync server. Open the app at http://localhost:5173');
     return;
   }
   let file = path.normalize(path.join(DIST, decodeURIComponent(url.pathname)));
@@ -194,5 +194,5 @@ process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
 server.listen(PORT, () => {
-  console.log(`Mira sync server on :${PORT}, boards saved in ${DATA_DIR}${SERVE_APP ? ', serving dist/' : ''}`);
+  console.log(`PlanX sync server on :${PORT}, boards saved in ${DATA_DIR}${SERVE_APP ? ', serving dist/' : ''}`);
 });
