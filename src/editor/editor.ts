@@ -1,9 +1,9 @@
 import type { Board } from '../model/board';
-import type { Item, ItemType, Link } from '../model/types';
+import type { Item, ItemType, Link, Side } from '../model/types';
 import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
-import { boundsOf, hitItem, hitLink, normRect, pointInRect, rectContains, rectsIntersect } from '../canvas/geometry';
-import { clearTextCache, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
+import { boundsOf, hitItem, hitLink, nearestSide, normRect, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
+import { clearTextCache, DOT_GAP, DOT_R, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
 import { measureTextHeight } from '../canvas/text';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame';
@@ -30,7 +30,7 @@ type Gesture =
   | { type: 'resize'; id: string; start: Point; w0: number; h0: number }
   | { type: 'create'; id: string; origin: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' }
-  | { type: 'link'; from: string; to: Point; target: string | null }
+  | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
   | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null };
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
@@ -65,6 +65,7 @@ export class Editor {
   private camKey: string;
   private needsFit: boolean;
   private lastCursorSent = 0;
+  private hotDot: Side | null = null;
 
   constructor(board: Board, opts: { presence?: Presence; storageKey?: string } = {}) {
     this.board = board;
@@ -170,7 +171,7 @@ export class Editor {
     let linkPreview = null;
     if (g?.type === 'link') {
       const from = this.board.get(g.from);
-      if (from) linkPreview = { from, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null };
+      if (from) linkPreview = { from, fromSide: g.fromSide, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null };
     }
     drawScene(this.ctx, {
       items: this.board.list(),
@@ -187,6 +188,7 @@ export class Editor {
       linkPreview,
       peers: this.presence?.peers() ?? [],
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]),
+      hotDot: this.hotDot,
     });
   }
 
@@ -323,20 +325,36 @@ export class Editor {
   paste(offset = 30): void {
     if (!this.clipboard) return;
     const data = JSON.parse(this.clipboard) as { items: Item[]; links: Link[] };
+    const { items, links } = this.insertCopies(data.items, data.links, offset);
+    // Paste again lands one step further.
+    this.clipboard = JSON.stringify({ items, links });
+    this.setSelection(items.map((i) => i.id));
+  }
+
+  /** Adds copies of items, and of the links among them, with fresh ids. Copies keep their order and go on top. */
+  private insertCopies(src: Item[], srcLinks: Link[], offset: number): { items: Item[]; links: Link[]; map: Map<string, string> } {
     const map = new Map<string, string>();
     let z = this.board.maxZ();
-    const items = data.items.sort((a, b) => a.z - b.z).map((it) => {
+    const items = [...src].sort((a, b) => a.z - b.z).map((it) => {
       const id = uid();
       map.set(it.id, id);
       return { ...it, id, x: it.x + offset, y: it.y + offset, z: it.type === 'frame' ? it.z : ++z };
     });
+    const links = srcLinks.map((l) => ({ ...l, id: uid(), from: map.get(l.from)!, to: map.get(l.to)! }));
     this.board.transact(() => {
       items.forEach((it) => this.board.add(it));
-      data.links.forEach((l) => this.board.addLink({ id: uid(), from: map.get(l.from)!, to: map.get(l.to)! }));
+      links.forEach((l) => this.board.addLink(l));
     });
-    // Paste again lands one step further.
-    this.clipboard = JSON.stringify({ items, links: data.links.map((l) => ({ ...l, from: map.get(l.from)!, to: map.get(l.to)! })) });
-    this.setSelection(items.map((i) => i.id));
+    return { items, links, map };
+  }
+
+  /** Alt-drag: leave the dragged items where they are and drag copies of them instead. */
+  private dragCopies(orig: Map<string, Point>): Map<string, Point> {
+    const items = [...orig.keys()].map((id) => this.board.get(id)).filter((i): i is Item => !!i);
+    const links = this.board.linkList().filter((l) => orig.has(l.from) && orig.has(l.to));
+    const { items: copies, map } = this.insertCopies(items, links, 0);
+    this.setSelection([...this.selection].map((id) => map.get(id)).filter((id): id is string => !!id));
+    return new Map(copies.map((c) => [c.id, { x: c.x, y: c.y }]));
   }
 
   duplicate(): void {
@@ -453,12 +471,17 @@ export class Editor {
         return;
       }
       case 'link':
-        if (hit) this.gesture = { type: 'link', from: hit.id, to: w, target: null };
+        if (hit) this.gesture = { type: 'link', from: hit.id, fromSide: null, to: w, target: null };
         return;
     }
 
     // Select tool.
     const single = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
+    const dot = single && !this.editingId ? this.dotAt(single, w) : null;
+    if (single && dot) {
+      this.gesture = { type: 'link', from: single.id, fromSide: dot, to: w, target: null };
+      return;
+    }
     if (single && this.onHandle(single, w)) {
       this.board.beginGesture();
       this.gesture = { type: 'resize', id: single.id, start: w, w0: single.w, h0: single.h };
@@ -505,11 +528,21 @@ export class Editor {
     return pointInRect(w, { x: it.x + it.w + off - hs / 2, y: it.y + it.h + off - hs / 2, w: hs, h: hs });
   }
 
+  /** The link dot under the point, if any. */
+  private dotAt(it: Item, w: Point): Side | null {
+    const r = (DOT_R + 5) / this.cam.z;
+    for (const side of SIDES) {
+      const p = sidePoint(it, side, DOT_GAP / this.cam.z);
+      if (Math.hypot(w.x - p.x, w.y - p.y) <= r) return side;
+    }
+    return null;
+  }
+
   private onPointerMove(e: PointerEvent): void {
     const sp = this.local(e);
     const w = this.toWorld(sp.x, sp.y);
     this.sendCursor(w);
-    this.updateCursor(w);
+    this.updateCursor(w, e.altKey);
     if (!this.pointers.has(e.pointerId) || !this.gesture) return;
     this.pointers.set(e.pointerId, sp);
     const g = this.gesture;
@@ -534,6 +567,7 @@ export class Editor {
           if (Math.hypot(dx, dy) * this.cam.z < 3) return;
           g.moved = true;
           this.board.beginGesture();
+          if (e.altKey) g.orig = this.dragCopies(g.orig);
         }
         this.board.transact(() => {
           for (const [id, o] of g.orig) this.board.update(id, { x: Math.round(o.x + dx), y: Math.round(o.y + dy) });
@@ -624,7 +658,10 @@ export class Editor {
       }
       case 'link':
         if (g.target && !this.board.hasLink(g.from, g.target)) {
-          const l = { id: uid(), from: g.from, to: g.target };
+          const target = this.board.get(g.target)!;
+          const l: Link = g.fromSide
+            ? { id: uid(), from: g.from, to: g.target, fromSide: g.fromSide, toSide: nearestSide(target, g.to) }
+            : { id: uid(), from: g.from, to: g.target };
           this.board.addLink(l);
           this.setTool('select');
           this.setSelection([l.id]);
@@ -646,12 +683,15 @@ export class Editor {
     this.requestRender();
   }
 
-  private updateCursor(w: Point): void {
+  private updateCursor(w: Point, alt: boolean): void {
     if (!this.canvas || this.gesture || this.tool !== 'select') return;
     const single = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
+    const dot = single && !this.editingId ? this.dotAt(single, w) : null;
+    if (dot !== this.hotDot) { this.hotDot = dot; this.requestRender(); }
     let cursor = '';
-    if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
-    else if (hitItem(this.board.list(), w, this.cam.z)) cursor = 'move';
+    if (dot) cursor = 'crosshair';
+    else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
+    else if (hitItem(this.board.list(), w, this.cam.z)) cursor = alt ? 'copy' : 'move';
     else if (hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
     this.canvas.style.cursor = cursor;
   }

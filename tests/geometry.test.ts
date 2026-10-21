@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { distToSegment, edgePoint, hitItem, rectContains } from '../src/canvas/geometry';
+import { distToSegment, edgePoint, hitItem, hitLink, linkCurve, nearestSide, rectContains, sidePoint } from '../src/canvas/geometry';
 import { wrapText } from '../src/canvas/text';
 import type { Item } from '../src/model/types';
 
@@ -16,6 +16,29 @@ describe('geometry', () => {
     const p = edgePoint(box('ellipse'), { x: 150, y: 75 });
     const e = ((p.x - 50) / 50) ** 2 + ((p.y - 25) / 25) ** 2;
     expect(e).toBeCloseTo(1);
+  });
+
+  it('puts link dots outside the middle of each side', () => {
+    expect(sidePoint(box('rect'), 'top', 10)).toEqual({ x: 50, y: -10 });
+    expect(sidePoint(box('rect'), 'right', 10)).toEqual({ x: 110, y: 25 });
+    expect(nearestSide(box('rect'), { x: -40, y: 30 })).toBe('left');
+    expect(nearestSide(box('rect'), { x: 60, y: 90 })).toBe('bottom');
+  });
+
+  it('draws a pinned link as a curve that leaves square to its side', () => {
+    const a = box('rect'), b = box('rect', { id: 'b', x: 300, y: 200 });
+    const get = (id: string) => (id === 'rect' ? a : b);
+    const link = { id: 'l', from: 'rect', to: 'b', fromSide: 'right', toSide: 'top' } as const;
+    const [p0, c1, c2, p3] = linkCurve(link, get)!;
+    expect(p0).toEqual({ x: 100, y: 25 });
+    expect(c1.y).toBe(25);
+    expect(c1.x).toBeGreaterThan(100);
+    expect(p3).toEqual({ x: 350, y: 200 });
+    expect(c2.x).toBe(350);
+    expect(c2.y).toBeLessThan(200);
+    // The corner of the bend is near the curve, the straight chord's middle is not.
+    expect(hitLink([link], get, { x: 225, y: 112 }, 1)).toBeNull();
+    expect(hitLink([link], get, { x: 276, y: 61 }, 1)?.id).toBe('l');
   });
 
   it('only grabs a frame by its label or border', () => {

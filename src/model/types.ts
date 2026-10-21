@@ -19,10 +19,15 @@ export interface Item {
   icon?: string;
 }
 
+export type Side = 'top' | 'right' | 'bottom' | 'left';
+
 export interface Link {
   id: string;
   from: string;
   to: string;
+  /** Sides the link is pinned to. Links drawn from the selection dots have them and are drawn as curves. */
+  fromSide?: Side;
+  toSide?: Side;
 }
 
 /** Fills for stickers and shapes. Stickers are paper, so they keep these colours in both themes. */

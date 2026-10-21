@@ -34,6 +34,16 @@ describe('Board', () => {
     expect(b.links.size).toBe(0);
   });
 
+  it('keeps the sides of a curved link and syncs them', () => {
+    const [a, b] = pair();
+    a.add(sticky('x'));
+    a.add(sticky('y'));
+    a.addLink({ id: 'c', from: 'x', to: 'y', fromSide: 'right', toSide: 'left' });
+    a.addLink({ id: 's', from: 'y', to: 'x' });
+    expect(b.getLink('c')).toEqual({ id: 'c', from: 'x', to: 'y', fromSide: 'right', toSide: 'left' });
+    expect(b.getLink('s')).toEqual({ id: 's', from: 'y', to: 'x' });
+  });
+
   it('merges different fields changed by two people at once', () => {
     const [a, b] = pair();
     a.add(sticky('s'));

@@ -1,4 +1,4 @@
-import type { Item, Link } from '../model/types';
+import type { Item, Link, Side } from '../model/types';
 
 export interface Point { x: number; y: number }
 export interface Rect { x: number; y: number; w: number; h: number }
@@ -40,6 +40,61 @@ export function linkEnds(link: Link, get: (id: string) => Item | undefined): [Po
   return [edgePoint(a, center(b)), edgePoint(b, center(a))];
 }
 
+export const SIDES: Side[] = ['top', 'right', 'bottom', 'left'];
+const NORMAL: Record<Side, Point> = { top: { x: 0, y: -1 }, right: { x: 1, y: 0 }, bottom: { x: 0, y: 1 }, left: { x: -1, y: 0 } };
+
+/** Midpoint of an item's side, pushed `gap` outward. Curved links attach here, the selection dots sit just outside. */
+export function sidePoint(r: Rect, side: Side, gap = 0): Point {
+  const c = center(r), n = NORMAL[side];
+  return { x: c.x + n.x * (r.w / 2 + gap), y: c.y + n.y * (r.h / 2 + gap) };
+}
+
+/** The side whose midpoint is closest to p. */
+export function nearestSide(r: Rect, p: Point): Side {
+  let best: Side = 'top', d = Infinity;
+  for (const s of SIDES) {
+    const q = sidePoint(r, s), dq = Math.hypot(p.x - q.x, p.y - q.y);
+    if (dq < d) { d = dq; best = s; }
+  }
+  return best;
+}
+
+export type Bezier = [Point, Point, Point, Point];
+
+/** Smooth curve from a to b that leaves and enters square to the given sides. A missing side means a loose end. */
+export function curveBetween(a: Point, aSide: Side, b: Point, bSide: Side | null): Bezier {
+  const k = Math.max(30, Math.min(220, Math.hypot(b.x - a.x, b.y - a.y) * 0.45));
+  const na = NORMAL[aSide], nb = bSide ? NORMAL[bSide] : { x: 0, y: 0 };
+  return [a, { x: a.x + na.x * k, y: a.y + na.y * k }, { x: b.x + nb.x * k, y: b.y + nb.y * k }, b];
+}
+
+/** Every link as a cubic Bezier; straight links have their control points on the ends. */
+export function linkCurve(link: Link, get: (id: string) => Item | undefined): Bezier | null {
+  const a = get(link.from), b = get(link.to);
+  if (!a || !b) return null;
+  if (link.fromSide && link.toSide) return curveBetween(sidePoint(a, link.fromSide), link.fromSide, sidePoint(b, link.toSide), link.toSide);
+  const [p, q] = linkEnds(link, get)!;
+  return [p, p, q, q];
+}
+
+export function bezierPoint([a, b, c, d]: Bezier, t: number): Point {
+  const u = 1 - t;
+  return {
+    x: u * u * u * a.x + 3 * u * u * t * b.x + 3 * u * t * t * c.x + t * t * t * d.x,
+    y: u * u * u * a.y + 3 * u * u * t * b.y + 3 * u * t * t * c.y + t * t * t * d.y,
+  };
+}
+
+export function distToBezier(p: Point, curve: Bezier): number {
+  let d = Infinity, prev = curve[0];
+  for (let i = 1; i <= 24; i++) {
+    const q = bezierPoint(curve, i / 24);
+    d = Math.min(d, distToSegment(p, prev, q));
+    prev = q;
+  }
+  return d;
+}
+
 export function distToSegment(p: Point, a: Point, b: Point): number {
   const dx = b.x - a.x, dy = b.y - a.y;
   const len2 = dx * dx + dy * dy;
@@ -75,8 +130,8 @@ export function hitItem(items: Item[], p: Point, zoom: number): Item | null {
 export function hitLink(links: Link[], get: (id: string) => Item | undefined, p: Point, zoom: number): Link | null {
   const tol = 7 / zoom;
   for (let i = links.length - 1; i >= 0; i--) {
-    const ends = linkEnds(links[i], get);
-    if (ends && distToSegment(p, ends[0], ends[1]) <= tol) return links[i];
+    const curve = linkCurve(links[i], get);
+    if (curve && distToBezier(p, curve) <= tol) return links[i];
   }
   return null;
 }

@@ -6,6 +6,7 @@ import { Toolbar } from './ui/Toolbar';
 import { IconPicker } from './ui/IconPicker';
 import { SelectionPanel } from './ui/SelectionPanel';
 import { TextEditor } from './ui/TextEditor';
+import { FormatPanel } from './ui/FormatPanel';
 import { Stroke } from './ui/glyphs';
 
 type Pop = 'clear' | 'icons' | 'help' | 'name' | null;
@@ -109,6 +110,8 @@ export function App({ boardId }: { boardId: string }) {
         <button className="ib fit" title="Показать всё (Shift+1)" aria-label="Показать всё" onClick={() => editor.fit()}><Stroke name="fit" /></button>
       </div>
 
+      <FormatPanel />
+
       {!editing && <SelectionPanel editor={editor} items={selItems} linkCount={linkCount} />}
       {editing && <TextEditor key={editing.id} editor={editor} item={editing} />}
 
@@ -133,6 +136,8 @@ export function App({ boardId }: { boardId: string }) {
             <dt>Колесо, щипок</dt><dd>масштаб</dd>
             <dt>Двойной клик</dt><dd>редактировать текст</dd>
             <dt>Shift + клик</dt><dd>выделить несколько</dd>
+            <dt>Alt + тянуть</dt><dd>копировать элемент</dd>
+            <dt>Тянуть за синюю точку</dt><dd>связать с другим элементом</dd>
             <dt><kbd>V H N T R O C F I</kbd></dt><dd>инструменты</dd>
             <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></dt><dd>отменить / вернуть свои действия</dd>
             <dt><kbd>Ctrl</kbd>+<kbd>C</kbd> <kbd>V</kbd> <kbd>D</kbd></dt><dd>копировать, вставить, дублировать</dd>
