@@ -82,6 +82,30 @@ button { font: inherit; color: inherit; }
 .sw.on { box-shadow: 0 0 0 2px var(--accent); }
 .sw.none { background: linear-gradient(135deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%), var(--surface) !important; }
 
+/* Text formatting panel, sizes and colours 1:1 with the Figma component "Mol / Bar". */
+.fmt { position: fixed; z-index: 5; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 14px; padding: 18px 23px; width: 1417px; max-width: calc(100vw - 32px); overflow-x: auto; scrollbar-width: none; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+  background: rgba(255, 255, 255, .9); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 20px; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); color: #454545; }
+.fmt img { display: block; flex: none; pointer-events: none; }
+.fsep { flex: none; width: 5px; height: 24px; position: relative; }
+.fsep.line::after { content: ""; position: absolute; left: 50%; top: 2px; width: 1px; height: 20px; background: rgba(0, 0, 0, .07); }
+.fmt.dragging { cursor: grabbing; }
+.fb { position: relative; isolation: isolate; flex: none; min-width: 30px; height: 30px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 0; cursor: pointer; }
+/* Highlight is 42px tall (6px past the 30px icon on each side), as in the Figma "Ato / Hover icon". */
+.fb::before, .fpick::before { content: ""; position: absolute; inset: -6px; border-radius: 6px; z-index: -1; transition: background-color .25s ease; }
+.fb:hover:not(:disabled)::before, .fpick:hover::before { background: rgba(0, 0, 0, .05); }
+.fb.on::before { background: rgba(75, 145, 255, .14); }
+.fb:disabled { opacity: .3; cursor: default; }
+.fb.sw-btn { min-width: 24px; width: 24px; height: 30px; }
+.fb.sw-btn::before { inset: -6px -9px; }
+.fb.sw-btn > img { margin: 0 -3px; }
+.fb .swatch { position: absolute; left: 4px; right: 4px; bottom: -1px; height: 4px; border-radius: 2px; }
+.fmt .caret { margin: 0 -10px; }
+.fpick { position: relative; isolation: isolate; flex: none; height: 30px; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; padding: 0; cursor: pointer; font: 500 17px/1 "Inter", var(--ui); color: #454545; white-space: nowrap; }
+.fmt-gap { flex: 1 0 0; }
+.fmt.collapsed { width: auto; padding: 18px; }
+.fb.toggle img { transform: rotate(-90deg); transition: transform .25s ease; }
+.fmt.collapsed .fb.toggle img { transform: rotate(90deg); }
+
 .pop { position: fixed; z-index: 6; background: var(--surface); box-shadow: var(--shadow); border-radius: 12px; padding: 14px 16px; font-size: 13px; line-height: 1.5; }
 .pop p { margin: 0 0 10px; }
 .pop .row { display: flex; gap: 6px; justify-content: flex-end; }

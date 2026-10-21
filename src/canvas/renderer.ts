@@ -1,8 +1,8 @@
-import type { Item, Link } from '../model/types';
+import type { Item, Link, Side } from '../model/types';
 import { FILLS, ICON_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
 import type { Point, Rect } from './geometry';
-import { center, edgePoint, linkEnds, rectsIntersect } from './geometry';
+import { center, curveBetween, edgePoint, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, type Bezier } from './geometry';
 import { font, layoutText, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -42,13 +42,19 @@ export interface Scene {
   selection: Set<string>;
   editingId: string | null;
   marquee: Rect | null;
-  linkPreview: { from: Item; to: Point; target: Item | null } | null;
+  linkPreview: { from: Item; fromSide: Side | null; to: Point; target: Item | null } | null;
   peers: Peer[];
   showHandle: boolean;
+  /** The dot under the pointer, drawn larger. */
+  hotDot: Side | null;
 }
 
 /** Size of the resize handle in screen pixels. */
 export const HANDLE = 12;
+/** Link dots around a single selected item: radius and distance from its side, in screen pixels. */
+export const DOT_R = 6;
+export const DOT_GAP = 16;
+const DOT_COLOR = '#4DA3FF';
 
 const layoutCache = new Map<string, TextLayout>();
 
@@ -140,8 +146,11 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
   }
 }
 
-function arrow(ctx: CanvasRenderingContext2D, a: Point, b: Point, color: string, width: number, dash: number[] = []) {
-  const ang = Math.atan2(b.y - a.y, b.x - a.x), head = 10;
+function arrow(ctx: CanvasRenderingContext2D, [a, c1, c2, b]: Bezier, color: string, width: number, dash: number[] = []) {
+  // The head follows the curve's last tangent; straight links have no control points, so fall back along the line.
+  const from = c2.x !== b.x || c2.y !== b.y ? c2 : c1.x !== b.x || c1.y !== b.y ? c1 : a;
+  const ang = Math.atan2(b.y - from.y, b.x - from.x), head = 10;
+  const sx = Math.cos(ang) * head * 0.6, sy = Math.sin(ang) * head * 0.6;
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
   ctx.lineWidth = width;
@@ -149,7 +158,7 @@ function arrow(ctx: CanvasRenderingContext2D, a: Point, b: Point, color: string,
   ctx.setLineDash(dash);
   ctx.beginPath();
   ctx.moveTo(a.x, a.y);
-  ctx.lineTo(b.x - Math.cos(ang) * head * 0.6, b.y - Math.sin(ang) * head * 0.6);
+  ctx.bezierCurveTo(c1.x, c1.y, c2.x - sx, c2.y - sy, b.x - sx, b.y - sy);
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.beginPath();
@@ -193,8 +202,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   }
 
   for (const l of s.links) {
-    const ends = linkEnds(l, s.get);
-    if (ends) arrow(ctx, ends[0], ends[1], s.selection.has(l.id) ? theme.accent : theme.ink, (s.selection.has(l.id) ? 3 : 2));
+    const curve = linkCurve(l, s.get);
+    if (curve) arrow(ctx, curve, s.selection.has(l.id) ? theme.accent : theme.ink, (s.selection.has(l.id) ? 3 : 2));
   }
 
   for (const p of s.peers) {
@@ -217,14 +226,30 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       ctx.roundRect(it.x + it.w + off - hs / 2, it.y + it.h + off - hs / 2, hs, hs, 3 / cam.z);
       ctx.fill();
       ctx.stroke();
+      ctx.fillStyle = DOT_COLOR;
+      ctx.strokeStyle = '#fff';
+      for (const side of SIDES) {
+        const p = sidePoint(it, side, DOT_GAP / cam.z);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, (side === s.hotDot ? DOT_R + 2 : DOT_R) / cam.z, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
     }
   }
 
   if (s.linkPreview) {
-    const { from, to, target } = s.linkPreview;
+    const { from, fromSide, to, target } = s.linkPreview;
     if (target) outline(ctx, target, cam.z, theme.accent, [4, 4]);
-    const end = target ? edgePoint(target, center(from)) : to;
-    arrow(ctx, edgePoint(from, end), end, theme.accent, 2 / Math.max(cam.z, 0.5), [6, 6]);
+    let curve: Bezier;
+    if (fromSide) {
+      const toSide = target ? nearestSide(target, to) : null;
+      curve = curveBetween(sidePoint(from, fromSide), fromSide, target && toSide ? sidePoint(target, toSide) : to, toSide);
+    } else {
+      const end = target ? edgePoint(target, center(from)) : to, start = edgePoint(from, end);
+      curve = [start, start, end, end];
+    }
+    arrow(ctx, curve, theme.accent, 2 / Math.max(cam.z, 0.5), [6, 6]);
   }
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import type { Item, Link } from './types';
+import type { Item, Link, Side } from './types';
 
 /** Transaction origin for changes made by this client. Only these are undoable. */
 export const LOCAL = { local: true };
@@ -77,7 +77,9 @@ export class Board {
       const out: Link[] = [];
       this.links.forEach((m, id) => {
         const from = m.get('from') as string, to = m.get('to') as string;
-        if (this.items.has(from) && this.items.has(to)) out.push({ id, from, to });
+        if (!this.items.has(from) || !this.items.has(to)) return;
+        const fromSide = m.get('fromSide') as Side | undefined, toSide = m.get('toSide') as Side | undefined;
+        out.push(fromSide && toSide ? { id, from, to, fromSide, toSide } : { id, from, to });
       });
       this.linkCache = out;
     }
@@ -149,6 +151,7 @@ export class Board {
       const m = new Y.Map<unknown>();
       m.set('from', link.from);
       m.set('to', link.to);
+      if (link.fromSide && link.toSide) { m.set('fromSide', link.fromSide); m.set('toSide', link.toSide); }
       this.links.set(link.id, m);
     });
   }
