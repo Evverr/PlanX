@@ -66,11 +66,11 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
         table: tables.length > 0 ? (
           <div className="sw-group table-count">
             <span>Строки</span>
-            {btn('minus-m', 'Убрать строку', () => editor.changeTable('row', -1))}
-            {btn('plus-m', 'Добавить строку', () => editor.changeTable('row', 1))}
+            {btn('minus-s', 'Убрать строку', () => editor.changeTable('row', -1))}
+            {btn('plus-s', 'Добавить строку', () => editor.changeTable('row', 1))}
             <span>Столбцы</span>
-            {btn('minus-m', 'Убрать столбец', () => editor.changeTable('col', -1))}
-            {btn('plus-m', 'Добавить столбец', () => editor.changeTable('col', 1))}
+            {btn('minus-s', 'Убрать столбец', () => editor.changeTable('col', -1))}
+            {btn('plus-s', 'Добавить столбец', () => editor.changeTable('col', 1))}
           </div>
         ) : undefined,
         sep4: <div className="sep" />,
