@@ -4,7 +4,7 @@ import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
 import { boundsOf, hitItem, hitLink, nearestSide, nearInk, normRect, onAudioButton, onTaskBox, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
 import { clearTextCache, DOT_GAP, DOT_R, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
-import { font, itemTextHeight } from '../canvas/text';
+import { fitHeight, font, itemTextHeight } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, lineAt, newTable, withCount, withScale, withSize } from '../model/table';
@@ -235,7 +235,6 @@ export class Editor {
       linkPreview,
       peers: this.presence?.peers() ?? [],
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]),
-      resizable: this.selection.size === 1 && this.board.get([...this.selection][0])?.type !== 'task',
       hotDot: this.hotDot,
       editingCell: this.editingCell,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker' } : null,
@@ -429,7 +428,8 @@ export class Editor {
     const refit = () => this.board.transact(() => {
       for (const it of items) {
         const now = this.board.get(it.id);
-        if (now?.type === 'text') this.board.update(it.id, { h: itemTextHeight(now) });
+        const h = now && fitHeight(now);
+        if (h) this.board.update(it.id, { h });
       }
     });
     this.board.transact(() => {
@@ -587,7 +587,8 @@ export class Editor {
         this.selection.delete(id);
       } else if (value !== (it.text ?? '')) {
         const patch: Partial<Item> = { text: value };
-        if (it.type === 'text') patch.h = itemTextHeight(it, value);
+        const h = fitHeight(it, value);
+        if (h) patch.h = h;
         this.board.update(id, patch);
       }
     }
@@ -595,13 +596,11 @@ export class Editor {
     this.requestRender();
   }
 
-  /** Live text while typing, so a text item grows as you type and others see it. */
+  /** Live text while typing, so a text item or a task grows (or shrinks back) as you type and others see it. */
   previewText(id: string, text: string): void {
     const it = this.board.get(id);
-    if (it?.type === 'text') {
-      const h = itemTextHeight(it, text);
-      if (h !== it.h) this.board.update(id, { h });
-    }
+    const h = it && fitHeight(it, text);
+    if (it && h && h !== it.h) this.board.update(id, { h });
   }
 
   private stopEditing(): void {
@@ -691,7 +690,7 @@ export class Editor {
       this.gesture = { type: 'link', from: single.id, fromSide: dot, to: w, target: null };
       return;
     }
-    if (single && single.type !== 'task' && this.onHandle(single, w)) {
+    if (single && this.onHandle(single, w)) {
       this.board.beginGesture();
       this.gesture = { type: 'resize', id: single.id, start: w, w0: single.w, h0: single.h };
       this.setMoving(true);
@@ -818,6 +817,8 @@ export class Editor {
           nh = Math.round(g.h0 * k);
         }
         if (it.type === 'text') nh = itemTextHeight(it, it.text, nw);
+        // A task can be made taller by hand, never shorter than its text.
+        if (it.type === 'task') nh = Math.max(nh, fitHeight(it, it.text, nw)!);
         this.board.update(g.id, it.type === 'table' ? withScale(it, nw, nh) : { w: nw, h: nh });
         return;
       }
@@ -985,7 +986,7 @@ export class Editor {
     let cursor = '';
     const line = single?.type === 'table' && !this.editingId ? lineAt(single, w, 5 / this.cam.z) : null;
     if (dot) cursor = 'crosshair';
-    else if (single && single.type !== 'task' && this.onHandle(single, w)) cursor = 'nwse-resize';
+    else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
     else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
     else if (hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
     else {

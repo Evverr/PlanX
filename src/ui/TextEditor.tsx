@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { Editor } from '../editor/editor';
 import { alignOf, TEXT_COLORS, textPad, type Item } from '../model/types';
 import { fontOf, FONTS, LINE_HEIGHT } from '../canvas/text';
-import { taskInset } from '../canvas/geometry';
+import { TASK_INSET } from '../canvas/geometry';
 
 /**
  * A textarea laid over the item being edited, scaled with the board so the
@@ -38,7 +38,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   const fs = isFrame ? 15 : item.fs ?? 16;
   const pad = textPad(item);
   // A task's text starts right of its checkbox.
-  const inset = item.type === 'task' ? taskInset(item, editor.cam.z) : 0;  // a task's checkbox takes the right-hand strip
+  const inset = item.type === 'task' ? TASK_INSET : 0;  // a task's checkbox takes the right-hand strip
   const width = isFrame ? Math.max(160, item.w * 0.6) : item.w - inset - pad * 2;
   const top = isFrame ? item.y - 30 : item.y + pad;
   const p = editor.toScreen({ x: item.x + (isFrame ? 0 : pad), y: top });
@@ -76,7 +76,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         padding: isFrame ? '0 4px' : 0,
       }}
       onInput={(e) => {
-        if (item.type === 'text') editor.previewText(id, e.currentTarget.value);
+        if (item.type === 'text' || item.type === 'task') editor.previewText(id, e.currentTarget.value);
         if (item.type !== 'text' && !isFrame) {
           const el = e.currentTarget;
           el.style.height = '0px';

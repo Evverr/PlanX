@@ -6,7 +6,7 @@ import { drawPicture } from './pictures';
 import { cellRect, cellText, colsOf, rowsOf } from '../model/table';
 import { audioProgress, clock } from './audio';
 import type { Point, Rect } from './geometry';
-import { audioButton, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, taskBox, taskInset, type Bezier } from './geometry';
+import { audioButton, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -55,8 +55,6 @@ export interface Scene {
   linkPreview: { from: Item; fromSide: Side | null; to: Point; target: Item | null } | null;
   peers: Peer[];
   showHandle: boolean;
-  /** Whether that single item has a resize handle (tasks keep their size). */
-  resizable: boolean;
   /** The dot under the pointer, drawn larger. */
   hotDot: Side | null;
   /** The pen or highlighter line being drawn, in board units. */
@@ -312,7 +310,7 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
     ctx.lineWidth = 1.6 * k;
     ctx.stroke();
   }
-  if (!editing) drawText(ctx, { ...it, w: it.w - taskInset(it, cam.z), fx: it.fx || it.done, tc: it.done ? undefined : it.tc }, 8, it.done ? theme.muted : theme.ink, true, s);
+  if (!editing) drawText(ctx, { ...it, w: it.w - TASK_INSET, fx: it.fx || it.done, tc: it.done ? undefined : it.tc }, 8, it.done ? theme.muted : theme.ink, true, s);
 }
 
 /** Adds a polygon item's outline to the current path. */
@@ -558,16 +556,14 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     if (!it) continue;
     outline(ctx, it, cam.z, SELECT_COLOR);
     if (s.showHandle && s.editingId !== id) {
-      if (s.resizable) {
-        const hs = HANDLE / cam.z, off = 3 / cam.z;
-        ctx.fillStyle = theme.surface;
-        ctx.strokeStyle = SELECT_COLOR;
-        ctx.lineWidth = 2 / cam.z;
-        ctx.beginPath();
-        ctx.roundRect(it.x + it.w + off - hs / 2, it.y + it.h + off - hs / 2, hs, hs, 3 / cam.z);
-        ctx.fill();
-        ctx.stroke();
-      }
+      const hs = HANDLE / cam.z, off = 3 / cam.z;
+      ctx.fillStyle = theme.surface;
+      ctx.strokeStyle = SELECT_COLOR;
+      ctx.lineWidth = 2 / cam.z;
+      ctx.beginPath();
+      ctx.roundRect(it.x + it.w + off - hs / 2, it.y + it.h + off - hs / 2, hs, hs, 3 / cam.z);
+      ctx.fill();
+      ctx.stroke();
       ctx.fillStyle = SELECT_COLOR;
       ctx.strokeStyle = '#fff';
       for (const side of SIDES) {

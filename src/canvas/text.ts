@@ -1,4 +1,5 @@
-import { baseWeight, type Item, type ListKind } from '../model/types';
+import { baseWeight, DEFAULTS, type Item, type ListKind } from '../model/types';
+import { TASK_INSET } from './geometry';
 
 export const FONT_FAMILY = 'Onest, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 export const LINE_HEIGHT = 1.28;
@@ -86,3 +87,11 @@ export function measureTextHeight(text: string, width: number, size: number, sty
 /** Height a text item needs with its own font, size and list, optionally with other text or width. */
 export const itemTextHeight = (it: Item, text = it.text ?? '', width = it.w): number =>
   measureTextHeight(withList(text || ' ', it.ls), width, it.fs ?? 20, fontOf(it));
+
+/** Height a task needs: its lines beside the checkbox plus 8 above and below, at least its usual height. */
+export const taskHeight = (it: Item, text = it.text ?? '', width = it.w): number =>
+  Math.max(DEFAULTS.task.h, measureTextHeight(withList(text || ' ', it.ls), width - TASK_INSET - 16, it.fs ?? 16, fontOf(it)) + 16);
+
+/** Height a text item or task needs for its text; other items have none to fit. */
+export const fitHeight = (it: Item, text = it.text ?? '', width = it.w): number | null =>
+  it.type === 'text' ? itemTextHeight(it, text, width) : it.type === 'task' ? taskHeight(it, text, width) : null;
