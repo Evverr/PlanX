@@ -422,16 +422,6 @@ export class Editor {
     });
   }
 
-  changeFontSize(dir: 1 | -1): void {
-    this.board.transact(() => {
-      for (const it of this.selectedItems()) {
-        if (!HAS_FONT.includes(it.type)) continue;
-        const fs = clamp(Math.round((it.fs ?? 16) * (dir > 0 ? 1.2 : 1 / 1.2)), 8, 120);
-        this.board.update(it.id, it.type === 'text' ? { fs, h: itemTextHeight({ ...it, fs }) } : { fs });
-      }
-    });
-  }
-
   /** Changes how the selected items' text looks; an undefined field goes back to the default.
    *  Text items are re-measured to fit, and again once a newly picked font has loaded. */
   setTextStyle(patch: Partial<Item>): void {
