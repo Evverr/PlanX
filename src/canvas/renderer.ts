@@ -76,7 +76,7 @@ const DONE_COLOR = '#15C674';
 /** Size of the resize handle in screen pixels. */
 export const HANDLE = 12;
 /** Link dots around a single selected item: radius and distance from its side, in screen pixels. */
-export const DOT_R = 6;
+export const DOT_R = 4.2;
 export const DOT_GAP = 16;
 /** Selection outlines and handles, the link dots and selected links. */
 const SELECT_COLOR = '#4DA3FF';
@@ -586,7 +586,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
         const p = sidePoint(it, side, DOT_GAP / cam.z);
         ctx.beginPath();
         ctx.globalAlpha = side === s.hotDot ? 1 : 0.5;
-        ctx.arc(p.x, p.y, (side === s.hotDot ? DOT_R + 2 : DOT_R) / cam.z, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, (side === s.hotDot ? DOT_R * 1.33 : DOT_R) / cam.z, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       }
