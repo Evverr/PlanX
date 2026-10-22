@@ -707,7 +707,7 @@ export class Editor {
       return;
     }
     // A task's checkbox ticks it off (or back on) instead of picking the task up.
-    if (hit?.type === 'task' && !e.shiftKey && onTaskBox(hit, w)) {
+    if (hit?.type === 'task' && !e.shiftKey && onTaskBox(hit, w, this.cam.z)) {
       this.board.update(hit.id, { done: hit.done ? undefined : true });
       return;
     }
@@ -990,7 +990,7 @@ export class Editor {
     else if (hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
     else {
       const hit = hitItem(this.board.list(), w, this.cam.z);
-      if ((hit?.type === 'task' && onTaskBox(hit, w)) || (hit?.type === 'audio' && onAudioButton(hit, w))) cursor = 'pointer';
+      if ((hit?.type === 'task' && onTaskBox(hit, w, this.cam.z)) || (hit?.type === 'audio' && onAudioButton(hit, w))) cursor = 'pointer';
       else if (hit) cursor = alt ? 'copy' : 'move';
     }
     this.canvas.style.cursor = cursor;

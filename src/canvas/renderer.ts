@@ -6,7 +6,7 @@ import { drawPicture } from './pictures';
 import { cellRect, cellText, colsOf, rowsOf } from '../model/table';
 import { audioProgress, clock } from './audio';
 import type { Point, Rect } from './geometry';
-import { audioButton, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_BOX_R, TASK_INSET, taskBox, type Bezier } from './geometry';
+import { audioButton, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, taskBox, taskInset, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -291,27 +291,28 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   ctx.lineWidth = 1 / cam.z;
   ctx.strokeStyle = theme.line;
   ctx.stroke();
-  const c = taskBox(it);
+  // The box and its tick are drawn for a radius of 10 and scaled to the radius it has at this zoom.
+  const c = taskBox(it, cam.z), k = c.r / 10;
   ctx.beginPath();
-  ctx.arc(c.x, c.y, TASK_BOX_R, 0, Math.PI * 2);
+  ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
   if (it.done) {
     ctx.fillStyle = DONE_COLOR;
     ctx.fill();
     ctx.beginPath();
-    ctx.moveTo(c.x - 4.5, c.y + 0.2);
-    ctx.lineTo(c.x - 1.3, c.y + 3.4);
-    ctx.lineTo(c.x + 4.8, c.y - 3);
+    ctx.moveTo(c.x - 4.5 * k, c.y + 0.2 * k);
+    ctx.lineTo(c.x - 1.3 * k, c.y + 3.4 * k);
+    ctx.lineTo(c.x + 4.8 * k, c.y - 3 * k);
     ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * k;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.stroke();
   } else {
     ctx.strokeStyle = theme.muted;
-    ctx.lineWidth = 1.6;
+    ctx.lineWidth = 1.6 * k;
     ctx.stroke();
   }
-  if (!editing) drawText(ctx, { ...it, w: it.w - TASK_INSET, fx: it.fx || it.done, tc: it.done ? undefined : it.tc }, 8, it.done ? theme.muted : theme.ink, true, s);
+  if (!editing) drawText(ctx, { ...it, w: it.w - taskInset(it, cam.z), fx: it.fx || it.done, tc: it.done ? undefined : it.tc }, 8, it.done ? theme.muted : theme.ink, true, s);
 }
 
 /** Adds a polygon item's outline to the current path. */

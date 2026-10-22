@@ -63,9 +63,13 @@ describe('geometry', () => {
   it('finds the checkbox of a task in its top right corner', () => {
     const task = box('task', { w: 260, h: 52 });
     const c = taskBox(task);
-    expect(c).toEqual({ x: 242, y: 18 });
+    expect(c).toEqual({ x: 242, y: 18, r: 10 });
     expect(onTaskBox(task, c)).toBe(true);
     expect(onTaskBox(task, { x: 30, y: 26 })).toBe(false);
+    // Same size on screen when zoomed in: half as big on the board at 200%.
+    expect(taskBox(task, 2)).toEqual({ x: 251, y: 9, r: 5 });
+    // Zoomed far out it stops at 30% of the card's height.
+    expect(taskBox(task, 0.1).r).toBeCloseTo(15.6);
   });
 
   it('hits a star only inside its points, and ends links on its outline', () => {
