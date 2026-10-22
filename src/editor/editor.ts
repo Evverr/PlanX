@@ -54,6 +54,8 @@ type Gesture =
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const MIN_Z = 0.08, MAX_Z = 4;
+/** Zoom change per mouse wheel notch: half a percentage point. */
+const WHEEL_STEP = 0.005;
 
 /**
  * Owns the canvas: turns pointer and keyboard input into board changes and
@@ -859,8 +861,8 @@ export class Editor {
     e.preventDefault();
     const mouseWheel = e.deltaMode !== 0 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
     if (e.ctrlKey || e.metaKey) this.zoomAt(sp.x, sp.y, Math.exp(-e.deltaY * 0.004));
-    // Mouse wheel zooms linearly: every notch adds or takes the same 1.5 percentage points.
-    else if (mouseWheel && !e.shiftKey) this.zoomAt(sp.x, sp.y, (this.cam.z - Math.sign(e.deltaY) * 0.015) / this.cam.z);
+    // Mouse wheel zooms linearly: every notch adds or takes the same WHEEL_STEP.
+    else if (mouseWheel && !e.shiftKey) this.zoomAt(sp.x, sp.y, (this.cam.z - Math.sign(e.deltaY) * WHEEL_STEP) / this.cam.z);
     else {
       const horiz = e.shiftKey && !e.deltaX;
       this.cam = { ...this.cam, x: this.cam.x - (horiz ? e.deltaY : e.deltaX), y: this.cam.y - (horiz ? 0 : e.deltaY) };
