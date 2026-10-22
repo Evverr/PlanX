@@ -70,6 +70,11 @@ button { font: inherit; color: inherit; }
   gap: clamp(6px, calc((100vh - 150px - 432px) / 13), 18px);
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
 .tools.docked { left: 0; border-radius: 0 12px 12px 0; }
+/* Holding a button lifts it so it can be moved along the rail (Toolbar does the moving). */
+.tools { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.tools.sorting, .tools.sorting .fb { cursor: grabbing; }
+.tools .lifted { z-index: 1; }
+.tools .fb.lifted::before { background: var(--fmt-bg); box-shadow: var(--fmt-shadow); }
 .tsep { flex: none; width: 20px; height: 7px; position: relative; }
 /* Drawing tools, opened from the rail's drawing button: a second rail beside the first. */
 .draw-panel { position: fixed; z-index: 5; left: calc(90px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
