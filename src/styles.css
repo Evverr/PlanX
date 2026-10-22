@@ -124,6 +124,10 @@ img.dock-chevron { transition: transform .25s ease; }
 .fsep { flex: none; width: 5px; height: 24px; position: relative; }
 .fsep.line::after { content: ""; position: absolute; left: 50%; top: 2px; width: 1px; height: 20px; background: var(--fmt-line); }
 .fmt.dragging { cursor: grabbing; }
+/* The same controls over the selected text or sticker; FormatPanel's TextPanel places it. */
+.tfmt { position: fixed; z-index: 5; display: flex; align-items: center; gap: 14px; padding: 12px 18px; max-width: calc(100vw - 24px); overflow-x: auto; scrollbar-width: none;
+  background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 16px; box-shadow: var(--fmt-shadow); color: var(--fmt-ink); }
+.tfmt .caret { margin: 0 -10px; }
 .fb { position: relative; isolation: isolate; flex: none; min-width: 30px; height: 30px; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 0; cursor: pointer; }
 /* Highlight is 42px tall (6px past the 30px icon on each side), as in the Figma "Ato / Hover icon". */
 .fb::before, .fpick::before { content: ""; position: absolute; inset: -6px; border-radius: 6px; z-index: -1; transition: background-color .25s ease; }
