@@ -9,6 +9,7 @@ import { TextEditor } from './ui/TextEditor';
 import { FormatPanel } from './ui/FormatPanel';
 import { PanelIcon } from './ui/PanelIcon';
 import { DockButton, useDock } from './ui/Dock';
+import { Minimap } from './ui/Minimap';
 
 type Pop = 'clear' | 'icons' | 'help' | 'name' | null;
 
@@ -67,6 +68,7 @@ export function App({ boardId }: { boardId: string }) {
 
   // One chevron, in the zoom panel, sticks every panel around the edge of the screen to it.
   const [docked, toggleDock] = useDock('panels');
+  const [minimap, setMinimap] = useState(false);
 
   const [title, setTitle] = useState(board.title);
   useEffect(() => setTitle(board.title), [board.title]);
@@ -105,7 +107,10 @@ export function App({ boardId }: { boardId: string }) {
         <button className="tb danger" onClick={() => toggle('clear')}>Очистить</button>
       </header>
 
-      <div className={`bar people ${docked ? 'docked' : ''}`}>
+      <Toolbar editor={editor} tool={ui.tool} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => toggle('icons')} />
+      {pop === 'icons' && <IconPicker onPickEmoji={(id) => { editor.addEmoji(id); setPop(null); }} onPickIcon={(id) => { editor.addIcon(id); setPop(null); }} />}
+
+      <div className={`bar zoom ${docked ? 'docked' : ''}`}>
         <div className="avatars">
           <button className="avatar me" style={{ background: conn.me.color }} title={`${conn.me.name} (вы). Нажмите, чтобы сменить имя`}
             aria-label="Ваше имя" onClick={() => toggle('name')}>
@@ -116,13 +121,10 @@ export function App({ boardId }: { boardId: string }) {
           ))}
           {peers.length > 4 && <span className="more">+{peers.length - 4}</span>}
         </div>
-        <button className="tb primary" onClick={share}>Поделиться</button>
-      </div>
-
-      <Toolbar editor={editor} tool={ui.tool} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => toggle('icons')} />
-      {pop === 'icons' && <IconPicker onPickEmoji={(id) => { editor.addEmoji(id); setPop(null); }} onPickIcon={(id) => { editor.addIcon(id); setPop(null); }} />}
-
-      <div className={`bar zoom ${docked ? 'docked' : ''}`}>
+        <button className="ib" title="Скопировать ссылку на доску" aria-label="Поделиться" onClick={share}><PanelIcon name="link" /></button>
+        <div className="sep" />
+        <button className={`ib ${minimap ? 'on' : ''}`} title="Карта доски" aria-label="Карта доски" aria-pressed={minimap}
+          onClick={() => setMinimap(!minimap)}><PanelIcon name="map" /></button>
         <button className="ib" title="Отдалить (−)" aria-label="Отдалить" onClick={() => editor.zoomCenter(1 / 1.25)}><PanelIcon name="zoom-out" /></button>
         <button className="zpct" title="Масштаб 100%" onClick={() => editor.zoomCenter(1 / editor.cam.z)}>{Math.round(ui.cam.z * 100)}%</button>
         <button className="ib" title="Приблизить (+)" aria-label="Приблизить" onClick={() => editor.zoomCenter(1.25)}><PanelIcon name="zoom-in" /></button>
@@ -131,6 +133,8 @@ export function App({ boardId }: { boardId: string }) {
         <button className="ib fit" title="Показать всё (Shift+1)" aria-label="Показать всё" onClick={() => editor.fit()}><PanelIcon name="screen" /></button>
         <DockButton edge="bottom" docked={docked} onToggle={toggleDock} />
       </div>
+
+      {minimap && <Minimap editor={editor} items={board.list()} docked={docked} />}
 
       <FormatPanel />
 
