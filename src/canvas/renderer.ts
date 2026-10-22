@@ -3,6 +3,7 @@ import { alignOf, FILLS, ICON_COLORS, INK_COLORS, MARK_COLORS, TEXT_COLORS } fro
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
+import { cellRect, cellText, colsOf, rowsOf } from '../model/table';
 import type { Point, Rect } from './geometry';
 import { center, curveBetween, edgePoint, inkPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_BOX_R, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
@@ -57,6 +58,8 @@ export interface Scene {
   hotDot: Side | null;
   /** The pen or highlighter line being drawn, in board units. */
   stroke: InkStroke | null;
+  /** The table cell being edited, its text left to the overlay. */
+  editingCell: number | null;
 }
 
 export interface InkStroke { pts: Point[]; color: string; width: number; hl: boolean }
@@ -260,6 +263,9 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'task':
       drawTask(ctx, it, s, editing);
       break;
+    case 'table':
+      drawTable(ctx, it, s, editing ? s.editingCell : null);
+      break;
     case 'ink':
       strokeInk(ctx, { pts: inkPoints(it), color: it.color ?? 'ink', width: (it.sw ?? 2) * it.w / (it.iw || it.w), hl: !!it.hl }, theme);
       break;
@@ -298,6 +304,26 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
     ctx.stroke();
   }
   if (!editing) drawText(ctx, { ...it, x: it.x + TASK_INSET, w: it.w - TASK_INSET, fx: it.fx || it.done, tc: it.done ? undefined : it.tc }, 8, it.done ? theme.muted : theme.ink, true, s);
+}
+
+/** A grid on the panel colour with each cell's text; the cell being edited is left to the overlay. */
+function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCell: number | null) {
+  const { theme, cam } = s;
+  ctx.fillStyle = theme.surface;
+  ctx.fillRect(it.x, it.y, it.w, it.h);
+  ctx.strokeStyle = theme.line;
+  ctx.lineWidth = 1 / cam.z;
+  ctx.beginPath();
+  let x = it.x, y = it.y;
+  for (const w of colsOf(it).slice(0, -1)) { x += w; ctx.moveTo(x, it.y); ctx.lineTo(x, it.y + it.h); }
+  for (const h of rowsOf(it).slice(0, -1)) { y += h; ctx.moveTo(it.x, y); ctx.lineTo(it.x + it.w, y); }
+  ctx.rect(it.x, it.y, it.w, it.h);
+  ctx.stroke();
+  const n = colsOf(it).length * rowsOf(it).length;
+  for (let i = 0; i < n; i++) {
+    const text = cellText(it, i);
+    if (text && i !== editingCell) drawText(ctx, { ...it, ...cellRect(it, i), text, ls: undefined }, 8, theme.ink, true, s);
+  }
 }
 
 /** A pen or highlighter line, smoothed by curving through the midpoints between its points. */

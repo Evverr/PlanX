@@ -68,8 +68,8 @@ button { font: inherit; color: inherit; }
 .tools { position: fixed; z-index: 5; left: calc(12px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; align-items: center; width: 66px; padding: 21px 18px;
   /* 18px gaps as in the mockup; on a short screen it fits between the top bar and the bottom edge
-     by tightening them (432px is the buttons, separator and padding; there are 13 gaps). */
-  gap: clamp(6px, calc((100vh - 150px - 432px) / 13), 18px);
+     by tightening them (462px is the buttons, separator and padding; there are 14 gaps). */
+  gap: clamp(6px, calc((100vh - 150px - 462px) / 14), 18px);
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
 .tools.docked { left: 0; border-radius: 0 12px 12px 0; }
 /* Panels whose buttons can be rearranged: holding one lifts it so it can be moved (see ui/sortable.ts). */
@@ -139,6 +139,9 @@ button { font: inherit; color: inherit; }
 .sw { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; margin: 0 2px; }
 .sw.on { box-shadow: 0 0 0 2px var(--accent); }
 .sw-group, .sort-wrap { display: flex; align-items: center; }
+.table-count { gap: 2px; font-size: 13px; color: var(--muted); }
+.table-count span { padding: 0 4px 0 8px; }
+.table-count .tb { min-width: 30px; font-size: 17px; line-height: 1; padding: 6px 8px; color: var(--ink); }
 .sw.custom { position: relative; overflow: hidden; display: inline-block; background: conic-gradient(#FF5E5E, #FFD25E, #8CE35E, #5ED9E3, #5E8CFF, #C45EFF, #FF5E5E); }
 .sw.custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .sw.none { background: linear-gradient(135deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%), var(--surface) !important; }
@@ -216,7 +219,7 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 
 .text-edit { position: fixed; z-index: 4; margin: 0; border: 0; outline: none; resize: none; overflow: hidden; background: transparent; font-family: var(--ui); transform-origin: 0 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .text-edit.sticky, .text-edit.rect, .text-edit.ellipse { text-align: center; color: var(--sticky-ink); }
-.text-edit.text, .text-edit.task { color: var(--ink); }
+.text-edit.text, .text-edit.task, .text-edit.table { color: var(--ink); }
 .text-edit.frame { color: var(--muted); font-weight: 600; background: var(--surface); border-radius: 4px; }
 .text-edit.nofill { color: var(--ink); }
 
