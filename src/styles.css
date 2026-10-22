@@ -55,7 +55,7 @@ button { font: inherit; color: inherit; }
 .board-canvas[data-tool="eraser"] { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18'%3E%3Ccircle cx='9' cy='9' r='8' fill='white' fill-opacity='.6' stroke='%23555' stroke-width='1.5'/%3E%3C/svg%3E") 9 9, cell !important; }
 
 .bar { position: fixed; z-index: 5; display: flex; align-items: center; gap: 4px; padding: 6px; background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); }
-.ib { width: 40px; height: 40px; border: 0; background: transparent; border-radius: 6px; display: grid; place-items: center; cursor: pointer; color: var(--ink); padding: 0; transition: background-color .25s ease; }
+.ib { position: relative; width: 40px; height: 40px; border: 0; background: transparent; border-radius: 6px; display: grid; place-items: center; cursor: pointer; color: var(--ink); padding: 0; transition: background-color .25s ease; }
 /* Hovers everywhere match the tool panel's (.fb): a neutral grey, the pressed state light blue. */
 .ib:hover { background: var(--fmt-hover); }
 .ib.on { background: var(--fmt-on); }
@@ -65,12 +65,30 @@ button { font: inherit; color: inherit; }
 /* Separators in the bars: the tool rail's line (.tsep) turned upright. */
 .sep { flex: none; width: 1px; height: 20px; background: var(--fmt-line); margin: 0 2px; }
 
+/* Buttons in the panels answer the pointer across the whole panel (its height in a bar, its width
+   in an upright one) and halfway to their neighbours, while their highlight keeps its own size. */
+.bar { --gap: 4px; --bar-h: 52px; }
+.topbar { --gap: 8px; }
+.tfmt { --gap: 14px; --bar-h: 54px; }
+.draw-panel { --gap: 18px; }
+.tb, .zpct, .bar .sw:not(.custom) { position: relative; }
+.bar .ib::after, .bar .tb::after, .bar .zpct::after, .bar .sw:not(.custom)::after,
+.tfmt .sort-wrap > .fb::after, .tfmt .tf-drop > .fb::after, .tfmt .tf-drop > .fpick::after {
+  content: ""; position: absolute; top: 50%; height: var(--bar-h); transform: translateY(-50%);
+  left: calc(var(--gap) / -2); right: calc(var(--gap) / -2); }
+/* Swatches sit 7px apart within their group. */
+.bar .sw:not(.custom)::after { left: -3.5px; right: -3.5px; }
+.tools .fb::after, .draw-panel .fb::after, .draw-panel .ink-preset::after {
+  content: ""; position: absolute; left: 50%; width: 62px; transform: translateX(-50%);
+  top: calc(var(--gap) / -2); bottom: calc(var(--gap) / -2); }
+
 /* Tool panel, 1:1 with the Figma component "Mol / Bar vertical"; buttons share the format panel's styles. */
 .tools { position: fixed; z-index: 5; left: calc(12px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; align-items: center; width: 62px; padding: 21px 16px;
   /* 18px gaps as in the mockup; on a short screen it fits between the top bar and the bottom edge
      by tightening them (462px is the buttons, separator and padding; there are 14 gaps). */
-  gap: clamp(6px, calc((100vh - 150px - 462px) / 14), 18px);
+  --gap: clamp(6px, calc((100vh - 150px - 462px) / 14), 18px);
+  gap: var(--gap);
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
 .tools.docked { left: 0; border-radius: 0 12px 12px 0; }
 /* Panels whose buttons can be rearranged: holding one lifts it so it can be moved (see ui/sortable.ts). */
@@ -84,7 +102,7 @@ button { font: inherit; color: inherit; }
 .draw-panel { position: fixed; z-index: 5; left: calc(86px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 18px; width: 62px; padding: 21px 16px;
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
-.ink-preset, .ink-size { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--fmt-line); background: transparent;
+.ink-preset, .ink-size { position: relative; flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--fmt-line); background: transparent;
   display: grid; place-items: center; padding: 0; cursor: pointer; transition: border-color .25s ease; }
 .ink-preset:hover, .ink-size:hover { border-color: var(--muted); }
 .ink-preset.on, .ink-size.on { border: 2px solid #4DA3FF; }
