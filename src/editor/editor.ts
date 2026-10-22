@@ -2,13 +2,13 @@ import type { Board } from '../model/board';
 import type { Item, ItemType, Link, Side } from '../model/types';
 import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
-import { boundsOf, hitItem, hitLink, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
+import { boundsOf, hitItem, hitLink, nearestSide, nearInk, normRect, onTaskBox, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
 import { clearTextCache, DOT_GAP, DOT_R, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
 import { font, itemTextHeight } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 
-export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser';
+export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task';
 export type PenTool = 'pen' | 'marker';
 export const DRAW_TOOLS: Tool[] = ['pen', 'marker', 'eraser'];
 
@@ -47,7 +47,7 @@ type Gesture =
   | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean }
   | { type: 'resize'; id: string; start: Point; w0: number; h0: number }
   | { type: 'create'; id: string; origin: Point }
-  | { type: 'place'; at: Point; tool: 'sticky' | 'text' }
+  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
   | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
   | { type: 'draw'; tool: PenTool; pts: Point[] }
@@ -587,6 +587,7 @@ export class Editor {
     switch (this.tool) {
       case 'sticky':
       case 'text':
+      case 'task':
         this.gesture = { type: 'place', at: w, tool: this.tool };
         return;
       case 'rect':
@@ -624,6 +625,11 @@ export class Editor {
     if (single && this.onHandle(single, w)) {
       this.board.beginGesture();
       this.gesture = { type: 'resize', id: single.id, start: w, w0: single.w, h0: single.h };
+      return;
+    }
+    // A task's checkbox ticks it off (or back on) instead of picking the task up.
+    if (hit?.type === 'task' && !e.shiftKey && onTaskBox(hit, w)) {
+      this.board.update(hit.id, { done: hit.done ? undefined : true });
       return;
     }
     if (hit) {
@@ -788,9 +794,9 @@ export class Editor {
         return;
       case 'place': {
         const d = DEFAULTS[g.tool];
-        const it = g.tool === 'sticky'
-          ? this.newItem('sticky', g.at.x - d.w / 2, g.at.y - d.h / 2)
-          : this.newItem('text', g.at.x - 4, g.at.y - 14);
+        const it = g.tool === 'text'
+          ? this.newItem('text', g.at.x - 4, g.at.y - 14)
+          : this.newItem(g.tool, g.at.x - d.w / 2, g.at.y - d.h / 2);
         if (it.type === 'text') it.h = itemTextHeight(it);
         this.board.add(it);
         this.setTool('select');
@@ -882,7 +888,11 @@ export class Editor {
     if (dot) cursor = 'crosshair';
     else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
     else if (hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
-    else if (hitItem(this.board.list(), w, this.cam.z)) cursor = alt ? 'copy' : 'move';
+    else {
+      const hit = hitItem(this.board.list(), w, this.cam.z);
+      if (hit?.type === 'task' && onTaskBox(hit, w)) cursor = 'pointer';
+      else if (hit) cursor = alt ? 'copy' : 'move';
+    }
     this.canvas.style.cursor = cursor;
   }
 

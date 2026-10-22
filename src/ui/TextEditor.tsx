@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { Editor } from '../editor/editor';
 import { alignOf, TEXT_COLORS, type Item } from '../model/types';
 import { fontOf, FONTS, LINE_HEIGHT } from '../canvas/text';
+import { TASK_INSET } from '../canvas/geometry';
 
 /**
  * A textarea laid over the item being edited, scaled with the board so the
@@ -35,10 +36,12 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   const z = editor.cam.z;
   const isFrame = item.type === 'frame';
   const fs = isFrame ? 15 : item.fs ?? 16;
-  const pad = item.type === 'sticky' ? 14 : item.type === 'rect' ? 10 : item.type === 'ellipse' ? Math.min(item.w, item.h) * 0.15 + 6 : 0;
-  const width = isFrame ? Math.max(160, item.w * 0.6) : item.w - pad * 2;
+  const pad = item.type === 'sticky' ? 14 : item.type === 'rect' ? 10 : item.type === 'task' ? 8 : item.type === 'ellipse' ? Math.min(item.w, item.h) * 0.15 + 6 : 0;
+  // A task's text starts right of its checkbox.
+  const inset = item.type === 'task' ? TASK_INSET : 0;
+  const width = isFrame ? Math.max(160, item.w * 0.6) : item.w - inset - pad * 2;
   const top = isFrame ? item.y - 30 : item.y + pad;
-  const p = editor.toScreen({ x: item.x + (isFrame ? 0 : pad), y: top });
+  const p = editor.toScreen({ x: item.x + (isFrame ? 0 : inset + pad), y: top });
 
   // Centre the text vertically in stickers and shapes, like the canvas does.
   useLayoutEffect(() => {

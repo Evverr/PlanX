@@ -1,4 +1,4 @@
-export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji' | 'ink' | 'image';
+export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji' | 'ink' | 'image' | 'task';
 
 export interface Item {
   id: string;
@@ -35,6 +35,8 @@ export interface Item {
   iw?: number;
   /** Picture as a data URL, image items only. */
   src?: string;
+  /** A task that has been ticked off. */
+  done?: boolean;
   sw?: number;
   hl?: boolean;
 }
@@ -44,8 +46,8 @@ export type TextAlign = 'left' | 'center' | 'right';
 export type ListKind = 'bullet' | 'number';
 
 /** Font weight of text left as it was made: plain for text, heavier on stickers and shapes. */
-export const baseWeight = (type: ItemType): number => (type === 'text' ? 400 : type === 'sticky' ? 500 : 600);
-export const alignOf = (it: Item): TextAlign => it.ta ?? (it.type === 'text' ? 'left' : 'center');
+export const baseWeight = (type: ItemType): number => (type === 'text' ? 400 : type === 'sticky' || type === 'task' ? 500 : 600);
+export const alignOf = (it: Item): TextAlign => it.ta ?? (it.type === 'text' || it.type === 'task' ? 'left' : 'center');
 
 /** Text colours; "ink" is the item's usual text colour. */
 export const TEXT_COLORS: Record<string, string> = {
@@ -122,11 +124,12 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   emoji: { w: 64, h: 64 },
   ink: { w: 1, h: 1 },
   image: { w: 200, h: 150 },
+  task: { w: 260, h: 52, fs: 16, text: '' },
 };
 
 export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse'];
-export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse'];
-export const EDITABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'frame'];
+export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'task'];
+export const EDITABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'frame', 'task'];
 
 export const uid = (): string =>
   Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
