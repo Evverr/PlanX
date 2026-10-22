@@ -11,6 +11,7 @@ import { PanelIcon } from './ui/PanelIcon';
 import { DockButton, useDock } from './ui/Dock';
 import { Minimap } from './ui/Minimap';
 import { catFor } from './emoji/emoji';
+import { useSortable } from './ui/sortable';
 
 type Pop = 'clear' | 'icons' | 'help' | 'name' | null;
 
@@ -69,6 +70,9 @@ export function App({ boardId }: { boardId: string }) {
   // One chevron, in the zoom panel, sticks every panel around the edge of the screen to it.
   const [docked, toggleDock] = useDock('panels');
   const [minimap, setMinimap] = useState(false);
+  // Buttons in the top bar and the zoom panel can be rearranged by holding them.
+  const topSort = useSortable('planx-order-top', ['logo', 'sep', 'title', 'undo', 'redo', 'new', 'clear'], 'x');
+  const zoomSort = useSortable('planx-order-zoom', ['people', 'share', 'sep', 'map', 'zoom-out', 'zoom', 'zoom-in', 'theme', 'fit', 'help', 'dock'], 'x');
   const closeMinimap = useCallback(() => setMinimap(false), []);
 
   const [title, setTitle] = useState(board.title);
@@ -95,27 +99,32 @@ export function App({ boardId }: { boardId: string }) {
     <>
       <canvas ref={canvas} className="board-canvas" data-tool={ui.tool} aria-label="Доска" onPointerDown={() => setPop(null)} />
 
-      <header className={`bar topbar ${docked ? 'docked' : ''}`}>
-        <div className="logo">Plan<span>X</span></div>
-        <div className="sep" />
-        {/* The field is as wide as its text (the copy in data-text sizes it), up to 30 characters. */}
-        <div className="title-fit" data-text={(title || 'Без названия').slice(0, 30)}>
-          <input className="title-input" id="board-title" aria-label="Название доски" spellCheck={false} placeholder="Без названия"
-            size={1} maxLength={30} value={title} onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => { if (title.trim() !== board.title) board.setTitle(title.trim()); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur(); }} />
-        </div>
-        <button className="ib hide-narrow" title="Отменить (Ctrl+Z)" aria-label="Отменить" onClick={() => editor.undo()}><PanelIcon name="undo-on" /></button>
-        <button className="ib hide-narrow" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" onClick={() => editor.redo()}><PanelIcon name="redo-on" /></button>
-        <button className="tb hide-narrow" onClick={() => { location.search = `?board=${newBoardId()}`; }}>Новая доска</button>
-        <button className="tb danger" onClick={() => toggle('clear')}>Очистить</button>
+      <header ref={topSort.ref} className={`bar topbar sortable ${docked ? 'docked' : ''} ${topSort.sorting ? 'sorting' : ''}`} {...topSort.container}>
+        {topSort.render({
+          logo: <div className="logo">Plan<span>X</span></div>,
+          sep: <div className="sep" />,
+          // The field is as wide as its text (the copy in data-text sizes it), up to 30 characters.
+          title: (
+            <div className="title-fit" data-text={(title || 'Без названия').slice(0, 30)}>
+              <input className="title-input" id="board-title" aria-label="Название доски" spellCheck={false} placeholder="Без названия" data-nosort
+                size={1} maxLength={30} value={title} onChange={(e) => setTitle(e.target.value)}
+                onBlur={() => { if (title.trim() !== board.title) board.setTitle(title.trim()); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur(); }} />
+            </div>
+          ),
+          undo: <button className="ib hide-narrow" title="Отменить (Ctrl+Z)" aria-label="Отменить" onClick={() => editor.undo()}><PanelIcon name="undo-on" /></button>,
+          redo: <button className="ib hide-narrow" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" onClick={() => editor.redo()}><PanelIcon name="redo-on" /></button>,
+          new: <button className="tb hide-narrow" onClick={() => { location.search = `?board=${newBoardId()}`; }}>Новая доска</button>,
+          clear: <button className="tb danger" onClick={() => toggle('clear')}>Очистить</button>,
+        })}
       </header>
 
       <Toolbar editor={editor} tool={ui.tool} pens={ui.pens} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => toggle('icons')} />
       {pop === 'icons' && <IconPicker onPickEmoji={(id) => { editor.addEmoji(id); setPop(null); }} onPickIcon={(id) => { editor.addIcon(id); setPop(null); }} />}
 
-      <div className={`bar zoom ${docked ? 'docked' : ''}`}>
-        <div className="avatars">
+      <div ref={zoomSort.ref as React.RefObject<HTMLDivElement>} className={`bar zoom sortable ${docked ? 'docked' : ''} ${zoomSort.sorting ? 'sorting' : ''}`} {...zoomSort.container}>
+        {zoomSort.render({
+        people: <div className="avatars">
           <button className="avatar me" title={`${conn.me.name} (вы). Нажмите, чтобы сменить имя`}
             aria-label="Ваше имя" onClick={() => toggle('name')}>
             <img src={catFor()} alt="" draggable={false} />
@@ -124,19 +133,21 @@ export function App({ boardId }: { boardId: string }) {
             <span key={p.id} className="avatar" title={p.name}><img src={catFor(p.id)} alt="" draggable={false} /></span>
           ))}
           {peers.length > 4 && <span className="more">+{peers.length - 4}</span>}
-        </div>
-        <button className="ib" title="Скопировать ссылку на доску" aria-label="Поделиться" onClick={share}><PanelIcon name="link" /></button>
-        <div className="sep" />
-        <button className={`ib ${minimap ? 'on' : ''}`} title="Карта доски" aria-label="Карта доски" aria-pressed={minimap} data-minimap-toggle
-          onClick={() => { setMinimap(!minimap); setPop(null); }}><PanelIcon name="map" /></button>
-        <button className="ib" title="Отдалить (−)" aria-label="Отдалить" onClick={() => editor.zoomCenter(1 / 1.25)}><PanelIcon name="zoom-out" /></button>
-        <button className="zpct" title="Масштаб 100%" onClick={() => editor.zoomCenter(1 / editor.cam.z)}>{Math.round(ui.cam.z * 100)}%</button>
-        <button className="ib" title="Приблизить (+)" aria-label="Приблизить" onClick={() => editor.zoomCenter(1.25)}><PanelIcon name="zoom-in" /></button>
-        <button className="ib" title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'} aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-          onClick={toggleTheme}><PanelIcon name={theme === 'dark' ? 'sun' : 'moon'} /></button>
-        <button className="ib fit" title="Показать всё (Shift+1)" aria-label="Показать всё" onClick={() => editor.fit()}><PanelIcon name="screen" /></button>
-        <button className={`ib ${pop === 'help' ? 'on' : ''}`} title="Подсказки" aria-label="Подсказки" onClick={() => { toggle('help'); setMinimap(false); }}><PanelIcon name="question" /></button>
-        <DockButton edge="bottom" docked={docked} onToggle={toggleDock} />
+        </div>,
+        share: <button className="ib" title="Скопировать ссылку на доску" aria-label="Поделиться" onClick={share}><PanelIcon name="link" /></button>,
+        sep: <div className="sep" />,
+        map: <button className={`ib ${minimap ? 'on' : ''}`} title="Карта доски" aria-label="Карта доски" aria-pressed={minimap} data-minimap-toggle
+          onClick={() => { setMinimap(!minimap); setPop(null); }}><PanelIcon name="map" /></button>,
+        'zoom-out': <button className="ib" title="Отдалить (−)" aria-label="Отдалить" onClick={() => editor.zoomCenter(1 / 1.25)}><PanelIcon name="zoom-out" /></button>,
+        zoom: <button className="zpct" title="Масштаб 100%" onClick={() => editor.zoomCenter(1 / editor.cam.z)}>{Math.round(ui.cam.z * 100)}%</button>,
+        'zoom-in': <button className="ib" title="Приблизить (+)" aria-label="Приблизить" onClick={() => editor.zoomCenter(1.25)}><PanelIcon name="zoom-in" /></button>,
+        theme: <button className="ib" title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'} aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+          onClick={toggleTheme}><PanelIcon name={theme === 'dark' ? 'sun' : 'moon'} /></button>,
+        fit: <button className="ib fit" title="Показать всё (Shift+1)" aria-label="Показать всё" onClick={() => editor.fit()}><PanelIcon name="screen" /></button>,
+        help: <button className={`ib ${pop === 'help' ? 'on' : ''}`} title="Подсказки" aria-label="Подсказки" onClick={() => { toggle('help'); setMinimap(false); }}><PanelIcon name="question" /></button>,
+        // A component can't take the ref, so the dock button sits in a wrapper.
+        dock: <span className="sort-wrap"><DockButton edge="bottom" docked={docked} onToggle={toggleDock} /></span>,
+        })}
       </div>
 
       {minimap && <Minimap editor={editor} items={board.list()} docked={docked} onClose={closeMinimap} />}

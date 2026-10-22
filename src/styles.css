@@ -72,11 +72,12 @@ button { font: inherit; color: inherit; }
   gap: clamp(6px, calc((100vh - 150px - 432px) / 13), 18px);
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
 .tools.docked { left: 0; border-radius: 0 12px 12px 0; }
-/* Holding a button lifts it so it can be moved along the rail (Toolbar does the moving). */
-.tools { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-.tools.sorting, .tools.sorting .fb { cursor: grabbing; }
-.tools .lifted { z-index: 1; }
-.tools .fb.lifted::before { background: var(--fmt-bg); box-shadow: var(--fmt-shadow); }
+/* Panels whose buttons can be rearranged: holding one lifts it so it can be moved (see ui/sortable.ts). */
+.sortable { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.sortable.sorting, .sortable.sorting * { cursor: grabbing !important; }
+.sortable .lifted { position: relative; z-index: 1; }
+.sortable .fb.lifted::before { background: var(--fmt-bg); box-shadow: var(--fmt-shadow); }
+.sortable .lifted:not(.fb, .sep, .tsep, .fsep) { background: var(--surface); box-shadow: var(--fmt-shadow); border-radius: 6px; }
 .tsep { flex: none; width: 20px; height: 7px; position: relative; }
 /* Drawing tools, opened from the rail's drawing button: a second rail beside the first. */
 .draw-panel { position: fixed; z-index: 5; left: calc(90px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
@@ -130,13 +131,14 @@ button { font: inherit; color: inherit; }
 .minimap svg { display: block; width: 240px; height: 160px; cursor: pointer; touch-action: none; }
 .minimap .mm-item { fill: rgba(75, 145, 255, .35); }
 .minimap .mm-frame { fill: rgba(75, 145, 255, .12); }
-.minimap .mm-view { fill: none; stroke: var(--ink); stroke-width: 2; }
+.minimap .mm-view { fill: none; stroke: var(--ink); stroke-width: 2; stroke-opacity: .3; }
 .zpct { min-width: 52px; text-align: center; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; border: 0; background: transparent; cursor: pointer; padding: 8px 4px; border-radius: 6px; transition: background-color .25s ease; }
 .zpct:hover { background: var(--fmt-hover); }
 
 .panel { left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 32px); }
 .sw { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; margin: 0 2px; }
 .sw.on { box-shadow: 0 0 0 2px var(--accent); }
+.sw-group, .sort-wrap { display: flex; align-items: center; }
 .sw.custom { position: relative; overflow: hidden; display: inline-block; background: conic-gradient(#FF5E5E, #FFD25E, #8CE35E, #5ED9E3, #5E8CFF, #C45EFF, #FF5E5E); }
 .sw.custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .sw.none { background: linear-gradient(135deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%), var(--surface) !important; }

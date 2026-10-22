@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DRAW_TOOLS, INK_SIZES, type Editor, type Pens, type PenTool, type Tool } from '../editor/editor';
 import { INK_COLORS } from '../model/types';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
+import { useSortable } from './sortable';
 
 const PENS: Array<[Tool, PanelIconName, string]> = [
   ['pen', 'pen', 'Ручка (P)'],
@@ -17,16 +18,19 @@ const dot = (tool: PenTool, size: number) => Math.round(4 + (size / INK_SIZES[to
  *  Clicking the preset in use opens its colours and widths. */
 export function DrawPanel({ editor, tool, pens }: { editor: Editor; tool: Tool; pens: Pens }) {
   const [editing, setEditing] = useState(false);
+  // Pen, highlighter and eraser can be rearranged by holding them; the presets stay put.
+  const sort = useSortable('planx-order-draw', PENS.map(([t]) => t), 'y');
   const pen = tool === 'pen' || tool === 'marker' ? tool : null;
   const set = pen ? pens[pen] : null;
   return (
-    <div className="draw-panel" role="toolbar" aria-label="Рисование">
-      {PENS.map(([t, icon, label]) => (
-        <button key={t} className={`fb ${tool === t ? 'on' : ''}`} title={label} aria-label={label} aria-pressed={tool === t}
+    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`draw-panel sortable ${sort.sorting ? 'sorting' : ''}`} role="toolbar" aria-label="Рисование"
+      {...sort.container}>
+      {sort.render(Object.fromEntries(PENS.map(([t, icon, label]) => [t, (
+        <button className={`fb ${tool === t ? 'on' : ''}`} title={label} aria-label={label} aria-pressed={tool === t}
           onClick={() => { setEditing(false); editor.setTool(t); }}>
           <PanelIcon name={icon} />
         </button>
-      ))}
+      )])))}
       {pen && set && (
         <>
           <div className="tsep" />
@@ -38,7 +42,7 @@ export function DrawPanel({ editor, tool, pens }: { editor: Editor; tool: Tool; 
             </button>
           ))}
           {editing && (
-            <div className="ink-style" role="dialog" aria-label="Цвет и толщина">
+            <div className="ink-style" role="dialog" aria-label="Цвет и толщина" data-nosort>
               <div className="ink-colors">
                 {Object.keys(INK_COLORS).map((c) => (
                   <button key={c} className={`sw ${set.presets[set.active].color === c ? 'on' : ''}`} style={{ background: swatch(c) }}
