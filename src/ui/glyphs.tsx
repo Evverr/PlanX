@@ -6,16 +6,10 @@ export function Glyph({ id, className }: { id: string; className?: string }) {
   if (!icon) return null;
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
-      {icon.paths.map((p, i) => {
-        const paint = p.fill === 'current' ? 'currentColor' : p.fill;
-        return p.stroke ? (
-          <path key={i} d={p.d} fill="none" stroke={paint} strokeOpacity={p.opacity} strokeWidth={p.stroke}
-            strokeLinecap={p.round ? 'round' : undefined} strokeLinejoin={p.round ? 'round' : undefined} />
-        ) : (
-          <path key={i} d={p.d} fill={paint} fillOpacity={p.opacity}
-            fillRule={p.evenodd ? 'evenodd' : undefined} clipRule={p.evenodd ? 'evenodd' : undefined} />
-        );
-      })}
+      {icon.paths.map((p, i) => (
+        <path key={i} d={p.d} fill={p.fill === 'current' ? 'currentColor' : p.fill} fillOpacity={p.opacity}
+          fillRule={p.evenodd ? 'evenodd' : undefined} clipRule={p.evenodd ? 'evenodd' : undefined} />
+      ))}
     </svg>
   );
 }
