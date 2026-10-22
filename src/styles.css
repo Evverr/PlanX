@@ -135,7 +135,10 @@ button { font: inherit; color: inherit; }
 .zpct { min-width: 52px; text-align: center; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; border: 0; background: transparent; cursor: pointer; padding: 8px 4px; border-radius: 6px; transition: background-color .25s ease; }
 .zpct:hover { background: var(--fmt-hover); }
 
-.panel { left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 32px); }
+.panel { left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 32px); transition: bottom .2s ease; }
+/* Too wide to sit beside the zoom panel: one bar's height (52px) and a gap higher. */
+.panel.raised { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+.panel.docked.raised { bottom: 60px; border-radius: 12px; }
 .sw { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; margin: 0 2px; }
 .sw.on { box-shadow: 0 0 0 2px var(--accent); }
 .sw-group, .sort-wrap { display: flex; align-items: center; }

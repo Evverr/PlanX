@@ -333,12 +333,11 @@ export class Editor {
   }
 
   /** Puts an icon in the middle of the screen (fanned out a little so several don't stack),
-   *  or centred on a screen point when dropped there, `px` screen pixels across if given. */
-  addIcon(icon: string, at?: Point, px?: number): void {
+   *  or centred on a screen point when dropped there. */
+  addIcon(icon: string, at?: Point): void {
     const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
     const n = at ? 0 : this.board.list().filter((i) => i.type === 'icon').length % 6;
-    const s = px ? Math.round(px / this.cam.z) : DEFAULTS.icon.w;
-    const it = this.newItem('icon', c.x - s / 2 + n * 12, c.y - s / 2 + n * 12, { icon, w: s, h: s });
+    const it = this.newItem('icon', c.x - 32 + n * 12, c.y - 32 + n * 12, { icon });
     this.board.add(it);
     this.setTool('select');
     this.setSelection([it.id]);
@@ -381,11 +380,10 @@ export class Editor {
   }
 
   /** Like addIcon. */
-  addEmoji(emoji: string, at?: Point, px?: number): void {
+  addEmoji(emoji: string, at?: Point): void {
     const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
     const n = at ? 0 : this.board.list().filter((i) => i.type === 'emoji').length % 6;
-    const s = px ? Math.round(px / this.cam.z) : DEFAULTS.emoji.w;
-    const it = this.newItem('emoji', c.x - s / 2 + n * 12, c.y - s / 2 + n * 12, { emoji, w: s, h: s });
+    const it = this.newItem('emoji', c.x - 32 + n * 12, c.y - 32 + n * 12, { emoji });
     this.board.add(it);
     this.setTool('select');
     this.setSelection([it.id]);
