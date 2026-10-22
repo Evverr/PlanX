@@ -115,12 +115,12 @@ export function App({ boardId }: { boardId: string }) {
 
       <div className={`bar zoom ${docked ? 'docked' : ''}`}>
         <div className="avatars">
-          <button className="avatar me" style={{ background: conn.me.color }} title={`${conn.me.name} (вы). Нажмите, чтобы сменить имя`}
+          <button className="avatar me" title={`${conn.me.name} (вы). Нажмите, чтобы сменить имя`}
             aria-label="Ваше имя" onClick={() => toggle('name')}>
             <img src={catFor()} alt="" draggable={false} />
           </button>
           {peers.slice(0, 4).map((p) => (
-            <span key={p.id} className="avatar" style={{ background: p.color }} title={p.name}><img src={catFor(p.id)} alt="" draggable={false} /></span>
+            <span key={p.id} className="avatar" title={p.name}><img src={catFor(p.id)} alt="" draggable={false} /></span>
           ))}
           {peers.length > 4 && <span className="more">+{peers.length - 4}</span>}
         </div>

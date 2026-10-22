@@ -106,7 +106,7 @@ button { font: inherit; color: inherit; }
 .status.offline { background: var(--muted); }
 
 .avatars { display: flex; align-items: center; padding: 0 2px 0 4px; }
-.avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--surface); margin-left: -6px; cursor: default; padding: 0; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 2px solid var(--surface); margin-left: -6px; cursor: default; padding: 0; }
 .avatar img { width: 20px; height: 20px; display: block; pointer-events: none; }
 .avatar:first-child { margin-left: 0; }
 .avatar.me { cursor: pointer; }
