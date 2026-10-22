@@ -6,7 +6,7 @@
   --grad-1: #FAFAFA; --grad-2: #FCF0FA; --grad-3: #ECF2FC; --grid: 0, 0, 0;
   /* Format panel (Figma "Mol / Bar") and how much board fills are dimmed. */
   --fmt-bg: rgba(255, 255, 255, .9); --fmt-ink: #454545; --fmt-line: rgba(0, 0, 0, .07); --fmt-hover: rgba(0, 0, 0, .05);
-  --fmt-on: rgba(75, 145, 255, .14); --fmt-shadow: 0 2px 6px rgba(0, 0, 0, .18); --fmt-icon: none; --fmt-marker: #5A5A5A; --fill-dim: 1;
+  --fmt-on: rgba(75, 145, 255, .14); --fmt-shadow: 0 2px 6px rgba(0, 0, 0, .18); --fmt-on-ink: #0080FF; --fmt-marker: #5A5A5A; --fill-dim: 1;
   --logo-x: #0080FF;
   /* Every panel and popover casts the tool rail's shadow. */
   --shadow: var(--fmt-shadow);
@@ -23,7 +23,7 @@
     --accent: #43BCCB; --accent-soft: rgba(67, 188, 203, .18); --frame: rgba(255, 255, 255, .035); --danger: #F07A63;
     --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
     --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
-    --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-icon: invert(1) hue-rotate(180deg); --fmt-marker: #BFC4CC; --fill-dim: .85; --logo-x: #4DA3FF;
+    --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-marker: #BFC4CC; --fill-dim: .85; --logo-x: #4DA3FF;
     --shape-stroke: rgba(10, 12, 16, .6); --avatar-bg: transparent; --avatar-fade: .85;
     color-scheme: dark;
   }
@@ -33,7 +33,7 @@
   --accent: #43BCCB; --accent-soft: rgba(67, 188, 203, .18); --frame: rgba(255, 255, 255, .035); --danger: #F07A63;
   --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
   --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
-  --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-icon: invert(1) hue-rotate(180deg); --fmt-marker: #BFC4CC; --fill-dim: .85; --logo-x: #4DA3FF;
+  --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-marker: #BFC4CC; --fill-dim: .85; --logo-x: #4DA3FF;
   --shape-stroke: rgba(10, 12, 16, .6); --avatar-bg: transparent; --avatar-fade: .85;
   color-scheme: dark;
 }
@@ -143,10 +143,12 @@ button { font: inherit; color: inherit; }
 .sw.custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .sw.none { background: linear-gradient(135deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%), var(--surface) !important; }
 
-/* Panel icons from Figma are dark; in the dark theme flip their lightness but keep their hue (the blue B stays blue). */
-img.pi { display: block; flex: none; pointer-events: none; filter: var(--fmt-icon); }
-img.pi.grid24 { width: 30px; height: 30px; }
-img.dock-chevron { transition: transform .25s ease; }
+/* Panel icons (Figma SVGs used as masks): the panel's ink, blue on a pressed button. */
+.pi { display: block; flex: none; width: 30px; height: 30px; pointer-events: none; background: var(--fmt-ink);
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; -webkit-mask-size: contain; mask-size: contain; }
+.on .pi { background: var(--fmt-on-ink); }
+.pi.caret { width: 24px; height: 24px; }
+.dock-chevron { transition: transform .25s ease; }
 .fsep { flex: none; width: 5px; height: 24px; position: relative; }
 .fsep.line::after { content: ""; position: absolute; left: 50%; top: 2px; width: 1px; height: 20px; background: var(--fmt-line); }
 /* Text controls over the selected text or sticker; TextPanel in FormatPanel.tsx places it. */
@@ -171,7 +173,7 @@ img.dock-chevron { transition: transform .25s ease; }
 .fb:disabled { opacity: .3; cursor: default; }
 .fb.sw-btn { min-width: 24px; width: 24px; height: 30px; }
 .fb.sw-btn::before { inset: -6px -9px; }
-.fb.sw-btn > img { margin: 0 -3px; }
+.fb.sw-btn > .pi { margin: 0 -3px; }
 .fb .swatch { position: absolute; left: 4px; right: 4px; bottom: -1px; height: 4px; border-radius: 2px; }
 .fpick { position: relative; isolation: isolate; flex: none; height: 30px; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; padding: 0; cursor: pointer; font: 500 17px/1 "Inter", var(--ui); color: var(--fmt-ink); white-space: nowrap; }
 
