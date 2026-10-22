@@ -8,7 +8,7 @@ const HOLD_MS = 168, HOLD_SLOP = 6;
 export const isSeparator = (key: string) => key.startsWith('sep') || key.startsWith('gap');
 
 /** The saved order (with renamed keys renamed), minus anything no longer in the panel, plus anything new at the end. */
-function readOrder(storageKey: string, defaults: string[], renames: Record<string, string>): string[] {
+export function readOrder(storageKey: string, defaults: string[], renames: Record<string, string>): string[] {
   try {
     let saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
     if (Array.isArray(saved)) saved = saved.map((k) => renames[k] ?? k);

@@ -1,5 +1,5 @@
 import type { Board } from '../model/board';
-import type { Item, ItemType, Link, Side } from '../model/types';
+import type { Item, ItemType, Link, PolyShape, Side } from '../model/types';
 import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
 import { boundsOf, hitItem, hitLink, nearestSide, nearInk, normRect, onAudioButton, onTaskBox, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
@@ -10,9 +10,12 @@ import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, lineAt, newTable, withCount, withScale, withSize } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
 
-export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table';
+export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | PolyShape;
 export type PenTool = 'pen' | 'marker';
 export const DRAW_TOOLS: Tool[] = ['pen', 'marker', 'eraser'];
+/** Tools that draw a figure by dragging out its box; the polygons are one item type with a `shape`. */
+export const SHAPE_TOOLS: Tool[] = ['rect', 'ellipse', 'triangle', 'rhombus', 'pentagon', 'star'];
+const isPoly = (t: Tool): t is PolyShape => t === 'triangle' || t === 'rhombus' || t === 'pentagon' || t === 'star';
 
 /** A pen's colour (a key of INK_COLORS or '#rrggbb') and line width in screen pixels at the zoom it's drawn at. */
 export interface InkStyle { color: string; size: number }
@@ -41,6 +44,8 @@ export interface UIState {
   editingId: string | null;
   /** The table cell being edited, when editingId is a table. */
   editingCell: number | null;
+  /** Items are being moved or resized by hand right now. */
+  moving: boolean;
   cam: Camera;
   pens: Pens;
 }
@@ -75,6 +80,7 @@ export class Editor {
   selection = new Set<string>();
   editingId: string | null = null;
   editingCell: number | null = null;
+  moving = false;
   pens: Pens = readPens();
 
   private canvas: HTMLCanvasElement | null = null;
@@ -116,7 +122,13 @@ export class Editor {
   };
 
   private snapshot(): UIState {
-    return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, editingCell: this.editingCell, cam: { ...this.cam }, pens: this.pens };
+    return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, editingCell: this.editingCell, moving: this.moving, cam: { ...this.cam }, pens: this.pens };
+  }
+
+  private setMoving(moving: boolean): void {
+    if (this.moving === moving) return;
+    this.moving = moving;
+    this.emit();
   }
 
   private emit(): void {
@@ -439,6 +451,21 @@ export class Editor {
     }
   }
 
+  /** Puts a frame around two or more selected items, 40 units clear of them, and opens its title
+   *  for typing as a new frame's is. Returns whether there was enough to frame. */
+  frameSelection(): boolean {
+    const b = boundsOf(this.selectedItems());
+    if (this.selectedItems().length < 2 || !b) return false;
+    // Just under the lowest of them, not under everything: a frame they already sit in stays below.
+    const pad = 40, z = Math.min(...this.selectedItems().map((i) => i.z)) - 0.5;
+    const it = this.newItem('frame', b.x - pad, b.y - pad, { w: Math.round(b.w + pad * 2), h: Math.round(b.h + pad * 2), z });
+    this.board.add(it);
+    this.setTool('select');
+    this.setSelection([it.id]);
+    this.startEditing(it.id);
+    return true;
+  }
+
   /** Adds (+1) or removes (-1) the last column or row of the selected tables. */
   changeTable(axis: 'col' | 'row', delta: 1 | -1): void {
     this.board.transact(() => {
@@ -623,9 +650,14 @@ export class Editor {
         return;
       case 'rect':
       case 'ellipse':
+      case 'triangle':
+      case 'rhombus':
+      case 'pentagon':
+      case 'star':
       case 'frame': {
         this.board.beginGesture();
-        const it = this.newItem(this.tool, w.x, w.y, { w: 1, h: 1 });
+        const t = this.tool;
+        const it = isPoly(t) ? this.newItem('polygon', w.x, w.y, { w: 1, h: 1, shape: t }) : this.newItem(t, w.x, w.y, { w: 1, h: 1 });
         this.board.add(it);
         this.gesture = { type: 'create', id: it.id, origin: w };
         return;
@@ -656,6 +688,7 @@ export class Editor {
     if (single && this.onHandle(single, w)) {
       this.board.beginGesture();
       this.gesture = { type: 'resize', id: single.id, start: w, w0: single.w, h0: single.h };
+      this.setMoving(true);
       return;
     }
     // Inside a selected table (away from the corner handle), its lines resize the column or row before them.
@@ -664,6 +697,7 @@ export class Editor {
       this.board.beginGesture();
       const sizes = line.axis === 'col' ? single.cols : single.rows;
       this.gesture = { type: 'tableLine', id: single.id, axis: line.axis, index: line.index, start: w, size0: sizes?.[line.index] ?? 0 };
+      this.setMoving(true);
       return;
     }
     // A task's checkbox ticks it off (or back on) instead of picking the task up.
@@ -755,6 +789,7 @@ export class Editor {
         if (!g.moved) {
           if (Math.hypot(dx, dy) * this.cam.z < 3) return;
           g.moved = true;
+          this.setMoving(true);
           this.board.beginGesture();
           if (e.altKey) g.orig = this.dragCopies(g.orig);
         }
@@ -834,6 +869,7 @@ export class Editor {
     if (g.type === 'pinch') { if (!this.pointers.size) this.gesture = null; return; }
     this.gesture = null;
     this.canvas?.classList.remove('panning');
+    this.setMoving(false);
 
     switch (g.type) {
       case 'drag':
@@ -931,6 +967,7 @@ export class Editor {
     if (g.type === 'create') { this.board.remove([g.id]); this.board.endGesture(); }
     if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'erase' || g.type === 'tableLine') this.board.endGesture();
     this.gesture = null;
+    this.setMoving(false);
     this.requestRender();
   }
 
@@ -991,6 +1028,7 @@ export class Editor {
         case 'KeyV': e.preventDefault(); this.paste(); return;
         case 'KeyD': e.preventDefault(); this.duplicate(); return;
         case 'KeyA': e.preventDefault(); this.setSelection(this.board.list().map((i) => i.id)); return;
+        case 'KeyG': e.preventDefault(); this.frameSelection(); return;
       }
       return;
     }

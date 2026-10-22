@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { Editor } from '../editor/editor';
-import { alignOf, TEXT_COLORS, type Item } from '../model/types';
+import { alignOf, TEXT_COLORS, textPad, type Item } from '../model/types';
 import { fontOf, FONTS, LINE_HEIGHT } from '../canvas/text';
 import { TASK_INSET } from '../canvas/geometry';
 
@@ -36,7 +36,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   const z = editor.cam.z;
   const isFrame = item.type === 'frame';
   const fs = isFrame ? 15 : item.fs ?? 16;
-  const pad = item.type === 'sticky' ? 14 : item.type === 'rect' ? 10 : item.type === 'task' || item.type === 'table' ? 8 : item.type === 'ellipse' ? Math.min(item.w, item.h) * 0.15 + 6 : 0;
+  const pad = textPad(item);
   // A task's text starts right of its checkbox.
   const inset = item.type === 'task' ? TASK_INSET : 0;
   const width = isFrame ? Math.max(160, item.w * 0.6) : item.w - inset - pad * 2;

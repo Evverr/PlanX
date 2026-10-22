@@ -1,12 +1,12 @@
 import type { Item, Link, Side } from '../model/types';
-import { alignOf, FILLS, ICON_COLORS, INK_COLORS, MARK_COLORS, TEXT_COLORS } from '../model/types';
+import { alignOf, FILLS, textPad, ICON_COLORS, INK_COLORS, MARK_COLORS, TEXT_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellRect, cellText, colsOf, rowsOf } from '../model/table';
 import { audioProgress, clock } from './audio';
 import type { Point, Rect } from './geometry';
-import { audioButton, center, curveBetween, edgePoint, inkPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_BOX_R, TASK_INSET, taskBox, type Bezier } from './geometry';
+import { audioButton, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_BOX_R, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -219,17 +219,19 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       if (!editing) drawText(ctx, it, 14, theme.stickyInk, true, s);
       break;
     case 'rect':
-    case 'ellipse': {
+    case 'ellipse':
+    case 'polygon': {
       const none = it.color === 'none';
       ctx.beginPath();
       if (it.type === 'rect') ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(CORNER, it.w / 2, it.h / 2));
-      else ctx.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
+      else if (it.type === 'ellipse') ctx.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
+      else outlinePolygon(ctx, it);
       if (!none) { ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : FILLS[it.color ?? 'blue'] ?? FILLS.blue, theme.dim); ctx.fill(); }
       ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
       ctx.strokeStyle = none ? theme.ink : theme.shapeStroke;
       ctx.stroke();
-      const pad = it.type === 'ellipse' ? Math.min(it.w, it.h) * 0.15 + 6 : 10;
-      if (!editing) drawText(ctx, it, pad, none ? theme.ink : theme.stickyInk, true, s);
+      if (!editing) drawText(ctx, it, textPad(it), none ? theme.ink : theme.stickyInk, true, s);
       break;
     }
     case 'text':
@@ -308,6 +310,14 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
     ctx.stroke();
   }
   if (!editing) drawText(ctx, { ...it, x: it.x + TASK_INSET, w: it.w - TASK_INSET, fx: it.fx || it.done, tc: it.done ? undefined : it.tc }, 8, it.done ? theme.muted : theme.ink, true, s);
+}
+
+/** Adds a polygon item's outline to the current path. */
+function outlinePolygon(ctx: CanvasRenderingContext2D, it: Item) {
+  const pts = polyPoints(it);
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (const p of pts.slice(1)) ctx.lineTo(p.x, p.y);
+  ctx.closePath();
 }
 
 /** Blue of the audio note's play button and of the played part of its waveform. */
@@ -507,7 +517,8 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
     if (it.type === 'ellipse') {
       lc.moveTo(it.x + it.w, it.y + it.h / 2);
       lc.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
-    } else lc.roundRect(it.x, it.y, it.w, it.h, corner(it));
+    } else if (it.type === 'polygon') outlinePolygon(lc, it);
+    else lc.roundRect(it.x, it.y, it.w, it.h, corner(it));
   }
   lc.fill();
   ctx.save();
