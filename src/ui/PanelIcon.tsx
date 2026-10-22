@@ -7,12 +7,12 @@ export type PanelIconName =
   | 'cursor' | 'hand' | 'sticker' | 'text' | 'landscape' | 'circle-check' | 'maximize' | 'smile' | 'chevron-left'
   | 'moon' | 'sun' | 'zoom-in' | 'zoom-out' | 'screen' | 'question-l' | 'undo-on' | 'redo-on'
   | 'to-front' | 'to-back' | 'duplicate' | 'trashcan' | 'map' | 'pen' | 'highlighter' | 'eraser'
-  | 'align-left' | 'align-center' | 'align-right' | 'bulleted-list' | 'numbered-list' | 'question' | 'ellipse' | 'frame' | 'microphone' | 'triangle' | 'rhombus' | 'pentagon' | 'star' | 'plus' | 'cross' | 'plus-m' | 'minus-m';
+  | 'align-left' | 'align-center' | 'align-right' | 'bulleted-list' | 'numbered-list' | 'question' | 'ellipse' | 'frame' | 'microphone' | 'triangle' | 'rhombus' | 'pentagon' | 'star' | 'plus' | 'cross' | 'plus-s' | 'minus-s';
 
 /** These come from the board icon set (assets/icons), drawn on a 24 grid; they're shown at 30 like the rest. */
 const GRID24 = new Set<PanelIconName>(['list', 'moon', 'sun', 'zoom-in', 'zoom-out', 'screen', 'question-l', 'undo-on', 'redo-on',
   'to-front', 'to-back', 'duplicate', 'trashcan', 'map', 'pen', 'highlighter', 'eraser',
-  'align-left', 'align-center', 'align-right', 'bulleted-list', 'numbered-list', 'question', 'ellipse', 'frame', 'microphone', 'triangle', 'rhombus', 'pentagon', 'star', 'plus', 'cross', 'plus-m', 'minus-m']);
+  'align-left', 'align-center', 'align-right', 'bulleted-list', 'numbered-list', 'question', 'ellipse', 'frame', 'microphone', 'triangle', 'rhombus', 'pentagon', 'star', 'plus', 'cross', 'plus-s', 'minus-s']);
 
 /** The icon is a mask over a plain fill, so CSS picks its colour: the panel's ink, blue when pressed. */
 export function PanelIcon({ name, className, style }: { name: PanelIconName; className?: string; style?: React.CSSProperties }) {
