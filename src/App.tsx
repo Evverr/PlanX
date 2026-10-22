@@ -87,13 +87,13 @@ export function App({ boardId }: { boardId: string }) {
   const linkCount = ui.selection.filter((id) => board.getLink(id)).length;
   const editing = ui.editingId ? board.get(ui.editingId) : undefined;
   const textItem = selItems.length === 1 && ['text', 'sticky', 'task', 'table'].includes(selItems[0].type) ? selItems[0] : undefined;
-  // The text panel shows up a second after the item is picked, or after it's let go when moved;
+  // The text panel shows up 0.6 s after the item is picked, or after it's let go when moved;
   // it stays away while the item is being moved or resized.
   const [textShown, setTextShown] = useState<string | null>(null);
   useEffect(() => {
     setTextShown(null);
     if (!textItem || ui.moving) return;
-    const t = setTimeout(() => setTextShown(textItem.id), 1000);
+    const t = setTimeout(() => setTextShown(textItem.id), 600);
     return () => clearTimeout(t);
   }, [textItem?.id, ui.moving]); // eslint-disable-line react-hooks/exhaustive-deps
   const peers = conn.peers();
@@ -134,8 +134,8 @@ export function App({ boardId }: { boardId: string }) {
           ),
           undo: <button className="ib hide-narrow" title="Отменить (Ctrl+Z)" aria-label="Отменить" onClick={() => editor.undo()}><PanelIcon name="undo-on" /></button>,
           redo: <button className="ib hide-narrow" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" onClick={() => editor.redo()}><PanelIcon name="redo-on" /></button>,
-          new: <button className="tb hide-narrow" onClick={() => { location.search = `?board=${newBoardId()}`; }}>Новая доска</button>,
-          clear: <button className="tb danger" onClick={() => toggle('clear')}>Очистить</button>,
+          new: <button className="ib hide-narrow" title="Новая доска" aria-label="Новая доска" onClick={() => { location.search = `?board=${newBoardId()}`; }}><PanelIcon name="plus" /></button>,
+          clear: <button className={`ib ${pop === 'clear' ? 'on' : ''}`} title="Очистить доску" aria-label="Очистить доску" onClick={() => toggle('clear')}><PanelIcon name="cross" /></button>,
         })}
       </header>
 
