@@ -71,7 +71,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           fontStyle: item.fi ? 'italic' : undefined,
           textAlign: alignOf(item),
           textDecoration: [item.fu && 'underline', item.fx && 'line-through'].filter(Boolean).join(' ') || undefined,
-          color: item.tc && (item.tc.startsWith('#') ? item.tc : TEXT_COLORS[item.tc]) || undefined,
+          color: item.tc && (item.tc.startsWith('#') ? item.tc : TEXT_COLORS[item.tc]) || (item.type === 'mind' && !item.parent ? 'var(--surface)' : undefined),
         }),
         padding: isFrame ? '0 4px' : 0,
       }}
@@ -89,6 +89,11 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey || isFrame))) {
           e.preventDefault();
           commit();
+        } else if (item.type === 'mind' && (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey))) {
+          // In a mind map, typing goes on in a new node: Tab a branch of this one, Enter one beside it.
+          e.preventDefault();
+          commit();
+          editor.addMindNode(id, e.key === 'Enter' && item.parent ? 'sibling' : 'child');
         }
       }}
     />

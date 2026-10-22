@@ -92,6 +92,21 @@ export const itemTextHeight = (it: Item, text = it.text ?? '', width = it.w): nu
 export const taskHeight = (it: Item, text = it.text ?? '', width = it.w): number =>
   Math.max(DEFAULTS.task.h, measureTextHeight(withList(text || ' ', it.ls), width - TASK_INSET * 2 - 20, it.fs ?? 16, fontOf(it)) + 20);
 
+/** Widest a mind map node grows before its text wraps, and its narrowest. */
+const MIND_MAX_W = 260, MIND_MIN_W = 48;
+
+/** A mind map node's size: as wide as its longest line (up to MIND_MAX_W), as tall as its lines, plus padding. */
+export function mindSize(it: Item, text = it.text ?? ''): { w: number; h: number } {
+  const fs = it.fs ?? 16, st = fontOf(it), pad = 12;
+  if (typeof document === 'undefined') return { w: 160, h: Math.ceil(fs * LINE_HEIGHT) + pad * 2 };
+  measureCtx ??= document.createElement('canvas').getContext('2d');
+  if (!measureCtx) return { w: 160, h: Math.ceil(fs * LINE_HEIGHT) + pad * 2 };
+  measureCtx.font = font(fs, st.weight, st.family, st.italic);
+  const widest = Math.max(...(text || ' ').split('\n').map((l) => measureCtx!.measureText(l).width));
+  const inner = Math.ceil(Math.min(MIND_MAX_W, Math.max(MIND_MIN_W, widest + 2)));
+  return { w: inner + pad * 2, h: measureTextHeight(text || ' ', inner, fs, st) + pad * 2 };
+}
+
 /** Height a text item or task needs for its text; other items have none to fit. */
 export const fitHeight = (it: Item, text = it.text ?? '', width = it.w): number | null =>
   it.type === 'text' ? itemTextHeight(it, text, width) : it.type === 'task' ? taskHeight(it, text, width) : null;

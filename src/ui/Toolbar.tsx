@@ -16,6 +16,7 @@ const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
   task: ['task', 'circle-check', 'Задача'],
   link: ['link', 'maximize', 'Стрелка (C)'],
   table: ['table', 'columns', 'Таблица'],
+  mind: ['mind', 'branch', 'Майнд-карта'],
 };
 
 /** Buttons from the mockup that have no feature behind them yet. */
@@ -24,7 +25,7 @@ const LATER: Partial<Record<string, [PanelIconName, string]>> = {
 };
 
 /** Everything on the rail, top to bottom, until someone rearranges it. */
-const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'link', 'table', 'frames', 'draw', 'image', 'audio', 'smile', 'paint'];
+const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'link', 'table', 'mind', 'frames', 'draw', 'image', 'audio', 'smile', 'paint'];
 
 /** Rail buttons that make something on the board when dragged off the rail, and their icons. */
 const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape', paint: 'paint' };
@@ -49,7 +50,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
   // A button dragged off the rail turns into what it makes and lands on the board there; buttons
   // that make nothing to preview stay an icon (and the picture button opens its dialog for that spot).
   const toolOf = (key: string): Tool | null =>
-    key === 'frames' ? 'frame' : key === 'oval' ? lastShape.current : ['sticky', 'text', 'task', 'table'].includes(key) ? key as Tool : null;
+    key === 'frames' ? 'frame' : key === 'oval' ? lastShape.current : ['sticky', 'text', 'task', 'table', 'mind'].includes(key) ? key as Tool : null;
   const dropOut = {
     preview: (key: string) => {
       const t = toolOf(key), icon = TOOLS[key]?.[1] ?? ICONS[key];
