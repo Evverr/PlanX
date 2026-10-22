@@ -1,12 +1,13 @@
 /** Text formatting panel over the selected text or sticker, built from the controls of the
  *  Figma mockup (Mol / Bar). Each setting applies to the item's whole text. */
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 
 import type { Editor } from '../editor/editor';
 import { alignOf, baseWeight, DEFAULTS, MARK_COLORS, TEXT_COLORS, type Item, type ListKind, type TextAlign } from '../model/types';
 import { DOT_GAP, DOT_R } from '../canvas/renderer';
 import { FONTS } from '../canvas/text';
 import { PanelIcon as Icon, type PanelIconName as IconName } from './PanelIcon';
+import { useSortable } from './sortable';
 
 function Btn({ icon, label, on, off, swatch, menu, onClick }: {
   icon: IconName; label: string; on?: boolean; off?: boolean; swatch?: string; menu?: boolean; onClick?: () => void;
@@ -33,7 +34,7 @@ function Drop({ open, menu, grid, children }: { open: boolean; menu: ReactNode; 
   return (
     <div className="tf-drop">
       {children}
-      {open && <div className={`tf-menu ${grid ? 'grid' : ''}`} role="menu">{menu}</div>}
+      {open && <div className={`tf-menu ${grid ? 'grid' : ''}`} role="menu" data-nosort>{menu}</div>}
     </div>
   );
 }
@@ -47,6 +48,8 @@ const LISTS: Array<[ListKind, IconName, string]> = [['bullet', 'bulleted-list', 
 
 const hex = (c: string | undefined, table: Record<string, string>) => (c ? (c.startsWith('#') ? c : table[c]) : undefined);
 
+const ORDER = ['font', 'gap', 'style', 'gap2', 'size', 'gap3', 'bold', 'italic', 'underline', 'strike', 'sep', 'color', 'mark', 'sep2', 'align', 'sep3', 'list'];
+
 type Menu = 'font' | 'style' | 'size' | 'color' | 'mark' | 'align' | 'list';
 
 /** Gap between the selected item's top dot and the text panel, and the panel's margin to the screen edge. */
@@ -54,7 +57,8 @@ const GAP = 20, MARGIN = 12;
 
 /** Hung 20px over the top dot of the selected text or sticker (under the bottom dot when there's no room above). */
 export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
-  const el = useRef<HTMLDivElement>(null);
+  const sort = useSortable('planx-order-text', ORDER, 'x');
+  const el = sort.ref;
   const [menu, setMenu] = useState<Menu | null>(null);
   useLayoutEffect(() => {
     const box = el.current!;
@@ -92,66 +96,70 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
   const mark = hex(item.mk, MARK_COLORS);
 
   return (
-    // Keep focus in the text being edited when a control is pressed.
-    <div ref={el} className="tfmt" role="toolbar" aria-label="Форматирование текста" onPointerDown={(e) => e.preventDefault()}>
-      <Drop open={menu === 'font'} menu={Object.entries(FONTS).map(([k, f]) => (
-        <button key={k} className={`tf-item ${(item.ff ?? 'onest') === k ? 'on' : ''}`} style={{ fontFamily: f.css }}
-          onClick={() => set({ ff: k === 'onest' ? undefined : k })}>{f.label}</button>
-      ))}>
-        <Pick value={FONTS[item.ff ?? 'onest']?.label ?? 'Onest'} label="Шрифт" onClick={() => toggle('font')} />
-      </Drop>
-      <div className="fsep" />
-      <Drop open={menu === 'style'} menu={<>
-        <button className={`tf-item ${heading ? '' : 'on'}`} onClick={() => set({ fs: DEFAULTS[item.type].fs, fw: undefined })}>Обычный</button>
-        {HEADINGS.map(([label, size]) => (
-          <button key={label} className={`tf-item ${heading?.[0] === label ? 'on' : ''}`} style={{ fontSize: Math.round(size * 0.55), fontWeight: 700 }}
-            onClick={() => set({ fs: size, fw: 700 })}>{label}</button>
-        ))}
-      </>}>
-        <Pick value={heading?.[0] ?? 'Обычный'} label="Стиль" onClick={() => toggle('style')} />
-      </Drop>
-      <div className="fsep" />
-      <Drop open={menu === 'size'} menu={SIZES.map((s) => (
-        <button key={s} className={`tf-item num ${s === fs ? 'on' : ''}`} onClick={() => set({ fs: s })}>{s}</button>
-      ))}>
-        <Pick value={String(fs)} label="Размер" onClick={() => toggle('size')} />
-      </Drop>
-      <div className="fsep" />
-      <Btn icon="bold" label="Жирный" on={bold} onClick={() => set({ fw: bold ? 400 : 700 })} />
-      <Btn icon="italic" label="Курсив" on={item.fi} onClick={() => set({ fi: item.fi ? undefined : true })} />
-      <Btn icon="underline" label="Подчёркнутый" on={item.fu} onClick={() => set({ fu: item.fu ? undefined : true })} />
-      <Btn icon="strike" label="Зачёркнутый" on={item.fx} onClick={() => set({ fx: item.fx ? undefined : true })} />
-      <div className="fsep line" />
-      <Drop open={menu === 'color'} grid menu={Object.entries(TEXT_COLORS).map(([k, v]) => (
-        <button key={k} className={`sw ${(item.tc ?? 'ink') === k ? 'on' : ''}`} style={{ background: v || 'var(--ink)' }}
-          title={k === 'ink' ? 'Обычный' : undefined} aria-label={`Цвет текста ${k}`} onClick={() => set({ tc: k === 'ink' ? undefined : k })} />
-      ))}>
-        <Btn icon="color" label="Цвет текста" swatch={textColor ?? 'var(--fmt-ink)'} on={menu === 'color'} onClick={() => toggle('color')} />
-      </Drop>
-      <Drop open={menu === 'mark'} grid menu={<>
-        <button className={`sw none ${item.mk ? '' : 'on'}`} aria-label="Без выделения" title="Без выделения" onClick={() => set({ mk: undefined })} />
-        {Object.entries(MARK_COLORS).map(([k, v]) => (
-          <button key={k} className={`sw ${item.mk === k ? 'on' : ''}`} style={{ background: v }} aria-label={`Выделение ${k}`} onClick={() => set({ mk: k })} />
-        ))}
-      </>}>
-        <Btn icon="marker" label="Выделение цветом" swatch={mark ?? 'transparent'} on={menu === 'mark'} onClick={() => toggle('mark')} />
-      </Drop>
-      <div className="fsep line" />
-      <Drop open={menu === 'align'} menu={<div className="tf-row">
-        {(['left', 'center', 'right'] as TextAlign[]).map((a) => (
-          <Btn key={a} icon={ALIGN_ICONS[a]} label={ALIGN_LABELS[a]} on={align === a} onClick={() => set({ ta: a })} />
-        ))}
-      </div>}>
-        <Btn icon={ALIGN_ICONS[align]} label="Выравнивание" menu on={menu === 'align'} onClick={() => toggle('align')} />
-      </Drop>
-      <div className="fsep line" />
-      <Drop open={menu === 'list'} menu={<div className="tf-row">
-        {LISTS.map(([kind, icon, label]) => (
-          <Btn key={kind} icon={icon} label={label} on={item.ls === kind} onClick={() => set({ ls: item.ls === kind ? undefined : kind })} />
-        ))}
-      </div>}>
-        <Btn icon={item.ls === 'number' ? 'numbered-list' : 'list'} label="Список" menu on={!!item.ls || menu === 'list'} onClick={() => toggle('list')} />
-      </Drop>
+    // Keep focus in the text being edited when a control is pressed. Controls can be rearranged by holding them;
+    // components can't take the ref, so each sits in a wrapper.
+    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`tfmt sortable ${sort.sorting ? 'sorting' : ''}`} role="toolbar" aria-label="Форматирование текста"
+      {...sort.container} onPointerDown={(e) => { e.preventDefault(); sort.container.onPointerDown(e); }}>
+      {sort.render({
+        font: <span className="sort-wrap"><Drop open={menu === 'font'} menu={Object.entries(FONTS).map(([k, f]) => (
+          <button key={k} className={`tf-item ${(item.ff ?? 'onest') === k ? 'on' : ''}`} style={{ fontFamily: f.css }}
+            onClick={() => set({ ff: k === 'onest' ? undefined : k })}>{f.label}</button>
+        ))}>
+          <Pick value={FONTS[item.ff ?? 'onest']?.label ?? 'Onest'} label="Шрифт" onClick={() => toggle('font')} />
+        </Drop></span>,
+        gap: <div className="fsep" />,
+        style: <span className="sort-wrap"><Drop open={menu === 'style'} menu={<>
+          <button className={`tf-item ${heading ? '' : 'on'}`} onClick={() => set({ fs: DEFAULTS[item.type].fs, fw: undefined })}>Обычный</button>
+          {HEADINGS.map(([label, size]) => (
+            <button key={label} className={`tf-item ${heading?.[0] === label ? 'on' : ''}`} style={{ fontSize: Math.round(size * 0.55), fontWeight: 700 }}
+              onClick={() => set({ fs: size, fw: 700 })}>{label}</button>
+          ))}
+        </>}>
+          <Pick value={heading?.[0] ?? 'Обычный'} label="Стиль" onClick={() => toggle('style')} />
+        </Drop></span>,
+        gap2: <div className="fsep" />,
+        size: <span className="sort-wrap"><Drop open={menu === 'size'} menu={SIZES.map((s) => (
+          <button key={s} className={`tf-item num ${s === fs ? 'on' : ''}`} onClick={() => set({ fs: s })}>{s}</button>
+        ))}>
+          <Pick value={String(fs)} label="Размер" onClick={() => toggle('size')} />
+        </Drop></span>,
+        gap3: <div className="fsep" />,
+        bold: <span className="sort-wrap"><Btn icon="bold" label="Жирный" on={bold} onClick={() => set({ fw: bold ? 400 : 700 })} /></span>,
+        italic: <span className="sort-wrap"><Btn icon="italic" label="Курсив" on={item.fi} onClick={() => set({ fi: item.fi ? undefined : true })} /></span>,
+        underline: <span className="sort-wrap"><Btn icon="underline" label="Подчёркнутый" on={item.fu} onClick={() => set({ fu: item.fu ? undefined : true })} /></span>,
+        strike: <span className="sort-wrap"><Btn icon="strike" label="Зачёркнутый" on={item.fx} onClick={() => set({ fx: item.fx ? undefined : true })} /></span>,
+        sep: <div className="fsep line" />,
+        color: <span className="sort-wrap"><Drop open={menu === 'color'} grid menu={Object.entries(TEXT_COLORS).map(([k, v]) => (
+          <button key={k} className={`sw ${(item.tc ?? 'ink') === k ? 'on' : ''}`} style={{ background: v || 'var(--ink)' }}
+            title={k === 'ink' ? 'Обычный' : undefined} aria-label={`Цвет текста ${k}`} onClick={() => set({ tc: k === 'ink' ? undefined : k })} />
+        ))}>
+          <Btn icon="color" label="Цвет текста" swatch={textColor ?? 'var(--fmt-ink)'} on={menu === 'color'} onClick={() => toggle('color')} />
+        </Drop></span>,
+        mark: <span className="sort-wrap"><Drop open={menu === 'mark'} grid menu={<>
+          <button className={`sw none ${item.mk ? '' : 'on'}`} aria-label="Без выделения" title="Без выделения" onClick={() => set({ mk: undefined })} />
+          {Object.entries(MARK_COLORS).map(([k, v]) => (
+            <button key={k} className={`sw ${item.mk === k ? 'on' : ''}`} style={{ background: v }} aria-label={`Выделение ${k}`} onClick={() => set({ mk: k })} />
+          ))}
+        </>}>
+          <Btn icon="marker" label="Выделение цветом" swatch={mark ?? 'transparent'} on={menu === 'mark'} onClick={() => toggle('mark')} />
+        </Drop></span>,
+        sep2: <div className="fsep line" />,
+        align: <span className="sort-wrap"><Drop open={menu === 'align'} menu={<div className="tf-row">
+          {(['left', 'center', 'right'] as TextAlign[]).map((a) => (
+            <Btn key={a} icon={ALIGN_ICONS[a]} label={ALIGN_LABELS[a]} on={align === a} onClick={() => set({ ta: a })} />
+          ))}
+        </div>}>
+          <Btn icon={ALIGN_ICONS[align]} label="Выравнивание" menu on={menu === 'align'} onClick={() => toggle('align')} />
+        </Drop></span>,
+        sep3: <div className="fsep line" />,
+        list: <span className="sort-wrap"><Drop open={menu === 'list'} menu={<div className="tf-row">
+          {LISTS.map(([kind, icon, label]) => (
+            <Btn key={kind} icon={icon} label={label} on={item.ls === kind} onClick={() => set({ ls: item.ls === kind ? undefined : kind })} />
+          ))}
+        </div>}>
+          <Btn icon={item.ls === 'number' ? 'numbered-list' : 'list'} label="Список" menu on={!!item.ls || menu === 'list'} onClick={() => toggle('list')} />
+        </Drop></span>,
+      })}
     </div>
   );
 }
