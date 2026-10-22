@@ -283,13 +283,13 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
 /** A card with a round checkbox and the task's text; ticked off, the box turns green with a tick
  *  and the text goes grey and struck through. */
 function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
-  const { theme, cam } = s;
+  const { theme, cam } = s, none = it.color === 'none';
+  // The card is a rectangle like any other, fill and outline alike.
   ctx.beginPath();
-  ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(CORNER, it.h / 2));
-  ctx.fillStyle = theme.surface;
-  ctx.fill();
-  ctx.lineWidth = 1 / cam.z;
-  ctx.strokeStyle = theme.line;
+  ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(CORNER, it.w / 2, it.h / 2));
+  if (!none) { ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : FILLS[it.color ?? 'blue'] ?? FILLS.blue, theme.dim); ctx.fill(); }
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = none ? theme.ink : theme.shapeStroke;
   ctx.stroke();
   // The box and its tick are drawn for a radius of 10 and scaled to the radius it has at this zoom.
   const c = taskBox(it, cam.z), k = c.r / 10;
@@ -308,12 +308,15 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
     ctx.lineJoin = 'round';
     ctx.stroke();
   } else {
-    // A notch stronger than the card's border.
-    ctx.strokeStyle = theme.link;
+    // The card's own outline colour.
+    ctx.strokeStyle = none ? theme.ink : theme.shapeStroke;
     ctx.lineWidth = 1.6 * k;
     ctx.stroke();
   }
-  if (!editing) drawText(ctx, { ...it, w: it.w - TASK_INSET, fx: it.fx || it.done, tc: it.done ? undefined : it.tc }, 8, it.done ? theme.muted : theme.ink, true, s);
+  if (!editing) {
+    const ink = it.done ? theme.muted : none ? theme.ink : theme.stickyInk;
+    drawText(ctx, { ...it, x: it.x + TASK_INSET, w: it.w - TASK_INSET * 2, fx: it.fx || it.done, tc: it.done ? undefined : it.tc }, textPad(it), ink, true, s);
+  }
 }
 
 /** Adds a polygon item's outline to the current path. */

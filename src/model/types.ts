@@ -56,12 +56,12 @@ export type TextAlign = 'left' | 'center' | 'right';
 export type ListKind = 'bullet' | 'number';
 
 /** Font weight of text left as it was made: plain for text, heavier on stickers and shapes. */
-export const baseWeight = (type: ItemType): number => (type === 'text' || type === 'table' ? 400 : type === 'sticky' || type === 'task' ? 500 : 600);
+export const baseWeight = (type: ItemType): number => (type === 'text' || type === 'table' ? 400 : type === 'sticky' ? 500 : 600);
 /** Inset of the text in stickers and shapes; figures without square corners keep it further in. */
 export const textPad = (it: Item): number =>
-  it.type === 'sticky' ? 14 : it.type === 'rect' ? 10 : it.type === 'task' || it.type === 'table' ? 8
+  it.type === 'sticky' ? 14 : it.type === 'rect' || it.type === 'task' ? 10 : it.type === 'table' ? 8
     : it.type === 'ellipse' ? Math.min(it.w, it.h) * 0.15 + 6 : it.type === 'polygon' ? Math.min(it.w, it.h) * 0.22 + 6 : 0;
-export const alignOf = (it: Item): TextAlign => it.ta ?? (it.type === 'text' || it.type === 'task' || it.type === 'table' ? 'left' : 'center');
+export const alignOf = (it: Item): TextAlign => it.ta ?? (it.type === 'text' || it.type === 'table' ? 'left' : 'center');
 
 /** Text colours; "ink" is the item's usual text colour. */
 export const TEXT_COLORS: Record<string, string> = {
@@ -138,13 +138,13 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   emoji: { w: 64, h: 64 },
   ink: { w: 1, h: 1 },
   image: { w: 200, h: 150 },
-  task: { w: 260, h: 52, fs: 16, text: '' },
+  task: { w: 180, h: 110, color: 'blue', fs: 16, text: '' },
   table: { w: 360, h: 120, fs: 14 },
   audio: { w: 300, h: 64 },
   polygon: { w: 160, h: 150, color: 'purple', fs: 16, text: '' },
 };
 
-export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse', 'polygon'];
+export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse', 'polygon', 'task'];
 export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'task', 'table', 'polygon'];
 export const EDITABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'frame', 'task', 'table', 'polygon'];
 

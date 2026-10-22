@@ -88,9 +88,9 @@ export function measureTextHeight(text: string, width: number, size: number, sty
 export const itemTextHeight = (it: Item, text = it.text ?? '', width = it.w): number =>
   measureTextHeight(withList(text || ' ', it.ls), width, it.fs ?? 20, fontOf(it));
 
-/** Height a task needs: its lines beside the checkbox plus 8 above and below, at least its usual height. */
+/** Height a task needs: its lines between the side insets plus 10 above and below, at least its usual height. */
 export const taskHeight = (it: Item, text = it.text ?? '', width = it.w): number =>
-  Math.max(DEFAULTS.task.h, measureTextHeight(withList(text || ' ', it.ls), width - TASK_INSET - 16, it.fs ?? 16, fontOf(it)) + 16);
+  Math.max(DEFAULTS.task.h, measureTextHeight(withList(text || ' ', it.ls), width - TASK_INSET * 2 - 20, it.fs ?? 16, fontOf(it)) + 20);
 
 /** Height a text item or task needs for its text; other items have none to fit. */
 export const fitHeight = (it: Item, text = it.text ?? '', width = it.w): number | null =>

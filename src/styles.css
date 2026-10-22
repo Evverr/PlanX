@@ -256,8 +256,8 @@ button { font: inherit; color: inherit; }
 /* Previews of what a rail tool makes, while it's dragged onto the board (ui/ToolPreview.tsx). */
 .tp-sticky { display: block; box-shadow: 0 2px 4px rgba(0, 0, 0, .15); }
 .tp-text { display: block; color: var(--ink); white-space: nowrap; }
-.tp-task { display: flex; align-items: center; box-sizing: border-box; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font-weight: 500; }
-.tp-task i { flex: none; border-radius: 50%; border: 1.6px solid var(--link); box-sizing: border-box; }
+.tp-task { display: grid; place-items: center; position: relative; box-sizing: border-box; border: 2px solid var(--shape-stroke); border-radius: 8px; color: var(--sticky-ink); font-weight: 600; }
+.tp-task i { position: absolute; top: 8px; right: 8px; border-radius: 50%; border: 1.6px solid var(--shape-stroke); box-sizing: border-box; }
 .tp-frame { display: block; box-sizing: border-box; position: relative; background: var(--frame); border: 1px solid var(--line); border-radius: 8px; }
 .tp-frame b { position: absolute; left: 2px; bottom: 100%; margin-bottom: 4px; color: var(--muted); font-weight: 600; white-space: nowrap; }
 .tp-svg { display: block; overflow: visible; fill: var(--surface); stroke: var(--line); stroke-width: 1; }
@@ -280,8 +280,8 @@ button { font: inherit; color: inherit; }
 kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); border-radius: 4px; padding: 1px 5px; }
 
 .text-edit { position: fixed; z-index: 4; margin: 0; border: 0; outline: none; resize: none; overflow: hidden; background: transparent; font-family: var(--ui); transform-origin: 0 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.text-edit.sticky, .text-edit.rect, .text-edit.ellipse, .text-edit.polygon { text-align: center; color: var(--sticky-ink); }
-.text-edit.text, .text-edit.task, .text-edit.table { color: var(--ink); }
+.text-edit.sticky, .text-edit.rect, .text-edit.ellipse, .text-edit.polygon, .text-edit.task { text-align: center; color: var(--sticky-ink); }
+.text-edit.text, .text-edit.table { color: var(--ink); }
 .text-edit.frame { color: var(--muted); font-weight: 600; background: var(--surface); border-radius: 4px; }
 .text-edit.nofill { color: var(--ink); }
 
