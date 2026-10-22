@@ -4,7 +4,7 @@ import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
 import { boundsOf, hitItem, hitLink, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
 import { clearTextCache, DOT_GAP, DOT_R, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
-import { measureTextHeight } from '../canvas/text';
+import { font, itemTextHeight } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser';
@@ -147,6 +147,10 @@ export class Editor {
     offs.push(onEmojiLoad(() => this.requestRender()));
     if (this.presence) offs.push(this.presence.subscribe(() => this.requestRender()));
     document.fonts?.ready.then(() => { clearTextCache(); this.requestRender(); });
+    // Fonts picked for text load when first drawn.
+    const onFonts = () => { clearTextCache(); this.requestRender(); };
+    document.fonts?.addEventListener('loadingdone', onFonts);
+    offs.push(() => document.fonts?.removeEventListener('loadingdone', onFonts));
     this.resize();
     this.onBoardChange();
     return () => {
@@ -358,9 +362,29 @@ export class Editor {
       for (const it of this.selectedItems()) {
         if (!HAS_FONT.includes(it.type)) continue;
         const fs = clamp(Math.round((it.fs ?? 16) * (dir > 0 ? 1.2 : 1 / 1.2)), 8, 120);
-        this.board.update(it.id, it.type === 'text' ? { fs, h: measureTextHeight(it.text ?? '', it.w, fs, it.fw) } : { fs });
+        this.board.update(it.id, it.type === 'text' ? { fs, h: itemTextHeight({ ...it, fs }) } : { fs });
       }
     });
+  }
+
+  /** Changes how the selected items' text looks; an undefined field goes back to the default.
+   *  Text items are re-measured to fit, and again once a newly picked font has loaded. */
+  setTextStyle(patch: Partial<Item>): void {
+    const items = this.selectedItems().filter((i) => HAS_FONT.includes(i.type));
+    const refit = () => this.board.transact(() => {
+      for (const it of items) {
+        const now = this.board.get(it.id);
+        if (now?.type === 'text') this.board.update(it.id, { h: itemTextHeight(now) });
+      }
+    });
+    this.board.transact(() => {
+      for (const it of items) this.board.update(it.id, patch);
+      refit();
+    });
+    if (patch.ff && document.fonts) {
+      const f = font(20, 400, patch.ff);
+      void Promise.all([document.fonts.load(f), document.fonts.load(font(20, 700, patch.ff, true))]).then(refit);
+    }
   }
 
   bringToFront(): void {
@@ -462,7 +486,7 @@ export class Editor {
         this.selection.delete(id);
       } else if (value !== (it.text ?? '')) {
         const patch: Partial<Item> = { text: value };
-        if (it.type === 'text') patch.h = measureTextHeight(value, it.w, it.fs ?? 20, it.fw);
+        if (it.type === 'text') patch.h = itemTextHeight(it, value);
         this.board.update(id, patch);
       }
     }
@@ -474,7 +498,7 @@ export class Editor {
   previewText(id: string, text: string): void {
     const it = this.board.get(id);
     if (it?.type === 'text') {
-      const h = measureTextHeight(text, it.w, it.fs ?? 20, it.fw);
+      const h = itemTextHeight(it, text);
       if (h !== it.h) this.board.update(id, { h });
     }
   }
@@ -662,7 +686,7 @@ export class Editor {
           nw = Math.round(g.w0 * k);
           nh = Math.round(g.h0 * k);
         }
-        if (it.type === 'text') nh = measureTextHeight(it.text ?? '', nw, it.fs ?? 20, it.fw);
+        if (it.type === 'text') nh = itemTextHeight(it, it.text, nw);
         this.board.update(g.id, { w: nw, h: nh });
         return;
       }
@@ -726,7 +750,8 @@ export class Editor {
         const d = DEFAULTS[g.tool];
         const it = g.tool === 'sticky'
           ? this.newItem('sticky', g.at.x - d.w / 2, g.at.y - d.h / 2)
-          : this.newItem('text', g.at.x - 4, g.at.y - 14, { h: measureTextHeight(' ', d.w, d.fs ?? 20) });
+          : this.newItem('text', g.at.x - 4, g.at.y - 14);
+        if (it.type === 'text') it.h = itemTextHeight(it);
         this.board.add(it);
         this.setTool('select');
         this.setSelection([it.id]);
