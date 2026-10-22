@@ -1,13 +1,13 @@
 import { useEffect, useLayoutEffect, useReducer, useState } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
-import { COLORABLE, FILLS, HAS_FONT, ICON_COLORS } from '../model/types';
+import { COLORABLE, FILLS, ICON_COLORS } from '../model/types';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
 
 const same = (vals: Array<string | undefined>) => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] : null);
 
-const ORDER = ['fills', 'sep', 'icons', 'sep2', 'smaller', 'bigger', 'sep3', 'table', 'sep4', 'front', 'back', 'duplicate', 'trash'];
+const ORDER = ['fills', 'sep', 'icons', 'sep2', 'table', 'sep4', 'front', 'back', 'duplicate', 'trash'];
 
 export function SelectionPanel({ editor, items, linkCount, docked }: { editor: Editor; items: Item[]; linkCount: number; docked: boolean }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
@@ -28,7 +28,6 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
   if (!items.length && !linkCount) return null;
   const colorable = items.filter((i) => COLORABLE.includes(i.type));
   const icons = items.filter((i) => i.type === 'icon');
-  const sized = items.filter((i) => HAS_FONT.includes(i.type));
   const tables = items.filter((i) => i.type === 'table');
   const fill = same(colorable.map((i) => i.color));
   const iconColor = same(icons.map((i) => i.color));
@@ -62,8 +61,6 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
             ))}
           </div>
         ) : undefined,
-        smaller: sized.length > 0 ? btn('font-smaller', 'Меньше шрифт', () => editor.changeFontSize(-1)) : undefined,
-        bigger: sized.length > 0 ? btn('font-bigger', 'Больше шрифт', () => editor.changeFontSize(1)) : undefined,
         // Rows and columns of the selected tables: add or take away the last one.
         table: tables.length > 0 ? (
           <div className="sw-group table-count">
@@ -82,7 +79,6 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
         trash: btn('trashcan', 'Удалить (Del)', () => editor.deleteSelection()),
         sep: <div className="sep" />,
         sep2: <div className="sep" />,
-        sep3: <div className="sep" />,
       })}
     </div>
   );
