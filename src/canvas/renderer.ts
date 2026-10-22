@@ -4,7 +4,7 @@ import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import type { Point, Rect } from './geometry';
-import { center, curveBetween, edgePoint, inkPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, type Bezier } from './geometry';
+import { center, curveBetween, edgePoint, inkPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_BOX_R, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -63,7 +63,9 @@ export interface InkStroke { pts: Point[]; color: string; width: number; hl: boo
 
 /** Corner radius of everything with corners except stickers, in board units. */
 const CORNER = 8;
-const corner = (it: Item) => (it.type === 'rect' || it.type === 'frame' ? CORNER : 0);
+const corner = (it: Item) => (it.type === 'rect' || it.type === 'frame' || it.type === 'task' ? CORNER : 0);
+/** A ticked task's checkbox. */
+const DONE_COLOR = '#15C674';
 
 /** Size of the resize handle in screen pixels. */
 export const HANDLE = 12;
@@ -255,10 +257,47 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'image':
       drawPicture(ctx, it, theme.line);
       break;
+    case 'task':
+      drawTask(ctx, it, s, editing);
+      break;
     case 'ink':
       strokeInk(ctx, { pts: inkPoints(it), color: it.color ?? 'ink', width: (it.sw ?? 2) * it.w / (it.iw || it.w), hl: !!it.hl }, theme);
       break;
   }
+}
+
+/** A card with a round checkbox and the task's text; ticked off, the box turns green with a tick
+ *  and the text goes grey and struck through. */
+function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
+  const { theme, cam } = s;
+  ctx.beginPath();
+  ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(CORNER, it.h / 2));
+  ctx.fillStyle = theme.surface;
+  ctx.fill();
+  ctx.lineWidth = 1 / cam.z;
+  ctx.strokeStyle = theme.line;
+  ctx.stroke();
+  const c = taskBox(it);
+  ctx.beginPath();
+  ctx.arc(c.x, c.y, TASK_BOX_R, 0, Math.PI * 2);
+  if (it.done) {
+    ctx.fillStyle = DONE_COLOR;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(c.x - 4.5, c.y + 0.2);
+    ctx.lineTo(c.x - 1.3, c.y + 3.4);
+    ctx.lineTo(c.x + 4.8, c.y - 3);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = theme.muted;
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+  }
+  if (!editing) drawText(ctx, { ...it, x: it.x + TASK_INSET, w: it.w - TASK_INSET, fx: it.fx || it.done, tc: it.done ? undefined : it.tc }, 8, it.done ? theme.muted : theme.ink, true, s);
 }
 
 /** A pen or highlighter line, smoothed by curving through the midpoints between its points. */

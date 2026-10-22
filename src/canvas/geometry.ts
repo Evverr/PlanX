@@ -102,6 +102,17 @@ export function distToSegment(p: Point, a: Point, b: Point): number {
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
+/** Tasks: the round checkbox sits in a strip this wide on the left, the text to its right. */
+export const TASK_INSET = 40;
+export const TASK_BOX_R = 10;
+export const taskBox = (it: Rect): Point => ({ x: it.x + TASK_INSET / 2 + 2, y: it.y + it.h / 2 });
+
+/** Whether the point is on a task's checkbox, with a little room around it. */
+export function onTaskBox(it: Item, p: Point): boolean {
+  const c = taskBox(it);
+  return Math.hypot(p.x - c.x, p.y - c.y) <= TASK_BOX_R + 5;
+}
+
 /** An ink stroke's points on the board. */
 export function inkPoints(it: Item): Point[] {
   const pts = it.pts ?? [], k = it.w / (it.iw || it.w || 1), out: Point[] = [];

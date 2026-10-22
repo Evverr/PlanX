@@ -83,7 +83,7 @@ export function App({ boardId }: { boardId: string }) {
   const selItems = ui.selection.map((id) => board.get(id)).filter((i) => !!i);
   const linkCount = ui.selection.filter((id) => board.getLink(id)).length;
   const editing = ui.editingId ? board.get(ui.editingId) : undefined;
-  const textItem = selItems.length === 1 && (selItems[0].type === 'text' || selItems[0].type === 'sticky') ? selItems[0] : undefined;
+  const textItem = selItems.length === 1 && ['text', 'sticky', 'task'].includes(selItems[0].type) ? selItems[0] : undefined;
   const peers = conn.peers();
 
   const share = async () => {

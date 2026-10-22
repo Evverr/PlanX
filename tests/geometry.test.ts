@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { distToSegment, edgePoint, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, rectContains, sidePoint } from '../src/canvas/geometry';
+import { distToSegment, edgePoint, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, onTaskBox, rectContains, sidePoint, taskBox } from '../src/canvas/geometry';
 import { withList, wrapText } from '../src/canvas/text';
 import type { Item } from '../src/model/types';
 
@@ -58,6 +58,14 @@ describe('geometry', () => {
     expect(inkPoints(big)[1]).toEqual({ x: 200, y: 200 });
     expect(nearInk(big, { x: 150, y: 156 }, 1)).toBe(true);
     expect(nearInk(ink, { x: 50, y: 56 }, 1)).toBe(false);
+  });
+
+  it('finds the checkbox of a task on the left, middle of its height', () => {
+    const task = box('task', { w: 260, h: 52 });
+    const c = taskBox(task);
+    expect(c.y).toBe(26);
+    expect(onTaskBox(task, c)).toBe(true);
+    expect(onTaskBox(task, { x: 150, y: 26 })).toBe(false);
   });
 
   it('picks the topmost item', () => {

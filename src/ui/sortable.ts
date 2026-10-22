@@ -7,10 +7,11 @@ const HOLD_MS = 168, HOLD_SLOP = 6;
 /** Separators are items too, keyed 'sep…' (a line) or 'gap…' (a space). */
 export const isSeparator = (key: string) => key.startsWith('sep') || key.startsWith('gap');
 
-/** The saved order, minus anything no longer in the panel, plus anything new at the end. */
-function readOrder(storageKey: string, defaults: string[]): string[] {
+/** The saved order (with renamed keys renamed), minus anything no longer in the panel, plus anything new at the end. */
+function readOrder(storageKey: string, defaults: string[], renames: Record<string, string>): string[] {
   try {
-    const saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
+    let saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
+    if (Array.isArray(saved)) saved = saved.map((k) => renames[k] ?? k);
     if (Array.isArray(saved)) return [...saved.filter((k) => defaults.includes(k)), ...defaults.filter((k) => !saved.includes(k))];
   } catch { /* storage can be unavailable */ }
   return defaults;
@@ -21,10 +22,11 @@ function readOrder(storageKey: string, defaults: string[]): string[] {
  * others slide out of the way. The order is kept per browser under `storageKey`.
  *
  * Put `container` on the panel and `item(key)` on each button; mark parts that must not start a
- * drag (text fields, open menus) with data-nosort.
+ * drag (text fields, open menus) with data-nosort. When a button takes over another's place under
+ * a new key, `renames` maps the old key to it so saved orders keep it there.
  */
-export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 'y') {
-  const [order, setOrder] = useState(() => readOrder(storageKey, defaults));
+export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 'y', renames: Record<string, string> = {}) {
+  const [order, setOrder] = useState(() => readOrder(storageKey, defaults, renames));
   const [drag, setDrag] = useState<{ key: string; grab: number; at: number; at0: number; moved: boolean } | null>(null);
   const press = useRef<{ x: number; y: number; timer: number } | null>(null);
   const ref = useRef<HTMLElement>(null);

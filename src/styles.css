@@ -216,7 +216,7 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 
 .text-edit { position: fixed; z-index: 4; margin: 0; border: 0; outline: none; resize: none; overflow: hidden; background: transparent; font-family: var(--ui); transform-origin: 0 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .text-edit.sticky, .text-edit.rect, .text-edit.ellipse { text-align: center; color: var(--sticky-ink); }
-.text-edit.text { color: var(--ink); }
+.text-edit.text, .text-edit.task { color: var(--ink); }
 .text-edit.frame { color: var(--muted); font-weight: 600; background: var(--surface); border-radius: 4px; }
 .text-edit.nofill { color: var(--ink); }
 
