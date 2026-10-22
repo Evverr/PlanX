@@ -120,7 +120,12 @@ export function App({ boardId }: { boardId: string }) {
       </header>
 
       <Toolbar editor={editor} tool={ui.tool} pens={ui.pens} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => toggle('icons')} />
-      {pop === 'icons' && <IconPicker onPickEmoji={(id) => { editor.addEmoji(id); setPop(null); }} onPickIcon={(id) => { editor.addIcon(id); setPop(null); }} />}
+      {pop === 'icons' && <IconPicker onPick={(kind, id, at) => {
+        setPop(null);
+        if (kind === 'emoji') editor.addEmoji(id, at);
+        else if (kind === 'sticky') editor.addSticky(id, at);
+        else editor.addIcon(id, at);
+      }} />}
 
       <div ref={zoomSort.ref as React.RefObject<HTMLDivElement>} className={`bar zoom sortable ${docked ? 'docked' : ''} ${zoomSort.sorting ? 'sorting' : ''}`} {...zoomSort.container}>
         {zoomSort.render({
