@@ -101,6 +101,8 @@ export class Editor {
   private needsFit: boolean;
   private lastCursorSent = 0;
   private hotDot: Side | null = null;
+  /** The pointer is over the selection (or the dots around it), which then shows at full strength. */
+  private selHover = false;
 
   constructor(board: Board, opts: { presence?: Presence; storageKey?: string } = {}) {
     this.board = board;
@@ -151,7 +153,7 @@ export class Editor {
     on(canvas, 'pointermove', (e) => this.onPointerMove(e));
     on(canvas, 'pointerup', (e) => this.onPointerUp(e));
     on(canvas, 'pointercancel', (e) => this.onPointerUp(e));
-    on(canvas, 'pointerleave', () => this.presence?.setCursor(null));
+    on(canvas, 'pointerleave', () => { this.presence?.setCursor(null); this.setSelHover(false); });
     on(canvas, 'wheel', (e) => this.wheel(e), { passive: false });
     on(window, 'keydown', (e) => this.onKeyDown(e));
     on(window, 'keyup', (e) => { if (e.code === 'Space') this.setSpace(false); });
@@ -236,6 +238,7 @@ export class Editor {
       peers: this.presence?.peers() ?? [],
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]),
       hotDot: this.hotDot,
+      selHover: this.selHover,
       editingCell: this.editingCell,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker' } : null,
     });
@@ -978,8 +981,15 @@ export class Editor {
     this.requestRender();
   }
 
+  private setSelHover(on: boolean): void {
+    if (on !== this.selHover) { this.selHover = on; this.requestRender(); }
+  }
+
   private updateCursor(w: Point, alt: boolean): void {
     if (!this.canvas || this.gesture || this.tool !== 'select') return;
+    const reach = (DOT_GAP + DOT_R + 4) / this.cam.z;
+    this.setSelHover(this.selectedItems().some((it) =>
+      pointInRect(w, { x: it.x - reach, y: it.y - reach, w: it.w + reach * 2, h: it.h + reach * 2 })));
     const single = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
     const dot = single && !this.editingId ? this.dotAt(single, w) : null;
     if (dot !== this.hotDot) { this.hotDot = dot; this.requestRender(); }
