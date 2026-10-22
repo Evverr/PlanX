@@ -1,7 +1,10 @@
 """Build src/icons/icons.json from the SVG files in assets/icons.
 
 The icons are the Bitrix "Outline Icon Bold" set: 24x24 SVGs made of <path>
-elements (a few reuse paths through <defs>/<use>). Every fill, the grey
+elements (a few reuse paths through <defs>/<use>). A few also have
+outlined strokes (stroke="..." with no fill, and one <rect>): those stay
+strokes with their width and caps, since filling an open or outline-only
+path draws a solid blob. Every fill and stroke colour, the grey
 #909090 and the green accent included, becomes "current": icons are drawn
 in one colour, the item's (black by default).
 
@@ -43,6 +46,25 @@ def compact(d: str) -> str:
     return NUMBER.sub(lambda m: f"{float(m.group()):.2f}".rstrip("0").rstrip("."), d)
 
 
+def rect_path(r) -> str:
+    """A <rect> as path data. Only the plain translate/flip matrix Figma writes is supported."""
+    w, h = float(r.get("width")), float(r.get("height"))
+    x, y = float(r.get("x", "0")), float(r.get("y", "0"))
+    rx = min(float(r.get("rx", "0")), w / 2, h / 2)
+    t = r.get("transform")
+    if t:
+        m = re.fullmatch(r"matrix\((\S+) 0 0 (\S+) (\S+) (\S+)\)", t)
+        if not m:
+            raise SystemExit(f"unsupported rect transform {t}")
+        sx, sy, tx, ty = map(float, m.groups())
+        x0, x1 = sorted((tx + sx * x, tx + sx * (x + w)))
+        y0, y1 = sorted((ty + sy * y, ty + sy * (y + h)))
+        x, y = x0, y0
+    return (f"M{x + rx} {y}H{x + w - rx}A{rx} {rx} 0 0 1 {x + w} {y + rx}V{y + h - rx}"
+            f"A{rx} {rx} 0 0 1 {x + w - rx} {y + h}H{x + rx}A{rx} {rx} 0 0 1 {x} {y + h - rx}"
+            f"V{y + rx}A{rx} {rx} 0 0 1 {x + rx} {y}Z")
+
+
 SIZES = ["l", "m", "s", "xs"]
 SIZED = re.compile(r"(.+)-(l|m|s|xs)$")
 
@@ -66,11 +88,20 @@ def main() -> None:
         fname = icon_id + ".svg"
         root = ET.parse(os.path.join(SRC, fname)).getroot()
         paths = []
-        for p in root.iter(NS + "path"):
-            d = p.get("d", "")
+        for p in root.iter():
+            if p.tag == NS + "rect":
+                d = rect_path(p)
+            elif p.tag == NS + "path":
+                d = p.get("d", "")
+            else:
+                continue
             if not PATH_DATA.fullmatch(d):
                 raise SystemExit(f"{fname}: unexpected path data")
             entry = {"d": compact(d), "fill": "current"}
+            if p.get("stroke"):
+                entry["stroke"] = float(p.get("stroke-width", "1"))
+                if p.get("stroke-linecap") == "round":
+                    entry["round"] = True
             if p.get("fill-rule") == "evenodd":
                 entry["evenodd"] = True
             paths.append(entry)
