@@ -169,6 +169,7 @@ export function App({ boardId }: { boardId: string }) {
             <dt>Alt + тянуть</dt><dd>копировать элемент</dd>
             <dt>Тянуть за синюю точку</dt><dd>связать с другим элементом</dd>
             <dt><kbd>V H N T R O C F P M E I</kbd></dt><dd>инструменты</dd>
+            <dt>Удерживать инструмент</dt><dd>переставить его на панели</dd>
             <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></dt><dd>отменить / вернуть свои действия</dd>
             <dt><kbd>Ctrl</kbd>+<kbd>C</kbd> <kbd>V</kbd> <kbd>D</kbd></dt><dd>копировать, вставить, дублировать</dd>
             <dt><kbd>Del</kbd></dt><dd>удалить выделенное</dd>
