@@ -1,4 +1,4 @@
-export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji' | 'ink' | 'image' | 'task' | 'table';
+export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji' | 'ink' | 'image' | 'task' | 'table' | 'audio';
 
 export interface Item {
   id: string;
@@ -33,8 +33,11 @@ export interface Item {
    *  a resized stroke is scaled by w / iw. `sw` is the line width, `hl` marks a highlighter. */
   pts?: number[];
   iw?: number;
-  /** Picture as a data URL, image items only. */
+  /** Picture or recording as a data URL, image and audio items only. */
   src?: string;
+  /** Audio notes: length in seconds and a coarse waveform, 0…1 per bar. */
+  dur?: number;
+  peaks?: number[];
   /** A task that has been ticked off. */
   done?: boolean;
   /** Tables: column widths, row heights and the cells' text row by row (see model/table.ts). */
@@ -130,6 +133,7 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   image: { w: 200, h: 150 },
   task: { w: 260, h: 52, fs: 16, text: '' },
   table: { w: 360, h: 120, fs: 14 },
+  audio: { w: 300, h: 64 },
 };
 
 export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse'];

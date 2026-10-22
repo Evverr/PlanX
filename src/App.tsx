@@ -10,6 +10,7 @@ import { TextPanel } from './ui/FormatPanel';
 import { PanelIcon } from './ui/PanelIcon';
 import { DockButton, useDock } from './ui/Dock';
 import { Minimap } from './ui/Minimap';
+import { AudioRecorder } from './ui/AudioRecorder';
 import { catFor } from './emoji/emoji';
 import { readPictures } from './canvas/pictures';
 import { cellRect, cellText } from './model/table';
@@ -72,6 +73,7 @@ export function App({ boardId }: { boardId: string }) {
   // One chevron, in the zoom panel, sticks every panel around the edge of the screen to it.
   const [docked, toggleDock] = useDock('panels');
   const [minimap, setMinimap] = useState(false);
+  const [recorder, setRecorder] = useState(false);
   // Buttons in the top bar and the zoom panel can be rearranged by holding them.
   const topSort = useSortable('planx-order-top', ['logo', 'sep', 'title', 'undo', 'redo', 'new', 'clear'], 'x');
   const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'share', 'help', 'theme', 'fit', 'dock', 'people'], 'x');
@@ -128,7 +130,10 @@ export function App({ boardId }: { boardId: string }) {
         })}
       </header>
 
-      <Toolbar editor={editor} tool={ui.tool} pens={ui.pens} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => toggle('icons')} />
+      <Toolbar editor={editor} tool={ui.tool} pens={ui.pens} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => { toggle('icons'); setRecorder(false); }}
+        recorderOpen={recorder} onToggleRecorder={() => { setRecorder(!recorder); setPop(null); }} />
+      {/* Not a popover: a click on the board mustn't cut a recording short. */}
+      {recorder && <AudioRecorder onClose={() => setRecorder(false)} onAdd={(note) => { editor.addAudio(note); setRecorder(false); }} />}
       {pop === 'icons' && <IconPicker onPick={(kind, id, at) => {
         setPop(null);
         if (kind === 'emoji') editor.addEmoji(id, at && { x: at.x, y: at.y }, at?.size);

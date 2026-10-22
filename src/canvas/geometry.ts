@@ -113,6 +113,16 @@ export function onTaskBox(it: Item, p: Point): boolean {
   return Math.hypot(p.x - c.x, p.y - c.y) <= TASK_BOX_R + 5;
 }
 
+/** Audio notes: the play button's centre and radius, scaled with the card's height (drawn 64 high). */
+export const audioButton = (it: Rect): Point & { r: number } => {
+  const k = it.h / 64;
+  return { x: it.x + 32 * k, y: it.y + it.h / 2, r: 20 * k };
+};
+export function onAudioButton(it: Item, p: Point): boolean {
+  const b = audioButton(it);
+  return Math.hypot(p.x - b.x, p.y - b.y) <= b.r + 4;
+}
+
 /** An ink stroke's points on the board. */
 export function inkPoints(it: Item): Point[] {
   const pts = it.pts ?? [], k = it.w / (it.iw || it.w || 1), out: Point[] = [];
