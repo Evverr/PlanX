@@ -68,8 +68,8 @@ button { font: inherit; color: inherit; }
 .tools { position: fixed; z-index: 5; left: calc(12px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; align-items: center; width: 66px; padding: 21px 18px;
   /* 18px gaps as in the mockup; on a short screen it fits between the top bar and the bottom edge
-     by tightening them (462px is the buttons, separator and padding; there are 14 gaps). */
-  gap: clamp(6px, calc((100vh - 150px - 462px) / 14), 18px);
+     by tightening them (492px is the buttons, separator and padding; there are 15 gaps). */
+  gap: clamp(6px, calc((100vh - 150px - 492px) / 15), 18px);
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
 .tools.docked { left: 0; border-radius: 0 12px 12px 0; }
 /* Panels whose buttons can be rearranged: holding one lifts it so it can be moved (see ui/sortable.ts). */
@@ -185,6 +185,27 @@ button { font: inherit; color: inherit; }
 .pop .row { display: flex; gap: 6px; justify-content: flex-end; }
 .btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 13px; font-weight: 500; }
 .btn.red { background: var(--danger); border-color: var(--danger); color: #fff; }
+.btn.blue { background: #0080FF; border-color: #0080FF; color: #fff; }
+
+/* Audio note recorder beside the tool rail. */
+.recorder { left: calc(90px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: 320px; max-width: calc(100vw - 102px);
+  display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.recorder-head { align-self: stretch; display: flex; align-items: center; justify-content: space-between; margin: -6px -8px 0 0; }
+.recorder-head h3 { margin: 0; font-size: 14px; font-weight: 600; }
+.recorder-head .ib { width: 30px; height: 30px; font-size: 20px; color: var(--muted); }
+.recorder p { margin: 0; }
+.rec-btn { width: 64px; height: 64px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; background: var(--danger); padding: 0; transition: transform .15s ease; }
+.rec-btn:hover:not(:disabled) { transform: scale(1.05); }
+.rec-btn:disabled { opacity: .5; cursor: default; }
+.rec-btn .pi { background: #fff; }
+.rec-stop { display: block; width: 20px; height: 20px; border-radius: 4px; background: #fff; }
+.rec-meter { align-self: stretch; height: 48px; display: flex; align-items: center; gap: 2px; }
+.rec-meter i { flex: 1; border-radius: 2px; background: var(--danger); min-height: 3px; }
+.rec-clock { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rec-clock .muted { font-size: 14px; font-weight: 500; }
+.rec-preview { width: 100%; height: 40px; }
+.recorder .row { align-self: stretch; justify-content: space-between; }
+.recorder .row .btn { flex: 1; white-space: nowrap; }
 .confirm { left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(70px + env(safe-area-inset-top, 0px)); width: 270px; }
 .namepop { right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(72px + env(safe-area-inset-bottom, 0px)); width: 240px; }
 .namepop input, .icon-pick input { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 8px 10px; font: inherit; margin-bottom: 10px; }

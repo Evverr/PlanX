@@ -25,10 +25,11 @@ const LATER: Partial<Record<string, [PanelIconName, string]>> = {
 };
 
 /** Everything on the rail, top to bottom, until someone rearranges it. */
-const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'rect', 'oval', 'task', 'link', 'table', 'frames', 'draw', 'image', 'smile', 'paint'];
+const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'rect', 'oval', 'task', 'link', 'table', 'frames', 'draw', 'image', 'audio', 'smile', 'paint'];
 
-export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons }: {
+export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons, recorderOpen, onToggleRecorder }: {
   editor: Editor; tool: Tool; pens: Pens; docked: boolean; iconsOpen: boolean; onToggleIcons: () => void;
+  recorderOpen: boolean; onToggleRecorder: () => void;
 }) {
   // The drawing button brings back whichever of pen, highlighter and eraser was used last.
   const lastDraw = useRef<Tool>('pen');
@@ -54,6 +55,7 @@ export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons }
     if (t) return button(key, tool === t[0], t[2], t[1], () => editor.setTool(t[0]), { 'aria-pressed': tool === t[0] });
     if (key === 'draw') return button(key, drawing, 'Рисование (P)', 'marker', () => editor.setTool(drawing ? 'select' : lastDraw.current), { 'aria-pressed': drawing });
     if (key === 'image') return button(key, false, 'Картинка', 'image', () => filePicker.current?.click());
+    if (key === 'audio') return button(key, recorderOpen, 'Аудиозаметка', 'microphone', onToggleRecorder, { 'aria-expanded': recorderOpen });
     if (key === 'smile') return button(key, iconsOpen, 'Смайлы, стикеры и иконки (I)', 'smile', onToggleIcons, { 'aria-expanded': iconsOpen });
     if (later) return button(key, false, `${later[1]} (скоро)`, later[0]);
     return null;

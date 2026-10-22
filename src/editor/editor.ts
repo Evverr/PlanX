@@ -2,12 +2,13 @@ import type { Board } from '../model/board';
 import type { Item, ItemType, Link, Side } from '../model/types';
 import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
-import { boundsOf, hitItem, hitLink, nearestSide, nearInk, normRect, onTaskBox, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
+import { boundsOf, hitItem, hitLink, nearestSide, nearInk, normRect, onAudioButton, onTaskBox, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
 import { clearTextCache, DOT_GAP, DOT_R, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
 import { font, itemTextHeight } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, lineAt, newTable, withCount, withScale, withSize } from '../model/table';
+import { toggleAudio, type AudioNote } from '../canvas/audio';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table';
 export type PenTool = 'pen' | 'marker';
@@ -370,6 +371,15 @@ export class Editor {
     this.setSelection(items.map((i) => i.id));
   }
 
+  /** Puts a recorded audio note in the middle of the screen, selected. */
+  addAudio(note: AudioNote): void {
+    const c = this.toWorld(this.width / 2, this.height / 2), d = DEFAULTS.audio;
+    const it = this.newItem('audio', c.x - d.w / 2, c.y - d.h / 2, { src: note.src, dur: Math.round(note.dur * 10) / 10, peaks: note.peaks });
+    this.board.add(it);
+    this.setTool('select');
+    this.setSelection([it.id]);
+  }
+
   /** Like addIcon. */
   addEmoji(emoji: string, at?: Point, px?: number): void {
     const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
@@ -663,6 +673,11 @@ export class Editor {
       this.board.update(hit.id, { done: hit.done ? undefined : true });
       return;
     }
+    // An audio note's button plays it (or stops it) instead of picking it up.
+    if (hit?.type === 'audio' && !e.shiftKey && onAudioButton(hit, w)) {
+      toggleAudio(hit, () => this.requestRender());
+      return;
+    }
     if (hit) {
       const now = performance.now();
       const dbl = this.lastTap.id === hit.id && now - this.lastTap.t < 380 && !e.shiftKey;
@@ -753,11 +768,11 @@ export class Editor {
       case 'resize': {
         const it = this.board.get(g.id);
         if (!it) return;
-        const min = it.type === 'frame' ? 80 : it.type === 'ink' ? 4 : it.type === 'icon' || it.type === 'emoji' || it.type === 'image' ? 16 : 40;
+        const min = it.type === 'frame' ? 80 : it.type === 'ink' ? 4 : it.type === 'audio' ? 32 : it.type === 'icon' || it.type === 'emoji' || it.type === 'image' ? 16 : 40;
         let nw = Math.max(min, Math.round(g.w0 + w.x - g.start.x));
         let nh = Math.max(min, Math.round(g.h0 + w.y - g.start.y));
         // Stickers, icons, emoji, drawings and pictures keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
-        const keep = it.type === 'sticky' || it.type === 'image' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || it.type === 'ink' || e.shiftKey;
+        const keep = it.type === 'sticky' || it.type === 'image' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || it.type === 'ink' || it.type === 'audio' || e.shiftKey;
         if (keep) {
           const k = Math.max(nw / g.w0, nh / g.h0);
           nw = Math.round(g.w0 * k);
@@ -934,7 +949,7 @@ export class Editor {
     else if (hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
     else {
       const hit = hitItem(this.board.list(), w, this.cam.z);
-      if (hit?.type === 'task' && onTaskBox(hit, w)) cursor = 'pointer';
+      if ((hit?.type === 'task' && onTaskBox(hit, w)) || (hit?.type === 'audio' && onAudioButton(hit, w))) cursor = 'pointer';
       else if (hit) cursor = alt ? 'copy' : 'move';
     }
     this.canvas.style.cursor = cursor;

@@ -4,8 +4,9 @@ import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellRect, cellText, colsOf, rowsOf } from '../model/table';
+import { audioProgress, clock } from './audio';
 import type { Point, Rect } from './geometry';
-import { center, curveBetween, edgePoint, inkPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_BOX_R, TASK_INSET, taskBox, type Bezier } from './geometry';
+import { audioButton, center, curveBetween, edgePoint, inkPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_BOX_R, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -266,6 +267,9 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'table':
       drawTable(ctx, it, s, editing ? s.editingCell : null);
       break;
+    case 'audio':
+      drawAudio(ctx, it, s);
+      break;
     case 'ink':
       strokeInk(ctx, { pts: inkPoints(it), color: it.color ?? 'ink', width: (it.sw ?? 2) * it.w / (it.iw || it.w), hl: !!it.hl }, theme);
       break;
@@ -304,6 +308,55 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
     ctx.stroke();
   }
   if (!editing) drawText(ctx, { ...it, x: it.x + TASK_INSET, w: it.w - TASK_INSET, fx: it.fx || it.done, tc: it.done ? undefined : it.tc }, 8, it.done ? theme.muted : theme.ink, true, s);
+}
+
+/** Blue of the audio note's play button and of the played part of its waveform. */
+const PLAY_COLOR = '#0080FF';
+
+/** A card with a play button, the recording's waveform (blue as far as it has played) and its length. */
+function drawAudio(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
+  const { theme, cam } = s, k = it.h / 64;
+  ctx.beginPath();
+  ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.h / 2, CORNER * 2 * k));
+  ctx.fillStyle = theme.surface;
+  ctx.fill();
+  ctx.lineWidth = 1 / cam.z;
+  ctx.strokeStyle = theme.line;
+  ctx.stroke();
+  const b = audioButton(it), played = audioProgress(it.id, it.dur ?? 0);
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+  ctx.fillStyle = PLAY_COLOR;
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  if (played !== null) {
+    ctx.fillRect(b.x - 6 * k, b.y - 7 * k, 4 * k, 14 * k);
+    ctx.fillRect(b.x + 2 * k, b.y - 7 * k, 4 * k, 14 * k);
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(b.x - 5 * k, b.y - 8 * k);
+    ctx.lineTo(b.x + 8 * k, b.y);
+    ctx.lineTo(b.x - 5 * k, b.y + 8 * k);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Waveform between the button and the time.
+  const peaks = it.peaks?.length ? it.peaks : Array(48).fill(0.3);
+  const left = it.x + 64 * k, right = it.x + it.w - 52 * k, step = (right - left) / peaks.length;
+  peaks.forEach((p, i) => {
+    const h = Math.max(3 * k, p * it.h * 0.5);
+    ctx.fillStyle = played !== null && i / peaks.length < played ? PLAY_COLOR : theme.muted;
+    ctx.globalAlpha = played !== null && i / peaks.length < played ? 1 : 0.45;
+    ctx.beginPath();
+    ctx.roundRect(left + i * step + step * 0.2, b.y - h / 2, step * 0.6, h, step * 0.3);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  ctx.font = font(13 * k, 500);
+  ctx.fillStyle = theme.muted;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(clock(played !== null ? played * (it.dur ?? 0) : it.dur ?? 0), it.x + it.w - 14 * k, b.y);
 }
 
 /** A grid on the panel colour with each cell's text; the cell being edited is left to the overlay. */
