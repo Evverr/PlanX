@@ -150,7 +150,7 @@ export function distToSegment(p: Point, a: Point, b: Point): number {
 
 /** Tasks: the round checkbox sits in the top right corner, in a strip this wide; the text fills the rest. */
 /** The checkbox keeps its size on screen at any zoom (in screen pixels here), until zooming out far
- *  enough that it would outgrow the card. */
+ *  enough that it would outgrow the card. The text keeps a strip of TASK_INSET board units clear for it. */
 export const TASK_INSET = 40;
 export const TASK_BOX_R = 10;
 const TASK_BOX_GAP = 8;
@@ -160,9 +160,6 @@ export function taskBox(it: Rect, zoom = 1): Point & { r: number } {
   const k = Math.min(1 / zoom, (it.h * 0.3) / TASK_BOX_R), r = TASK_BOX_R * k, gap = TASK_BOX_GAP * k;
   return { x: it.x + it.w - r - gap, y: it.y + r + gap, r };
 }
-
-/** Width of the strip on the right that the checkbox takes from the text, at this zoom. */
-export const taskInset = (it: Rect, zoom = 1): number => TASK_INSET * Math.min(1 / zoom, (it.h * 0.3) / TASK_BOX_R);
 
 /** Whether the point is on a task's checkbox, with a little room around it. */
 export function onTaskBox(it: Item, p: Point, zoom = 1): boolean {
