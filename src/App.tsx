@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Board } from './model/board';
 import { Editor } from './editor/editor';
 import { Connection, newBoardId } from './collab/connection';
@@ -6,10 +6,11 @@ import { Toolbar } from './ui/Toolbar';
 import { IconPicker } from './ui/IconPicker';
 import { SelectionPanel } from './ui/SelectionPanel';
 import { TextEditor } from './ui/TextEditor';
-import { FormatPanel, TextPanel } from './ui/FormatPanel';
+import { TextPanel } from './ui/FormatPanel';
 import { PanelIcon } from './ui/PanelIcon';
 import { DockButton, useDock } from './ui/Dock';
 import { Minimap } from './ui/Minimap';
+import { catFor } from './emoji/emoji';
 
 type Pop = 'clear' | 'icons' | 'help' | 'name' | null;
 
@@ -69,6 +70,7 @@ export function App({ boardId }: { boardId: string }) {
   // One chevron, in the zoom panel, sticks every panel around the edge of the screen to it.
   const [docked, toggleDock] = useDock('panels');
   const [minimap, setMinimap] = useState(false);
+  const closeMinimap = useCallback(() => setMinimap(false), []);
 
   const [title, setTitle] = useState(board.title);
   useEffect(() => setTitle(board.title), [board.title]);
@@ -108,36 +110,36 @@ export function App({ boardId }: { boardId: string }) {
         <button className="tb danger" onClick={() => toggle('clear')}>Очистить</button>
       </header>
 
-      <Toolbar editor={editor} tool={ui.tool} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => toggle('icons')} />
+      <Toolbar editor={editor} tool={ui.tool} pens={ui.pens} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => toggle('icons')} />
       {pop === 'icons' && <IconPicker onPickEmoji={(id) => { editor.addEmoji(id); setPop(null); }} onPickIcon={(id) => { editor.addIcon(id); setPop(null); }} />}
 
       <div className={`bar zoom ${docked ? 'docked' : ''}`}>
         <div className="avatars">
-          <button className="avatar me" style={{ background: conn.me.color }} title={`${conn.me.name} (вы). Нажмите, чтобы сменить имя`}
+          <button className="avatar me" title={`${conn.me.name} (вы). Нажмите, чтобы сменить имя`}
             aria-label="Ваше имя" onClick={() => toggle('name')}>
-            {conn.me.name.slice(0, 1).toUpperCase()}
+            <img src={catFor()} alt="" draggable={false} />
           </button>
           {peers.slice(0, 4).map((p) => (
-            <span key={p.id} className="avatar" style={{ background: p.color }} title={p.name}>{p.name.slice(0, 1).toUpperCase()}</span>
+            <span key={p.id} className="avatar" title={p.name}><img src={catFor(p.id)} alt="" draggable={false} /></span>
           ))}
           {peers.length > 4 && <span className="more">+{peers.length - 4}</span>}
         </div>
         <button className="ib" title="Скопировать ссылку на доску" aria-label="Поделиться" onClick={share}><PanelIcon name="link" /></button>
         <div className="sep" />
-        <button className={`ib ${minimap ? 'on' : ''}`} title="Карта доски" aria-label="Карта доски" aria-pressed={minimap}
-          onClick={() => setMinimap(!minimap)}><PanelIcon name="map" /></button>
+        <button className={`ib ${minimap ? 'on' : ''}`} title="Карта доски" aria-label="Карта доски" aria-pressed={minimap} data-minimap-toggle
+          onClick={() => { setMinimap(!minimap); setPop(null); }}><PanelIcon name="map" /></button>
         <button className="ib" title="Отдалить (−)" aria-label="Отдалить" onClick={() => editor.zoomCenter(1 / 1.25)}><PanelIcon name="zoom-out" /></button>
         <button className="zpct" title="Масштаб 100%" onClick={() => editor.zoomCenter(1 / editor.cam.z)}>{Math.round(ui.cam.z * 100)}%</button>
         <button className="ib" title="Приблизить (+)" aria-label="Приблизить" onClick={() => editor.zoomCenter(1.25)}><PanelIcon name="zoom-in" /></button>
         <button className="ib" title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'} aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
           onClick={toggleTheme}><PanelIcon name={theme === 'dark' ? 'sun' : 'moon'} /></button>
         <button className="ib fit" title="Показать всё (Shift+1)" aria-label="Показать всё" onClick={() => editor.fit()}><PanelIcon name="screen" /></button>
+        <button className={`ib ${pop === 'help' ? 'on' : ''}`} title="Подсказки" aria-label="Подсказки" onClick={() => { toggle('help'); setMinimap(false); }}><PanelIcon name="question" /></button>
         <DockButton edge="bottom" docked={docked} onToggle={toggleDock} />
       </div>
 
-      {minimap && <Minimap editor={editor} items={board.list()} docked={docked} />}
+      {minimap && <Minimap editor={editor} items={board.list()} docked={docked} onClose={closeMinimap} />}
 
-      <FormatPanel />
       {textItem && <TextPanel editor={editor} item={textItem} />}
 
       {!editing && <SelectionPanel editor={editor} items={selItems} linkCount={linkCount} docked={docked} />}
@@ -155,7 +157,6 @@ export function App({ boardId }: { boardId: string }) {
 
       {pop === 'name' && <NamePopover name={conn.me.name} onSave={(n) => { conn.rename(n); setPop(null); }} />}
 
-      <button className="bar ib help-btn" title="Подсказки" aria-label="Подсказки" onClick={() => toggle('help')}><PanelIcon name="question-l" /></button>
       {pop === 'help' && (
         <div className="pop help" role="dialog" aria-label="Управление">
           <h3>Управление</h3>
@@ -167,7 +168,7 @@ export function App({ boardId }: { boardId: string }) {
             <dt>Shift + тянуть за угол</dt><dd>стикер любой формы, фигура в пропорции</dd>
             <dt>Alt + тянуть</dt><dd>копировать элемент</dd>
             <dt>Тянуть за синюю точку</dt><dd>связать с другим элементом</dd>
-            <dt><kbd>V H N T R O C F I</kbd></dt><dd>инструменты</dd>
+            <dt><kbd>V H N T R O C F P M E I</kbd></dt><dd>инструменты</dd>
             <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></dt><dd>отменить / вернуть свои действия</dd>
             <dt><kbd>Ctrl</kbd>+<kbd>C</kbd> <kbd>V</kbd> <kbd>D</kbd></dt><dd>копировать, вставить, дублировать</dd>
             <dt><kbd>Del</kbd></dt><dd>удалить выделенное</dd>

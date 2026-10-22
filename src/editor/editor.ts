@@ -2,12 +2,27 @@ import type { Board } from '../model/board';
 import type { Item, ItemType, Link, Side } from '../model/types';
 import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
-import { boundsOf, hitItem, hitLink, nearestSide, normRect, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
+import { boundsOf, hitItem, hitLink, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
 import { clearTextCache, DOT_GAP, DOT_R, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
-import { measureTextHeight } from '../canvas/text';
+import { font, itemTextHeight } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 
-export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame';
+export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser';
+export type PenTool = 'pen' | 'marker';
+export const DRAW_TOOLS: Tool[] = ['pen', 'marker', 'eraser'];
+
+/** A pen's colour (a key of INK_COLORS or '#rrggbb') and line width in screen pixels at the zoom it's drawn at. */
+export interface InkStyle { color: string; size: number }
+/** Each pen has three presets, as in Miro; `active` is the one it draws with. */
+export interface PenSet { presets: InkStyle[]; active: number }
+export type Pens = Record<PenTool, PenSet>;
+
+export const INK_SIZES: Record<PenTool, number[]> = { pen: [2, 4, 8, 14], marker: [12, 20, 32, 48] };
+const DEFAULT_PENS: Pens = {
+  pen: { presets: [{ color: 'ink', size: 2 }, { color: 'red', size: 4 }, { color: 'blue', size: 8 }], active: 0 },
+  marker: { presets: [{ color: 'yellow', size: 20 }, { color: 'green', size: 20 }, { color: 'pink', size: 20 }], active: 0 },
+};
+const PENS_KEY = 'planx-pens';
 
 /** What the editor needs from the collaboration layer. Optional, so the editor also runs alone. */
 export interface Presence {
@@ -22,6 +37,7 @@ export interface UIState {
   selection: string[];
   editingId: string | null;
   cam: Camera;
+  pens: Pens;
 }
 
 type Gesture =
@@ -32,10 +48,14 @@ type Gesture =
   | { type: 'create'; id: string; origin: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
-  | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null };
+  | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
+  | { type: 'draw'; tool: PenTool; pts: Point[] }
+  | { type: 'erase'; last: Point };
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const MIN_Z = 0.08, MAX_Z = 4;
+/** Zoom change per mouse wheel notch: half a percentage point. */
+const WHEEL_STEP = 0.005;
 
 /**
  * Owns the canvas: turns pointer and keyboard input into board changes and
@@ -48,6 +68,7 @@ export class Editor {
   tool: Tool = 'select';
   selection = new Set<string>();
   editingId: string | null = null;
+  pens: Pens = readPens();
 
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
@@ -88,7 +109,7 @@ export class Editor {
   };
 
   private snapshot(): UIState {
-    return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, cam: { ...this.cam } };
+    return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, cam: { ...this.cam }, pens: this.pens };
   }
 
   private emit(): void {
@@ -112,7 +133,7 @@ export class Editor {
     on(canvas, 'pointerup', (e) => this.onPointerUp(e));
     on(canvas, 'pointercancel', (e) => this.onPointerUp(e));
     on(canvas, 'pointerleave', () => this.presence?.setCursor(null));
-    on(canvas, 'wheel', (e) => this.onWheel(e), { passive: false });
+    on(canvas, 'wheel', (e) => this.wheel(e), { passive: false });
     on(window, 'keydown', (e) => this.onKeyDown(e));
     on(window, 'keyup', (e) => { if (e.code === 'Space') this.setSpace(false); });
     on(window, 'blur', () => this.setSpace(false));
@@ -128,6 +149,10 @@ export class Editor {
     offs.push(onEmojiLoad(() => this.requestRender()));
     if (this.presence) offs.push(this.presence.subscribe(() => this.requestRender()));
     document.fonts?.ready.then(() => { clearTextCache(); this.requestRender(); });
+    // Fonts picked for text load when first drawn.
+    const onFonts = () => { clearTextCache(); this.requestRender(); };
+    document.fonts?.addEventListener('loadingdone', onFonts);
+    offs.push(() => document.fonts?.removeEventListener('loadingdone', onFonts));
     this.resize();
     this.onBoardChange();
     return () => {
@@ -191,6 +216,7 @@ export class Editor {
       peers: this.presence?.peers() ?? [],
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]),
       hotDot: this.hotDot,
+      stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker' } : null,
     });
   }
 
@@ -249,6 +275,25 @@ export class Editor {
   setTool(tool: Tool): void {
     this.tool = tool;
     if (this.canvas) this.canvas.dataset.tool = tool;
+    this.emit();
+  }
+
+  penStyle(tool: PenTool): InkStyle {
+    const set = this.pens[tool];
+    return set.presets[set.active] ?? DEFAULT_PENS[tool].presets[0];
+  }
+
+  /** Draws with one of the pen's presets from now on. */
+  pickPen(tool: PenTool, active: number): void {
+    this.pens = { ...this.pens, [tool]: { ...this.pens[tool], active } };
+    writeJSON(PENS_KEY, this.pens);
+    this.setTool(tool);
+  }
+
+  setPenStyle(tool: PenTool, i: number, patch: Partial<InkStyle>): void {
+    const presets = this.pens[tool].presets.map((p, j) => (j === i ? { ...p, ...patch } : p));
+    this.pens = { ...this.pens, [tool]: { ...this.pens[tool], presets } };
+    writeJSON(PENS_KEY, this.pens);
     this.emit();
   }
 
@@ -319,9 +364,29 @@ export class Editor {
       for (const it of this.selectedItems()) {
         if (!HAS_FONT.includes(it.type)) continue;
         const fs = clamp(Math.round((it.fs ?? 16) * (dir > 0 ? 1.2 : 1 / 1.2)), 8, 120);
-        this.board.update(it.id, it.type === 'text' ? { fs, h: measureTextHeight(it.text ?? '', it.w, fs, it.fw) } : { fs });
+        this.board.update(it.id, it.type === 'text' ? { fs, h: itemTextHeight({ ...it, fs }) } : { fs });
       }
     });
+  }
+
+  /** Changes how the selected items' text looks; an undefined field goes back to the default.
+   *  Text items are re-measured to fit, and again once a newly picked font has loaded. */
+  setTextStyle(patch: Partial<Item>): void {
+    const items = this.selectedItems().filter((i) => HAS_FONT.includes(i.type));
+    const refit = () => this.board.transact(() => {
+      for (const it of items) {
+        const now = this.board.get(it.id);
+        if (now?.type === 'text') this.board.update(it.id, { h: itemTextHeight(now) });
+      }
+    });
+    this.board.transact(() => {
+      for (const it of items) this.board.update(it.id, patch);
+      refit();
+    });
+    if (patch.ff && document.fonts) {
+      const f = font(20, 400, patch.ff);
+      void Promise.all([document.fonts.load(f), document.fonts.load(font(20, 700, patch.ff, true))]).then(refit);
+    }
   }
 
   bringToFront(): void {
@@ -423,7 +488,7 @@ export class Editor {
         this.selection.delete(id);
       } else if (value !== (it.text ?? '')) {
         const patch: Partial<Item> = { text: value };
-        if (it.type === 'text') patch.h = measureTextHeight(value, it.w, it.fs ?? 20, it.fw);
+        if (it.type === 'text') patch.h = itemTextHeight(it, value);
         this.board.update(id, patch);
       }
     }
@@ -435,7 +500,7 @@ export class Editor {
   previewText(id: string, text: string): void {
     const it = this.board.get(id);
     if (it?.type === 'text') {
-      const h = measureTextHeight(text, it.w, it.fs ?? 20, it.fw);
+      const h = itemTextHeight(it, text);
       if (h !== it.h) this.board.update(id, { h });
     }
   }
@@ -454,6 +519,8 @@ export class Editor {
 
   private onPointerDown(e: PointerEvent): void {
     this.stopEditing();
+    // Fitting the board once it loads is for boards opened with content, not for the first thing drawn on a new one.
+    this.needsFit = false;
     const sp = this.local(e);
     this.canvas!.setPointerCapture(e.pointerId);
     this.pointers.set(e.pointerId, sp);
@@ -495,6 +562,17 @@ export class Editor {
       }
       case 'link':
         if (hit) this.gesture = { type: 'link', from: hit.id, fromSide: null, to: w, target: null };
+        return;
+      case 'pen':
+      case 'marker':
+        if (this.selection.size) this.setSelection([]);
+        this.gesture = { type: 'draw', tool: this.tool, pts: [w] };
+        this.requestRender();
+        return;
+      case 'eraser':
+        this.board.beginGesture();
+        this.gesture = { type: 'erase', last: w };
+        this.eraseAlong(w, w);
         return;
     }
 
@@ -600,17 +678,17 @@ export class Editor {
       case 'resize': {
         const it = this.board.get(g.id);
         if (!it) return;
-        const min = it.type === 'frame' ? 80 : it.type === 'icon' || it.type === 'emoji' ? 16 : 40;
+        const min = it.type === 'frame' ? 80 : it.type === 'ink' ? 4 : it.type === 'icon' || it.type === 'emoji' ? 16 : 40;
         let nw = Math.max(min, Math.round(g.w0 + w.x - g.start.x));
         let nh = Math.max(min, Math.round(g.h0 + w.y - g.start.y));
-        // Stickers, icons and emoji keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
-        const keep = it.type === 'sticky' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || e.shiftKey;
+        // Stickers, icons, emoji and drawings keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
+        const keep = it.type === 'sticky' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || it.type === 'ink' || e.shiftKey;
         if (keep) {
           const k = Math.max(nw / g.w0, nh / g.h0);
           nw = Math.round(g.w0 * k);
           nh = Math.round(g.h0 * k);
         }
-        if (it.type === 'text') nh = measureTextHeight(it.text ?? '', nw, it.fs ?? 20, it.fw);
+        if (it.type === 'text') nh = itemTextHeight(it, it.text, nw);
         this.board.update(g.id, { w: nw, h: nh });
         return;
       }
@@ -627,6 +705,19 @@ export class Editor {
         this.requestRender();
         return;
       }
+      case 'draw': {
+        // Coalesced events keep fast strokes smooth; skip points closer than a pixel and a half.
+        for (const ev of e.getCoalescedEvents?.() ?? [e]) {
+          const l = this.local(ev), p = this.toWorld(l.x, l.y), last = g.pts[g.pts.length - 1];
+          if (Math.hypot(p.x - last.x, p.y - last.y) * this.cam.z >= 1.5) g.pts.push(p);
+        }
+        this.requestRender();
+        return;
+      }
+      case 'erase':
+        this.eraseAlong(g.last, w);
+        g.last = w;
+        return;
       case 'marquee': {
         g.rect = normRect(g.start, w);
         const next = new Set(g.base);
@@ -661,7 +752,8 @@ export class Editor {
         const d = DEFAULTS[g.tool];
         const it = g.tool === 'sticky'
           ? this.newItem('sticky', g.at.x - d.w / 2, g.at.y - d.h / 2)
-          : this.newItem('text', g.at.x - 4, g.at.y - 14, { h: measureTextHeight(' ', d.w, d.fs ?? 20) });
+          : this.newItem('text', g.at.x - 4, g.at.y - 14);
+        if (it.type === 'text') it.h = itemTextHeight(it);
         this.board.add(it);
         this.setTool('select');
         this.setSelection([it.id]);
@@ -696,14 +788,49 @@ export class Editor {
       case 'marquee':
         this.requestRender();
         return;
+      case 'draw':
+        this.addInk(g.tool, g.pts);
+        return;
+      case 'erase':
+        this.board.endGesture();
+        return;
     }
+  }
+
+  /** Turns a drawn line into an ink item boxed around it, its points kept relative to the box. */
+  private addInk(tool: PenTool, pts: Point[]): void {
+    const style = this.penStyle(tool), sw = style.size / this.cam.z;
+    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    for (const p of pts) { x1 = Math.min(x1, p.x); y1 = Math.min(y1, p.y); x2 = Math.max(x2, p.x); y2 = Math.max(y2, p.y); }
+    const x = Math.floor(x1 - sw / 2), y = Math.floor(y1 - sw / 2);
+    const w = Math.ceil(x2 + sw / 2) - x, h = Math.ceil(y2 + sw / 2) - y;
+    const r = (v: number) => Math.round(v * 10) / 10;
+    this.board.add(this.newItem('ink', x, y, {
+      w, h, iw: w, sw: r(sw), color: style.color, hl: tool === 'marker' || undefined,
+      pts: pts.flatMap((p) => [r(p.x - x), r(p.y - y)]),
+    }));
+  }
+
+  /** Removes every stroke the eraser touches between two points, checked at steps narrower than the eraser. */
+  private eraseAlong(a: Point, b: Point): void {
+    const tol = 8 / this.cam.z, steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / tol));
+    const gone = new Set<string>();
+    for (const it of this.board.list()) {
+      if (it.type !== 'ink') continue;
+      const box = { x: it.x - tol, y: it.y - tol, w: it.w + tol * 2, h: it.h + tol * 2 };
+      for (let i = 0; i <= steps; i++) {
+        const p = { x: a.x + (b.x - a.x) * i / steps, y: a.y + (b.y - a.y) * i / steps };
+        if (pointInRect(p, box) && nearInk(it, p, tol)) { gone.add(it.id); break; }
+      }
+    }
+    if (gone.size) this.board.remove(gone);
   }
 
   private cancelGesture(): void {
     const g = this.gesture;
     if (!g) return;
     if (g.type === 'create') { this.board.remove([g.id]); this.board.endGesture(); }
-    if ((g.type === 'drag' && g.moved) || g.type === 'resize') this.board.endGesture();
+    if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'erase') this.board.endGesture();
     this.gesture = null;
     this.requestRender();
   }
@@ -728,13 +855,14 @@ export class Editor {
     this.presence.setCursor({ x: Math.round(w.x), y: Math.round(w.y) });
   }
 
-  private onWheel(e: WheelEvent): void {
+  /** Wheel and trackpad: zoom or scroll the board. `sp` is the screen point zooming keeps still,
+   *  the pointer by default; the board map passes the middle of the screen. */
+  wheel(e: WheelEvent, sp: Point = this.local(e)): void {
     e.preventDefault();
-    const sp = this.local(e);
     const mouseWheel = e.deltaMode !== 0 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
     if (e.ctrlKey || e.metaKey) this.zoomAt(sp.x, sp.y, Math.exp(-e.deltaY * 0.004));
-    // Mouse wheel zooms linearly: every notch adds or takes the same 1.5 percentage points.
-    else if (mouseWheel && !e.shiftKey) this.zoomAt(sp.x, sp.y, (this.cam.z - Math.sign(e.deltaY) * 0.015) / this.cam.z);
+    // Mouse wheel zooms linearly: every notch adds or takes the same WHEEL_STEP.
+    else if (mouseWheel && !e.shiftKey) this.zoomAt(sp.x, sp.y, (this.cam.z - Math.sign(e.deltaY) * WHEEL_STEP) / this.cam.z);
     else {
       const horiz = e.shiftKey && !e.deltaX;
       this.cam = { ...this.cam, x: this.cam.x - (horiz ? e.deltaY : e.deltaX), y: this.cam.y - (horiz ? 0 : e.deltaY) };
@@ -776,10 +904,15 @@ export class Editor {
       this.board.transact(() => this.selectedItems().forEach((it) => this.board.update(it.id, { x: it.x + dx, y: it.y + dy })));
       return;
     }
-    const tools: Record<string, Tool> = { KeyV: 'select', KeyH: 'hand', KeyN: 'sticky', KeyS: 'sticky', KeyT: 'text', KeyR: 'rect', KeyO: 'ellipse', KeyC: 'link', KeyL: 'link', KeyF: 'frame' };
+    const tools: Record<string, Tool> = { KeyV: 'select', KeyH: 'hand', KeyN: 'sticky', KeyS: 'sticky', KeyT: 'text', KeyR: 'rect', KeyO: 'ellipse', KeyC: 'link', KeyL: 'link', KeyF: 'frame', KeyP: 'pen', KeyM: 'marker', KeyE: 'eraser' };
     if (e.code === 'KeyI') { window.dispatchEvent(new CustomEvent('planx:toggle-icons')); return; }
     if (tools[e.code]) this.setTool(tools[e.code]);
   }
+}
+
+function readPens(): Pens {
+  const saved = readJSON<Pens>(PENS_KEY);
+  return saved?.pen?.presets?.length && saved.marker?.presets?.length ? saved : DEFAULT_PENS;
 }
 
 function readJSON<T>(key: string): T | null {

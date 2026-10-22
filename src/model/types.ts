@@ -1,4 +1,4 @@
-export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji';
+export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji' | 'ink';
 
 export interface Item {
   id: string;
@@ -13,15 +13,59 @@ export interface Item {
   color?: string;
   /** Font size in board units. */
   fs?: number;
-  /** Font weight, text items only. */
+  /** Font weight; unset means the type's own (see baseWeight). */
   fw?: number;
+  /** How the text looks: font (a key of FONTS in canvas/text.ts), italic, underline, strikethrough,
+   *  text colour and highlight (keys of TEXT_COLORS and MARK_COLORS, or '#rrggbb'), alignment and list. */
+  ff?: string;
+  fi?: boolean;
+  fu?: boolean;
+  fx?: boolean;
+  tc?: string;
+  mk?: string;
+  ta?: TextAlign;
+  ls?: ListKind;
   /** Icon id from src/icons/icons.json, icon items only. */
   icon?: string;
   /** Emoji id from src/emoji/emoji.ts (emoji-0 … emoji-80), emoji items only. */
   emoji?: string;
+  /** Ink strokes: points as x0, y0, x1, y1… from the item's corner, laid out for width `iw`;
+   *  a resized stroke is scaled by w / iw. `sw` is the line width, `hl` marks a highlighter. */
+  pts?: number[];
+  iw?: number;
+  sw?: number;
+  hl?: boolean;
 }
 
 export type Side = 'top' | 'right' | 'bottom' | 'left';
+export type TextAlign = 'left' | 'center' | 'right';
+export type ListKind = 'bullet' | 'number';
+
+/** Font weight of text left as it was made: plain for text, heavier on stickers and shapes. */
+export const baseWeight = (type: ItemType): number => (type === 'text' ? 400 : type === 'sticky' ? 500 : 600);
+export const alignOf = (it: Item): TextAlign => it.ta ?? (it.type === 'text' ? 'left' : 'center');
+
+/** Text colours; "ink" is the item's usual text colour. */
+export const TEXT_COLORS: Record<string, string> = {
+  ink: '',
+  gray: '#8A8F98',
+  red: '#E5484D',
+  orange: '#E8892B',
+  green: '#30A46C',
+  blue: '#3E7BFA',
+  purple: '#8E4EC6',
+  pink: '#D6409F',
+};
+
+/** Highlights behind the text, drawn at 45% so they work on any background. */
+export const MARK_COLORS: Record<string, string> = {
+  yellow: '#FFE135',
+  green: '#5BD27A',
+  blue: '#6EA8FE',
+  pink: '#F17AC1',
+  orange: '#F5A524',
+  purple: '#B48CFF',
+};
 
 export interface Link {
   id: string;
@@ -44,6 +88,18 @@ export const FILLS: Record<string, string> = {
   none: 'transparent',
 };
 
+/** Pen and highlighter colours; "ink" follows the theme's text colour. */
+export const INK_COLORS: Record<string, string> = {
+  ink: '',
+  red: '#E5484D',
+  orange: '#F5A524',
+  yellow: '#FFE135',
+  green: '#30A46C',
+  blue: '#3E7BFA',
+  purple: '#8E4EC6',
+  pink: '#F17AC1',
+};
+
 /** Icon colours; "ink" follows the theme's text colour. */
 export const ICON_COLORS: Record<string, string> = {
   ink: '',
@@ -62,6 +118,7 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   frame: { w: 520, h: 380, text: 'Фрейм' },
   icon: { w: 64, h: 64, color: 'ink' },
   emoji: { w: 64, h: 64 },
+  ink: { w: 1, h: 1 },
 };
 
 export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse'];
