@@ -38,10 +38,10 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   const fs = isFrame ? 15 : item.fs ?? 16;
   const pad = textPad(item);
   // A task's text starts right of its checkbox.
-  const inset = item.type === 'task' ? TASK_INSET : 0;
+  const inset = item.type === 'task' ? TASK_INSET : 0;  // a task's checkbox takes the right-hand strip
   const width = isFrame ? Math.max(160, item.w * 0.6) : item.w - inset - pad * 2;
   const top = isFrame ? item.y - 30 : item.y + pad;
-  const p = editor.toScreen({ x: item.x + (isFrame ? 0 : inset + pad), y: top });
+  const p = editor.toScreen({ x: item.x + (isFrame ? 0 : pad), y: top });
 
   // Centre the text vertically in stickers and shapes, like the canvas does.
   useLayoutEffect(() => {

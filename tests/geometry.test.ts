@@ -60,12 +60,12 @@ describe('geometry', () => {
     expect(nearInk(ink, { x: 50, y: 56 }, 1)).toBe(false);
   });
 
-  it('finds the checkbox of a task on the left, middle of its height', () => {
+  it('finds the checkbox of a task in its top right corner', () => {
     const task = box('task', { w: 260, h: 52 });
     const c = taskBox(task);
-    expect(c.y).toBe(26);
+    expect(c).toEqual({ x: 242, y: 18 });
     expect(onTaskBox(task, c)).toBe(true);
-    expect(onTaskBox(task, { x: 150, y: 26 })).toBe(false);
+    expect(onTaskBox(task, { x: 30, y: 26 })).toBe(false);
   });
 
   it('hits a star only inside its points, and ends links on its outline', () => {
