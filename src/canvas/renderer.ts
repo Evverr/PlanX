@@ -1,6 +1,7 @@
 import type { Item, Link, Side } from '../model/types';
 import { FILLS, ICON_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
+import { drawEmoji } from '../emoji/emoji';
 import type { Point, Rect } from './geometry';
 import { center, curveBetween, edgePoint, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, type Bezier } from './geometry';
 import { font, layoutText, type TextLayout } from './text';
@@ -8,17 +9,23 @@ import { font, layoutText, type TextLayout } from './text';
 export interface Camera { x: number; y: number; z: number }
 
 export interface Theme {
-  bg: string; dot: string; ink: string; muted: string; line: string;
+  bg: string; link: string; ink: string; muted: string; line: string;
   accent: string; frame: string; surface: string; stickyInk: string; shapeStroke: string;
+  /** Board background gradient stops and the RGB of the grid lines. */
+  grad: [string, string, string]; grid: string;
+  /** Multiplier for the colours of stickers, shape fills and coloured icons; below 1 dims them in the dark theme. */
+  dim: number;
 }
 
 export function readTheme(): Theme {
   const cs = getComputedStyle(document.documentElement);
   const v = (n: string) => cs.getPropertyValue(n).trim();
   return {
-    bg: v('--bg'), dot: v('--dot'), ink: v('--ink'), muted: v('--muted'), line: v('--line'),
+    bg: v('--bg'), link: v('--link'), ink: v('--ink'), muted: v('--muted'), line: v('--line'),
     accent: v('--accent'), frame: v('--frame'), surface: v('--surface'),
     stickyInk: v('--sticky-ink'), shapeStroke: v('--shape-stroke'),
+    grad: [v('--grad-1'), v('--grad-2'), v('--grad-3')], grid: v('--grid'),
+    dim: parseFloat(v('--fill-dim')) || 1,
   };
 }
 
@@ -49,12 +56,17 @@ export interface Scene {
   hotDot: Side | null;
 }
 
+/** Corner radius of everything with corners except stickers, in board units. */
+const CORNER = 8;
+const corner = (it: Item) => (it.type === 'rect' || it.type === 'frame' ? CORNER : 0);
+
 /** Size of the resize handle in screen pixels. */
 export const HANDLE = 12;
 /** Link dots around a single selected item: radius and distance from its side, in screen pixels. */
 export const DOT_R = 6;
 export const DOT_GAP = 16;
-const DOT_COLOR = '#4DA3FF';
+/** Selection outlines and handles, the link dots and selected links. */
+const SELECT_COLOR = '#4DA3FF';
 
 const layoutCache = new Map<string, TextLayout>();
 
@@ -91,28 +103,85 @@ function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, align: '
   }
 }
 
+const shadeCache = new Map<string, string>();
+
+/** A '#rrggbb' or 'rgb(r,g,b)' colour with each channel multiplied by k: a darker colour, not a transparent one. */
+function shade(color: string, k: number): string {
+  if (k === 1) return color;
+  const key = `${color}|${k}`;
+  let out = shadeCache.get(key);
+  if (!out) {
+    const ch = color.startsWith('#')
+      ? [1, 3, 5].map((i) => parseInt(color.slice(i, i + 2), 16))
+      : (color.match(/\d+/g) ?? []).slice(0, 3).map(Number);
+    out = `rgb(${ch.map((c) => Math.round(c * k)).join(',')})`;
+    shadeCache.set(key, out);
+  }
+  return out;
+}
+
+/** Gradient ends for stickers: the Figma sticker's yellow, other colours fade halfway to white. */
+const STICKY_GRADIENT: Record<string, [string, string]> = { yellow: ['#FFF8A8', '#FFFED3'] };
+
+function stickyGradient(color: string): [string, string] {
+  if (STICKY_GRADIENT[color]) return STICKY_GRADIENT[color];
+  const hex = color.startsWith('#') ? color : FILLS[color] ?? FILLS.yellow;
+  const n = parseInt(hex.slice(1), 16);
+  const light = [16, 8, 0].map((sh) => Math.round(((n >> sh) & 255) * 0.5 + 255 * 0.5));
+  return (STICKY_GRADIENT[color] = [hex, `rgb(${light.join(',')})`]);
+}
+
+/**
+ * Sticker from the Figma mockup (drawn there at 108×108, scaled here to the item):
+ * a diagonal gradient, a soft base shadow, and a separate blurred wedge under the
+ * bottom edge, thicker to the right, so the bottom-right corner looks lifted.
+ * `px` is device pixels per board unit; canvas shadows aren't scaled by the transform.
+ */
+function drawSticky(ctx: CanvasRenderingContext2D, it: Item, px: number, dim: number) {
+  const k = it.w / 108, { x, y, w, h } = it;
+  // Corner shadow: draw the wedge far off to the side and throw only its shadow back into place.
+  const away = 100000;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.13)';
+  ctx.shadowBlur = 4 * k * px;
+  ctx.shadowOffsetX = away * px;
+  ctx.beginPath();
+  ctx.moveTo(x + 106 * k - away, y + h - 1 * k);
+  ctx.lineTo(x + 25 * k - away, y + h - 1 * k);
+  ctx.lineTo(x + 104 * k - away, y + h + 3 * k);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  const [from, to] = stickyGradient(it.color ?? 'yellow');
+  const g = ctx.createLinearGradient(x + w * 0.287, y + h * 0.102, x + w * 0.769, y + h * 1.296);
+  g.addColorStop(0, shade(from, dim));
+  g.addColorStop(0.412, shade(from, dim));
+  g.addColorStop(1, shade(to, dim));
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.14)';
+  ctx.shadowBlur = 3 * k * px;
+  ctx.shadowOffsetY = 2 * k * px;
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
+  ctx.restore();
+}
+
 function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
   const { theme, cam } = s;
   const editing = s.editingId === it.id;
   switch (it.type) {
-    case 'sticky': {
-      ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,0.22)';
-      ctx.shadowBlur = 14 * cam.z * s.dpr;
-      ctx.shadowOffsetY = 5 * cam.z * s.dpr;
-      ctx.fillStyle = FILLS[it.color ?? 'yellow'] ?? FILLS.yellow;
-      ctx.fillRect(it.x, it.y, it.w, it.h);
-      ctx.restore();
+    case 'sticky':
+      drawSticky(ctx, it, cam.z * s.dpr, theme.dim);
       if (!editing) drawText(ctx, it, 14, 'center', 500, theme.stickyInk, true, cam.z);
       break;
-    }
     case 'rect':
     case 'ellipse': {
       const none = it.color === 'none';
       ctx.beginPath();
-      if (it.type === 'rect') ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(8, it.w / 4, it.h / 4));
+      if (it.type === 'rect') ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(CORNER, it.w / 2, it.h / 2));
       else ctx.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
-      if (!none) { ctx.fillStyle = FILLS[it.color ?? 'blue'] ?? FILLS.blue; ctx.fill(); }
+      if (!none) { ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : FILLS[it.color ?? 'blue'] ?? FILLS.blue, theme.dim); ctx.fill(); }
       ctx.lineWidth = 2;
       ctx.strokeStyle = none ? theme.ink : theme.shapeStroke;
       ctx.stroke();
@@ -128,7 +197,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       ctx.strokeStyle = theme.line;
       ctx.lineWidth = 1 / cam.z;
       ctx.beginPath();
-      ctx.roundRect(it.x, it.y, it.w, it.h, 6);
+      ctx.roundRect(it.x, it.y, it.w, it.h, CORNER);
       ctx.fill();
       ctx.stroke();
       if (!editing && it.text) {
@@ -141,32 +210,42 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       break;
     }
     case 'icon':
-      drawIcon(ctx, it.icon ?? '', it.x, it.y, Math.min(it.w, it.h), ICON_COLORS[it.color ?? 'ink'] || theme.ink);
+      drawIcon(ctx, it.icon ?? '', it.x, it.y, Math.min(it.w, it.h), ICON_COLORS[it.color ?? 'ink'] ? shade(ICON_COLORS[it.color ?? 'ink'], theme.dim) : theme.ink);
+      break;
+    case 'emoji':
+      drawEmoji(ctx, it.emoji ?? '', it.x, it.y, Math.min(it.w, it.h));
       break;
   }
 }
 
-function arrow(ctx: CanvasRenderingContext2D, [a, c1, c2, b]: Bezier, color: string, width: number, dash: number[] = []) {
+/** Link line width on screen, whatever the zoom; thinner once zoomed far out. */
+const linkWidth = (z: number) => (z < 0.3 ? 1 : 1.7);
+
+/** Line width and dashes are in screen pixels, so links look the same at any zoom. */
+function arrow(ctx: CanvasRenderingContext2D, [a, c1, c2, b]: Bezier, color: string, z: number, dash: number[] = []) {
   // The head follows the curve's last tangent; straight links have no control points, so fall back along the line.
   const from = c2.x !== b.x || c2.y !== b.y ? c2 : c1.x !== b.x || c1.y !== b.y ? c1 : a;
-  const ang = Math.atan2(b.y - from.y, b.x - from.x), head = 10;
-  const sx = Math.cos(ang) * head * 0.6, sy = Math.sin(ang) * head * 0.6;
+  const ang = Math.atan2(b.y - from.y, b.x - from.x);
+  // Open chevron like the undo icon's: two round-capped arms at 45°. Pull the tip back by
+  // half the line width so the rounded cap just touches the target.
+  const px = linkWidth(z), width = px / z;
+  const arm = px * 3.8 / z, sx = Math.cos(ang) * width / 2, sy = Math.sin(ang) * width / 2;
+  const tip = { x: b.x - sx, y: b.y - sy };
   ctx.strokeStyle = color;
-  ctx.fillStyle = color;
   ctx.lineWidth = width;
   ctx.lineCap = 'round';
-  ctx.setLineDash(dash);
+  ctx.lineJoin = 'round';
+  ctx.setLineDash(dash.map((d) => d / z));
   ctx.beginPath();
   ctx.moveTo(a.x, a.y);
-  ctx.bezierCurveTo(c1.x, c1.y, c2.x - sx, c2.y - sy, b.x - sx, b.y - sy);
+  ctx.bezierCurveTo(c1.x, c1.y, c2.x - sx, c2.y - sy, tip.x, tip.y);
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.beginPath();
-  ctx.moveTo(b.x, b.y);
-  ctx.lineTo(b.x - head * Math.cos(ang - 0.42), b.y - head * Math.sin(ang - 0.42));
-  ctx.lineTo(b.x - head * Math.cos(ang + 0.42), b.y - head * Math.sin(ang + 0.42));
-  ctx.closePath();
-  ctx.fill();
+  ctx.moveTo(tip.x - arm * Math.cos(ang - Math.PI / 4), tip.y - arm * Math.sin(ang - Math.PI / 4));
+  ctx.lineTo(tip.x, tip.y);
+  ctx.lineTo(tip.x - arm * Math.cos(ang + Math.PI / 4), tip.y - arm * Math.sin(ang + Math.PI / 4));
+  ctx.stroke();
 }
 
 function outline(ctx: CanvasRenderingContext2D, it: Item, z: number, color: string, dash: number[] = []) {
@@ -174,24 +253,91 @@ function outline(ctx: CanvasRenderingContext2D, it: Item, z: number, color: stri
   ctx.strokeStyle = color;
   ctx.lineWidth = 2 / z;
   ctx.setLineDash(dash.map((d) => d / z));
-  ctx.strokeRect(it.x - off, it.y - off, it.w + off * 2, it.h + off * 2);
+  // Follows the item's corners, pushed out by the same gap.
+  const r = corner(it);
+  ctx.beginPath();
+  ctx.roundRect(it.x - off, it.y - off, it.w + off * 2, it.h + off * 2, r ? r + off : 0);
+  ctx.stroke();
   ctx.setLineDash([]);
+}
+
+/**
+ * Board background from the Figma "Table" frame: a 140° gradient pinned to the screen,
+ * and a line grid on the board (from "Ato / Pattern lines": a line every 18.5 units,
+ * every fourth one darker), coarser as you zoom out so it never turns into noise.
+ */
+function drawBackground(ctx: CanvasRenderingContext2D, s: Scene) {
+  const { cam, theme, width: W, height: H } = s;
+  // Same geometry as CSS linear-gradient(140deg, ...): the line runs through the centre and spans the corners.
+  const ang = 139.9 * Math.PI / 180, dx = Math.sin(ang), dy = -Math.cos(ang);
+  const half = (Math.abs(W * dx) + Math.abs(H * dy)) / 2;
+  const g = ctx.createLinearGradient(W / 2 - dx * half, H / 2 - dy * half, W / 2 + dx * half, H / 2 + dy * half);
+  g.addColorStop(0.114, theme.grad[0]);
+  g.addColorStop(0.707, theme.grad[1]);
+  g.addColorStop(0.995, theme.grad[2]);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  let step = 18.5;
+  while (step * cam.z < 9) step *= 4;
+  const big = step * 4, px = step * cam.z;
+  const firstX = Math.floor(-cam.x / cam.z / step), firstY = Math.floor(-cam.y / cam.z / step);
+  for (const major of [false, true]) {
+    ctx.fillStyle = `rgba(${theme.grid}, ${major ? 0.032 : 0.016})`;
+    for (let i = firstX; i * px + cam.x < W; i++) {
+      const isMajor = Math.abs(Math.round(i * step / big) * big - i * step) < 1e-6;
+      if (isMajor === major) ctx.fillRect(Math.round(i * px + cam.x), 0, 1, H);
+    }
+    for (let j = firstY; j * px + cam.y < H; j++) {
+      const isMajor = Math.abs(Math.round(j * step / big) * big - j * step) < 1e-6;
+      if (isMajor === major) ctx.fillRect(0, Math.round(j * px + cam.y), W, 1);
+    }
+  }
+}
+
+let linkLayer: HTMLCanvasElement | null = null;
+
+/**
+ * Links go on their own layer so that where one crosses an item it can be faded to 15%:
+ * the items' outlines are filled as one path (so overlaps don't fade twice) and cut out
+ * at 85% strength. Frames are left out, otherwise every link inside one would fade.
+ */
+function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
+  const { cam, dpr, theme } = s;
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  if (!linkLayer) linkLayer = document.createElement('canvas');
+  if (linkLayer.width !== W || linkLayer.height !== H) { linkLayer.width = W; linkLayer.height = H; }
+  const lc = linkLayer.getContext('2d')!;
+  lc.setTransform(1, 0, 0, 1, 0, 0);
+  lc.globalCompositeOperation = 'source-over';
+  lc.globalAlpha = 1;
+  lc.clearRect(0, 0, W, H);
+  lc.setTransform(dpr * cam.z, 0, 0, dpr * cam.z, dpr * cam.x, dpr * cam.y);
+  for (const l of s.links) {
+    const curve = linkCurve(l, s.get);
+    if (curve) arrow(lc, curve, s.selection.has(l.id) ? SELECT_COLOR : theme.link, cam.z);
+  }
+  lc.globalCompositeOperation = 'destination-out';
+  lc.globalAlpha = 0.85;
+  lc.beginPath();
+  for (const it of s.items) {
+    if (it.type === 'frame' || !rectsIntersect(it, view)) continue;
+    if (it.type === 'ellipse') {
+      lc.moveTo(it.x + it.w, it.y + it.h / 2);
+      lc.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
+    } else lc.roundRect(it.x, it.y, it.w, it.h, corner(it));
+  }
+  lc.fill();
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(linkLayer, 0, 0);
+  ctx.restore();
 }
 
 export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   const { cam, theme, dpr } = s;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = theme.bg;
-  ctx.fillRect(0, 0, s.width, s.height);
-
-  // Dot grid, coarser as you zoom out so it never turns into noise.
-  let step = 24;
-  while (step * cam.z < 14) step *= 4;
-  ctx.fillStyle = theme.dot;
-  const sx0 = ((cam.x % (step * cam.z)) + step * cam.z) % (step * cam.z);
-  const sy0 = ((cam.y % (step * cam.z)) + step * cam.z) % (step * cam.z);
-  for (let x = sx0; x < s.width; x += step * cam.z)
-    for (let y = sy0; y < s.height; y += step * cam.z) ctx.fillRect(Math.round(x) - 1, Math.round(y) - 1, 2, 2);
+  drawBackground(ctx, s);
 
   ctx.setTransform(dpr * cam.z, 0, 0, dpr * cam.z, dpr * cam.x, dpr * cam.y);
   const view: Rect = { x: -cam.x / cam.z - 50, y: -cam.y / cam.z - 50, w: s.width / cam.z + 100, h: s.height / cam.z + 100 };
@@ -201,10 +347,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     if (rectsIntersect(box, view)) drawItem(ctx, it, s);
   }
 
-  for (const l of s.links) {
-    const curve = linkCurve(l, s.get);
-    if (curve) arrow(ctx, curve, s.selection.has(l.id) ? theme.accent : theme.ink, (s.selection.has(l.id) ? 3 : 2));
-  }
+  if (s.links.length) drawLinks(ctx, s, view);
 
   for (const p of s.peers) {
     for (const id of p.selection) {
@@ -216,17 +359,17 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   for (const id of s.selection) {
     const it = s.get(id);
     if (!it) continue;
-    outline(ctx, it, cam.z, theme.accent);
+    outline(ctx, it, cam.z, SELECT_COLOR);
     if (s.showHandle && s.editingId !== id) {
       const hs = HANDLE / cam.z, off = 3 / cam.z;
       ctx.fillStyle = theme.surface;
-      ctx.strokeStyle = theme.accent;
+      ctx.strokeStyle = SELECT_COLOR;
       ctx.lineWidth = 2 / cam.z;
       ctx.beginPath();
       ctx.roundRect(it.x + it.w + off - hs / 2, it.y + it.h + off - hs / 2, hs, hs, 3 / cam.z);
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = DOT_COLOR;
+      ctx.fillStyle = SELECT_COLOR;
       ctx.strokeStyle = '#fff';
       for (const side of SIDES) {
         const p = sidePoint(it, side, DOT_GAP / cam.z);
@@ -240,7 +383,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
 
   if (s.linkPreview) {
     const { from, fromSide, to, target } = s.linkPreview;
-    if (target) outline(ctx, target, cam.z, theme.accent, [4, 4]);
+    if (target) outline(ctx, target, cam.z, SELECT_COLOR, [4, 4]);
     let curve: Bezier;
     if (fromSide) {
       const toSide = target ? nearestSide(target, to) : null;
@@ -249,15 +392,15 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       const end = target ? edgePoint(target, center(from)) : to, start = edgePoint(from, end);
       curve = [start, start, end, end];
     }
-    arrow(ctx, curve, theme.accent, 2 / Math.max(cam.z, 0.5), [6, 6]);
+    arrow(ctx, curve, SELECT_COLOR, cam.z, [6, 6]);
   }
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   if (s.marquee) {
     const m = s.marquee;
     const x = m.x * cam.z + cam.x, y = m.y * cam.z + cam.y;
-    ctx.fillStyle = theme.accent + '22';
-    ctx.strokeStyle = theme.accent;
+    ctx.fillStyle = SELECT_COLOR + '22';
+    ctx.strokeStyle = SELECT_COLOR;
     ctx.lineWidth = 1;
     ctx.fillRect(x, y, m.w * cam.z, m.h * cam.z);
     ctx.strokeRect(x + 0.5, y + 0.5, m.w * cam.z, m.h * cam.z);
