@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { Editor } from '../editor/editor';
-import type { Item } from '../model/types';
-import { LINE_HEIGHT } from '../canvas/text';
+import { alignOf, TEXT_COLORS, type Item } from '../model/types';
+import { fontOf, FONTS, LINE_HEIGHT } from '../canvas/text';
 
 /**
  * A textarea laid over the item being edited, scaled with the board so the
@@ -62,7 +62,14 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         transform: `scale(${z})`,
         fontSize: fs,
         lineHeight: isFrame ? '26px' : LINE_HEIGHT,
-        fontWeight: isFrame ? 600 : item.type === 'text' ? item.fw ?? 400 : item.type === 'sticky' ? 500 : 600,
+        fontWeight: isFrame ? 600 : fontOf(item).weight,
+        ...(!isFrame && {
+          fontFamily: item.ff ? FONTS[item.ff]?.css : undefined,
+          fontStyle: item.fi ? 'italic' : undefined,
+          textAlign: alignOf(item),
+          textDecoration: [item.fu && 'underline', item.fx && 'line-through'].filter(Boolean).join(' ') || undefined,
+          color: item.tc && (item.tc.startsWith('#') ? item.tc : TEXT_COLORS[item.tc]) || undefined,
+        }),
         padding: isFrame ? '0 4px' : 0,
       }}
       onInput={(e) => {

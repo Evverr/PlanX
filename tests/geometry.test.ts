@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { distToSegment, edgePoint, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, rectContains, sidePoint } from '../src/canvas/geometry';
-import { wrapText } from '../src/canvas/text';
+import { withList, wrapText } from '../src/canvas/text';
 import type { Item } from '../src/model/types';
 
 const box = (type: Item['type'], extra: Partial<Item> = {}): Item =>
@@ -72,6 +72,14 @@ describe('geometry', () => {
   it('checks containment', () => {
     expect(rectContains({ x: 0, y: 0, w: 10, h: 10 }, { x: 1, y: 1, w: 5, h: 5 })).toBe(true);
     expect(rectContains({ x: 0, y: 0, w: 10, h: 10 }, { x: 8, y: 1, w: 5, h: 5 })).toBe(false);
+  });
+});
+
+describe('withList', () => {
+  it('puts a bullet or a number in front of each paragraph', () => {
+    expect(withList('a\nb', 'bullet')).toBe('•  a\n•  b');
+    expect(withList('a\nb', 'number')).toBe('1. a\n2. b');
+    expect(withList('a\nb')).toBe('a\nb');
   });
 });
 
