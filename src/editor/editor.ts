@@ -451,6 +451,21 @@ export class Editor {
     }
   }
 
+  /** Makes what a tool makes, at its usual size, centred on a screen point (a tool dragged off the
+   *  rail onto the board). Text, tasks and frames open for typing, as when made with the tool. */
+  dropItem(tool: Tool, at: Point): void {
+    const type = (isPoly(tool) ? 'polygon' : tool) as ItemType;
+    if (!DEFAULTS[type]) return;
+    const extra: Partial<Item> = isPoly(tool) ? { shape: tool } : tool === 'table' ? newTable() : {};
+    const c = this.toWorld(at.x, at.y), d = { ...DEFAULTS[type], ...extra };
+    const it = this.newItem(type, c.x - d.w / 2, c.y - d.h / 2, extra);
+    if (type === 'text') it.h = itemTextHeight(it);
+    this.board.add(it);
+    this.setTool('select');
+    this.setSelection([it.id]);
+    if (type === 'text' || type === 'task' || type === 'frame') this.startEditing(it.id);
+  }
+
   /** Puts a frame around two or more selected items, 40 units clear of them, and opens its title
    *  for typing as a new frame's is. Returns whether there was enough to frame. */
   frameSelection(): boolean {

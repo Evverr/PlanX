@@ -1,8 +1,19 @@
-import { cloneElement, useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactElement } from 'react';
+import { cloneElement, createElement, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactElement, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 /** How long to hold a button before it lifts, and how far the pointer may wander meanwhile; a lifted
  *  button let go without moving more than HOLD_SLOP still counts as a click. */
 const HOLD_MS = 168, HOLD_SLOP = 6;
+
+/** How far past a panel's edge a lifted button has to go before it counts as dragged out of it. */
+const OUT_MARGIN = 16;
+
+/** For panels whose buttons can be dragged out onto the board: what follows the pointer once a
+ *  button is out (a preview of what it makes, or just its icon), and what letting it go does. */
+export interface DropOut {
+  preview: (key: string) => ReactNode;
+  drop: (key: string, at: { x: number; y: number }) => void;
+}
 
 /** Separators are items too, keyed 'sep…' (a line) or 'gap…' (a space). */
 export const isSeparator = (key: string) => key.startsWith('sep') || key.startsWith('gap');
@@ -24,10 +35,17 @@ export function readOrder(storageKey: string, defaults: string[], renames: Recor
  * Put `container` on the panel and `item(key)` on each button; mark parts that must not start a
  * drag (text fields, open menus) with data-nosort. When a button takes over another's place under
  * a new key, `renames` maps the old key to it so saved orders keep it there.
+ *
+ * With `dropOut`, a button dragged out of the panel turns into its preview (render `ghost`) and is
+ * dropped on the board where it's let go; the panel's order goes back to what it was.
  */
-export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 'y', renames: Record<string, string> = {}) {
+export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 'y', renames: Record<string, string> = {}, dropOut?: DropOut) {
   const [order, setOrder] = useState(() => readOrder(storageKey, defaults, renames));
-  const [drag, setDrag] = useState<{ key: string; grab: number; at: number; at0: number; moved: boolean } | null>(null);
+  const [drag, setDrag] = useState<{
+    key: string; grab: number; at: number; at0: number; moved: boolean;
+    /** Out of the panel, where the pointer is on screen, and the order from before the drag. */
+    out: boolean; x: number; y: number; x0: number; y0: number; before: string[];
+  } | null>(null);
   const press = useRef<{ x: number; y: number; timer: number } | null>(null);
   const ref = useRef<HTMLElement>(null);
   const els = useRef(new Map<string, HTMLElement>());
@@ -44,10 +62,13 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
   };
   const shift = (d: number) => (axis === 'y' ? `translateY(${d}px)` : `translateX(${d}px)`);
 
-  // The lifted button follows the pointer, wherever its slot is now.
+  // The lifted button follows the pointer, wherever its slot is now; dragged out of the panel, it
+  // waits faintly in its old slot while its preview follows the pointer instead.
   useLayoutEffect(() => {
     if (!drag) return;
-    els.current.get(drag.key)!.style.transform = `${shift(drag.at - drag.grab - naturalStart(drag.key))} scale(1.12)`;
+    const el = els.current.get(drag.key)!;
+    el.style.transform = drag.out ? '' : `${shift(drag.at - drag.grab - naturalStart(drag.key))} scale(1.12)`;
+    el.style.opacity = drag.out ? '.3' : '';
   });
   // Buttons that changed places slide into their new ones.
   useLayoutEffect(() => {
@@ -60,7 +81,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     }
   }, [order]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const onPointerDown = (e: PointerEvent<HTMLElement>) => {
+  const onPointerDown = (e: ReactPointerEvent<HTMLElement>) => {
     const target = e.target as Element;
     const el = target.closest<HTMLElement>('[data-key]');
     if (!el || e.button !== 0 || target.closest('[data-nosort]') || !ref.current?.contains(el)) return;
@@ -72,20 +93,29 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
         const at = p ? (axis === 'y' ? p.y : p.x) : pos(e);
         press.current = null;
         const r = el.getBoundingClientRect();
-        setDrag({ key, grab: at - (axis === 'y' ? r.top : r.left), at, at0: at, moved: false });
+        setDrag({ key, grab: at - (axis === 'y' ? r.top : r.left), at, at0: at, moved: false, out: false, x: p?.x ?? e.clientX, y: p?.y ?? e.clientY, x0: p?.x ?? e.clientX, y0: p?.y ?? e.clientY, before: order });
       }, HOLD_MS),
     };
   };
-  const onPointerMove = (e: PointerEvent<HTMLElement>) => {
+  // Until the button lifts, wandering off it cancels the hold.
+  const onPointerMove = (e: ReactPointerEvent<HTMLElement>) => {
     const p = press.current;
     if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) > HOLD_SLOP) { clearTimeout(p.timer); press.current = null; }
     if (p) { p.x = e.clientX; p.y = e.clientY; }
+  };
+  // Once it has lifted, the pointer is followed on the window, so it can leave the panel; nothing
+  // is captured, so letting go in place still lands on the button as a click.
+  const dragMove = (e: PointerEvent) => {
     if (!drag) return;
     const at = pos(e);
-    // The pointer is only captured once the button really moves, so that letting go in place
-    // still lands on the button as a click.
-    const moved = drag.moved || Math.abs(at - drag.at0) > HOLD_SLOP;
-    if (moved && !drag.moved) e.currentTarget.setPointerCapture(e.pointerId);
+    const moved = drag.moved || Math.abs(at - drag.at0) > HOLD_SLOP || Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > HOLD_SLOP * 3;
+    const r = ref.current!.getBoundingClientRect();
+    const out = !!dropOut && moved && (e.clientX < r.left - OUT_MARGIN || e.clientX > r.right + OUT_MARGIN || e.clientY < r.top - OUT_MARGIN || e.clientY > r.bottom + OUT_MARGIN);
+    if (out) {
+      if (!drag.out) setOrder(drag.before);
+      setDrag({ ...drag, at, moved, out, x: e.clientX, y: e.clientY });
+      return;
+    }
     // Swap with the neighbour on screen once the lifted button's middle passes the neighbour's.
     const list = shown.current, i = list.indexOf(drag.key);
     const middle = (k: string) => naturalStart(k) + size(els.current.get(k)!) / 2;
@@ -96,22 +126,42 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
       [next[a], next[b]] = [next[b], next[a]];
       setOrder(next);
     }
-    setDrag({ ...drag, at, moved });
+    setDrag({ ...drag, at, moved, out, x: e.clientX, y: e.clientY });
   };
   const onPointerUp = () => {
     if (press.current) { clearTimeout(press.current.timer); press.current = null; }
+  };
+  const dragEnd = () => {
     if (!drag) return;
     // Settle into the slot from wherever it was let go, and don't count the release as a click.
     const el = els.current.get(drag.key)!;
     const from = el.style.transform;
     el.style.transform = '';
-    el.animate([{ transform: from }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
+    el.style.opacity = '';
+    if (!drag.out) el.animate([{ transform: from }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
     setDrag(null);
     if (!drag.moved) return;
-    try { localStorage.setItem(storageKey, JSON.stringify(order)); } catch { /* just won't be remembered */ }
+    if (drag.out) dropOut!.drop(drag.key, { x: drag.x, y: drag.y });
+    else try { localStorage.setItem(storageKey, JSON.stringify(order)); } catch { /* just won't be remembered */ }
     swallowClick.current = true;
     setTimeout(() => { swallowClick.current = false; }, 0);
   };
+
+  const handlers = useRef({ move: dragMove, end: dragEnd });
+  handlers.current = { move: dragMove, end: dragEnd };
+  const lifted = !!drag;
+  useEffect(() => {
+    if (!lifted) return;
+    const move = (e: PointerEvent) => handlers.current.move(e), end = () => handlers.current.end();
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', end);
+    window.addEventListener('pointercancel', end);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', end);
+    };
+  }, [lifted]);
 
   return {
     ref,
@@ -127,6 +177,10 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
       ref: (el: HTMLElement | null) => { if (el) els.current.set(key, el); else els.current.delete(key); },
     }),
     lifted: (key: string) => drag?.key === key,
+    /** The preview under the pointer while a button is dragged out of the panel. */
+    ghost: drag?.out && dropOut
+      ? createPortal(createElement('div', { className: 'pick-ghost preview', style: { left: drag.x, top: drag.y } }, dropOut.preview(drag.key)), document.body)
+      : null,
     /** Draws the panel's elements (by key) in order, each with its key, ref and 'lifted' class;
      *  elements left out of `items` are skipped. */
     render(items: Partial<Record<string, ReactElement>>): ReactElement[] {
