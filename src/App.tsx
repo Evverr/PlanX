@@ -6,7 +6,7 @@ import { Toolbar } from './ui/Toolbar';
 import { IconPicker } from './ui/IconPicker';
 import { SelectionPanel } from './ui/SelectionPanel';
 import { TextEditor } from './ui/TextEditor';
-import { FormatPanel } from './ui/FormatPanel';
+import { FormatPanel, TextPanel } from './ui/FormatPanel';
 import { PanelIcon } from './ui/PanelIcon';
 import { DockButton, useDock } from './ui/Dock';
 import { Minimap } from './ui/Minimap';
@@ -77,6 +77,7 @@ export function App({ boardId }: { boardId: string }) {
   const selItems = ui.selection.map((id) => board.get(id)).filter((i) => !!i);
   const linkCount = ui.selection.filter((id) => board.getLink(id)).length;
   const editing = ui.editingId ? board.get(ui.editingId) : undefined;
+  const textItem = selItems.length === 1 && (selItems[0].type === 'text' || selItems[0].type === 'sticky') ? selItems[0] : undefined;
   const peers = conn.peers();
 
   const share = async () => {
@@ -137,6 +138,7 @@ export function App({ boardId }: { boardId: string }) {
       {minimap && <Minimap editor={editor} items={board.list()} docked={docked} />}
 
       <FormatPanel />
+      {textItem && <TextPanel editor={editor} item={textItem} />}
 
       {!editing && <SelectionPanel editor={editor} items={selItems} linkCount={linkCount} docked={docked} />}
       {editing && <TextEditor key={editing.id} editor={editor} item={editing} />}
