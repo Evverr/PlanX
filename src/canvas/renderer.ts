@@ -57,6 +57,8 @@ export interface Scene {
   showHandle: boolean;
   /** The dot under the pointer, drawn larger. */
   hotDot: Side | null;
+  /** The pointer is over the selection: its outline, handle and dots show at full strength, otherwise at half. */
+  selHover: boolean;
   /** The pen or highlighter line being drawn, in board units. */
   stroke: InkStroke | null;
   /** The table cell being edited, its text left to the overlay. */
@@ -552,6 +554,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     }
   }
 
+  ctx.globalAlpha = s.selHover ? 1 : 0.5;
   for (const id of s.selection) {
     const it = s.get(id);
     if (!it) continue;
@@ -576,6 +579,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       }
     }
   }
+
+  ctx.globalAlpha = 1;
 
   if (s.linkPreview) {
     const { from, fromSide, to, target } = s.linkPreview;
