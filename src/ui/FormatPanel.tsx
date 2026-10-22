@@ -2,16 +2,7 @@
  *  The panel can be dragged by any spot that isn't a control, and folds down to its arrow button. */
 import { useRef, useState, type PointerEvent } from 'react';
 
-// Icons exported as-is from the Figma file (Bitrix "Outline Icon Bold" set).
-const ICON_URLS = import.meta.glob<string>('./format-icons/*.svg', { eager: true, query: '?url', import: 'default' });
-
-type IconName =
-  | 'undo' | 'redo' | 'search' | 'comment' | 'bold' | 'italic' | 'underline' | 'strike' | 'color' | 'marker'
-  | 'align' | 'list' | 'columns' | 'image' | 'link' | 'clear' | 'paint' | 'sup' | 'sub' | 'up' | 'drop';
-
-function Icon({ name, className }: { name: IconName; className?: string }) {
-  return <img src={ICON_URLS[`./format-icons/${name}.svg`]} className={className} alt="" draggable={false} />;
-}
+import { PanelIcon as Icon, type PanelIconName as IconName } from './PanelIcon';
 
 function Btn({ icon, label, on, off, swatch, menu }: {
   icon: IconName; label: string; on?: boolean; off?: boolean; swatch?: string; menu?: boolean;
@@ -94,7 +85,7 @@ export function FormatPanel() {
         <Btn icon="strike" label="Зачёркнутый" />
         <div className="fsep line" />
         <Btn icon="color" label="Цвет текста" swatch="#FFA600" />
-        <Btn icon="marker" label="Выделение цветом" swatch="#5A5A5A" />
+        <Btn icon="marker" label="Выделение цветом" swatch="var(--fmt-marker)" />
         <div className="fsep line" />
         <Btn icon="align" label="Выравнивание" menu />
         <div className="fsep line" />

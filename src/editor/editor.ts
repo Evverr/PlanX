@@ -5,6 +5,7 @@ import type { Point, Rect } from '../canvas/geometry';
 import { boundsOf, hitItem, hitLink, nearestSide, normRect, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
 import { clearTextCache, DOT_GAP, DOT_R, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
 import { measureTextHeight } from '../canvas/text';
+import { onEmojiLoad } from '../emoji/emoji';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame';
 
@@ -124,6 +125,7 @@ export class Editor {
     themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     offs.push(() => themeObs.disconnect());
     offs.push(this.board.subscribe(() => this.onBoardChange()));
+    offs.push(onEmojiLoad(() => this.requestRender()));
     if (this.presence) offs.push(this.presence.subscribe(() => this.requestRender()));
     document.fonts?.ready.then(() => { clearTextCache(); this.requestRender(); });
     this.resize();
@@ -266,6 +268,15 @@ export class Editor {
     const c = this.toWorld(this.width / 2, this.height / 2);
     const n = this.board.list().filter((i) => i.type === 'icon').length % 6;
     const it = this.newItem('icon', c.x - 32 + n * 12, c.y - 32 + n * 12, { icon });
+    this.board.add(it);
+    this.setTool('select');
+    this.setSelection([it.id]);
+  }
+
+  addEmoji(emoji: string): void {
+    const c = this.toWorld(this.width / 2, this.height / 2);
+    const n = this.board.list().filter((i) => i.type === 'emoji').length % 6;
+    const it = this.newItem('emoji', c.x - 32 + n * 12, c.y - 32 + n * 12, { emoji });
     this.board.add(it);
     this.setTool('select');
     this.setSelection([it.id]);
@@ -577,10 +588,12 @@ export class Editor {
       case 'resize': {
         const it = this.board.get(g.id);
         if (!it) return;
-        const min = it.type === 'frame' ? 80 : it.type === 'icon' ? 16 : 40;
+        const min = it.type === 'frame' ? 80 : it.type === 'icon' || it.type === 'emoji' ? 16 : 40;
         let nw = Math.max(min, Math.round(g.w0 + w.x - g.start.x));
         let nh = Math.max(min, Math.round(g.h0 + w.y - g.start.y));
-        if (it.type === 'sticky' || it.type === 'icon' || e.shiftKey) {
+        // Stickers, icons and emoji keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
+        const keep = it.type === 'sticky' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || e.shiftKey;
+        if (keep) {
           const k = Math.max(nw / g.w0, nh / g.h0);
           nw = Math.round(g.w0 * k);
           nh = Math.round(g.h0 * k);
@@ -707,8 +720,9 @@ export class Editor {
     e.preventDefault();
     const sp = this.local(e);
     const mouseWheel = e.deltaMode !== 0 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
-    if (e.ctrlKey || e.metaKey) this.zoomAt(sp.x, sp.y, Math.exp(-e.deltaY * 0.01));
-    else if (mouseWheel && !e.shiftKey) this.zoomAt(sp.x, sp.y, Math.exp(-Math.sign(e.deltaY) * 0.15));
+    if (e.ctrlKey || e.metaKey) this.zoomAt(sp.x, sp.y, Math.exp(-e.deltaY * 0.004));
+    // Mouse wheel zooms linearly: every notch adds or takes the same 1.5 percentage points.
+    else if (mouseWheel && !e.shiftKey) this.zoomAt(sp.x, sp.y, (this.cam.z - Math.sign(e.deltaY) * 0.015) / this.cam.z);
     else {
       const horiz = e.shiftKey && !e.deltaX;
       this.cam = { ...this.cam, x: this.cam.x - (horiz ? e.deltaY : e.deltaX), y: this.cam.y - (horiz ? 0 : e.deltaY) };

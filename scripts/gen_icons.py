@@ -1,8 +1,13 @@
 """Build src/icons/icons.json from the SVG files in assets/icons.
 
-Each icon is a 24x24 outline SVG made only of <path> elements. Fill #333333
-becomes "current" (drawn in the item's colour), #909090 becomes "current" at
-45% opacity, any other fill is kept as is.
+The icons are the Bitrix "Outline Icon Bold" set: 24x24 SVGs made of <path>
+elements (a few reuse paths through <defs>/<use>). Fill #333333 becomes
+"current" (drawn in the item's colour), #909090 becomes "current" at 45%
+opacity, any other fill (the green accent #15C674) is kept as is.
+
+Files are named by a slug of the icon's Figma name ("Add product" ->
+add-product.svg); scripts/icon-names-ru.json maps those names to Russian
+for search.
 
 Usage: python3 scripts/gen_icons.py
 """
@@ -14,61 +19,25 @@ import xml.etree.ElementTree as ET
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "assets", "icons")
 OUT = os.path.join(ROOT, "src", "icons", "icons.json")
+RU = os.path.join(ROOT, "scripts", "icon-names-ru.json")
 NS = "{http://www.w3.org/2000/svg}"
+XLINK = "{http://www.w3.org/1999/xlink}href"
 
-NAMES = {
-    "achievement": ("Achievement", "Достижение"),
-    "add-product": ("Add product", "Добавить товар"),
-    "barcode": ("Barcode", "Штрихкод"),
-    "box": ("Box", "Коробка"),
-    "cash-terminal": ("Cash terminal", "Касса"),
-    "collaboration": ("Collaboration", "Совместная работа"),
-    "crown": ("Crown", "Корона"),
-    "day-off": ("Day off", "Выходной"),
-    "dislike": ("Dislike", "Не нравится"),
-    "distribution": ("Distribution", "Распределение"),
-    "double-check": ("Double check", "Прочитано"),
-    "favorite": ("Favorite", "Избранное"),
-    "fire": ("Fire", "Огонь"),
-    "flag-with-cross": ("Flag with cross", "Флаг снят"),
-    "flag": ("Flag", "Флаг"),
-    "headset": ("Headset", "Поддержка"),
-    "heart": ("Heart", "Сердце"),
-    "inventory-management": ("Inventory management", "Склад"),
-    "like": ("Like", "Нравится"),
-    "mention": ("Mention", "Упоминание"),
-    "money": ("Money", "Деньги"),
-    "music": ("Music", "Музыка"),
-    "neutral": ("Neutral", "Нейтрально"),
-    "non-favorite": ("Non favorite", "Не в избранном"),
-    "notification-off": ("Notification off", "Уведомления выкл."),
-    "notification-settings": ("Notification settings", "Настройки уведомлений"),
-    "notification-with-cross": ("Notification with cross", "Уведомление отклонено"),
-    "notification": ("Notification", "Уведомление"),
-    "package-cancel": ("Package cancel", "Посылка отменена"),
-    "package-receive": ("Package receive", "Посылка получена"),
-    "package": ("Package", "Посылка"),
-    "payment-terminal": ("Payment terminal", "Терминал"),
-    "payment": ("Payment", "Оплата"),
-    "ping": ("Ping", "Метка"),
-    "product": ("Product", "Товар"),
-    "pulse": ("Pulse", "Пульс"),
-    "qr-code": ("QR code", "QR-код"),
-    "sad": ("Sad", "Грусть"),
-    "sale-tag": ("Sale tag", "Скидка"),
-    "sended": ("Sent", "Отправлено"),
-    "shopping-cart": ("Shopping cart", "Корзина"),
-    "sick": ("Sick", "Болезнь"),
-    "smile": ("Smile", "Улыбка"),
-    "sound-off": ("Sound off", "Звук выкл."),
-    "sound-on": ("Sound on", "Звук вкл."),
-    "stock": ("Stock", "Запасы"),
-    "stress-no": ("No stress", "Без стресса"),
-    "stress": ("Stress", "Стресс"),
-    "wallet": ("Wallet", "Кошелёк"),
-}
+
+def slug(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+
+
+with open(RU, encoding="utf-8") as f:
+    NAMES = {slug(en): (en, ru) for en, ru in json.load(f).items()}
 
 PATH_DATA = re.compile(r"[0-9MmLlHhVvCcSsQqTtAaZz.,\s-]+")
+NUMBER = re.compile(r"-?\d*\.\d+|-?\d+")
+
+
+def compact(d: str) -> str:
+    """Path data rounded to 0.01, plenty on a 24 grid, which halves the file."""
+    return NUMBER.sub(lambda m: f"{float(m.group()):.2f}".rstrip("0").rstrip("."), d)
 
 
 def main() -> None:
@@ -78,13 +47,19 @@ def main() -> None:
             continue
         icon_id = fname[:-4]
         root = ET.parse(os.path.join(SRC, fname)).getroot()
+        # Paths kept in <defs> take their fill from the <use> that draws them.
+        use_fill = {}
+        for u in root.iter(NS + "use"):
+            href = (u.get(XLINK) or u.get("href") or "").lstrip("#")
+            if href and u.get("fill"):
+                use_fill[href] = u.get("fill")
         paths = []
         for p in root.iter(NS + "path"):
             d = p.get("d", "")
             if not PATH_DATA.fullmatch(d):
                 raise SystemExit(f"{fname}: unexpected path data")
-            fill = p.get("fill", "#333333").upper()
-            entry = {"d": d}
+            fill = (p.get("fill") or use_fill.get(p.get("id", "")) or "#333333").upper()
+            entry = {"d": compact(d)}
             if fill == "#333333":
                 entry["fill"] = "current"
             elif fill == "#909090":
@@ -95,7 +70,7 @@ def main() -> None:
             if p.get("fill-rule") == "evenodd":
                 entry["evenodd"] = True
             paths.append(entry)
-        en, ru = NAMES.get(icon_id, (icon_id.replace("-", " ").capitalize(), icon_id))
+        en, ru = NAMES.get(icon_id, (icon_id.replace("-", " ").capitalize(), icon_id.replace("-", " ")))
         icons.append({"id": icon_id, "en": en, "ru": ru, "paths": paths})
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(icons, f, ensure_ascii=False, separators=(",", ":"))

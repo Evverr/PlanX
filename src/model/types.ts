@@ -1,4 +1,4 @@
-export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon';
+export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji';
 
 export interface Item {
   id: string;
@@ -17,6 +17,8 @@ export interface Item {
   fw?: number;
   /** Icon id from src/icons/icons.json, icon items only. */
   icon?: string;
+  /** Emoji id from src/emoji/emoji.ts (emoji-0 … emoji-80), emoji items only. */
+  emoji?: string;
 }
 
 export type Side = 'top' | 'right' | 'bottom' | 'left';
@@ -30,7 +32,7 @@ export interface Link {
   toSide?: Side;
 }
 
-/** Fills for stickers and shapes. Stickers are paper, so they keep these colours in both themes. */
+/** Fills for stickers and shapes, by name; an item's colour can also be any '#rrggbb' picked by hand. */
 export const FILLS: Record<string, string> = {
   yellow: '#FFE27A',
   orange: '#FFBC78',
@@ -59,6 +61,7 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   ellipse: { w: 170, h: 110, color: 'green', fs: 16, text: '' },
   frame: { w: 520, h: 380, text: 'Фрейм' },
   icon: { w: 64, h: 64, color: 'ink' },
+  emoji: { w: 64, h: 64 },
 };
 
 export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse'];

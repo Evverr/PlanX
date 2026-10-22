@@ -7,7 +7,8 @@ import { IconPicker } from './ui/IconPicker';
 import { SelectionPanel } from './ui/SelectionPanel';
 import { TextEditor } from './ui/TextEditor';
 import { FormatPanel } from './ui/FormatPanel';
-import { Stroke } from './ui/glyphs';
+import { PanelIcon } from './ui/PanelIcon';
+import { DockButton, useDock } from './ui/Dock';
 
 type Pop = 'clear' | 'icons' | 'help' | 'name' | null;
 
@@ -49,6 +50,24 @@ export function App({ boardId }: { boardId: string }) {
     return () => clearTimeout(t);
   }, [toast]);
 
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      const saved = localStorage.getItem('planx-theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+    } catch { /* storage can be unavailable */ }
+    return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    try { localStorage.setItem('planx-theme', next); } catch { /* the choice just won't be remembered */ }
+  };
+  // The canvas watches data-theme and redraws itself.
+  useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
+
+  // One chevron, in the zoom panel, sticks every panel around the edge of the screen to it.
+  const [docked, toggleDock] = useDock('panels');
+
   const [title, setTitle] = useState(board.title);
   useEffect(() => setTitle(board.title), [board.title]);
   useEffect(() => { document.title = board.title ? `${board.title} · PlanX` : 'PlanX'; }, [board.title]);
@@ -72,21 +91,21 @@ export function App({ boardId }: { boardId: string }) {
     <>
       <canvas ref={canvas} className="board-canvas" data-tool={ui.tool} aria-label="Доска" onPointerDown={() => setPop(null)} />
 
-      <header className="bar topbar">
-        <div className="logo"><i /><span>PlanX</span></div>
+      <header className={`bar topbar ${docked ? 'docked' : ''}`}>
+        <div className="logo">Plan<span>X</span></div>
         <div className="sep" />
         <input className="title-input" id="board-title" aria-label="Название доски" spellCheck={false} placeholder="Без названия"
           value={title} onChange={(e) => setTitle(e.target.value)}
           onBlur={() => { if (title.trim() !== board.title) board.setTitle(title.trim()); }}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur(); }} />
         <span className={`status ${conn.status}`} title={STATUS_TEXT[conn.status]} aria-label={STATUS_TEXT[conn.status]} />
-        <button className="ib hide-narrow" title="Отменить (Ctrl+Z)" aria-label="Отменить" onClick={() => editor.undo()}><Stroke name="undo" /></button>
-        <button className="ib hide-narrow" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" onClick={() => editor.redo()}><Stroke name="redo" /></button>
+        <button className="ib hide-narrow" title="Отменить (Ctrl+Z)" aria-label="Отменить" onClick={() => editor.undo()}><PanelIcon name="undo-on" /></button>
+        <button className="ib hide-narrow" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" onClick={() => editor.redo()}><PanelIcon name="redo-on" /></button>
         <button className="tb hide-narrow" onClick={() => { location.search = `?board=${newBoardId()}`; }}>Новая доска</button>
         <button className="tb danger" onClick={() => toggle('clear')}>Очистить</button>
       </header>
 
-      <div className="bar people">
+      <div className={`bar people ${docked ? 'docked' : ''}`}>
         <div className="avatars">
           <button className="avatar me" style={{ background: conn.me.color }} title={`${conn.me.name} (вы). Нажмите, чтобы сменить имя`}
             aria-label="Ваше имя" onClick={() => toggle('name')}>
@@ -100,19 +119,22 @@ export function App({ boardId }: { boardId: string }) {
         <button className="tb primary" onClick={share}>Поделиться</button>
       </div>
 
-      <Toolbar editor={editor} tool={ui.tool} iconsOpen={pop === 'icons'} onToggleIcons={() => toggle('icons')} />
-      {pop === 'icons' && <IconPicker onPick={(id) => { editor.addIcon(id); setPop(null); }} />}
+      <Toolbar editor={editor} tool={ui.tool} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => toggle('icons')} />
+      {pop === 'icons' && <IconPicker onPickEmoji={(id) => { editor.addEmoji(id); setPop(null); }} onPickIcon={(id) => { editor.addIcon(id); setPop(null); }} />}
 
-      <div className="bar zoom">
-        <button className="ib" title="Отдалить (−)" aria-label="Отдалить" onClick={() => editor.zoomCenter(1 / 1.25)}><Stroke name="minus" /></button>
+      <div className={`bar zoom ${docked ? 'docked' : ''}`}>
+        <button className="ib" title="Отдалить (−)" aria-label="Отдалить" onClick={() => editor.zoomCenter(1 / 1.25)}><PanelIcon name="zoom-out" /></button>
         <button className="zpct" title="Масштаб 100%" onClick={() => editor.zoomCenter(1 / editor.cam.z)}>{Math.round(ui.cam.z * 100)}%</button>
-        <button className="ib" title="Приблизить (+)" aria-label="Приблизить" onClick={() => editor.zoomCenter(1.25)}><Stroke name="plus" /></button>
-        <button className="ib fit" title="Показать всё (Shift+1)" aria-label="Показать всё" onClick={() => editor.fit()}><Stroke name="fit" /></button>
+        <button className="ib" title="Приблизить (+)" aria-label="Приблизить" onClick={() => editor.zoomCenter(1.25)}><PanelIcon name="zoom-in" /></button>
+        <button className="ib" title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'} aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+          onClick={toggleTheme}><PanelIcon name={theme === 'dark' ? 'sun' : 'moon'} /></button>
+        <button className="ib fit" title="Показать всё (Shift+1)" aria-label="Показать всё" onClick={() => editor.fit()}><PanelIcon name="screen" /></button>
+        <DockButton edge="bottom" docked={docked} onToggle={toggleDock} />
       </div>
 
       <FormatPanel />
 
-      {!editing && <SelectionPanel editor={editor} items={selItems} linkCount={linkCount} />}
+      {!editing && <SelectionPanel editor={editor} items={selItems} linkCount={linkCount} docked={docked} />}
       {editing && <TextEditor key={editing.id} editor={editor} item={editing} />}
 
       {pop === 'clear' && (
@@ -127,7 +149,7 @@ export function App({ boardId }: { boardId: string }) {
 
       {pop === 'name' && <NamePopover name={conn.me.name} onSave={(n) => { conn.rename(n); setPop(null); }} />}
 
-      <button className="bar ib help-btn" title="Подсказки" aria-label="Подсказки" onClick={() => toggle('help')}><Stroke name="help" /></button>
+      <button className="bar ib help-btn" title="Подсказки" aria-label="Подсказки" onClick={() => toggle('help')}><PanelIcon name="question-l" /></button>
       {pop === 'help' && (
         <div className="pop help" role="dialog" aria-label="Управление">
           <h3>Управление</h3>
@@ -136,6 +158,7 @@ export function App({ boardId }: { boardId: string }) {
             <dt>Колесо, щипок</dt><dd>масштаб</dd>
             <dt>Двойной клик</dt><dd>редактировать текст</dd>
             <dt>Shift + клик</dt><dd>выделить несколько</dd>
+            <dt>Shift + тянуть за угол</dt><dd>стикер любой формы, фигура в пропорции</dd>
             <dt>Alt + тянуть</dt><dd>копировать элемент</dd>
             <dt>Тянуть за синюю точку</dt><dd>связать с другим элементом</dd>
             <dt><kbd>V H N T R O C F I</kbd></dt><dd>инструменты</dd>
