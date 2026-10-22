@@ -324,11 +324,12 @@ export class Editor {
   }
 
   /** Puts an icon in the middle of the screen (fanned out a little so several don't stack),
-   *  or centred on a screen point when dropped there. */
-  addIcon(icon: string, at?: Point): void {
+   *  or centred on a screen point when dropped there, `px` screen pixels across if given. */
+  addIcon(icon: string, at?: Point, px?: number): void {
     const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
     const n = at ? 0 : this.board.list().filter((i) => i.type === 'icon').length % 6;
-    const it = this.newItem('icon', c.x - 32 + n * 12, c.y - 32 + n * 12, { icon });
+    const s = px ? Math.round(px / this.cam.z) : DEFAULTS.icon.w;
+    const it = this.newItem('icon', c.x - s / 2 + n * 12, c.y - s / 2 + n * 12, { icon, w: s, h: s });
     this.board.add(it);
     this.setTool('select');
     this.setSelection([it.id]);
@@ -346,10 +347,11 @@ export class Editor {
   }
 
   /** Like addIcon. */
-  addEmoji(emoji: string, at?: Point): void {
+  addEmoji(emoji: string, at?: Point, px?: number): void {
     const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
     const n = at ? 0 : this.board.list().filter((i) => i.type === 'emoji').length % 6;
-    const it = this.newItem('emoji', c.x - 32 + n * 12, c.y - 32 + n * 12, { emoji });
+    const s = px ? Math.round(px / this.cam.z) : DEFAULTS.emoji.w;
+    const it = this.newItem('emoji', c.x - s / 2 + n * 12, c.y - s / 2 + n * 12, { emoji, w: s, h: s });
     this.board.add(it);
     this.setTool('select');
     this.setSelection([it.id]);
@@ -551,8 +553,10 @@ export class Editor {
 
     const w = this.toWorld(sp.x, sp.y);
     const items = this.board.list();
-    const hit = hitItem(items, w, this.cam.z);
-    const link = hit ? null : hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z);
+    // A frame takes clicks anywhere on its empty area, but links drawn across it come first.
+    let hit = hitItem(items, w, this.cam.z);
+    const link = hit && hit.type !== 'frame' ? null : hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z);
+    if (link) hit = null;
 
     const touchPan = e.pointerType === 'touch' && this.tool === 'select' && !hit && !link;
     if (e.button === 1 || this.spaceDown || this.tool === 'hand' || touchPan) {
@@ -859,8 +863,8 @@ export class Editor {
     let cursor = '';
     if (dot) cursor = 'crosshair';
     else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
-    else if (hitItem(this.board.list(), w, this.cam.z)) cursor = alt ? 'copy' : 'move';
     else if (hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
+    else if (hitItem(this.board.list(), w, this.cam.z)) cursor = alt ? 'copy' : 'move';
     this.canvas.style.cursor = cursor;
   }
 
