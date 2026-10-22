@@ -3,7 +3,7 @@ import type { Item, ItemType, Link, PolyShape, Side } from '../model/types';
 import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
 import { boundsOf, hitItem, hitLink, nearestSide, nearInk, normRect, onAudioButton, onTaskBox, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
-import { clearTextCache, DOT_GAP, DOT_R, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
+import { clearTextCache, DOT_GAP, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
 import { fitHeight, font, itemTextHeight } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
@@ -775,7 +775,7 @@ export class Editor {
 
   /** The link dot under the point, if any. */
   private dotAt(it: Item, w: Point): Side | null {
-    const r = (DOT_R + 5) / this.cam.z;
+    const r = 11 / this.cam.z;  // as easy to catch as before the dots got smaller
     for (const side of SIDES) {
       const p = sidePoint(it, side, DOT_GAP / this.cam.z);
       if (Math.hypot(w.x - p.x, w.y - p.y) <= r) return side;
