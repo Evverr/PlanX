@@ -102,8 +102,23 @@ export function distToSegment(p: Point, a: Point, b: Point): number {
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
+/** An ink stroke's points on the board. */
+export function inkPoints(it: Item): Point[] {
+  const pts = it.pts ?? [], k = it.w / (it.iw || it.w || 1), out: Point[] = [];
+  for (let i = 0; i + 1 < pts.length; i += 2) out.push({ x: it.x + pts[i] * k, y: it.y + pts[i + 1] * k });
+  return out;
+}
+
+/** Whether the point is within `tol` of the stroke's line. */
+export function nearInk(it: Item, p: Point, tol: number): boolean {
+  const pts = inkPoints(it), r = (it.sw ?? 2) * (it.w / (it.iw || it.w || 1)) / 2 + tol;
+  if (pts.length === 1) return Math.hypot(p.x - pts[0].x, p.y - pts[0].y) <= r;
+  for (let i = 1; i < pts.length; i++) if (distToSegment(p, pts[i - 1], pts[i]) <= r) return true;
+  return false;
+}
+
 /**
- * Topmost item under the point. A frame only counts when the point is on its
+ * Topmost item under the point. Ink counts only near its line. A frame only counts when the point is on its
  * label or near its border, so dragging inside a frame starts a selection box.
  */
 export function hitItem(items: Item[], p: Point, zoom: number): Item | null {
@@ -115,6 +130,10 @@ export function hitItem(items: Item[], p: Point, zoom: number): Item | null {
       const inBox = pointInRect(p, it);
       const onBorder = inBox && (p.x - it.x < band || it.x + it.w - p.x < band || p.y - it.y < band || it.y + it.h - p.y < band);
       if (onLabel || onBorder) return it;
+      continue;
+    }
+    if (it.type === 'ink') {
+      if (pointInRect(p, it) && nearInk(it, p, 5 / zoom)) return it;
       continue;
     }
     if (it.type === 'ellipse') {
