@@ -6,7 +6,7 @@ import { Toolbar } from './ui/Toolbar';
 import { IconPicker } from './ui/IconPicker';
 import { SelectionPanel } from './ui/SelectionPanel';
 import { TextEditor } from './ui/TextEditor';
-import { FormatPanel, TextPanel } from './ui/FormatPanel';
+import { TextPanel } from './ui/FormatPanel';
 import { PanelIcon } from './ui/PanelIcon';
 import { DockButton, useDock } from './ui/Dock';
 import { Minimap } from './ui/Minimap';
@@ -108,7 +108,7 @@ export function App({ boardId }: { boardId: string }) {
         <button className="tb danger" onClick={() => toggle('clear')}>Очистить</button>
       </header>
 
-      <Toolbar editor={editor} tool={ui.tool} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => toggle('icons')} />
+      <Toolbar editor={editor} tool={ui.tool} pens={ui.pens} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => toggle('icons')} />
       {pop === 'icons' && <IconPicker onPickEmoji={(id) => { editor.addEmoji(id); setPop(null); }} onPickIcon={(id) => { editor.addIcon(id); setPop(null); }} />}
 
       <div className={`bar zoom ${docked ? 'docked' : ''}`}>
@@ -137,7 +137,6 @@ export function App({ boardId }: { boardId: string }) {
 
       {minimap && <Minimap editor={editor} items={board.list()} docked={docked} />}
 
-      <FormatPanel />
       {textItem && <TextPanel editor={editor} item={textItem} />}
 
       {!editing && <SelectionPanel editor={editor} items={selItems} linkCount={linkCount} docked={docked} />}
@@ -167,7 +166,7 @@ export function App({ boardId }: { boardId: string }) {
             <dt>Shift + тянуть за угол</dt><dd>стикер любой формы, фигура в пропорции</dd>
             <dt>Alt + тянуть</dt><dd>копировать элемент</dd>
             <dt>Тянуть за синюю точку</dt><dd>связать с другим элементом</dd>
-            <dt><kbd>V H N T R O C F I</kbd></dt><dd>инструменты</dd>
+            <dt><kbd>V H N T R O C F P M E I</kbd></dt><dd>инструменты</dd>
             <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></dt><dd>отменить / вернуть свои действия</dd>
             <dt><kbd>Ctrl</kbd>+<kbd>C</kbd> <kbd>V</kbd> <kbd>D</kbd></dt><dd>копировать, вставить, дублировать</dd>
             <dt><kbd>Del</kbd></dt><dd>удалить выделенное</dd>

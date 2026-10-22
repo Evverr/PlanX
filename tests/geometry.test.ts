@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { distToSegment, edgePoint, hitItem, hitLink, linkCurve, nearestSide, rectContains, sidePoint } from '../src/canvas/geometry';
+import { distToSegment, edgePoint, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, rectContains, sidePoint } from '../src/canvas/geometry';
 import { wrapText } from '../src/canvas/text';
 import type { Item } from '../src/model/types';
 
@@ -46,6 +46,17 @@ describe('geometry', () => {
     expect(hitItem([frame], { x: 200, y: 150 }, 1)).toBeNull();
     expect(hitItem([frame], { x: 20, y: -10 }, 1)?.id).toBe('frame');
     expect(hitItem([frame], { x: 2, y: 150 }, 1)?.id).toBe('frame');
+  });
+
+  it('grabs a drawing only near its line, and scales the line with the item', () => {
+    // A diagonal from corner to corner, drawn 100 wide and resized to 200.
+    const ink = box('ink', { w: 100, h: 100, iw: 100, sw: 4, pts: [0, 0, 100, 100] });
+    expect(hitItem([ink], { x: 50, y: 52 }, 1)?.id).toBe('ink');
+    expect(hitItem([ink], { x: 80, y: 20 }, 1)).toBeNull();
+    const big = { ...ink, w: 200, h: 200 };
+    expect(inkPoints(big)[1]).toEqual({ x: 200, y: 200 });
+    expect(nearInk(big, { x: 150, y: 156 }, 1)).toBe(true);
+    expect(nearInk(ink, { x: 50, y: 56 }, 1)).toBe(false);
   });
 
   it('picks the topmost item', () => {

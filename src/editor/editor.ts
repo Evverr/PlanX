@@ -2,12 +2,27 @@ import type { Board } from '../model/board';
 import type { Item, ItemType, Link, Side } from '../model/types';
 import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
-import { boundsOf, hitItem, hitLink, nearestSide, normRect, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
+import { boundsOf, hitItem, hitLink, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
 import { clearTextCache, DOT_GAP, DOT_R, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
 import { measureTextHeight } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 
-export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame';
+export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser';
+export type PenTool = 'pen' | 'marker';
+export const DRAW_TOOLS: Tool[] = ['pen', 'marker', 'eraser'];
+
+/** A pen's colour (a key of INK_COLORS or '#rrggbb') and line width in screen pixels at the zoom it's drawn at. */
+export interface InkStyle { color: string; size: number }
+/** Each pen has three presets, as in Miro; `active` is the one it draws with. */
+export interface PenSet { presets: InkStyle[]; active: number }
+export type Pens = Record<PenTool, PenSet>;
+
+export const INK_SIZES: Record<PenTool, number[]> = { pen: [2, 4, 8, 14], marker: [12, 20, 32, 48] };
+const DEFAULT_PENS: Pens = {
+  pen: { presets: [{ color: 'ink', size: 2 }, { color: 'red', size: 4 }, { color: 'blue', size: 8 }], active: 0 },
+  marker: { presets: [{ color: 'yellow', size: 20 }, { color: 'green', size: 20 }, { color: 'pink', size: 20 }], active: 0 },
+};
+const PENS_KEY = 'planx-pens';
 
 /** What the editor needs from the collaboration layer. Optional, so the editor also runs alone. */
 export interface Presence {
@@ -22,6 +37,7 @@ export interface UIState {
   selection: string[];
   editingId: string | null;
   cam: Camera;
+  pens: Pens;
 }
 
 type Gesture =
@@ -32,7 +48,9 @@ type Gesture =
   | { type: 'create'; id: string; origin: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
-  | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null };
+  | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
+  | { type: 'draw'; tool: PenTool; pts: Point[] }
+  | { type: 'erase'; last: Point };
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const MIN_Z = 0.08, MAX_Z = 4;
@@ -48,6 +66,7 @@ export class Editor {
   tool: Tool = 'select';
   selection = new Set<string>();
   editingId: string | null = null;
+  pens: Pens = readPens();
 
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
@@ -88,7 +107,7 @@ export class Editor {
   };
 
   private snapshot(): UIState {
-    return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, cam: { ...this.cam } };
+    return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, cam: { ...this.cam }, pens: this.pens };
   }
 
   private emit(): void {
@@ -191,6 +210,7 @@ export class Editor {
       peers: this.presence?.peers() ?? [],
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]),
       hotDot: this.hotDot,
+      stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker' } : null,
     });
   }
 
@@ -249,6 +269,25 @@ export class Editor {
   setTool(tool: Tool): void {
     this.tool = tool;
     if (this.canvas) this.canvas.dataset.tool = tool;
+    this.emit();
+  }
+
+  penStyle(tool: PenTool): InkStyle {
+    const set = this.pens[tool];
+    return set.presets[set.active] ?? DEFAULT_PENS[tool].presets[0];
+  }
+
+  /** Draws with one of the pen's presets from now on. */
+  pickPen(tool: PenTool, active: number): void {
+    this.pens = { ...this.pens, [tool]: { ...this.pens[tool], active } };
+    writeJSON(PENS_KEY, this.pens);
+    this.setTool(tool);
+  }
+
+  setPenStyle(tool: PenTool, i: number, patch: Partial<InkStyle>): void {
+    const presets = this.pens[tool].presets.map((p, j) => (j === i ? { ...p, ...patch } : p));
+    this.pens = { ...this.pens, [tool]: { ...this.pens[tool], presets } };
+    writeJSON(PENS_KEY, this.pens);
     this.emit();
   }
 
@@ -454,6 +493,8 @@ export class Editor {
 
   private onPointerDown(e: PointerEvent): void {
     this.stopEditing();
+    // Fitting the board once it loads is for boards opened with content, not for the first thing drawn on a new one.
+    this.needsFit = false;
     const sp = this.local(e);
     this.canvas!.setPointerCapture(e.pointerId);
     this.pointers.set(e.pointerId, sp);
@@ -495,6 +536,17 @@ export class Editor {
       }
       case 'link':
         if (hit) this.gesture = { type: 'link', from: hit.id, fromSide: null, to: w, target: null };
+        return;
+      case 'pen':
+      case 'marker':
+        if (this.selection.size) this.setSelection([]);
+        this.gesture = { type: 'draw', tool: this.tool, pts: [w] };
+        this.requestRender();
+        return;
+      case 'eraser':
+        this.board.beginGesture();
+        this.gesture = { type: 'erase', last: w };
+        this.eraseAlong(w, w);
         return;
     }
 
@@ -600,11 +652,11 @@ export class Editor {
       case 'resize': {
         const it = this.board.get(g.id);
         if (!it) return;
-        const min = it.type === 'frame' ? 80 : it.type === 'icon' || it.type === 'emoji' ? 16 : 40;
+        const min = it.type === 'frame' ? 80 : it.type === 'ink' ? 4 : it.type === 'icon' || it.type === 'emoji' ? 16 : 40;
         let nw = Math.max(min, Math.round(g.w0 + w.x - g.start.x));
         let nh = Math.max(min, Math.round(g.h0 + w.y - g.start.y));
-        // Stickers, icons and emoji keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
-        const keep = it.type === 'sticky' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || e.shiftKey;
+        // Stickers, icons, emoji and drawings keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
+        const keep = it.type === 'sticky' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || it.type === 'ink' || e.shiftKey;
         if (keep) {
           const k = Math.max(nw / g.w0, nh / g.h0);
           nw = Math.round(g.w0 * k);
@@ -627,6 +679,19 @@ export class Editor {
         this.requestRender();
         return;
       }
+      case 'draw': {
+        // Coalesced events keep fast strokes smooth; skip points closer than a pixel and a half.
+        for (const ev of e.getCoalescedEvents?.() ?? [e]) {
+          const l = this.local(ev), p = this.toWorld(l.x, l.y), last = g.pts[g.pts.length - 1];
+          if (Math.hypot(p.x - last.x, p.y - last.y) * this.cam.z >= 1.5) g.pts.push(p);
+        }
+        this.requestRender();
+        return;
+      }
+      case 'erase':
+        this.eraseAlong(g.last, w);
+        g.last = w;
+        return;
       case 'marquee': {
         g.rect = normRect(g.start, w);
         const next = new Set(g.base);
@@ -696,14 +761,49 @@ export class Editor {
       case 'marquee':
         this.requestRender();
         return;
+      case 'draw':
+        this.addInk(g.tool, g.pts);
+        return;
+      case 'erase':
+        this.board.endGesture();
+        return;
     }
+  }
+
+  /** Turns a drawn line into an ink item boxed around it, its points kept relative to the box. */
+  private addInk(tool: PenTool, pts: Point[]): void {
+    const style = this.penStyle(tool), sw = style.size / this.cam.z;
+    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+    for (const p of pts) { x1 = Math.min(x1, p.x); y1 = Math.min(y1, p.y); x2 = Math.max(x2, p.x); y2 = Math.max(y2, p.y); }
+    const x = Math.floor(x1 - sw / 2), y = Math.floor(y1 - sw / 2);
+    const w = Math.ceil(x2 + sw / 2) - x, h = Math.ceil(y2 + sw / 2) - y;
+    const r = (v: number) => Math.round(v * 10) / 10;
+    this.board.add(this.newItem('ink', x, y, {
+      w, h, iw: w, sw: r(sw), color: style.color, hl: tool === 'marker' || undefined,
+      pts: pts.flatMap((p) => [r(p.x - x), r(p.y - y)]),
+    }));
+  }
+
+  /** Removes every stroke the eraser touches between two points, checked at steps narrower than the eraser. */
+  private eraseAlong(a: Point, b: Point): void {
+    const tol = 8 / this.cam.z, steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / tol));
+    const gone = new Set<string>();
+    for (const it of this.board.list()) {
+      if (it.type !== 'ink') continue;
+      const box = { x: it.x - tol, y: it.y - tol, w: it.w + tol * 2, h: it.h + tol * 2 };
+      for (let i = 0; i <= steps; i++) {
+        const p = { x: a.x + (b.x - a.x) * i / steps, y: a.y + (b.y - a.y) * i / steps };
+        if (pointInRect(p, box) && nearInk(it, p, tol)) { gone.add(it.id); break; }
+      }
+    }
+    if (gone.size) this.board.remove(gone);
   }
 
   private cancelGesture(): void {
     const g = this.gesture;
     if (!g) return;
     if (g.type === 'create') { this.board.remove([g.id]); this.board.endGesture(); }
-    if ((g.type === 'drag' && g.moved) || g.type === 'resize') this.board.endGesture();
+    if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'erase') this.board.endGesture();
     this.gesture = null;
     this.requestRender();
   }
@@ -776,10 +876,15 @@ export class Editor {
       this.board.transact(() => this.selectedItems().forEach((it) => this.board.update(it.id, { x: it.x + dx, y: it.y + dy })));
       return;
     }
-    const tools: Record<string, Tool> = { KeyV: 'select', KeyH: 'hand', KeyN: 'sticky', KeyS: 'sticky', KeyT: 'text', KeyR: 'rect', KeyO: 'ellipse', KeyC: 'link', KeyL: 'link', KeyF: 'frame' };
+    const tools: Record<string, Tool> = { KeyV: 'select', KeyH: 'hand', KeyN: 'sticky', KeyS: 'sticky', KeyT: 'text', KeyR: 'rect', KeyO: 'ellipse', KeyC: 'link', KeyL: 'link', KeyF: 'frame', KeyP: 'pen', KeyM: 'marker', KeyE: 'eraser' };
     if (e.code === 'KeyI') { window.dispatchEvent(new CustomEvent('planx:toggle-icons')); return; }
     if (tools[e.code]) this.setTool(tools[e.code]);
   }
+}
+
+function readPens(): Pens {
+  const saved = readJSON<Pens>(PENS_KEY);
+  return saved?.pen?.presets?.length && saved.marker?.presets?.length ? saved : DEFAULT_PENS;
 }
 
 function readJSON<T>(key: string): T | null {

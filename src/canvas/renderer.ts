@@ -1,9 +1,9 @@
 import type { Item, Link, Side } from '../model/types';
-import { FILLS, ICON_COLORS } from '../model/types';
+import { FILLS, ICON_COLORS, INK_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import type { Point, Rect } from './geometry';
-import { center, curveBetween, edgePoint, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, type Bezier } from './geometry';
+import { center, curveBetween, edgePoint, inkPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, type Bezier } from './geometry';
 import { font, layoutText, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -54,7 +54,11 @@ export interface Scene {
   showHandle: boolean;
   /** The dot under the pointer, drawn larger. */
   hotDot: Side | null;
+  /** The pen or highlighter line being drawn, in board units. */
+  stroke: InkStroke | null;
 }
+
+export interface InkStroke { pts: Point[]; color: string; width: number; hl: boolean }
 
 /** Corner radius of everything with corners except stickers, in board units. */
 const CORNER = 8;
@@ -215,7 +219,31 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'emoji':
       drawEmoji(ctx, it.emoji ?? '', it.x, it.y, Math.min(it.w, it.h));
       break;
+    case 'ink':
+      strokeInk(ctx, { pts: inkPoints(it), color: it.color ?? 'ink', width: (it.sw ?? 2) * it.w / (it.iw || it.w), hl: !!it.hl }, theme);
+      break;
   }
+}
+
+/** A pen or highlighter line, smoothed by curving through the midpoints between its points. */
+function strokeInk(ctx: CanvasRenderingContext2D, { pts, color, width, hl }: InkStroke, theme: Theme) {
+  if (!pts.length) return;
+  const c = color.startsWith('#') ? color : INK_COLORS[color];
+  ctx.save();
+  ctx.globalAlpha = hl ? 0.45 : 1;
+  ctx.strokeStyle = c ? shade(c, theme.dim) : theme.ink;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length - 1; i++) {
+    ctx.quadraticCurveTo(pts[i].x, pts[i].y, (pts[i].x + pts[i + 1].x) / 2, (pts[i].y + pts[i + 1].y) / 2);
+  }
+  const last = pts[pts.length - 1];
+  ctx.lineTo(last.x, last.y);
+  ctx.stroke();
+  ctx.restore();
 }
 
 /** Link line width on screen, whatever the zoom; thinner once zoomed far out. */
@@ -321,7 +349,7 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
   lc.globalAlpha = 0.85;
   lc.beginPath();
   for (const it of s.items) {
-    if (it.type === 'frame' || !rectsIntersect(it, view)) continue;
+    if (it.type === 'frame' || it.type === 'ink' || !rectsIntersect(it, view)) continue;
     if (it.type === 'ellipse') {
       lc.moveTo(it.x + it.w, it.y + it.h / 2);
       lc.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
@@ -348,6 +376,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   }
 
   if (s.links.length) drawLinks(ctx, s, view);
+  if (s.stroke) strokeInk(ctx, s.stroke, theme);
 
   for (const p of s.peers) {
     for (const id of p.selection) {
