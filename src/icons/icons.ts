@@ -1,6 +1,7 @@
 import data from './icons.json';
 
-export interface IconPath { d: string; fill: string; opacity?: number; evenodd?: boolean }
+/** `stroke` is a line width: the path is drawn as a line, `round` gives it round caps and joins. */
+export interface IconPath { d: string; fill: string; opacity?: number; evenodd?: boolean; stroke?: number; round?: boolean }
 /** `aliases` are the smaller sizes of the same icon, dropped from the set; boards that use them get this one. */
 export interface IconDef { id: string; en: string; ru: string; paths: IconPath[]; aliases?: string[] }
 
@@ -23,8 +24,17 @@ export function drawIcon(ctx: CanvasRenderingContext2D, id: string, x: number, y
     let path = pathCache.get(p.d);
     if (!path) { path = new Path2D(p.d); pathCache.set(p.d, path); }
     ctx.globalAlpha = p.opacity ?? 1;
-    ctx.fillStyle = p.fill === 'current' ? color : p.fill;
-    ctx.fill(path, p.evenodd ? 'evenodd' : 'nonzero');
+    const paint = p.fill === 'current' ? color : p.fill;
+    if (p.stroke) {
+      ctx.strokeStyle = paint;
+      ctx.lineWidth = p.stroke;
+      ctx.lineCap = p.round ? 'round' : 'butt';
+      ctx.lineJoin = p.round ? 'round' : 'miter';
+      ctx.stroke(path);
+    } else {
+      ctx.fillStyle = paint;
+      ctx.fill(path, p.evenodd ? 'evenodd' : 'nonzero');
+    }
   }
   ctx.restore();
 }
