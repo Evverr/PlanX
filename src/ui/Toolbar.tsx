@@ -1,7 +1,8 @@
 import { useRef, type ReactNode } from 'react';
-import type { Editor, Pens, Tool } from '../editor/editor';
+import { SHAPE_TOOLS, type Editor, type Pens, type Tool } from '../editor/editor';
 import { readPictures } from '../canvas/pictures';
 import { DrawPanel, isDrawTool } from './DrawPanel';
+import { ShapePanel } from './ShapePanel';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
 
@@ -11,11 +12,8 @@ const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
   hand: ['hand', 'hand', 'Рука (H)'],
   sticky: ['sticky', 'sticker', 'Стикер (N)'],
   text: ['text', 'text', 'Текст (T)'],
-  rect: ['rect', 'landscape', 'Прямоугольник (R)'],
-  oval: ['ellipse', 'ellipse', 'Эллипс (O)'],
   task: ['task', 'circle-check', 'Задача'],
   link: ['link', 'maximize', 'Стрелка (C)'],
-  frames: ['frame', 'frame', 'Фрейм (F)'],
   table: ['table', 'columns', 'Таблица'],
 };
 
@@ -25,7 +23,7 @@ const LATER: Partial<Record<string, [PanelIconName, string]>> = {
 };
 
 /** Everything on the rail, top to bottom, until someone rearranges it. */
-const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'rect', 'oval', 'task', 'link', 'table', 'frames', 'draw', 'image', 'audio', 'smile', 'paint'];
+const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'link', 'table', 'frames', 'draw', 'image', 'audio', 'smile', 'paint'];
 
 export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons, recorderOpen, onToggleRecorder }: {
   editor: Editor; tool: Tool; pens: Pens; docked: boolean; iconsOpen: boolean; onToggleIcons: () => void;
@@ -35,6 +33,10 @@ export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons, 
   const lastDraw = useRef<Tool>('pen');
   const drawing = isDrawTool(tool);
   if (drawing) lastDraw.current = tool;
+  // Likewise the shapes button brings back the figure used last.
+  const lastShape = useRef<Tool>('rect');
+  const shaping = SHAPE_TOOLS.includes(tool);
+  if (shaping) lastShape.current = tool;
 
   const filePicker = useRef<HTMLInputElement>(null);
 
@@ -53,6 +55,10 @@ export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons, 
     const t = TOOLS[key], later = LATER[key];
     if (key === 'sep') return <div key={key} {...sort.item(key)} className={`tsep ${sort.lifted(key) ? 'lifted' : ''}`} />;
     if (t) return button(key, tool === t[0], t[2], t[1], () => editor.setTool(t[0]), { 'aria-pressed': tool === t[0] });
+    // With two or more items selected, the frame button puts a frame around them instead.
+    if (key === 'frames') return button(key, tool === 'frame', 'Фрейм (F; вокруг выделенного — Ctrl+G)', 'frame',
+      () => { if (!editor.frameSelection()) editor.setTool('frame'); }, { 'aria-pressed': tool === 'frame' });
+    if (key === 'oval') return button(key, shaping, 'Фигуры', 'ellipse', () => editor.setTool(shaping ? 'select' : lastShape.current), { 'aria-pressed': shaping });
     if (key === 'draw') return button(key, drawing, 'Рисование (P)', 'marker', () => editor.setTool(drawing ? 'select' : lastDraw.current), { 'aria-pressed': drawing });
     if (key === 'image') return button(key, false, 'Картинка', 'image', () => filePicker.current?.click());
     if (key === 'audio') return button(key, recorderOpen, 'Аудиозаметка', 'microphone', onToggleRecorder, { 'aria-expanded': recorderOpen });
@@ -68,6 +74,7 @@ export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons, 
       {sort.visible().map(item)}
     </nav>
     {drawing && <DrawPanel editor={editor} tool={tool} pens={pens} />}
+    {shaping && <ShapePanel editor={editor} tool={tool} />}
     <input ref={filePicker} type="file" accept="image/*" multiple hidden
       onChange={(e) => { void readPictures(e.target.files ?? []).then((pics) => editor.addPictures(pics)); e.target.value = ''; }} />
     </>

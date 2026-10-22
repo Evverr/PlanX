@@ -87,6 +87,15 @@ export function App({ boardId }: { boardId: string }) {
   const linkCount = ui.selection.filter((id) => board.getLink(id)).length;
   const editing = ui.editingId ? board.get(ui.editingId) : undefined;
   const textItem = selItems.length === 1 && ['text', 'sticky', 'task', 'table'].includes(selItems[0].type) ? selItems[0] : undefined;
+  // The text panel shows up a second after the item is picked, or after it's let go when moved;
+  // it stays away while the item is being moved or resized.
+  const [textShown, setTextShown] = useState<string | null>(null);
+  useEffect(() => {
+    setTextShown(null);
+    if (!textItem || ui.moving) return;
+    const t = setTimeout(() => setTextShown(textItem.id), 1000);
+    return () => clearTimeout(t);
+  }, [textItem?.id, ui.moving]); // eslint-disable-line react-hooks/exhaustive-deps
   const peers = conn.peers();
 
   const share = async () => {
@@ -134,7 +143,7 @@ export function App({ boardId }: { boardId: string }) {
         recorderOpen={recorder} onToggleRecorder={() => { setRecorder(!recorder); setPop(null); }} />
       {/* Not a popover: a click on the board mustn't cut a recording short. */}
       {recorder && <AudioRecorder onClose={() => setRecorder(false)} onAdd={(note) => { editor.addAudio(note); setRecorder(false); }} />}
-      {pop === 'icons' && <IconPicker onPick={(kind, id, at) => {
+      {pop === 'icons' && <IconPicker zoom={ui.cam.z} onPick={(kind, id, at) => {
         setPop(null);
         if (kind === 'emoji') editor.addEmoji(id, at);
         else if (kind === 'sticky') editor.addSticky(id, at);
@@ -171,7 +180,7 @@ export function App({ boardId }: { boardId: string }) {
 
       {minimap && <Minimap editor={editor} items={board.list()} docked={docked} onClose={closeMinimap} />}
 
-      {textItem && <TextPanel editor={editor} item={textItem} />}
+      {textItem && textShown === textItem.id && <TextPanel editor={editor} item={textItem} />}
 
       {!editing && <SelectionPanel editor={editor} items={selItems} linkCount={linkCount} docked={docked} />}
       {/* A table cell is typed into as if it were an item of its own, the size of the cell. */}
@@ -206,6 +215,7 @@ export function App({ boardId }: { boardId: string }) {
             <dt>Удерживать инструмент</dt><dd>переставить его на панели</dd>
             <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></dt><dd>отменить / вернуть свои действия</dd>
             <dt><kbd>Ctrl</kbd>+<kbd>C</kbd> <kbd>V</kbd> <kbd>D</kbd></dt><dd>копировать, вставить, дублировать</dd>
+            <dt><kbd>Ctrl</kbd>+<kbd>G</kbd></dt><dd>фрейм вокруг выделенного</dd>
             <dt><kbd>Del</kbd></dt><dd>удалить выделенное</dd>
           </dl>
         </div>

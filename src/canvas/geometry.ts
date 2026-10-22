@@ -1,4 +1,4 @@
-import type { Item, Link, Side } from '../model/types';
+import type { Item, Link, PolyShape, Side } from '../model/types';
 
 export interface Point { x: number; y: number }
 export interface Rect { x: number; y: number; w: number; h: number }
@@ -22,6 +22,51 @@ export const rectContains = (outer: Rect, inner: Rect): boolean =>
 export const pointInRect = (p: Point, r: Rect): boolean =>
   p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
 
+/** Corners of the polygon figures in a unit box, each stretched to fill it. */
+const POLY: Record<PolyShape, Point[]> = (() => {
+  const ring = (n: number, inner?: number) => Array.from({ length: inner ? n * 2 : n }, (_, i) => {
+    const a = -Math.PI / 2 + (i * Math.PI * 2) / (inner ? n * 2 : n), r = inner && i % 2 ? inner : 1;
+    return { x: Math.cos(a) * r, y: Math.sin(a) * r };
+  });
+  const fit = (pts: Point[]) => {
+    const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+    const x0 = Math.min(...xs), y0 = Math.min(...ys), w = Math.max(...xs) - x0, h = Math.max(...ys) - y0;
+    return pts.map((p) => ({ x: (p.x - x0) / w, y: (p.y - y0) / h }));
+  };
+  return {
+    triangle: [{ x: 0.5, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }],
+    rhombus: [{ x: 0.5, y: 0 }, { x: 1, y: 0.5 }, { x: 0.5, y: 1 }, { x: 0, y: 0.5 }],
+    pentagon: fit(ring(5)),
+    star: fit(ring(5, 0.4)),
+  };
+})();
+
+/** A polygon item's corners on the board. */
+export const polyPoints = (it: Item): Point[] =>
+  (POLY[it.shape ?? 'triangle'] ?? POLY.triangle).map((p) => ({ x: it.x + p.x * it.w, y: it.y + p.y * it.h }));
+
+export function pointInPolygon(p: Point, pts: Point[]): boolean {
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[i], b = pts[j];
+    if ((a.y > p.y) !== (b.y > p.y) && p.x < ((b.x - a.x) * (p.y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+
+/** How far along the ray from c by (dx, dy) it first crosses the polygon's outline (1 = the full step). */
+function polyExit(pts: Point[], c: Point, dx: number, dy: number): number {
+  let best = Infinity;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length], ex = b.x - a.x, ey = b.y - a.y;
+    const den = dx * ey - dy * ex;
+    if (!den) continue;
+    const t = ((a.x - c.x) * ey - (a.y - c.y) * ex) / den, u = ((a.x - c.x) * dy - (a.y - c.y) * dx) / den;
+    if (t > 0 && u >= 0 && u <= 1) best = Math.min(best, t);
+  }
+  return best;
+}
+
 /** Where the line from the item's centre toward `toward` leaves the item's outline. */
 export function edgePoint(item: Item, toward: Point): Point {
   const c = center(item), hw = item.w / 2, hh = item.h / 2;
@@ -29,6 +74,7 @@ export function edgePoint(item: Item, toward: Point): Point {
   if (!dx && !dy) return c;
   let t: number;
   if (item.type === 'ellipse') t = 1 / Math.sqrt((dx / hw) ** 2 + (dy / hh) ** 2);
+  else if (item.type === 'polygon') t = polyExit(polyPoints(item), c, dx, dy);
   else t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);
   t = Math.min(t, 1);
   return { x: c.x + dx * t, y: c.y + dy * t };
@@ -152,6 +198,10 @@ export function hitItem(items: Item[], p: Point, zoom: number): Item | null {
     }
     if (it.type === 'ink') {
       if (pointInRect(p, it) && nearInk(it, p, 5 / zoom)) return it;
+      continue;
+    }
+    if (it.type === 'polygon') {
+      if (pointInRect(p, it) && pointInPolygon(p, polyPoints(it))) return it;
       continue;
     }
     if (it.type === 'ellipse') {

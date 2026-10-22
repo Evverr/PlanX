@@ -68,6 +68,15 @@ describe('geometry', () => {
     expect(onTaskBox(task, { x: 150, y: 26 })).toBe(false);
   });
 
+  it('hits a star only inside its points, and ends links on its outline', () => {
+    const star = box('polygon', { shape: 'star', w: 100, h: 100 });
+    expect(hitItem([star], { x: 50, y: 50 }, 1)?.id).toBe('polygon');
+    expect(hitItem([star], { x: 5, y: 5 }, 1)).toBeNull();
+    const tip = edgePoint(box('polygon', { shape: 'rhombus', w: 100, h: 100 }), { x: 50, y: -100 });
+    expect(tip.x).toBeCloseTo(50);
+    expect(tip.y).toBeCloseTo(0);
+  });
+
   it('picks the topmost item', () => {
     const a = box('rect', { id: 'a' }), b = box('rect', { id: 'b', z: 1 });
     expect(hitItem([a, b], { x: 10, y: 10 }, 1)?.id).toBe('b');
