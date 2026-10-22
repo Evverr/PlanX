@@ -1,11 +1,12 @@
 import data from './icons.json';
 
 export interface IconPath { d: string; fill: string; opacity?: number; evenodd?: boolean }
-export interface IconDef { id: string; en: string; ru: string; paths: IconPath[] }
+/** `aliases` are the smaller sizes of the same icon, dropped from the set; boards that use them get this one. */
+export interface IconDef { id: string; en: string; ru: string; paths: IconPath[]; aliases?: string[] }
 
 /** The icon set, generated from assets/icons by `npm run icons`. */
 export const ICONS = data as IconDef[];
-export const ICON_BY_ID = new Map(ICONS.map((i) => [i.id, i]));
+export const ICON_BY_ID = new Map(ICONS.flatMap((i) => [i.id, ...(i.aliases ?? [])].map((id) => [id, i] as const)));
 
 /** Icons are drawn on a 24×24 grid. */
 const GRID = 24;
