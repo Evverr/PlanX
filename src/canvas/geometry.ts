@@ -148,10 +148,10 @@ export function distToSegment(p: Point, a: Point, b: Point): number {
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
-/** Tasks: the round checkbox sits in a strip this wide on the left, the text to its right. */
+/** Tasks: the round checkbox sits in the top right corner, in a strip this wide; the text fills the rest. */
 export const TASK_INSET = 40;
 export const TASK_BOX_R = 10;
-export const taskBox = (it: Rect): Point => ({ x: it.x + TASK_INSET / 2 + 2, y: it.y + it.h / 2 });
+export const taskBox = (it: Rect): Point => ({ x: it.x + it.w - TASK_BOX_R - 8, y: it.y + TASK_BOX_R + 8 });
 
 /** Whether the point is on a task's checkbox, with a little room around it. */
 export function onTaskBox(it: Item, p: Point): boolean {

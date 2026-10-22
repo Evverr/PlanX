@@ -235,6 +235,7 @@ export class Editor {
       linkPreview,
       peers: this.presence?.peers() ?? [],
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]),
+      resizable: this.selection.size === 1 && this.board.get([...this.selection][0])?.type !== 'task',
       hotDot: this.hotDot,
       editingCell: this.editingCell,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker' } : null,
@@ -700,7 +701,7 @@ export class Editor {
       this.gesture = { type: 'link', from: single.id, fromSide: dot, to: w, target: null };
       return;
     }
-    if (single && this.onHandle(single, w)) {
+    if (single && single.type !== 'task' && this.onHandle(single, w)) {
       this.board.beginGesture();
       this.gesture = { type: 'resize', id: single.id, start: w, w0: single.w, h0: single.h };
       this.setMoving(true);
@@ -994,7 +995,7 @@ export class Editor {
     let cursor = '';
     const line = single?.type === 'table' && !this.editingId ? lineAt(single, w, 5 / this.cam.z) : null;
     if (dot) cursor = 'crosshair';
-    else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
+    else if (single && single.type !== 'task' && this.onHandle(single, w)) cursor = 'nwse-resize';
     else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
     else if (hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
     else {
