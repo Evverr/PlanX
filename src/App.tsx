@@ -73,11 +73,30 @@ export function App({ boardId }: { boardId: string }) {
   // One chevron, in the zoom panel, sticks every panel around the edge of the screen to it.
   const [docked, toggleDock] = useDock('panels');
   const [minimap, setMinimap] = useState(false);
+  // Your cat clears the screen: every panel hides (styles.css, [data-ui="bare"]) but the cat itself,
+  // in a small square in the bottom right corner that brings them back.
+  const [bare, setBare] = useState(false);
+  useEffect(() => { document.documentElement.dataset.ui = bare ? 'bare' : ''; }, [bare]);
   const [recorder, setRecorder] = useState(false);
   // Buttons in the top bar and the zoom panel can be rearranged by holding them.
   const topSort = useSortable('planx-order-top', ['logo', 'sep', 'title', 'undo', 'redo', 'new', 'clear'], 'x');
   const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'share', 'help', 'theme', 'fit', 'dock', 'people'], 'x');
   const closeMinimap = useCallback(() => setMinimap(false), []);
+
+  // A new board opens in a new tab, named after this one with a number added ("План" → "План 2" → "План 3").
+  const openNewBoard = () => {
+    const t = board.title.trim() || 'Доска', m = t.match(/^(.*?)(\d+)$/);
+    const name = m ? `${m[1]}${Number(m[2]) + 1}` : `${t} 2`;
+    window.open(`${location.pathname}?board=${newBoardId()}&title=${encodeURIComponent(name)}`, '_blank');
+  };
+  // Opened that way, the board takes the name from the address, which is then tidied away.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search), name = params.get('title');
+    if (!name) return;
+    if (!board.title) board.setTitle(name.slice(0, 30));
+    params.delete('title');
+    history.replaceState(null, '', `${location.pathname}?${params}`);
+  }, [board]);
 
   const [title, setTitle] = useState(board.title);
   useEffect(() => setTitle(board.title), [board.title]);
@@ -134,7 +153,7 @@ export function App({ boardId }: { boardId: string }) {
           ),
           undo: <button className="ib hide-narrow" title="Отменить (Ctrl+Z)" aria-label="Отменить" onClick={() => editor.undo()}><PanelIcon name="undo-on" /></button>,
           redo: <button className="ib hide-narrow" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" onClick={() => editor.redo()}><PanelIcon name="redo-on" /></button>,
-          new: <button className="ib hide-narrow" title="Новая доска" aria-label="Новая доска" onClick={() => { location.search = `?board=${newBoardId()}`; }}><PanelIcon name="plus" /></button>,
+          new: <button className="ib hide-narrow" title="Новая доска в новой вкладке" aria-label="Новая доска" onClick={openNewBoard}><PanelIcon name="plus" /></button>,
           clear: <button className={`ib ${pop === 'clear' ? 'on' : ''}`} title="Очистить доску" aria-label="Очистить доску" onClick={() => toggle('clear')}><PanelIcon name="cross" /></button>,
         })}
       </header>
@@ -153,8 +172,8 @@ export function App({ boardId }: { boardId: string }) {
       <div ref={zoomSort.ref as React.RefObject<HTMLDivElement>} className={`bar zoom sortable ${docked ? 'docked' : ''} ${zoomSort.sorting ? 'sorting' : ''}`} {...zoomSort.container}>
         {zoomSort.render({
         people: <div className="avatars">
-          <button className="avatar me" title={`${conn.me.name} (вы). Нажмите, чтобы сменить имя`}
-            aria-label="Ваше имя" onClick={() => toggle('name')}>
+          <button className="avatar me" title={`${conn.me.name} (вы). Нажмите, чтобы убрать все панели`}
+            aria-label="Убрать панели" onClick={() => setBare(true)}>
             <img src={catFor()} alt="" draggable={false} />
           </button>
           {peers.slice(0, 4).map((p) => (
@@ -222,6 +241,11 @@ export function App({ boardId }: { boardId: string }) {
       )}
 
       {toast && <div className="pop toast" role="status">{toast}</div>}
+      {bare && (
+        <button className="cat-corner" title="Вернуть панели" aria-label="Вернуть панели" onClick={() => setBare(false)}>
+          <img src={catFor()} alt="" draggable={false} />
+        </button>
+      )}
     </>
   );
 }
