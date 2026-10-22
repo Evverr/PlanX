@@ -11,6 +11,7 @@ import { PanelIcon } from './ui/PanelIcon';
 import { DockButton, useDock } from './ui/Dock';
 import { Minimap } from './ui/Minimap';
 import { catFor } from './emoji/emoji';
+import { readPictures } from './canvas/pictures';
 import { useSortable } from './ui/sortable';
 
 type Pop = 'clear' | 'icons' | 'help' | 'name' | null;
@@ -97,7 +98,14 @@ export function App({ boardId }: { boardId: string }) {
 
   return (
     <>
-      <canvas ref={canvas} className="board-canvas" data-tool={ui.tool} aria-label="Доска" onPointerDown={() => setPop(null)} />
+      {/* Image files dropped on the board land where they were let go. */}
+      <canvas ref={canvas} className="board-canvas" data-tool={ui.tool} aria-label="Доска" onPointerDown={() => setPop(null)}
+        onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const at = { x: e.clientX, y: e.clientY };
+          void readPictures(e.dataTransfer.files).then((pics) => editor.addPictures(pics, at));
+        }} />
 
       <header ref={topSort.ref} className={`bar topbar sortable ${docked ? 'docked' : ''} ${topSort.sorting ? 'sorting' : ''}`} {...topSort.container}>
         {topSort.render({

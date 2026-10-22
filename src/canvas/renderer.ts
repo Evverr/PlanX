@@ -2,6 +2,7 @@ import type { Item, Link, Side } from '../model/types';
 import { alignOf, FILLS, ICON_COLORS, INK_COLORS, MARK_COLORS, TEXT_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
+import { drawPicture } from './pictures';
 import type { Point, Rect } from './geometry';
 import { center, curveBetween, edgePoint, inkPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
@@ -250,6 +251,9 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       break;
     case 'emoji':
       drawEmoji(ctx, it.emoji ?? '', it.x, it.y, Math.min(it.w, it.h));
+      break;
+    case 'image':
+      drawPicture(ctx, it, theme.line);
       break;
     case 'ink':
       strokeInk(ctx, { pts: inkPoints(it), color: it.color ?? 'ink', width: (it.sw ?? 2) * it.w / (it.iw || it.w), hl: !!it.hl }, theme);

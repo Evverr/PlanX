@@ -6,6 +6,7 @@ import { boundsOf, hitItem, hitLink, nearestSide, nearInk, normRect, pointInRect
 import { clearTextCache, DOT_GAP, DOT_R, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
 import { font, itemTextHeight } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
+import { onPictureLoad, type Picture } from '../canvas/pictures';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser';
 export type PenTool = 'pen' | 'marker';
@@ -147,6 +148,7 @@ export class Editor {
     offs.push(() => themeObs.disconnect());
     offs.push(this.board.subscribe(() => this.onBoardChange()));
     offs.push(onEmojiLoad(() => this.requestRender()));
+    offs.push(onPictureLoad(() => this.requestRender()));
     if (this.presence) offs.push(this.presence.subscribe(() => this.requestRender()));
     document.fonts?.ready.then(() => { clearTextCache(); this.requestRender(); });
     // Fonts picked for text load when first drawn.
@@ -344,6 +346,22 @@ export class Editor {
     this.setTool('select');
     this.setSelection([it.id]);
     this.startEditing(it.id);
+  }
+
+  /** Puts pictures centred in the middle of the screen or on a screen point, fanned out, at most
+   *  half the screen across and never bigger than their own pixels; they end up selected. */
+  addPictures(pics: Picture[], at?: Point): void {
+    if (!pics.length) return;
+    const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
+    const max = Math.min(this.width, this.height) * 0.5 / this.cam.z;
+    const items = pics.map((p, i) => {
+      const k = Math.min(1 / this.cam.z, max / Math.max(p.w, p.h));
+      const w = Math.max(16, Math.round(p.w * k)), h = Math.max(16, Math.round(p.h * k));
+      return this.newItem('image', c.x - w / 2 + i * 24, c.y - h / 2 + i * 24, { w, h, src: p.src });
+    });
+    this.board.transact(() => items.forEach((it) => this.board.add(it)));
+    this.setTool('select');
+    this.setSelection(items.map((i) => i.id));
   }
 
   /** Like addIcon. */
@@ -698,11 +716,11 @@ export class Editor {
       case 'resize': {
         const it = this.board.get(g.id);
         if (!it) return;
-        const min = it.type === 'frame' ? 80 : it.type === 'ink' ? 4 : it.type === 'icon' || it.type === 'emoji' ? 16 : 40;
+        const min = it.type === 'frame' ? 80 : it.type === 'ink' ? 4 : it.type === 'icon' || it.type === 'emoji' || it.type === 'image' ? 16 : 40;
         let nw = Math.max(min, Math.round(g.w0 + w.x - g.start.x));
         let nh = Math.max(min, Math.round(g.h0 + w.y - g.start.y));
-        // Stickers, icons, emoji and drawings keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
-        const keep = it.type === 'sticky' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || it.type === 'ink' || e.shiftKey;
+        // Stickers, icons, emoji, drawings and pictures keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
+        const keep = it.type === 'sticky' || it.type === 'image' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || it.type === 'ink' || e.shiftKey;
         if (keep) {
           const k = Math.max(nw / g.w0, nh / g.h0);
           nw = Math.round(g.w0 * k);
