@@ -231,6 +231,16 @@ button { font: inherit; color: inherit; }
 .pick-ghost.preview { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .15)); opacity: .9; }
 /* The tile being dragged leaves a faint place-holder where it will land in the picker. */
 .icon-grid button.dragging { opacity: .25; }
+/* Previews of what a rail tool makes, while it's dragged onto the board (ui/ToolPreview.tsx). */
+.tp-sticky { display: block; box-shadow: 0 2px 4px rgba(0, 0, 0, .15); }
+.tp-text { display: block; color: var(--ink); white-space: nowrap; }
+.tp-task { display: flex; align-items: center; box-sizing: border-box; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font-weight: 500; }
+.tp-task i { flex: none; border-radius: 50%; border: 1.6px solid var(--muted); box-sizing: border-box; }
+.tp-frame { display: block; box-sizing: border-box; position: relative; background: var(--frame); border: 1px solid var(--line); border-radius: 8px; }
+.tp-frame b { position: absolute; left: 2px; bottom: 100%; margin-bottom: 4px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.tp-svg { display: block; overflow: visible; fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+.tp-svg.shape { stroke: var(--shape-stroke); stroke-width: 2; stroke-linejoin: round; }
+.tp-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; background: var(--fmt-bg); box-shadow: var(--fmt-shadow); }
 .sticky-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .pick-sticky { display: block; width: 44px; height: 44px; box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
 .pick-ghost .pick-sticky { width: 88px; height: 88px; }
