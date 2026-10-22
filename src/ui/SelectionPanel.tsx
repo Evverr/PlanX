@@ -7,7 +7,8 @@ import { useSortable } from './sortable';
 
 const same = (vals: Array<string | undefined>) => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] : null);
 
-const ORDER = ['fills', 'sep', 'icons', 'sep2', 'table', 'sep4', 'front', 'back', 'duplicate', 'trash'];
+/** Rearrangeable buttons; the bin isn't among them, it always comes last. */
+const ORDER = ['fills', 'sep', 'icons', 'sep2', 'table', 'sep4', 'front', 'back', 'duplicate'];
 
 export function SelectionPanel({ editor, items, linkCount, docked }: { editor: Editor; items: Item[]; linkCount: number; docked: boolean }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
@@ -65,21 +66,21 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
         table: tables.length > 0 ? (
           <div className="sw-group table-count">
             <span>Строки</span>
-            <button className="tb" aria-label="Убрать строку" onClick={() => editor.changeTable('row', -1)}>−</button>
-            <button className="tb" aria-label="Добавить строку" onClick={() => editor.changeTable('row', 1)}>+</button>
+            {btn('minus-m', 'Убрать строку', () => editor.changeTable('row', -1))}
+            {btn('plus-m', 'Добавить строку', () => editor.changeTable('row', 1))}
             <span>Столбцы</span>
-            <button className="tb" aria-label="Убрать столбец" onClick={() => editor.changeTable('col', -1)}>−</button>
-            <button className="tb" aria-label="Добавить столбец" onClick={() => editor.changeTable('col', 1)}>+</button>
+            {btn('minus-m', 'Убрать столбец', () => editor.changeTable('col', -1))}
+            {btn('plus-m', 'Добавить столбец', () => editor.changeTable('col', 1))}
           </div>
         ) : undefined,
         sep4: <div className="sep" />,
         front: items.length > 0 ? btn('to-front', 'На передний план', () => editor.bringToFront()) : undefined,
         back: items.length > 0 ? btn('to-back', 'На задний план', () => editor.sendToBack()) : undefined,
         duplicate: items.length > 0 ? btn('duplicate', 'Дублировать (Ctrl+D)', () => editor.duplicate()) : undefined,
-        trash: btn('trashcan', 'Удалить (Del)', () => editor.deleteSelection()),
         sep: <div className="sep" />,
         sep2: <div className="sep" />,
       })}
+      {btn('trashcan', 'Удалить (Del)', () => editor.deleteSelection())}
     </div>
   );
 }
