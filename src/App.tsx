@@ -14,7 +14,6 @@ import { catFor } from './emoji/emoji';
 
 type Pop = 'clear' | 'icons' | 'help' | 'name' | null;
 
-const STATUS_TEXT = { online: 'Сохранено и синхронизировано', connecting: 'Подключаюсь к серверу…', offline: 'Нет связи: изменения сохранятся в браузере и отправятся позже' };
 
 export function App({ boardId }: { boardId: string }) {
   const conn = useMemo(() => new Connection(boardId), [boardId]);
@@ -99,11 +98,13 @@ export function App({ boardId }: { boardId: string }) {
       <header className={`bar topbar ${docked ? 'docked' : ''}`}>
         <div className="logo">Plan<span>X</span></div>
         <div className="sep" />
-        <input className="title-input" id="board-title" aria-label="Название доски" spellCheck={false} placeholder="Без названия"
-          value={title} onChange={(e) => setTitle(e.target.value)}
-          onBlur={() => { if (title.trim() !== board.title) board.setTitle(title.trim()); }}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur(); }} />
-        <span className={`status ${conn.status}`} title={STATUS_TEXT[conn.status]} aria-label={STATUS_TEXT[conn.status]} />
+        {/* The field is as wide as its text (the copy in data-text sizes it), up to 30 characters. */}
+        <div className="title-fit" data-text={(title || 'Без названия').slice(0, 30)}>
+          <input className="title-input" id="board-title" aria-label="Название доски" spellCheck={false} placeholder="Без названия"
+            size={1} maxLength={30} value={title} onChange={(e) => setTitle(e.target.value)}
+            onBlur={() => { if (title.trim() !== board.title) board.setTitle(title.trim()); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur(); }} />
+        </div>
         <button className="ib hide-narrow" title="Отменить (Ctrl+Z)" aria-label="Отменить" onClick={() => editor.undo()}><PanelIcon name="undo-on" /></button>
         <button className="ib hide-narrow" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" onClick={() => editor.redo()}><PanelIcon name="redo-on" /></button>
         <button className="tb hide-narrow" onClick={() => { location.search = `?board=${newBoardId()}`; }}>Новая доска</button>
