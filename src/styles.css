@@ -150,7 +150,7 @@ img.dock-chevron { transition: transform .25s ease; }
 .icon-grid button { aspect-ratio: 1; border: 0; background: transparent; border-radius: 6px; cursor: pointer; color: var(--ink); display: grid; place-items: center; padding: 0; transition: background-color .25s ease; }
 .icon-grid button:hover { background: var(--fmt-hover); }
 .icon-grid svg { width: 26px; height: 26px; }
-.emoji-grid img { width: 21px; height: 21px; object-fit: contain; pointer-events: none; }
+.emoji-grid img { width: 27px; height: 27px; object-fit: contain; pointer-events: none; }
 .pick-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
 .pick-tabs button { flex: 1; border: 0; background: transparent; border-radius: 8px; padding: 7px 10px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); }
 .pick-tabs button:hover { background: var(--fmt-hover); color: var(--ink); }
