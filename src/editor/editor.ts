@@ -7,7 +7,7 @@ import { clearTextCache, DOT_GAP, DOT_R, drawScene, HANDLE, readTheme, type Came
 import { fitHeight, font, itemTextHeight } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
-import { cellAt, lineAt, newTable, withCount, withScale, withSize } from '../model/table';
+import { cellAt, colsOf, lineAt, newTable, rowsOf, withCount, withScale, withSize, type TableLine } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | PolyShape;
@@ -57,7 +57,7 @@ type Gesture =
   | { type: 'resize'; id: string; start: Point; w0: number; h0: number }
   | { type: 'create'; id: string; origin: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' }
-  | { type: 'tableLine'; id: string; axis: 'col' | 'row'; index: number; start: Point; size0: number }
+  | { type: 'tableLine'; id: string; start: Point; lines: Array<TableLine & { size0: number }> }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
   | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
   | { type: 'draw'; tool: PenTool; pts: Point[] }
@@ -101,8 +101,9 @@ export class Editor {
   private needsFit: boolean;
   private lastCursorSent = 0;
   private hotDot: Side | null = null;
-  /** The pointer is over the selection (or the dots around it), which then shows at full strength. */
-  private selHover = false;
+  /** The table line under the pointer, and the lines picked with Shift to be dragged together. */
+  private hotLine: TableLine | null = null;
+  private pickedLines: TableLine[] = [];
 
   constructor(board: Board, opts: { presence?: Presence; storageKey?: string } = {}) {
     this.board = board;
@@ -153,7 +154,10 @@ export class Editor {
     on(canvas, 'pointermove', (e) => this.onPointerMove(e));
     on(canvas, 'pointerup', (e) => this.onPointerUp(e));
     on(canvas, 'pointercancel', (e) => this.onPointerUp(e));
-    on(canvas, 'pointerleave', () => { this.presence?.setCursor(null); this.setSelHover(false); });
+    on(canvas, 'pointerleave', () => {
+      this.presence?.setCursor(null);
+      if (this.hotDot || this.hotLine) { this.hotDot = null; this.hotLine = null; this.requestRender(); }
+    });
     on(canvas, 'wheel', (e) => this.wheel(e), { passive: false });
     on(window, 'keydown', (e) => this.onKeyDown(e));
     on(window, 'keyup', (e) => { if (e.code === 'Space') this.setSpace(false); });
@@ -238,7 +242,7 @@ export class Editor {
       peers: this.presence?.peers() ?? [],
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]),
       hotDot: this.hotDot,
-      selHover: this.selHover,
+      tableLines: this.hotLine ? [...this.pickedLines, this.hotLine] : this.pickedLines,
       editingCell: this.editingCell,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker' } : null,
     });
@@ -699,15 +703,25 @@ export class Editor {
       this.setMoving(true);
       return;
     }
-    // Inside a selected table (away from the corner handle), its lines resize the column or row before them.
-    const line = single?.type === 'table' && !this.editingId ? lineAt(single, w, 5 / this.cam.z) : null;
-    if (single && line) {
+    // A table's lines resize the column or row before them, the table selected or not. Shift-clicking
+    // picks several lines (or drops one); dragging any picked line moves them all.
+    const tl = this.editingId ? null : this.tableLineAt(w, hit);
+    if (tl) {
+      const same = (l: TableLine) => l.id === tl.id && l.axis === tl.axis && l.index === tl.index;
+      const picked = this.pickedLines.filter((l) => l.id === tl.id), was = picked.some(same);
+      // Only Shift-clicks pick lines; a line dragged on its own isn't kept.
+      this.pickedLines = e.shiftKey ? (was ? picked.filter((l) => !same(l)) : [...picked, tl]) : was ? picked : [];
+      const table = this.board.get(tl.id)!;
+      const moving = e.shiftKey || was ? this.pickedLines : [tl];
+      const lines = moving.map((l) => ({ ...l, size0: (l.axis === 'col' ? colsOf(table) : rowsOf(table))[l.index] }));
       this.board.beginGesture();
-      const sizes = line.axis === 'col' ? single.cols : single.rows;
-      this.gesture = { type: 'tableLine', id: single.id, axis: line.axis, index: line.index, start: w, size0: sizes?.[line.index] ?? 0 };
+      this.hotLine = tl;
+      this.gesture = { type: 'tableLine', id: tl.id, start: w, lines };
       this.setMoving(true);
+      this.requestRender();
       return;
     }
+    if (this.pickedLines.length) { this.pickedLines = []; this.requestRender(); }
     // A task's checkbox ticks it off (or back on) instead of picking the task up.
     if (hit?.type === 'task' && !e.shiftKey && onTaskBox(hit, w, this.cam.z)) {
       this.board.update(hit.id, { done: hit.done ? undefined : true });
@@ -828,8 +842,13 @@ export class Editor {
       case 'tableLine': {
         const it = this.board.get(g.id);
         if (!it) return;
-        const d = g.axis === 'col' ? w.x - g.start.x : w.y - g.start.y;
-        this.board.update(g.id, withSize(it, g.axis, g.index, g.size0 + d));
+        // Every dragged line moves by the same amount; each change builds on the one before.
+        let patch: Partial<Item> = {};
+        for (const l of g.lines) {
+          const d = l.axis === 'col' ? w.x - g.start.x : w.y - g.start.y;
+          patch = { ...patch, ...withSize({ ...it, ...patch }, l.axis, l.index, l.size0 + d) };
+        }
+        this.board.update(g.id, patch);
         return;
       }
       case 'create': {
@@ -981,20 +1000,15 @@ export class Editor {
     this.requestRender();
   }
 
-  private setSelHover(on: boolean): void {
-    if (on !== this.selHover) { this.selHover = on; this.requestRender(); }
-  }
-
   private updateCursor(w: Point, alt: boolean): void {
     if (!this.canvas || this.gesture || this.tool !== 'select') return;
-    const reach = (DOT_GAP + DOT_R + 4) / this.cam.z;
-    this.setSelHover(this.selectedItems().some((it) =>
-      pointInRect(w, { x: it.x - reach, y: it.y - reach, w: it.w + reach * 2, h: it.h + reach * 2 })));
     const single = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
     const dot = single && !this.editingId ? this.dotAt(single, w) : null;
     if (dot !== this.hotDot) { this.hotDot = dot; this.requestRender(); }
     let cursor = '';
-    const line = single?.type === 'table' && !this.editingId ? lineAt(single, w, 5 / this.cam.z) : null;
+    const line = this.editingId || dot ? null : this.tableLineAt(w, hitItem(this.board.list(), w, this.cam.z));
+    const same = line && this.hotLine && line.id === this.hotLine.id && line.axis === this.hotLine.axis && line.index === this.hotLine.index;
+    if (!same && (line || this.hotLine)) { this.hotLine = line; this.requestRender(); }
     if (dot) cursor = 'crosshair';
     else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
     else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
@@ -1005,6 +1019,19 @@ export class Editor {
       else if (hit) cursor = alt ? 'copy' : 'move';
     }
     this.canvas.style.cursor = cursor;
+  }
+
+  /** The table line under the point: of the table there, or just past a table's right or bottom edge. */
+  private tableLineAt(w: Point, hit: Item | null): TableLine | null {
+    if (hit && hit.type !== 'table' && hit.type !== 'frame') return null;
+    const tol = 5 / this.cam.z, items = this.board.list();
+    for (let i = items.length - 1; i >= 0; i--) {
+      const it = items[i];
+      if (it.type !== 'table') continue;
+      const l = lineAt(it, w, tol);
+      if (l) return { id: it.id, ...l };
+    }
+    return null;
   }
 
   private sendCursor(w: Point): void {
@@ -1050,7 +1077,7 @@ export class Editor {
       return;
     }
     if (e.key === 'Delete' || e.key === 'Backspace') { if (this.selection.size) { e.preventDefault(); this.deleteSelection(); } return; }
-    if (e.key === 'Escape') { this.setSelection([]); this.setTool('select'); window.dispatchEvent(new CustomEvent('planx:close-popovers')); return; }
+    if (e.key === 'Escape') { this.pickedLines = []; this.setSelection([]); this.setTool('select'); window.dispatchEvent(new CustomEvent('planx:close-popovers')); return; }
     if (e.key === 'Enter' && this.selection.size === 1) { e.preventDefault(); this.startEditing([...this.selection][0]); return; }
     if (e.shiftKey && e.code === 'Digit1') { this.fit(); return; }
     if (e.shiftKey && e.code === 'Digit0') { this.zoomCenter(1 / this.cam.z); return; }

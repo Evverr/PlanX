@@ -8,7 +8,7 @@ import { useSortable } from './sortable';
 const same = (vals: Array<string | undefined>) => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] : null);
 
 /** Rearrangeable buttons; the bin isn't among them, it always comes last. */
-const ORDER = ['fills', 'sep', 'icons', 'sep2', 'table', 'sep4', 'front', 'back', 'duplicate'];
+const ORDER = ['fills', 'sep', 'icons', 'sep2', 'rows', 'sep5', 'cols', 'sep4', 'front', 'back', 'duplicate'];
 
 export function SelectionPanel({ editor, items, linkCount, docked }: { editor: Editor; items: Item[]; linkCount: number; docked: boolean }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
@@ -63,16 +63,21 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
           </div>
         ) : undefined,
         // Rows and columns of the selected tables: add or take away the last one.
-        table: tables.length > 0 ? (
+        rows: tables.length > 0 ? (
           <div className="sw-group table-count">
             <span>Строки</span>
             {btn('minus-s', 'Убрать строку', () => editor.changeTable('row', -1))}
             {btn('plus-s', 'Добавить строку', () => editor.changeTable('row', 1))}
+          </div>
+        ) : undefined,
+        cols: tables.length > 0 ? (
+          <div className="sw-group table-count">
             <span>Столбцы</span>
             {btn('minus-s', 'Убрать столбец', () => editor.changeTable('col', -1))}
             {btn('plus-s', 'Добавить столбец', () => editor.changeTable('col', 1))}
           </div>
         ) : undefined,
+        sep5: <div className="sep" />,
         sep4: <div className="sep" />,
         front: items.length > 0 ? btn('to-front', 'На передний план', () => editor.bringToFront()) : undefined,
         back: items.length > 0 ? btn('to-back', 'На задний план', () => editor.sendToBack()) : undefined,

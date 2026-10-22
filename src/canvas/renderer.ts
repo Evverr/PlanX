@@ -3,7 +3,7 @@ import { alignOf, FILLS, textPad, ICON_COLORS, INK_COLORS, MARK_COLORS, TEXT_COL
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
-import { cellRect, cellText, colsOf, rowsOf } from '../model/table';
+import { cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
 import type { Point, Rect } from './geometry';
 import { audioButton, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
@@ -55,10 +55,10 @@ export interface Scene {
   linkPreview: { from: Item; fromSide: Side | null; to: Point; target: Item | null } | null;
   peers: Peer[];
   showHandle: boolean;
-  /** The dot under the pointer, drawn larger. */
+  /** The dot under the pointer, drawn larger and at full strength; the others are at half. */
   hotDot: Side | null;
-  /** The pointer is over the selection: its outline, handle and dots show at full strength, otherwise at half. */
-  selHover: boolean;
+  /** Table lines drawn blue: the one under the pointer and those picked to drag together. */
+  tableLines: TableLine[];
   /** The pen or highlighter line being drawn, in board units. */
   stroke: InkStroke | null;
   /** The table cell being edited, its text left to the overlay. */
@@ -386,6 +386,19 @@ function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCel
   for (const h of rowsOf(it).slice(0, -1)) { y += h; ctx.moveTo(it.x, y); ctx.lineTo(it.x + it.w, y); }
   ctx.rect(it.x, it.y, it.w, it.h);
   ctx.stroke();
+  // Lines under the pointer or picked to drag, in blue.
+  const marked = s.tableLines.filter((l) => l.id === it.id);
+  if (marked.length) {
+    const cols = colsOf(it), rows = rowsOf(it), upto = (a: number[], i: number) => a.slice(0, i + 1).reduce((t, v) => t + v, 0);
+    ctx.strokeStyle = SELECT_COLOR;
+    ctx.lineWidth = 2 / cam.z;
+    ctx.beginPath();
+    for (const l of marked) {
+      if (l.axis === 'col') { const lx = it.x + upto(cols, l.index); ctx.moveTo(lx, it.y); ctx.lineTo(lx, it.y + it.h); }
+      else { const ly = it.y + upto(rows, l.index); ctx.moveTo(it.x, ly); ctx.lineTo(it.x + it.w, ly); }
+    }
+    ctx.stroke();
+  }
   const n = colsOf(it).length * rowsOf(it).length;
   for (let i = 0; i < n; i++) {
     const text = cellText(it, i);
@@ -554,7 +567,6 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     }
   }
 
-  ctx.globalAlpha = s.selHover ? 1 : 0.5;
   for (const id of s.selection) {
     const it = s.get(id);
     if (!it) continue;
@@ -573,14 +585,14 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       for (const side of SIDES) {
         const p = sidePoint(it, side, DOT_GAP / cam.z);
         ctx.beginPath();
+        ctx.globalAlpha = side === s.hotDot ? 1 : 0.5;
         ctx.arc(p.x, p.y, (side === s.hotDot ? DOT_R + 2 : DOT_R) / cam.z, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       }
+      ctx.globalAlpha = 1;
     }
   }
-
-  ctx.globalAlpha = 1;
 
   if (s.linkPreview) {
     const { from, fromSide, to, target } = s.linkPreview;
