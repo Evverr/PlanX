@@ -35,6 +35,9 @@ export function cellAt(it: Item, p: Point): number | null {
   return r * cols.length + c;
 }
 
+/** A line of a table: the right edge of a column or the bottom edge of a row. */
+export interface TableLine { id: string; axis: 'col' | 'row'; index: number }
+
 /** The column's right edge or the row's bottom edge within `tol` of the point (the outer right and
  *  bottom edges included), as the line to drag to resize that column or row. */
 export function lineAt(it: Item, p: Point, tol: number): { axis: 'col' | 'row'; index: number } | null {
