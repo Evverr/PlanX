@@ -306,7 +306,8 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
     ctx.lineJoin = 'round';
     ctx.stroke();
   } else {
-    ctx.strokeStyle = theme.muted;
+    // A notch stronger than the card's border.
+    ctx.strokeStyle = theme.link;
     ctx.lineWidth = 1.6 * k;
     ctx.stroke();
   }
