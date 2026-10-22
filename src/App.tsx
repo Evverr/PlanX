@@ -136,9 +136,9 @@ export function App({ boardId }: { boardId: string }) {
       {recorder && <AudioRecorder onClose={() => setRecorder(false)} onAdd={(note) => { editor.addAudio(note); setRecorder(false); }} />}
       {pop === 'icons' && <IconPicker onPick={(kind, id, at) => {
         setPop(null);
-        if (kind === 'emoji') editor.addEmoji(id, at && { x: at.x, y: at.y }, at?.size);
+        if (kind === 'emoji') editor.addEmoji(id, at);
         else if (kind === 'sticky') editor.addSticky(id, at);
-        else editor.addIcon(id, at && { x: at.x, y: at.y }, at?.size);
+        else editor.addIcon(id, at);
       }} />}
 
       <div ref={zoomSort.ref as React.RefObject<HTMLDivElement>} className={`bar zoom sortable ${docked ? 'docked' : ''} ${zoomSort.sorting ? 'sorting' : ''}`} {...zoomSort.container}>
