@@ -14,13 +14,33 @@ function fitInto(r: Rect): Fit {
 }
 
 /** The whole board in miniature with a frame around what's on screen; click or drag on it to move there. */
-export function Minimap({ editor, items, docked }: { editor: Editor; items: Item[]; docked: boolean }) {
+export function Minimap({ editor, items, docked, onClose }: { editor: Editor; items: Item[]; docked: boolean; onClose: () => void }) {
   // The frame follows the window size too, and the editor doesn't announce resizes.
   const [, redraw] = useReducer((n: number) => n + 1, 0);
   useEffect(() => {
     window.addEventListener('resize', redraw);
     return () => window.removeEventListener('resize', redraw);
   }, []);
+
+  // The wheel works over the map as over the board, zooming about the middle of the screen
+  // (React's wheel listeners are passive and can't stop the page from scrolling).
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = root.current!;
+    const wheel = (e: WheelEvent) => editor.wheel(e, { x: innerWidth / 2, y: innerHeight / 2 });
+    el.addEventListener('wheel', wheel, { passive: false });
+    return () => el.removeEventListener('wheel', wheel);
+  }, [editor]);
+
+  // A click anywhere else closes the map; its own button toggles it as before.
+  useEffect(() => {
+    const away = (e: PointerEvent) => {
+      const t = e.target as Element;
+      if (!root.current?.contains(t) && !t.closest?.('[data-minimap-toggle]')) onClose();
+    };
+    window.addEventListener('pointerdown', away);
+    return () => window.removeEventListener('pointerdown', away);
+  }, [onClose]);
 
   const view = editor.viewRect();
   const b = boundsOf(items) ?? view;
@@ -36,7 +56,7 @@ export function Minimap({ editor, items, docked }: { editor: Editor; items: Item
   };
 
   return (
-    <div className={`bar minimap ${docked ? 'docked' : ''}`}>
+    <div ref={root} className={`bar minimap ${docked ? 'docked' : ''}`}>
       <svg viewBox={`0 0 ${W} ${H}`} aria-label="Карта доски"
         onPointerDown={(e) => { drag.current = { s, ox, oy }; e.currentTarget.setPointerCapture(e.pointerId); moveTo(e, drag.current); }}
         onPointerMove={(e) => { if (drag.current) moveTo(e, drag.current); }}

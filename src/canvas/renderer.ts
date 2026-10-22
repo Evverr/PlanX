@@ -1,10 +1,10 @@
 import type { Item, Link, Side } from '../model/types';
-import { FILLS, ICON_COLORS } from '../model/types';
+import { alignOf, FILLS, ICON_COLORS, INK_COLORS, MARK_COLORS, TEXT_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import type { Point, Rect } from './geometry';
-import { center, curveBetween, edgePoint, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, type Bezier } from './geometry';
-import { font, layoutText, type TextLayout } from './text';
+import { center, curveBetween, edgePoint, inkPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, type Bezier } from './geometry';
+import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
 
@@ -54,7 +54,11 @@ export interface Scene {
   showHandle: boolean;
   /** The dot under the pointer, drawn larger. */
   hotDot: Side | null;
+  /** The pen or highlighter line being drawn, in board units. */
+  stroke: InkStroke | null;
 }
+
+export interface InkStroke { pts: Point[]; color: string; width: number; hl: boolean }
 
 /** Corner radius of everything with corners except stickers, in board units. */
 const CORNER = 8;
@@ -70,11 +74,11 @@ const SELECT_COLOR = '#4DA3FF';
 
 const layoutCache = new Map<string, TextLayout>();
 
-function cachedLayout(ctx: CanvasRenderingContext2D, key: string, text: string, w: number, h: number, size: number, weight: number) {
+function cachedLayout(ctx: CanvasRenderingContext2D, key: string, text: string, w: number, h: number, size: number, style: FontStyle) {
   let l = layoutCache.get(key);
   if (!l) {
     if (layoutCache.size > 3000) layoutCache.clear();
-    l = layoutText(ctx, text, Math.max(1, w), h, size, weight);
+    l = layoutText(ctx, text, Math.max(1, w), h, size, style);
     layoutCache.set(key, l);
   }
   return l;
@@ -83,23 +87,55 @@ function cachedLayout(ctx: CanvasRenderingContext2D, key: string, text: string, 
 /** Forget measured text, e.g. after the web font finishes loading. */
 export const clearTextCache = () => layoutCache.clear();
 
-function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, align: 'center' | 'left', weight: number, color: string, shrink: boolean, z: number) {
-  const text = it.text ?? '';
+const askedFonts = new Set<string>();
+
+/** Web fonts load on first use; the editor redraws once they arrive. */
+function ensureFont(f: string) {
+  if (askedFonts.has(f) || typeof document === 'undefined' || !document.fonts) return;
+  askedFonts.add(f);
+  if (!document.fonts.check(f)) void document.fonts.load(f);
+}
+
+/** An item's text with its font, colour, highlight, underline, strikethrough, alignment and list.
+ *  `shrink` is for stickers and shapes: the text is centred vertically and shrinks to fit the box. */
+function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: string, shrink: boolean, s: Scene) {
+  const text = withList(it.text ?? '', it.ls);
   if (!text) return;
   const size = it.fs ?? 16;
-  if (size * z < 2.5) return; // too small to read; skip the work
+  if (size * s.cam.z < 2.5) return; // too small to read; skip the work
+  const st = fontOf(it), align = alignOf(it);
   const w = it.w - pad * 2, h = shrink ? it.h - pad * 2 : Infinity;
-  const l = cachedLayout(ctx, `${it.type}|${w}|${h}|${size}|${weight}|${text}`, text, w, h, size, weight);
-  ctx.font = font(l.size, weight);
-  ctx.fillStyle = color;
+  const l = cachedLayout(ctx, `${it.type}|${w}|${h}|${size}|${st.weight}|${st.family}|${st.italic}|${text}`, text, w, h, size, st);
+  const f = font(l.size, st.weight, st.family, st.italic);
+  ensureFont(f);
+  ctx.font = f;
   ctx.textBaseline = 'middle';
   ctx.textAlign = align;
+  const tc = it.tc && (it.tc.startsWith('#') ? it.tc : TEXT_COLORS[it.tc]);
+  const ink = tc ? shade(tc, s.theme.dim) : color;
+  const mark = it.mk && (it.mk.startsWith('#') ? it.mk : MARK_COLORS[it.mk]);
+  const rule = Math.max(1, l.size / 14);
   const total = l.lines.length * l.lineHeight;
-  const x = align === 'center' ? it.x + it.w / 2 : it.x + pad;
-  let y = align === 'center' ? it.y + it.h / 2 - total / 2 : it.y + pad;
+  const x = align === 'center' ? it.x + it.w / 2 : align === 'right' ? it.x + it.w - pad : it.x + pad;
+  let y = shrink ? it.y + it.h / 2 - total / 2 : it.y + pad;
   for (const line of l.lines) {
-    ctx.fillText(line, x, y + l.lineHeight / 2);
-    y += l.lineHeight;
+    const mid = y + l.lineHeight / 2;
+    if (line && (mark || it.fu || it.fx)) {
+      const tw = ctx.measureText(line).width;
+      const left = align === 'center' ? x - tw / 2 : align === 'right' ? x - tw : x;
+      if (mark) {
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = mark;
+        ctx.fillRect(left - 2, y + l.lineHeight * 0.06, tw + 4, l.lineHeight * 0.88);
+        ctx.globalAlpha = 1;
+      }
+      ctx.fillStyle = ink;
+      if (it.fu) ctx.fillRect(left, mid + l.size * 0.42, tw, rule);
+      if (it.fx) ctx.fillRect(left, mid + l.size * 0.04 - rule / 2, tw, rule);
+    }
+    ctx.fillStyle = ink;
+    ctx.fillText(line, x, mid);
+    y = mid + l.lineHeight / 2;
   }
 }
 
@@ -173,7 +209,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
   switch (it.type) {
     case 'sticky':
       drawSticky(ctx, it, cam.z * s.dpr, theme.dim);
-      if (!editing) drawText(ctx, it, 14, 'center', 500, theme.stickyInk, true, cam.z);
+      if (!editing) drawText(ctx, it, 14, theme.stickyInk, true, s);
       break;
     case 'rect':
     case 'ellipse': {
@@ -186,11 +222,11 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       ctx.strokeStyle = none ? theme.ink : theme.shapeStroke;
       ctx.stroke();
       const pad = it.type === 'ellipse' ? Math.min(it.w, it.h) * 0.15 + 6 : 10;
-      if (!editing) drawText(ctx, it, pad, 'center', 600, none ? theme.ink : theme.stickyInk, true, cam.z);
+      if (!editing) drawText(ctx, it, pad, none ? theme.ink : theme.stickyInk, true, s);
       break;
     }
     case 'text':
-      if (!editing) drawText(ctx, it, 0, 'left', it.fw ?? 400, theme.ink, false, cam.z);
+      if (!editing) drawText(ctx, it, 0, theme.ink, false, s);
       break;
     case 'frame': {
       ctx.fillStyle = theme.frame;
@@ -215,7 +251,31 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'emoji':
       drawEmoji(ctx, it.emoji ?? '', it.x, it.y, Math.min(it.w, it.h));
       break;
+    case 'ink':
+      strokeInk(ctx, { pts: inkPoints(it), color: it.color ?? 'ink', width: (it.sw ?? 2) * it.w / (it.iw || it.w), hl: !!it.hl }, theme);
+      break;
   }
+}
+
+/** A pen or highlighter line, smoothed by curving through the midpoints between its points. */
+function strokeInk(ctx: CanvasRenderingContext2D, { pts, color, width, hl }: InkStroke, theme: Theme) {
+  if (!pts.length) return;
+  const c = color.startsWith('#') ? color : INK_COLORS[color];
+  ctx.save();
+  ctx.globalAlpha = hl ? 0.45 : 1;
+  ctx.strokeStyle = c ? shade(c, theme.dim) : theme.ink;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length - 1; i++) {
+    ctx.quadraticCurveTo(pts[i].x, pts[i].y, (pts[i].x + pts[i + 1].x) / 2, (pts[i].y + pts[i + 1].y) / 2);
+  }
+  const last = pts[pts.length - 1];
+  ctx.lineTo(last.x, last.y);
+  ctx.stroke();
+  ctx.restore();
 }
 
 /** Link line width on screen, whatever the zoom; thinner once zoomed far out. */
@@ -321,7 +381,7 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
   lc.globalAlpha = 0.85;
   lc.beginPath();
   for (const it of s.items) {
-    if (it.type === 'frame' || !rectsIntersect(it, view)) continue;
+    if (it.type === 'frame' || it.type === 'ink' || !rectsIntersect(it, view)) continue;
     if (it.type === 'ellipse') {
       lc.moveTo(it.x + it.w, it.y + it.h / 2);
       lc.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
@@ -348,6 +408,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   }
 
   if (s.links.length) drawLinks(ctx, s, view);
+  if (s.stroke) strokeInk(ctx, s.stroke, theme);
 
   for (const p of s.peers) {
     for (const id of p.selection) {
