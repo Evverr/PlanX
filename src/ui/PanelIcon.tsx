@@ -14,7 +14,9 @@ const GRID24 = new Set<PanelIconName>(['list', 'moon', 'sun', 'zoom-in', 'zoom-o
   'font-smaller', 'font-bigger', 'to-front', 'to-back', 'duplicate', 'trashcan', 'map', 'pen', 'highlighter', 'eraser',
   'align-left', 'align-center', 'align-right', 'bulleted-list', 'numbered-list', 'question']);
 
+/** The icon is a mask over a plain fill, so CSS picks its colour: the panel's ink, blue when pressed. */
 export function PanelIcon({ name, className, style }: { name: PanelIconName; className?: string; style?: React.CSSProperties }) {
   const cls = ['pi', GRID24.has(name) ? 'grid24' : '', className ?? ''].filter(Boolean).join(' ');
-  return <img src={ICON_URLS[`./panel-icons/${name}.svg`]} className={cls} style={style} alt="" draggable={false} />;
+  const mask = `url("${ICON_URLS[`./panel-icons/${name}.svg`]}")`;
+  return <i className={cls} style={{ WebkitMaskImage: mask, maskImage: mask, ...style }} aria-hidden="true" />;
 }
