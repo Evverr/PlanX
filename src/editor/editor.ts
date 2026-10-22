@@ -316,23 +316,39 @@ export class Editor {
   /* ---------- operations ---------- */
 
   newItem(type: ItemType, x: number, y: number, extra: Partial<Item> = {}): Item {
+    // Fitting the board once it loads is for boards opened with content, not for the first thing made on a new one.
+    this.needsFit = false;
     const d = DEFAULTS[type];
     const z = type === 'frame' ? this.board.minZ() - 1 : this.board.maxZ() + 1;
     return { ...d, id: uid(), type, x: Math.round(x), y: Math.round(y), z, ...extra } as Item;
   }
 
-  addIcon(icon: string): void {
-    const c = this.toWorld(this.width / 2, this.height / 2);
-    const n = this.board.list().filter((i) => i.type === 'icon').length % 6;
+  /** Puts an icon in the middle of the screen (fanned out a little so several don't stack),
+   *  or centred on a screen point when dropped there. */
+  addIcon(icon: string, at?: Point): void {
+    const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
+    const n = at ? 0 : this.board.list().filter((i) => i.type === 'icon').length % 6;
     const it = this.newItem('icon', c.x - 32 + n * 12, c.y - 32 + n * 12, { icon });
     this.board.add(it);
     this.setTool('select');
     this.setSelection([it.id]);
   }
 
-  addEmoji(emoji: string): void {
-    const c = this.toWorld(this.width / 2, this.height / 2);
-    const n = this.board.list().filter((i) => i.type === 'emoji').length % 6;
+  /** A sticker of the given colour, like addIcon; it opens for typing as one placed with the sticker tool does. */
+  addSticky(color: string, at?: Point): void {
+    const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
+    const d = DEFAULTS.sticky, n = at ? 0 : this.board.list().filter((i) => i.type === 'sticky').length % 6;
+    const it = this.newItem('sticky', c.x - d.w / 2 + n * 12, c.y - d.h / 2 + n * 12, { color });
+    this.board.add(it);
+    this.setTool('select');
+    this.setSelection([it.id]);
+    this.startEditing(it.id);
+  }
+
+  /** Like addIcon. */
+  addEmoji(emoji: string, at?: Point): void {
+    const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
+    const n = at ? 0 : this.board.list().filter((i) => i.type === 'emoji').length % 6;
     const it = this.newItem('emoji', c.x - 32 + n * 12, c.y - 32 + n * 12, { emoji });
     this.board.add(it);
     this.setTool('select');
@@ -519,7 +535,7 @@ export class Editor {
 
   private onPointerDown(e: PointerEvent): void {
     this.stopEditing();
-    // Fitting the board once it loads is for boards opened with content, not for the first thing drawn on a new one.
+    // Same as in newItem: once someone works on the board, leave the camera to them.
     this.needsFit = false;
     const sp = this.local(e);
     this.canvas!.setPointerCapture(e.pointerId);

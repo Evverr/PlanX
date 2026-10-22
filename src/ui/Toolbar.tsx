@@ -48,7 +48,7 @@ export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons }
     if (key === 'sep') return <div key={key} {...sort.item(key)} className={`tsep ${sort.lifted(key) ? 'lifted' : ''}`} />;
     if (t) return button(key, tool === t[0], t[2], t[1], () => editor.setTool(t[0]), { 'aria-pressed': tool === t[0] });
     if (key === 'draw') return button(key, drawing, 'Рисование (P)', 'marker', () => editor.setTool(drawing ? 'select' : lastDraw.current), { 'aria-pressed': drawing });
-    if (key === 'smile') return button(key, iconsOpen, 'Смайлы и иконки (I)', 'smile', onToggleIcons, { 'aria-expanded': iconsOpen });
+    if (key === 'smile') return button(key, iconsOpen, 'Смайлы, стикеры и иконки (I)', 'smile', onToggleIcons, { 'aria-expanded': iconsOpen });
     if (later) return button(key, false, `${later[1]} (скоро)`, later[0]);
     return null;
   };
