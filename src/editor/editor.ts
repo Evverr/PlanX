@@ -4,13 +4,14 @@ import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
 import { boundsOf, hitItem, hitLink, nearestSide, nearInk, normRect, onAudioButton, onTaskBox, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
 import { clearTextCache, DOT_GAP, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
-import { fitHeight, font, itemTextHeight } from '../canvas/text';
+import { fitHeight, font, itemTextHeight, mindSize } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, colsOf, lineAt, newTable, rowsOf, withCount, withScale, withSize, type TableLine } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
+import { childPlace, descendants, MIND_COLORS, mindSide, plusButton } from '../model/mind';
 
-export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | PolyShape;
+export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | 'mind' | PolyShape;
 export type PenTool = 'pen' | 'marker';
 export const DRAW_TOOLS: Tool[] = ['pen', 'marker', 'eraser'];
 /** Tools that draw a figure by dragging out its box; the polygons are one item type with a `shape`. */
@@ -56,12 +57,15 @@ type Gesture =
   | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean }
   | { type: 'resize'; id: string; start: Point; w0: number; h0: number }
   | { type: 'create'; id: string; origin: Point }
-  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' }
+  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' }
   | { type: 'tableLine'; id: string; start: Point; lines: Array<TableLine & { size0: number }> }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
   | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
   | { type: 'draw'; tool: PenTool; pts: Point[] }
   | { type: 'erase'; last: Point };
+
+/** What a new mind map's central topic says until it's typed over. */
+const MIND_TOPIC = 'Центральная тема';
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const MIN_Z = 0.08, MAX_Z = 4;
@@ -410,7 +414,8 @@ export class Editor {
 
   deleteSelection(): void {
     if (!this.selection.size) return;
-    this.board.remove(this.selection);
+    // A mind map node goes with everything branching from it.
+    this.board.remove([...this.selection, ...descendants(this.selection, this.board.list())]);
     this.setSelection([]);
   }
 
@@ -454,14 +459,15 @@ export class Editor {
   dropItem(tool: Tool, at: Point): void {
     const type = (isPoly(tool) ? 'polygon' : tool) as ItemType;
     if (!DEFAULTS[type]) return;
-    const extra: Partial<Item> = isPoly(tool) ? { shape: tool } : tool === 'table' ? newTable() : {};
+    const extra: Partial<Item> = isPoly(tool) ? { shape: tool } : tool === 'table' ? newTable() : tool === 'mind' ? { text: MIND_TOPIC } : {};
+    if (type === 'mind') Object.assign(extra, mindSize({ ...DEFAULTS.mind, ...extra } as Item));
     const c = this.toWorld(at.x, at.y), d = { ...DEFAULTS[type], ...extra };
     const it = this.newItem(type, c.x - d.w / 2, c.y - d.h / 2, extra);
     if (type === 'text') it.h = itemTextHeight(it);
     this.board.add(it);
     this.setTool('select');
     this.setSelection([it.id]);
-    if (type === 'text' || type === 'task' || type === 'frame') this.startEditing(it.id);
+    if (type === 'text' || type === 'task' || type === 'frame' || type === 'mind') this.startEditing(it.id);
   }
 
   /** Puts a frame around two or more selected items, 40 units clear of them, and opens its title
@@ -524,6 +530,10 @@ export class Editor {
       const id = uid();
       map.set(it.id, id);
       return { ...it, id, x: it.x + offset, y: it.y + offset, z: it.type === 'frame' ? it.z : ++z };
+    }).map((it) => {
+      // Copied mind map nodes hang from the copies of their parents (or still from the original ones).
+      if (it.parent && map.has(it.parent)) it.parent = map.get(it.parent);
+      return it;
     });
     const links = srcLinks.map((l) => ({ ...l, id: uid(), from: map.get(l.from)!, to: map.get(l.to)! }));
     this.board.transact(() => {
@@ -593,7 +603,7 @@ export class Editor {
         this.board.remove([id]);
         this.selection.delete(id);
       } else if (value !== (it.text ?? '')) {
-        const patch: Partial<Item> = { text: value };
+        const patch: Partial<Item> = { text: value, ...this.mindFit(it, value) };
         const h = fitHeight(it, value);
         if (h) patch.h = h;
         this.board.update(id, patch);
@@ -608,6 +618,37 @@ export class Editor {
     const it = this.board.get(id);
     const h = it && fitHeight(it, text);
     if (it && h && h !== it.h) this.board.update(id, { h });
+    if (it?.type === 'mind') this.board.update(id, this.mindFit(it, text));
+  }
+
+  /** A mind map node's size for its text; one growing leftwards keeps its right edge where it is. */
+  private mindFit(it: Item, text: string): Partial<Item> {
+    if (it.type !== 'mind') return {};
+    const { w, h } = mindSize(it, text), up = it.parent ? this.board.get(it.parent) : undefined;
+    const left = up && mindSide(it, up) < 0;
+    return { w, h, x: left ? it.x + it.w - w : it.x, y: Math.round(it.y + it.h / 2 - h / 2) };
+  }
+
+  /** Adds a node to a mind map: a child of `from`, or (`sibling`) another child of its parent, and
+   *  opens it for typing. A new branch off the centre gets the next branch colour. */
+  addMindNode(fromId: string, kind: 'child' | 'sibling'): void {
+    const from = this.board.get(fromId);
+    if (from?.type !== 'mind') return;
+    const parent = kind === 'sibling' && from.parent ? this.board.get(from.parent) : from;
+    if (!parent) return;
+    const items = this.board.list(), get = (id: string) => this.board.get(id);
+    const depth = (n: Item): number => (n.parent ? 1 + depth(this.board.get(n.parent) ?? n) : 0);
+    const level = depth(parent) + 1;
+    const draft = { ...DEFAULTS.mind, type: 'mind', fs: level === 1 ? 16 : 14, text: '' } as Item;
+    const { w, h } = mindSize(draft, '');
+    const at = childPlace(parent, items, get, w, h);
+    const branches = items.filter((i) => i.type === 'mind' && i.parent === parent.id).length;
+    const it = this.newItem('mind', at.x, at.y, {
+      w, h, fs: draft.fs, parent: parent.id, ...(level === 1 && { color: MIND_COLORS[branches % MIND_COLORS.length] }),
+    });
+    this.board.add(it);
+    this.setSelection([it.id]);
+    this.startEditing(it.id);
   }
 
   private stopEditing(): void {
@@ -658,6 +699,7 @@ export class Editor {
       case 'text':
       case 'task':
       case 'table':
+      case 'mind':
         this.gesture = { type: 'place', at: w, tool: this.tool };
         return;
       case 'rect':
@@ -692,6 +734,10 @@ export class Editor {
 
     // Select tool.
     const single = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
+    if (single?.type === 'mind' && !this.editingId) {
+      const p = plusButton(single, (id) => this.board.get(id), this.cam.z);
+      if (Math.hypot(w.x - p.x, w.y - p.y) <= p.r * 1.5) { this.addMindNode(single.id, 'child'); return; }
+    }
     const dot = single && !this.editingId ? this.dotAt(single, w) : null;
     if (single && dot) {
       this.gesture = { type: 'link', from: single.id, fromSide: dot, to: w, target: null };
@@ -765,16 +811,23 @@ export class Editor {
     for (const f of sel.filter((i) => i.type === 'frame')) {
       for (const i of items) if (i.type !== 'frame' && !orig.has(i.id) && rectContains(f, i)) orig.set(i.id, { x: i.x, y: i.y });
     }
+    // A mind map node brings its branches along.
+    for (const id of descendants(orig.keys(), items)) {
+      const i = this.board.get(id);
+      if (i) orig.set(id, { x: i.x, y: i.y });
+    }
     return orig;
   }
 
   private onHandle(it: Item, w: Point): boolean {
+    if (it.type === 'mind') return false;
     const hs = (HANDLE + 6) / this.cam.z, off = 3 / this.cam.z;
     return pointInRect(w, { x: it.x + it.w + off - hs / 2, y: it.y + it.h + off - hs / 2, w: hs, h: hs });
   }
 
   /** The link dot under the point, if any. */
   private dotAt(it: Item, w: Point): Side | null {
+    if (it.type === 'mind') return null;
     const r = 11 / this.cam.z;  // as easy to catch as before the dots got smaller
     for (const side of SIDES) {
       const p = sidePoint(it, side, DOT_GAP / this.cam.z);
@@ -916,8 +969,9 @@ export class Editor {
         const d = DEFAULTS[g.tool];
         const it = g.tool === 'text'
           ? this.newItem('text', g.at.x - 4, g.at.y - 14)
-          : this.newItem(g.tool, g.at.x - d.w / 2, g.at.y - d.h / 2, g.tool === 'table' ? newTable() : {});
+          : this.newItem(g.tool, g.at.x - d.w / 2, g.at.y - d.h / 2, g.tool === 'table' ? newTable() : g.tool === 'mind' ? { text: MIND_TOPIC } : {});
         if (it.type === 'text') it.h = itemTextHeight(it);
+        if (it.type === 'mind') Object.assign(it, mindSize(it), { x: Math.round(g.at.x - mindSize(it).w / 2) });
         this.board.add(it);
         this.setTool('select');
         this.setSelection([it.id]);
@@ -1078,6 +1132,13 @@ export class Editor {
     }
     if (e.key === 'Delete' || e.key === 'Backspace') { if (this.selection.size) { e.preventDefault(); this.deleteSelection(); } return; }
     if (e.key === 'Escape') { this.pickedLines = []; this.setSelection([]); this.setTool('select'); window.dispatchEvent(new CustomEvent('planx:close-popovers')); return; }
+    // On a mind map node, Tab adds a branch to it and Enter one beside it (to the centre: a branch).
+    const one = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
+    if (one?.type === 'mind' && (e.key === 'Tab' || e.key === 'Enter')) {
+      e.preventDefault();
+      this.addMindNode(one.id, e.key === 'Enter' && one.parent ? 'sibling' : 'child');
+      return;
+    }
     if (e.key === 'Enter' && this.selection.size === 1) { e.preventDefault(); this.startEditing([...this.selection][0]); return; }
     if (e.shiftKey && e.code === 'Digit1') { this.fit(); return; }
     if (e.shiftKey && e.code === 'Digit0') { this.zoomCenter(1 / this.cam.z); return; }

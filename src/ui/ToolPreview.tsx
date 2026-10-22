@@ -12,7 +12,7 @@ const POLYS = ['triangle', 'rhombus', 'pentagon', 'star'];
 export function ToolPreview({ tool, zoom }: { tool: Tool; zoom: number }) {
   const type = POLYS.includes(tool) ? 'polygon' : tool;
   const d = DEFAULTS[type as Item['type']] as Partial<Item> | undefined;
-  if (!d || !['sticky', 'text', 'task', 'table', 'frame', 'rect', 'ellipse', 'polygon'].includes(type)) return null;
+  if (!d || !['sticky', 'text', 'task', 'table', 'frame', 'rect', 'ellipse', 'polygon', 'mind'].includes(type)) return null;
   const k = Math.min(zoom, MAX_PX / Math.max(d.w!, d.h!)), w = d.w! * k, h = d.h! * k;
   switch (type) {
     case 'sticky':
@@ -25,6 +25,8 @@ export function ToolPreview({ tool, zoom }: { tool: Tool; zoom: number }) {
           <i style={{ width: 20, height: 20 }} />Задача
         </span>
       );
+    case 'mind':
+      return <span className="tp-mind" style={{ fontSize: Math.max(11, 20 * k), padding: `${12 * k}px ${16 * k}px` }}>Центральная тема</span>;
     case 'frame':
       return <span className="tp-frame" style={{ width: w, height: h }}><b style={{ fontSize: Math.max(10, 15 * k) }}>Фрейм</b></span>;
     case 'table': {

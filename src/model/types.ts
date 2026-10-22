@@ -1,4 +1,4 @@
-export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji' | 'ink' | 'image' | 'task' | 'table' | 'audio' | 'polygon';
+export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji' | 'ink' | 'image' | 'task' | 'table' | 'audio' | 'polygon' | 'mind';
 export type PolyShape = 'triangle' | 'rhombus' | 'pentagon' | 'star';
 
 export interface Item {
@@ -36,6 +36,8 @@ export interface Item {
   iw?: number;
   /** Picture or recording as a data URL, image and audio items only. */
   src?: string;
+  /** Mind map nodes: the node this one branches from; the central topic has none (see model/mind.ts). */
+  parent?: string;
   /** Which figure a polygon item is. */
   shape?: PolyShape;
   /** Audio notes: length in seconds and a coarse waveform, 0…1 per bar. */
@@ -59,7 +61,7 @@ export type ListKind = 'bullet' | 'number';
 export const baseWeight = (type: ItemType): number => (type === 'text' || type === 'table' ? 400 : type === 'sticky' ? 500 : 600);
 /** Inset of the text in stickers and shapes; figures without square corners keep it further in. */
 export const textPad = (it: Item): number =>
-  it.type === 'sticky' ? 14 : it.type === 'rect' || it.type === 'task' ? 10 : it.type === 'table' ? 8
+  it.type === 'sticky' ? 14 : it.type === 'rect' || it.type === 'task' ? 10 : it.type === 'table' ? 8 : it.type === 'mind' ? 12
     : it.type === 'ellipse' ? Math.min(it.w, it.h) * 0.15 + 6 : it.type === 'polygon' ? Math.min(it.w, it.h) * 0.22 + 6 : 0;
 export const alignOf = (it: Item): TextAlign => it.ta ?? (it.type === 'text' || it.type === 'table' ? 'left' : 'center');
 
@@ -142,11 +144,12 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   table: { w: 360, h: 120, fs: 14 },
   audio: { w: 300, h: 64 },
   polygon: { w: 160, h: 150, color: 'purple', fs: 16, text: '' },
+  mind: { w: 200, h: 56, fs: 20, text: '' },
 };
 
 export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse', 'polygon', 'task'];
-export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'task', 'table', 'polygon'];
-export const EDITABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'frame', 'task', 'table', 'polygon'];
+export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'task', 'table', 'polygon', 'mind'];
+export const EDITABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'frame', 'task', 'table', 'polygon', 'mind'];
 
 export const uid = (): string =>
   Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);

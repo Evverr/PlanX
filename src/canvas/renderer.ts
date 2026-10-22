@@ -5,6 +5,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
+import { branchColor, branchCurve, mindDepth, plusButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import { audioButton, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
@@ -274,6 +275,9 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'audio':
       drawAudio(ctx, it, s);
       break;
+    case 'mind':
+      drawMind(ctx, it, s, editing);
+      break;
     case 'ink':
       strokeInk(ctx, { pts: inkPoints(it), color: it.color ?? 'ink', width: (it.sw ?? 2) * it.w / (it.iw || it.w), hl: !!it.hl }, theme);
       break;
@@ -325,6 +329,40 @@ function outlinePolygon(ctx: CanvasRenderingContext2D, it: Item) {
   ctx.moveTo(pts[0].x, pts[0].y);
   for (const p of pts.slice(1)) ctx.lineTo(p.x, p.y);
   ctx.closePath();
+}
+
+/** A mind map node: the central topic dark and solid, first-level nodes tinted with their branch
+ *  colour, the rest white with a branch-coloured edge. */
+function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
+  const { theme } = s, depth = mindDepth(it, s.get), color = branchColor(it, s.get);
+  ctx.beginPath();
+  ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.h / 2, depth === 0 ? 14 : 10));
+  ctx.fillStyle = depth === 0 ? theme.ink : theme.surface;
+  ctx.fill();
+  if (depth > 0) {
+    if (depth === 1) { ctx.fillStyle = color + '2E'; ctx.fill(); }
+    ctx.lineWidth = depth === 1 ? 2 : 1.5;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  }
+  if (!editing) drawText(ctx, it, textPad(it), depth === 0 ? theme.surface : theme.ink, true, s);
+}
+
+/** The branches of mind maps, under the nodes: thick near the centre, thinner further out. */
+function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
+  ctx.lineCap = 'round';
+  for (const it of s.items) {
+    if (it.type !== 'mind' || !it.parent) continue;
+    const up = s.get(it.parent);
+    if (!up) continue;
+    const [a, c1, c2, b] = branchCurve(up, it);
+    ctx.strokeStyle = branchColor(it, s.get);
+    ctx.lineWidth = up.parent ? 2.5 : 4;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, b.x, b.y);
+    ctx.stroke();
+  }
 }
 
 /** Blue of the audio note's play button and of the played part of its waveform. */
@@ -555,6 +593,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   ctx.setTransform(dpr * cam.z, 0, 0, dpr * cam.z, dpr * cam.x, dpr * cam.y);
   const view: Rect = { x: -cam.x / cam.z - 50, y: -cam.y / cam.z - 50, w: s.width / cam.z + 100, h: s.height / cam.z + 100 };
 
+  drawBranches(ctx, s);
   for (const it of s.items) {
     const box = it.type === 'frame' ? { ...it, y: it.y - 40, h: it.h + 40 } : it;
     if (rectsIntersect(box, view)) drawItem(ctx, it, s);
@@ -574,7 +613,22 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     const it = s.get(id);
     if (!it) continue;
     outline(ctx, it, cam.z, SELECT_COLOR);
-    if (s.showHandle && s.editingId !== id) {
+    // A mind map node sizes itself and links by its branches: instead of the handle and dots it
+    // gets a "+" for adding a branch.
+    if (s.showHandle && s.editingId !== id && it.type === 'mind') {
+      const p = plusButton(it, s.get, cam.z);
+      ctx.fillStyle = SELECT_COLOR;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2 / cam.z;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(p.x - p.r * 0.5, p.y); ctx.lineTo(p.x + p.r * 0.5, p.y);
+      ctx.moveTo(p.x, p.y - p.r * 0.5); ctx.lineTo(p.x, p.y + p.r * 0.5);
+      ctx.stroke();
+    } else if (s.showHandle && s.editingId !== id) {
       const hs = HANDLE / cam.z, off = 3 / cam.z;
       ctx.fillStyle = theme.surface;
       ctx.strokeStyle = SELECT_COLOR;
