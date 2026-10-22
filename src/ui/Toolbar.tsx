@@ -35,8 +35,9 @@ function readOrder(): string[] {
   return DEFAULT_ORDER;
 }
 
-/** How long to hold a button before it lifts and can be moved, and how far the pointer may wander meanwhile. */
-const HOLD_MS = 350, HOLD_SLOP = 6;
+/** How long to hold a button before it lifts, and how far the pointer may wander meanwhile; a lifted
+ *  button let go without moving more than HOLD_SLOP still counts as a click. */
+const HOLD_MS = 120, HOLD_SLOP = 6;
 
 export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons }: {
   editor: Editor; tool: Tool; pens: Pens; docked: boolean; iconsOpen: boolean; onToggleIcons: () => void;
@@ -48,7 +49,7 @@ export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons }
 
   // Hold a button to lift it, then drag it up or down the rail; the others make way.
   const [order, setOrder] = useState(readOrder);
-  const [drag, setDrag] = useState<{ key: string; grab: number; y: number } | null>(null);
+  const [drag, setDrag] = useState<{ key: string; grab: number; y: number; y0: number; moved: boolean } | null>(null);
   const press = useRef<{ x: number; y: number; timer: number } | null>(null);
   const nav = useRef<HTMLElement>(null);
   const els = useRef(new Map<string, HTMLElement>());
@@ -77,14 +78,13 @@ export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons }
   const down = (e: PointerEvent<HTMLElement>) => {
     const el = (e.target as Element).closest<HTMLElement>('[data-key]');
     if (!el || e.button !== 0) return;
-    const key = el.dataset.key!, id = e.pointerId, target = e.currentTarget;
+    const key = el.dataset.key!;
     press.current = {
       x: e.clientX, y: e.clientY,
       timer: window.setTimeout(() => {
         const y = press.current?.y ?? 0;
         press.current = null;
-        target.setPointerCapture(id);
-        setDrag({ key, grab: y - el.getBoundingClientRect().top, y });
+        setDrag({ key, grab: y - el.getBoundingClientRect().top, y, y0: y, moved: false });
       }, HOLD_MS),
     };
   };
@@ -92,6 +92,10 @@ export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons }
     const p = press.current;
     if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) > HOLD_SLOP) { clearTimeout(p.timer); press.current = null; }
     if (!drag) return;
+    // The pointer is only captured once the button really moves, so that letting go in place
+    // still lands on the button as a click.
+    const moved = drag.moved || Math.abs(e.clientY - drag.y0) > HOLD_SLOP;
+    if (moved && !drag.moved) e.currentTarget.setPointerCapture(e.pointerId);
     // Swap with a neighbour once the lifted button's middle passes the neighbour's.
     const i = order.indexOf(drag.key), h = els.current.get(drag.key)!.offsetHeight;
     const mid = e.clientY - drag.grab + h / 2;
@@ -104,7 +108,7 @@ export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons }
       [next[i], next[to]] = [next[to], next[i]];
       setOrder(next);
     }
-    setDrag({ ...drag, y: e.clientY });
+    setDrag({ ...drag, y: e.clientY, moved });
   };
   const up = () => {
     if (press.current) { clearTimeout(press.current.timer); press.current = null; }
@@ -114,8 +118,9 @@ export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons }
     const from = el.style.transform;
     el.style.transform = '';
     el.animate([{ transform: from }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
-    try { localStorage.setItem(ORDER_KEY, JSON.stringify(order)); } catch { /* just won't be remembered */ }
     setDrag(null);
+    if (!drag.moved) return;
+    try { localStorage.setItem(ORDER_KEY, JSON.stringify(order)); } catch { /* just won't be remembered */ }
     swallowClick.current = true;
     setTimeout(() => { swallowClick.current = false; }, 0);
   };
