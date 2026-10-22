@@ -1,12 +1,13 @@
 """Build src/icons/icons.json from the SVG files in assets/icons.
 
 The icons are the Bitrix "Outline Icon Bold" set: 24x24 SVGs made of <path>
-elements (a few reuse paths through <defs>/<use>). A few also have
-outlined strokes (stroke="..." with no fill, and one <rect>): those stay
-strokes with their width and caps, since filling an open or outline-only
-path draws a solid blob. Every fill and stroke colour, the grey
-#909090 and the green accent included, becomes "current": icons are drawn
-in one colour, the item's (black by default).
+elements (a few reuse paths through <defs>/<use>, a few are <rect>s).
+Every fill, the grey #909090 and the green accent included, becomes
+"current": icons are drawn in one colour, the item's (black by default).
+
+The set is filled shapes only. An icon drawn with outlined strokes
+(stroke="..." on a path or rect) is left out, with a warning naming it,
+until a filled version of it replaces the file.
 
 Icons drawn at several sizes (alert-l, alert-m, alert-s, alert-xs) keep
 only the largest; the smaller ids become its "aliases" so boards that
@@ -80,6 +81,7 @@ def main() -> None:
     for ids in variants.values():
         ids.sort(key=lambda i: SIZES.index(i.rsplit("-", 1)[1]))
     icons = []
+    outlined = []
     for icon_id in files:
         m = SIZED.fullmatch(icon_id)
         group = variants[m.group(1)] if m else [icon_id]
@@ -88,6 +90,7 @@ def main() -> None:
         fname = icon_id + ".svg"
         root = ET.parse(os.path.join(SRC, fname)).getroot()
         paths = []
+        stroked = False
         for p in root.iter():
             if p.tag == NS + "rect":
                 d = rect_path(p)
@@ -97,14 +100,15 @@ def main() -> None:
                 continue
             if not PATH_DATA.fullmatch(d):
                 raise SystemExit(f"{fname}: unexpected path data")
+            if p.get("stroke", "none") != "none":
+                stroked = True
             entry = {"d": compact(d), "fill": "current"}
-            if p.get("stroke"):
-                entry["stroke"] = float(p.get("stroke-width", "1"))
-                if p.get("stroke-linecap") == "round":
-                    entry["round"] = True
             if p.get("fill-rule") == "evenodd":
                 entry["evenodd"] = True
             paths.append(entry)
+        if stroked:
+            outlined.append(fname)
+            continue
         en, ru = NAMES.get(icon_id, (icon_id.replace("-", " ").capitalize(), icon_id.replace("-", " ")))
         icon = {"id": icon_id, "en": en, "ru": ru, "paths": paths}
         if len(group) > 1:
@@ -116,6 +120,12 @@ def main() -> None:
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(icons, f, ensure_ascii=False, separators=(",", ":"))
     print(f"{len(icons)} icons -> {os.path.relpath(OUT, ROOT)}")
+    if outlined:
+        bar = "!" * 64
+        print(f"\n{bar}\n  Контурные иконки не вошли в набор, нужны залитые версии:")
+        for name in outlined:
+            print(f"    assets/icons/{name}")
+        print(bar)
 
 
 if __name__ == "__main__":
