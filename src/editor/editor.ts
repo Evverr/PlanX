@@ -227,6 +227,18 @@ export class Editor {
     this.camChanged();
   }
 
+  /** The part of the board that's on screen, in board coordinates. */
+  viewRect(): Rect {
+    const p = this.toWorld(0, 0);
+    return { x: p.x, y: p.y, w: this.width / this.cam.z, h: this.height / this.cam.z };
+  }
+
+  /** Moves the board so that this point is in the middle of the screen, keeping the zoom. */
+  centerOn(p: Point): void {
+    this.cam = { ...this.cam, x: this.width / 2 - p.x * this.cam.z, y: this.height / 2 - p.y * this.cam.z };
+    this.camChanged();
+  }
+
   /** Screen position of a board point, for overlays such as the text editor. */
   toScreen(p: Point): Point {
     return { x: p.x * this.cam.z + this.cam.x, y: p.y * this.cam.z + this.cam.y };
