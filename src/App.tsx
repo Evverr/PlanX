@@ -12,6 +12,7 @@ import { DockButton, useDock } from './ui/Dock';
 import { Minimap } from './ui/Minimap';
 import { catFor } from './emoji/emoji';
 import { readPictures } from './canvas/pictures';
+import { cellRect, cellText } from './model/table';
 import { useSortable } from './ui/sortable';
 
 type Pop = 'clear' | 'icons' | 'help' | 'name' | null;
@@ -83,7 +84,7 @@ export function App({ boardId }: { boardId: string }) {
   const selItems = ui.selection.map((id) => board.get(id)).filter((i) => !!i);
   const linkCount = ui.selection.filter((id) => board.getLink(id)).length;
   const editing = ui.editingId ? board.get(ui.editingId) : undefined;
-  const textItem = selItems.length === 1 && ['text', 'sticky', 'task'].includes(selItems[0].type) ? selItems[0] : undefined;
+  const textItem = selItems.length === 1 && ['text', 'sticky', 'task', 'table'].includes(selItems[0].type) ? selItems[0] : undefined;
   const peers = conn.peers();
 
   const share = async () => {
@@ -168,7 +169,10 @@ export function App({ boardId }: { boardId: string }) {
       {textItem && <TextPanel editor={editor} item={textItem} />}
 
       {!editing && <SelectionPanel editor={editor} items={selItems} linkCount={linkCount} docked={docked} />}
-      {editing && <TextEditor key={editing.id} editor={editor} item={editing} />}
+      {/* A table cell is typed into as if it were an item of its own, the size of the cell. */}
+      {editing && (editing.type === 'table' && ui.editingCell !== null
+        ? <TextEditor key={`${editing.id}:${ui.editingCell}`} editor={editor} item={{ ...editing, ...cellRect(editing, ui.editingCell), text: cellText(editing, ui.editingCell), ls: undefined }} />
+        : <TextEditor key={editing.id} editor={editor} item={editing} />)}
 
       {pop === 'clear' && (
         <div className="pop confirm" role="dialog" aria-label="Очистить доску">

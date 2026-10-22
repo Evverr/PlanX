@@ -6,7 +6,7 @@ import { useSortable } from './sortable';
 
 const same = (vals: Array<string | undefined>) => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] : null);
 
-const ORDER = ['fills', 'sep', 'icons', 'sep2', 'smaller', 'bigger', 'sep3', 'front', 'back', 'duplicate', 'trash'];
+const ORDER = ['fills', 'sep', 'icons', 'sep2', 'smaller', 'bigger', 'sep3', 'table', 'sep4', 'front', 'back', 'duplicate', 'trash'];
 
 export function SelectionPanel({ editor, items, linkCount, docked }: { editor: Editor; items: Item[]; linkCount: number; docked: boolean }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
@@ -15,6 +15,7 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
   const colorable = items.filter((i) => COLORABLE.includes(i.type));
   const icons = items.filter((i) => i.type === 'icon');
   const sized = items.filter((i) => HAS_FONT.includes(i.type));
+  const tables = items.filter((i) => i.type === 'table');
   const fill = same(colorable.map((i) => i.color));
   const iconColor = same(icons.map((i) => i.color));
   const allowNone = colorable.length > 0 && colorable.every((i) => i.type !== 'sticky');
@@ -49,6 +50,18 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
         ) : undefined,
         smaller: sized.length > 0 ? btn('font-smaller', 'Меньше шрифт', () => editor.changeFontSize(-1)) : undefined,
         bigger: sized.length > 0 ? btn('font-bigger', 'Больше шрифт', () => editor.changeFontSize(1)) : undefined,
+        // Rows and columns of the selected tables: add or take away the last one.
+        table: tables.length > 0 ? (
+          <div className="sw-group table-count">
+            <span>Строки</span>
+            <button className="tb" aria-label="Убрать строку" onClick={() => editor.changeTable('row', -1)}>−</button>
+            <button className="tb" aria-label="Добавить строку" onClick={() => editor.changeTable('row', 1)}>+</button>
+            <span>Столбцы</span>
+            <button className="tb" aria-label="Убрать столбец" onClick={() => editor.changeTable('col', -1)}>−</button>
+            <button className="tb" aria-label="Добавить столбец" onClick={() => editor.changeTable('col', 1)}>+</button>
+          </div>
+        ) : undefined,
+        sep4: <div className="sep" />,
         front: items.length > 0 ? btn('to-front', 'На передний план', () => editor.bringToFront()) : undefined,
         back: items.length > 0 ? btn('to-back', 'На задний план', () => editor.sendToBack()) : undefined,
         duplicate: items.length > 0 ? btn('duplicate', 'Дублировать (Ctrl+D)', () => editor.duplicate()) : undefined,

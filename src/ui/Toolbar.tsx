@@ -15,7 +15,8 @@ const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
   oval: ['ellipse', 'ellipse', 'Эллипс (O)'],
   task: ['task', 'circle-check', 'Задача'],
   link: ['link', 'maximize', 'Стрелка (C)'],
-  frame: ['frame', 'columns', 'Фрейм (F)'],
+  frames: ['frame', 'frame', 'Фрейм (F)'],
+  table: ['table', 'columns', 'Таблица'],
 };
 
 /** Buttons from the mockup that have no feature behind them yet. */
@@ -24,7 +25,7 @@ const LATER: Partial<Record<string, [PanelIconName, string]>> = {
 };
 
 /** Everything on the rail, top to bottom, until someone rearranges it. */
-const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'rect', 'oval', 'task', 'link', 'frame', 'draw', 'image', 'smile', 'paint'];
+const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'rect', 'oval', 'task', 'link', 'table', 'frames', 'draw', 'image', 'smile', 'paint'];
 
 export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons }: {
   editor: Editor; tool: Tool; pens: Pens; docked: boolean; iconsOpen: boolean; onToggleIcons: () => void;
@@ -37,8 +38,9 @@ export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons }
   const filePicker = useRef<HTMLInputElement>(null);
 
   // Hold a button to lift it, then drag it up or down the rail; the others make way.
-  // The circle-check button was the ellipse's; it now makes tasks, so a saved order keeps it in place.
-  const sort = useSortable('planx-tools-order', DEFAULT_ORDER, 'y', { ellipse: 'task' });
+  // The circle-check and columns buttons were the ellipse's and the frame's; they now make tasks and
+  // tables, so saved orders keep them in place.
+  const sort = useSortable('planx-tools-order', DEFAULT_ORDER, 'y', { ellipse: 'task', frame: 'table' });
 
   const button = (key: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}): ReactNode => (
     <button key={key} {...sort.item(key)} className={`fb ${on ? 'on' : ''} ${sort.lifted(key) ? 'lifted' : ''}`}

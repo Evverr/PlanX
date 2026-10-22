@@ -7,8 +7,9 @@ import { clearTextCache, DOT_GAP, DOT_R, drawScene, HANDLE, readTheme, type Came
 import { font, itemTextHeight } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
+import { cellAt, lineAt, newTable, withCount, withScale, withSize } from '../model/table';
 
-export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task';
+export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table';
 export type PenTool = 'pen' | 'marker';
 export const DRAW_TOOLS: Tool[] = ['pen', 'marker', 'eraser'];
 
@@ -37,6 +38,8 @@ export interface UIState {
   tool: Tool;
   selection: string[];
   editingId: string | null;
+  /** The table cell being edited, when editingId is a table. */
+  editingCell: number | null;
   cam: Camera;
   pens: Pens;
 }
@@ -47,7 +50,8 @@ type Gesture =
   | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean }
   | { type: 'resize'; id: string; start: Point; w0: number; h0: number }
   | { type: 'create'; id: string; origin: Point }
-  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' }
+  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' }
+  | { type: 'tableLine'; id: string; axis: 'col' | 'row'; index: number; start: Point; size0: number }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
   | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
   | { type: 'draw'; tool: PenTool; pts: Point[] }
@@ -69,6 +73,7 @@ export class Editor {
   tool: Tool = 'select';
   selection = new Set<string>();
   editingId: string | null = null;
+  editingCell: number | null = null;
   pens: Pens = readPens();
 
   private canvas: HTMLCanvasElement | null = null;
@@ -110,7 +115,7 @@ export class Editor {
   };
 
   private snapshot(): UIState {
-    return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, cam: { ...this.cam }, pens: this.pens };
+    return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, editingCell: this.editingCell, cam: { ...this.cam }, pens: this.pens };
   }
 
   private emit(): void {
@@ -218,6 +223,7 @@ export class Editor {
       peers: this.presence?.peers() ?? [],
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]),
       hotDot: this.hotDot,
+      editingCell: this.editingCell,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker' } : null,
     });
   }
@@ -425,6 +431,13 @@ export class Editor {
     }
   }
 
+  /** Adds (+1) or removes (-1) the last column or row of the selected tables. */
+  changeTable(axis: 'col' | 'row', delta: 1 | -1): void {
+    this.board.transact(() => {
+      for (const it of this.selectedItems()) if (it.type === 'table') this.board.update(it.id, withCount(it, axis, delta));
+    });
+  }
+
   bringToFront(): void {
     let z = this.board.maxZ();
     const items = this.selectedItems().sort((a, b) => a.z - b.z);
@@ -503,10 +516,12 @@ export class Editor {
 
   /* ---------- text editing ---------- */
 
-  startEditing(id: string): void {
+  /** Opens an item's text for typing; for a table, one cell's (the first unless given). */
+  startEditing(id: string, cell?: number | null): void {
     const it = this.board.get(id);
     if (!it || !EDITABLE.includes(it.type)) return;
     this.editingId = id;
+    this.editingCell = it.type === 'table' ? cell ?? 0 : null;
     this.selection = new Set([id]);
     this.presence?.setSelection([id]);
     this.emit();
@@ -516,10 +531,17 @@ export class Editor {
   /** Called by the text overlay with its final value. */
   commitText(id: string, text: string): void {
     const it = this.board.get(id);
-    if (this.editingId === id) this.editingId = null;
+    const cell = this.editingCell;
+    if (this.editingId === id) { this.editingId = null; this.editingCell = null; }
     if (it) {
       const value = text.replace(/\s+$/, '');
-      if (it.type === 'text' && !value.trim()) {
+      if (it.type === 'table') {
+        if (cell !== null && value !== (it.cells?.[cell] ?? '')) {
+          const cells = [...(it.cells ?? [])];
+          cells[cell] = value;
+          this.board.update(id, { cells: Array.from(cells, (c) => c ?? '') });
+        }
+      } else if (it.type === 'text' && !value.trim()) {
         this.board.remove([id]);
         this.selection.delete(id);
       } else if (value !== (it.text ?? '')) {
@@ -588,6 +610,7 @@ export class Editor {
       case 'sticky':
       case 'text':
       case 'task':
+      case 'table':
         this.gesture = { type: 'place', at: w, tool: this.tool };
         return;
       case 'rect':
@@ -625,6 +648,14 @@ export class Editor {
     if (single && this.onHandle(single, w)) {
       this.board.beginGesture();
       this.gesture = { type: 'resize', id: single.id, start: w, w0: single.w, h0: single.h };
+      return;
+    }
+    // Inside a selected table (away from the corner handle), its lines resize the column or row before them.
+    const line = single?.type === 'table' && !this.editingId ? lineAt(single, w, 5 / this.cam.z) : null;
+    if (single && line) {
+      this.board.beginGesture();
+      const sizes = line.axis === 'col' ? single.cols : single.rows;
+      this.gesture = { type: 'tableLine', id: single.id, axis: line.axis, index: line.index, start: w, size0: sizes?.[line.index] ?? 0 };
       return;
     }
     // A task's checkbox ticks it off (or back on) instead of picking the task up.
@@ -733,7 +764,14 @@ export class Editor {
           nh = Math.round(g.h0 * k);
         }
         if (it.type === 'text') nh = itemTextHeight(it, it.text, nw);
-        this.board.update(g.id, { w: nw, h: nh });
+        this.board.update(g.id, it.type === 'table' ? withScale(it, nw, nh) : { w: nw, h: nh });
+        return;
+      }
+      case 'tableLine': {
+        const it = this.board.get(g.id);
+        if (!it) return;
+        const d = g.axis === 'col' ? w.x - g.start.x : w.y - g.start.y;
+        this.board.update(g.id, withSize(it, g.axis, g.index, g.size0 + d));
         return;
       }
       case 'create': {
@@ -787,16 +825,20 @@ export class Editor {
     switch (g.type) {
       case 'drag':
         if (g.moved) this.board.endGesture();
-        else if (g.dbl) this.startEditing(g.id);
+        else if (g.dbl) {
+          const it = this.board.get(g.id);
+          this.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
+        }
         return;
       case 'resize':
+      case 'tableLine':
         this.board.endGesture();
         return;
       case 'place': {
         const d = DEFAULTS[g.tool];
         const it = g.tool === 'text'
           ? this.newItem('text', g.at.x - 4, g.at.y - 14)
-          : this.newItem(g.tool, g.at.x - d.w / 2, g.at.y - d.h / 2);
+          : this.newItem(g.tool, g.at.x - d.w / 2, g.at.y - d.h / 2, g.tool === 'table' ? newTable() : {});
         if (it.type === 'text') it.h = itemTextHeight(it);
         this.board.add(it);
         this.setTool('select');
@@ -874,7 +916,7 @@ export class Editor {
     const g = this.gesture;
     if (!g) return;
     if (g.type === 'create') { this.board.remove([g.id]); this.board.endGesture(); }
-    if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'erase') this.board.endGesture();
+    if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'erase' || g.type === 'tableLine') this.board.endGesture();
     this.gesture = null;
     this.requestRender();
   }
@@ -885,8 +927,10 @@ export class Editor {
     const dot = single && !this.editingId ? this.dotAt(single, w) : null;
     if (dot !== this.hotDot) { this.hotDot = dot; this.requestRender(); }
     let cursor = '';
+    const line = single?.type === 'table' && !this.editingId ? lineAt(single, w, 5 / this.cam.z) : null;
     if (dot) cursor = 'crosshair';
     else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
+    else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
     else if (hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
     else {
       const hit = hitItem(this.board.list(), w, this.cam.z);
