@@ -131,7 +131,7 @@ export class Editor {
     on(canvas, 'pointerup', (e) => this.onPointerUp(e));
     on(canvas, 'pointercancel', (e) => this.onPointerUp(e));
     on(canvas, 'pointerleave', () => this.presence?.setCursor(null));
-    on(canvas, 'wheel', (e) => this.onWheel(e), { passive: false });
+    on(canvas, 'wheel', (e) => this.wheel(e), { passive: false });
     on(window, 'keydown', (e) => this.onKeyDown(e));
     on(window, 'keyup', (e) => { if (e.code === 'Space') this.setSpace(false); });
     on(window, 'blur', () => this.setSpace(false));
@@ -853,9 +853,10 @@ export class Editor {
     this.presence.setCursor({ x: Math.round(w.x), y: Math.round(w.y) });
   }
 
-  private onWheel(e: WheelEvent): void {
+  /** Wheel and trackpad: zoom or scroll the board. `sp` is the screen point zooming keeps still,
+   *  the pointer by default; the board map passes the middle of the screen. */
+  wheel(e: WheelEvent, sp: Point = this.local(e)): void {
     e.preventDefault();
-    const sp = this.local(e);
     const mouseWheel = e.deltaMode !== 0 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
     if (e.ctrlKey || e.metaKey) this.zoomAt(sp.x, sp.y, Math.exp(-e.deltaY * 0.004));
     // Mouse wheel zooms linearly: every notch adds or takes the same 1.5 percentage points.

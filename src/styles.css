@@ -9,7 +9,8 @@
   --fmt-bg: rgba(255, 255, 255, .9); --fmt-ink: #454545; --fmt-line: rgba(0, 0, 0, .07); --fmt-hover: rgba(0, 0, 0, .05);
   --fmt-on: rgba(75, 145, 255, .14); --fmt-shadow: 0 2px 6px rgba(0, 0, 0, .18); --fmt-icon: none; --fmt-marker: #5A5A5A; --fill-dim: 1;
   --logo-x: #0080FF;
-  --shadow: 0 1px 2px rgba(20, 25, 40, .08), 0 8px 24px rgba(20, 25, 40, .10);
+  /* Every panel and popover casts the tool rail's shadow. */
+  --shadow: var(--fmt-shadow);
   --sticky-ink: #1B2130; --shape-stroke: rgba(20, 25, 40, .45);
   --ui: "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --display: "Unbounded", "Onest", system-ui, sans-serif;
@@ -22,7 +23,7 @@
     --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
     --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
     --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-icon: invert(1) hue-rotate(180deg); --fmt-marker: #BFC4CC; --fill-dim: .85; --logo-x: #4DA3FF;
-    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px rgba(0, 0, 0, .4); --shape-stroke: rgba(10, 12, 16, .6);
+    --shape-stroke: rgba(10, 12, 16, .6);
     color-scheme: dark;
   }
 }
@@ -32,7 +33,7 @@
   --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
   --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
   --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-icon: invert(1) hue-rotate(180deg); --fmt-marker: #BFC4CC; --fill-dim: .85; --logo-x: #4DA3FF;
-  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px rgba(0, 0, 0, .4); --shape-stroke: rgba(10, 12, 16, .6);
+  --shape-stroke: rgba(10, 12, 16, .6);
   color-scheme: dark;
 }
 
@@ -64,7 +65,7 @@ button { font: inherit; color: inherit; }
 /* Tool panel, 1:1 with the Figma component "Mol / Bar vertical"; buttons share the format panel's styles. */
 .tools { position: fixed; z-index: 5; left: calc(12px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; align-items: center; width: 66px; padding: 21px 18px;
-  /* 18px gaps as in the mockup; on a short screen it fits between the top bar and the help button
+  /* 18px gaps as in the mockup; on a short screen it fits between the top bar and the bottom edge
      by tightening them (432px is the buttons, separator and padding; there are 13 gaps). */
   gap: clamp(6px, calc((100vh - 150px - 432px) / 13), 18px);
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
@@ -105,7 +106,8 @@ button { font: inherit; color: inherit; }
 .status.offline { background: var(--muted); }
 
 .avatars { display: flex; align-items: center; padding: 0 2px 0 4px; }
-.avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 700; border: 2px solid var(--surface); margin-left: -6px; cursor: default; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; border: 2px solid var(--surface); margin-left: -6px; cursor: default; padding: 0; }
+.avatar img { width: 20px; height: 20px; display: block; pointer-events: none; }
 .avatar:first-child { margin-left: 0; }
 .avatar.me { cursor: pointer; }
 .more { font-size: 12px; color: var(--muted); padding: 0 4px; }
@@ -185,8 +187,7 @@ img.dock-chevron { transition: transform .25s ease; }
 .pick-tabs button.on { background: var(--fmt-on); color: var(--ink); }
 .muted { color: var(--muted); }
 
-.help-btn { left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 4px; }
-.help { left: calc(12px + env(safe-area-inset-left, 0px)); bottom: calc(72px + env(safe-area-inset-bottom, 0px)); width: 300px; max-width: calc(100vw - 24px); }
+.help { right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); width: 300px; max-width: calc(100vw - 24px); }
 .help h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
 .help dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
 .help dt { font-weight: 600; white-space: nowrap; }

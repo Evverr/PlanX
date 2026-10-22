@@ -8,6 +8,11 @@ export const EMOJI: EmojiDef[] = Object.entries(URLS)
   .sort((a, b) => Number(a.id.slice(6)) - Number(b.id.slice(6)));
 
 const URL_BY_ID = new Map(EMOJI.map((e) => [e.id, e.url]));
+export const emojiUrl = (id: string): string | undefined => URL_BY_ID.get(id);
+
+/** Cats for people's avatars: yours is the smiling one, everyone else gets one of the others by their id. */
+const CATS = ['emoji-66', 'emoji-68', 'emoji-69', 'emoji-70', 'emoji-71'];
+export const catFor = (peerId?: number): string => emojiUrl(peerId === undefined ? 'emoji-67' : CATS[peerId % CATS.length]) ?? '';
 const images = new Map<string, HTMLImageElement>();
 const listeners = new Set<() => void>();
 

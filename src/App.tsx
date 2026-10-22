@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Board } from './model/board';
 import { Editor } from './editor/editor';
 import { Connection, newBoardId } from './collab/connection';
@@ -10,6 +10,7 @@ import { TextPanel } from './ui/FormatPanel';
 import { PanelIcon } from './ui/PanelIcon';
 import { DockButton, useDock } from './ui/Dock';
 import { Minimap } from './ui/Minimap';
+import { catFor } from './emoji/emoji';
 
 type Pop = 'clear' | 'icons' | 'help' | 'name' | null;
 
@@ -69,6 +70,7 @@ export function App({ boardId }: { boardId: string }) {
   // One chevron, in the zoom panel, sticks every panel around the edge of the screen to it.
   const [docked, toggleDock] = useDock('panels');
   const [minimap, setMinimap] = useState(false);
+  const closeMinimap = useCallback(() => setMinimap(false), []);
 
   const [title, setTitle] = useState(board.title);
   useEffect(() => setTitle(board.title), [board.title]);
@@ -115,27 +117,28 @@ export function App({ boardId }: { boardId: string }) {
         <div className="avatars">
           <button className="avatar me" style={{ background: conn.me.color }} title={`${conn.me.name} (вы). Нажмите, чтобы сменить имя`}
             aria-label="Ваше имя" onClick={() => toggle('name')}>
-            {conn.me.name.slice(0, 1).toUpperCase()}
+            <img src={catFor()} alt="" draggable={false} />
           </button>
           {peers.slice(0, 4).map((p) => (
-            <span key={p.id} className="avatar" style={{ background: p.color }} title={p.name}>{p.name.slice(0, 1).toUpperCase()}</span>
+            <span key={p.id} className="avatar" style={{ background: p.color }} title={p.name}><img src={catFor(p.id)} alt="" draggable={false} /></span>
           ))}
           {peers.length > 4 && <span className="more">+{peers.length - 4}</span>}
         </div>
         <button className="ib" title="Скопировать ссылку на доску" aria-label="Поделиться" onClick={share}><PanelIcon name="link" /></button>
         <div className="sep" />
-        <button className={`ib ${minimap ? 'on' : ''}`} title="Карта доски" aria-label="Карта доски" aria-pressed={minimap}
-          onClick={() => setMinimap(!minimap)}><PanelIcon name="map" /></button>
+        <button className={`ib ${minimap ? 'on' : ''}`} title="Карта доски" aria-label="Карта доски" aria-pressed={minimap} data-minimap-toggle
+          onClick={() => { setMinimap(!minimap); setPop(null); }}><PanelIcon name="map" /></button>
         <button className="ib" title="Отдалить (−)" aria-label="Отдалить" onClick={() => editor.zoomCenter(1 / 1.25)}><PanelIcon name="zoom-out" /></button>
         <button className="zpct" title="Масштаб 100%" onClick={() => editor.zoomCenter(1 / editor.cam.z)}>{Math.round(ui.cam.z * 100)}%</button>
         <button className="ib" title="Приблизить (+)" aria-label="Приблизить" onClick={() => editor.zoomCenter(1.25)}><PanelIcon name="zoom-in" /></button>
         <button className="ib" title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'} aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
           onClick={toggleTheme}><PanelIcon name={theme === 'dark' ? 'sun' : 'moon'} /></button>
         <button className="ib fit" title="Показать всё (Shift+1)" aria-label="Показать всё" onClick={() => editor.fit()}><PanelIcon name="screen" /></button>
+        <button className={`ib ${pop === 'help' ? 'on' : ''}`} title="Подсказки" aria-label="Подсказки" onClick={() => { toggle('help'); setMinimap(false); }}><PanelIcon name="question" /></button>
         <DockButton edge="bottom" docked={docked} onToggle={toggleDock} />
       </div>
 
-      {minimap && <Minimap editor={editor} items={board.list()} docked={docked} />}
+      {minimap && <Minimap editor={editor} items={board.list()} docked={docked} onClose={closeMinimap} />}
 
       {textItem && <TextPanel editor={editor} item={textItem} />}
 
@@ -154,7 +157,6 @@ export function App({ boardId }: { boardId: string }) {
 
       {pop === 'name' && <NamePopover name={conn.me.name} onSave={(n) => { conn.rename(n); setPop(null); }} />}
 
-      <button className="bar ib help-btn" title="Подсказки" aria-label="Подсказки" onClick={() => toggle('help')}><PanelIcon name="question-l" /></button>
       {pop === 'help' && (
         <div className="pop help" role="dialog" aria-label="Управление">
           <h3>Управление</h3>
