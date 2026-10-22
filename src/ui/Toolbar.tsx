@@ -19,12 +19,11 @@ const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
 /** Buttons from the mockup that have no feature behind them yet. */
 const LATER: Partial<Record<string, [PanelIconName, string]>> = {
   image: ['image', 'Изображение'],
-  weblink: ['link', 'Ссылка'],
   paint: ['paint', 'Копировать формат'],
 };
 
 /** Everything on the rail, top to bottom, until someone rearranges it. */
-const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'rect', 'ellipse', 'link', 'frame', 'draw', 'image', 'weblink', 'smile', 'paint'];
+const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'rect', 'ellipse', 'link', 'frame', 'draw', 'image', 'smile', 'paint'];
 
 export function Toolbar({ editor, tool, pens, docked, iconsOpen, onToggleIcons }: {
   editor: Editor; tool: Tool; pens: Pens; docked: boolean; iconsOpen: boolean; onToggleIcons: () => void;

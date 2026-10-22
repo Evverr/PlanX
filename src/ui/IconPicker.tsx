@@ -13,6 +13,9 @@ const TABS: Array<[Tab, string]> = [['emoji', 'Смайлы'], ['stickers', 'С�
 const STICKY_COLORS = Object.keys(FILLS).filter((c) => c !== 'none');
 /** How far the pointer moves before a press on a tile becomes a drag. */
 const DRAG_SLOP = 4;
+/** Size of the picture under the pointer while dragging (twice the tile's), in screen pixels;
+ *  emoji and icons keep it when dropped. Matches .pick-ghost in styles.css. */
+const GHOST_SIZE: Record<PickKind, number> = { emoji: 54, sticky: 88, icon: 52 };
 
 /** Picture of a tile, in the grid and (twice as big) under the pointer while dragging. */
 function Tile({ kind, id }: { kind: PickKind; id: string }): ReactNode {
@@ -26,7 +29,7 @@ function Tile({ kind, id }: { kind: PickKind; id: string }): ReactNode {
  * of the screen, or drag it out and drop it where it should go.
  * `at` is the screen point it was dropped on.
  */
-export function IconPicker({ onPick }: { onPick: (kind: PickKind, id: string, at?: Point) => void }) {
+export function IconPicker({ onPick }: { onPick: (kind: PickKind, id: string, at?: Point & { size: number }) => void }) {
   const [tab, setTab] = useState<Tab>('emoji');
   const [q, setQ] = useState('');
   const input = useRef<HTMLInputElement>(null);
@@ -55,7 +58,7 @@ export function IconPicker({ onPick }: { onPick: (kind: PickKind, id: string, at
     if (!p) return;
     if (!p.dragged) { onPick(p.kind, p.id); return; }
     // Only a drop on the board counts; let go over a panel or the picker, nothing happens.
-    if (document.elementFromPoint(e.clientX, e.clientY)?.classList.contains('board-canvas')) onPick(p.kind, p.id, { x: e.clientX, y: e.clientY });
+    if (document.elementFromPoint(e.clientX, e.clientY)?.classList.contains('board-canvas')) onPick(p.kind, p.id, { x: e.clientX, y: e.clientY, size: GHOST_SIZE[p.kind] });
   };
   const tile = (kind: PickKind, id: string, label: string) => (
     <button key={id} title={kind === 'icon' ? label : undefined} aria-label={label}

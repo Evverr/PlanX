@@ -41,11 +41,12 @@ describe('geometry', () => {
     expect(hitLink([link], get, { x: 276, y: 61 }, 1)?.id).toBe('l');
   });
 
-  it('only grabs a frame by its label or border', () => {
-    const frame = box('frame', { w: 400, h: 300 });
-    expect(hitItem([frame], { x: 200, y: 150 }, 1)).toBeNull();
-    expect(hitItem([frame], { x: 20, y: -10 }, 1)?.id).toBe('frame');
-    expect(hitItem([frame], { x: 2, y: 150 }, 1)?.id).toBe('frame');
+  it('grabs a frame by its label or anywhere inside, but items on it first', () => {
+    const frame = box('frame', { w: 400, h: 300, z: -1 }), sticky = box('sticky', { x: 100, y: 100, w: 50, h: 50 });
+    expect(hitItem([frame, sticky], { x: 200, y: 150 }, 1)?.id).toBe('frame');
+    expect(hitItem([frame, sticky], { x: 20, y: -10 }, 1)?.id).toBe('frame');
+    expect(hitItem([frame, sticky], { x: 120, y: 120 }, 1)?.id).toBe('sticky');
+    expect(hitItem([frame, sticky], { x: 500, y: 150 }, 1)).toBeNull();
   });
 
   it('grabs a drawing only near its line, and scales the line with the item', () => {

@@ -190,7 +190,7 @@ img.dock-chevron { transition: transform .25s ease; }
 .icon-grid button { aspect-ratio: 1; border: 0; background: transparent; border-radius: 6px; cursor: pointer; color: var(--ink); display: grid; place-items: center; padding: 0; transition: background-color .25s ease; }
 .icon-grid button:hover { background: var(--fmt-hover); }
 .icon-grid svg { width: 26px; height: 26px; }
-.emoji-grid { grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 0; }
+.emoji-grid { grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 6px; }
 .emoji-grid img { width: 27px; height: 27px; object-fit: contain; pointer-events: none; }
 /* An emoji or icon being dragged out of the picker: twice its size in the picker, under the pointer. */
 .pick-ghost { position: fixed; z-index: 10; pointer-events: none; transform: translate(-50%, -50%); color: var(--ink); filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .2)); }

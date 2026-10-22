@@ -72,7 +72,7 @@ export function App({ boardId }: { boardId: string }) {
   const [minimap, setMinimap] = useState(false);
   // Buttons in the top bar and the zoom panel can be rearranged by holding them.
   const topSort = useSortable('planx-order-top', ['logo', 'sep', 'title', 'undo', 'redo', 'new', 'clear'], 'x');
-  const zoomSort = useSortable('planx-order-zoom', ['people', 'share', 'sep', 'map', 'zoom-out', 'zoom', 'zoom-in', 'theme', 'fit', 'help', 'dock'], 'x');
+  const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'share', 'help', 'theme', 'fit', 'dock', 'people'], 'x');
   const closeMinimap = useCallback(() => setMinimap(false), []);
 
   const [title, setTitle] = useState(board.title);
@@ -122,9 +122,9 @@ export function App({ boardId }: { boardId: string }) {
       <Toolbar editor={editor} tool={ui.tool} pens={ui.pens} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => toggle('icons')} />
       {pop === 'icons' && <IconPicker onPick={(kind, id, at) => {
         setPop(null);
-        if (kind === 'emoji') editor.addEmoji(id, at);
+        if (kind === 'emoji') editor.addEmoji(id, at && { x: at.x, y: at.y }, at?.size);
         else if (kind === 'sticky') editor.addSticky(id, at);
-        else editor.addIcon(id, at);
+        else editor.addIcon(id, at && { x: at.x, y: at.y }, at?.size);
       }} />}
 
       <div ref={zoomSort.ref as React.RefObject<HTMLDivElement>} className={`bar zoom sortable ${docked ? 'docked' : ''} ${zoomSort.sorting ? 'sorting' : ''}`} {...zoomSort.container}>

@@ -118,18 +118,15 @@ export function nearInk(it: Item, p: Point, tol: number): boolean {
 }
 
 /**
- * Topmost item under the point. Ink counts only near its line. A frame only counts when the point is on its
- * label or near its border, so dragging inside a frame starts a selection box.
+ * Topmost item under the point. Ink counts only near its line. A frame counts on its label and
+ * anywhere inside, so it can be grabbed by any empty spot (frames lie under everything else).
  */
 export function hitItem(items: Item[], p: Point, zoom: number): Item | null {
-  const band = 8 / zoom;
   for (let i = items.length - 1; i >= 0; i--) {
     const it = items[i];
     if (it.type === 'frame') {
       const onLabel = p.x >= it.x && p.x <= it.x + it.w && p.y >= it.y - FRAME_LABEL && p.y < it.y;
-      const inBox = pointInRect(p, it);
-      const onBorder = inBox && (p.x - it.x < band || it.x + it.w - p.x < band || p.y - it.y < band || it.y + it.h - p.y < band);
-      if (onLabel || onBorder) return it;
+      if (onLabel || pointInRect(p, it)) return it;
       continue;
     }
     if (it.type === 'ink') {
