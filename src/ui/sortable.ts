@@ -46,7 +46,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     /** Out of the panel, where the pointer is on screen, and the order from before the drag. */
     out: boolean; x: number; y: number; x0: number; y0: number; before: string[];
   } | null>(null);
-  const press = useRef<{ x: number; y: number; timer: number } | null>(null);
+  const press = useRef<{ el: HTMLElement; key: string; x0: number; y0: number; x: number; y: number; timer: number } | null>(null);
   const ref = useRef<HTMLElement>(null);
   const els = useRef(new Map<string, HTMLElement>());
   const offsets = useRef(new Map<string, number>());
@@ -81,27 +81,30 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     }
   }, [order]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Lifts the pressed button: `x0`, `y0` is where the press began, `x`, `y` where the pointer is now.
+  const lift = (p: { el: HTMLElement; key: string; x0: number; y0: number; x: number; y: number }) => {
+    const at0 = axis === 'y' ? p.y0 : p.x0, at = axis === 'y' ? p.y : p.x, r = p.el.getBoundingClientRect();
+    setDrag({ key: p.key, grab: at0 - (axis === 'y' ? r.top : r.left), at, at0, moved: false, out: false, x: p.x, y: p.y, x0: p.x0, y0: p.y0, before: order });
+  };
   const onPointerDown = (e: ReactPointerEvent<HTMLElement>) => {
     const target = e.target as Element;
     const el = target.closest<HTMLElement>('[data-key]');
     if (!el || e.button !== 0 || target.closest('[data-nosort]') || !ref.current?.contains(el)) return;
-    const key = el.dataset.key!;
-    press.current = {
-      x: e.clientX, y: e.clientY,
-      timer: window.setTimeout(() => {
-        const p = press.current;
-        const at = p ? (axis === 'y' ? p.y : p.x) : pos(e);
-        press.current = null;
-        const r = el.getBoundingClientRect();
-        setDrag({ key, grab: at - (axis === 'y' ? r.top : r.left), at, at0: at, moved: false, out: false, x: p?.x ?? e.clientX, y: p?.y ?? e.clientY, x0: p?.x ?? e.clientX, y0: p?.y ?? e.clientY, before: order });
-      }, HOLD_MS),
-    };
+    const p = { el, key: el.dataset.key!, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, timer: 0 };
+    p.timer = window.setTimeout(() => { press.current = null; lift(p); }, HOLD_MS);
+    press.current = p;
   };
-  // Until the button lifts, wandering off it cancels the hold.
+  // Wandering off the button before it lifts cancels the hold, except in a panel whose buttons can
+  // be dragged onto the board: there pulling a button away picks it up at once.
   const onPointerMove = (e: ReactPointerEvent<HTMLElement>) => {
     const p = press.current;
-    if (p && Math.hypot(e.clientX - p.x, e.clientY - p.y) > HOLD_SLOP) { clearTimeout(p.timer); press.current = null; }
-    if (p) { p.x = e.clientX; p.y = e.clientY; }
+    if (!p) return;
+    p.x = e.clientX;
+    p.y = e.clientY;
+    if (Math.hypot(p.x - p.x0, p.y - p.y0) <= HOLD_SLOP) return;
+    clearTimeout(p.timer);
+    press.current = null;
+    if (dropOut) lift(p);
   };
   // Once it has lifted, the pointer is followed on the window, so it can leave the panel; nothing
   // is captured, so letting go in place still lands on the button as a click.
