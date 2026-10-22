@@ -1,4 +1,4 @@
-export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji' | 'ink';
+export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji' | 'ink' | 'image';
 
 export interface Item {
   id: string;
@@ -33,6 +33,8 @@ export interface Item {
    *  a resized stroke is scaled by w / iw. `sw` is the line width, `hl` marks a highlighter. */
   pts?: number[];
   iw?: number;
+  /** Picture as a data URL, image items only. */
+  src?: string;
   sw?: number;
   hl?: boolean;
 }
@@ -119,6 +121,7 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   icon: { w: 64, h: 64, color: 'ink' },
   emoji: { w: 64, h: 64 },
   ink: { w: 1, h: 1 },
+  image: { w: 200, h: 150 },
 };
 
 export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse'];
