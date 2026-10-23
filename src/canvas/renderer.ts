@@ -7,7 +7,7 @@ import { cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/tab
 import { audioProgress, clock } from './audio';
 import { branchColor, branchCurve, mindDepth, plusButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
-import { audioButton, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
+import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -81,6 +81,20 @@ export const DOT_R = 4.2;
 export const DOT_GAP = 16;
 /** Selection outlines and handles, the link dots and selected links. */
 const SELECT_COLOR = '#4DA3FF';
+
+/** Runs `draw` with the board turned about the item's centre by the item's own turn, so the item
+ *  can be drawn square. Paths added meanwhile keep the turn after it's undone. */
+function turned(ctx: CanvasRenderingContext2D, it: Item, draw: () => void) {
+  const a = angleOf(it);
+  if (!a) { draw(); return; }
+  const c = center(it);
+  ctx.save();
+  ctx.translate(c.x, c.y);
+  ctx.rotate(a);
+  ctx.translate(-c.x, -c.y);
+  draw();
+  ctx.restore();
+}
 
 const layoutCache = new Map<string, TextLayout>();
 
@@ -184,13 +198,15 @@ function stickyGradient(color: string): [string, string] {
  * `px` is device pixels per board unit; canvas shadows aren't scaled by the transform.
  */
 function drawSticky(ctx: CanvasRenderingContext2D, it: Item, px: number, dim: number) {
-  const k = it.w / 108, { x, y, w, h } = it;
-  // Corner shadow: draw the wedge far off to the side and throw only its shadow back into place.
+  const k = it.w / 108, { x, y, w, h } = it, a = angleOf(it);
+  // Corner shadow: draw the wedge far off to the side and throw only its shadow back into place
+  // (shadow offsets are on the screen, so along the sticker's turn).
   const away = 100000;
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.13)';
   ctx.shadowBlur = 4 * k * px;
-  ctx.shadowOffsetX = away * px;
+  ctx.shadowOffsetX = away * px * Math.cos(a);
+  ctx.shadowOffsetY = away * px * Math.sin(a);
   ctx.beginPath();
   ctx.moveTo(x + 106 * k - away, y + h - 1 * k);
   ctx.lineTo(x + 25 * k - away, y + h - 1 * k);
@@ -506,7 +522,7 @@ function outline(ctx: CanvasRenderingContext2D, it: Item, z: number, color: stri
   // Follows the item's corners, pushed out by the same gap.
   const r = corner(it);
   ctx.beginPath();
-  ctx.roundRect(it.x - off, it.y - off, it.w + off * 2, it.h + off * 2, r ? r + off : 0);
+  turned(ctx, it, () => ctx.roundRect(it.x - off, it.y - off, it.w + off * 2, it.h + off * 2, r ? r + off : 0));
   ctx.stroke();
   ctx.setLineDash([]);
 }
@@ -571,12 +587,14 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
   lc.globalAlpha = 0.85;
   lc.beginPath();
   for (const it of s.items) {
-    if (it.type === 'frame' || it.type === 'ink' || !rectsIntersect(it, view)) continue;
-    if (it.type === 'ellipse') {
-      lc.moveTo(it.x + it.w, it.y + it.h / 2);
-      lc.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
-    } else if (it.type === 'polygon') outlinePolygon(lc, it);
-    else lc.roundRect(it.x, it.y, it.w, it.h, corner(it));
+    if (it.type === 'frame' || it.type === 'ink' || !rectsIntersect(boxOf(it), view)) continue;
+    turned(lc, it, () => {
+      if (it.type === 'ellipse') {
+        lc.moveTo(it.x + it.w, it.y + it.h / 2);
+        lc.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
+      } else if (it.type === 'polygon') outlinePolygon(lc, it);
+      else lc.roundRect(it.x, it.y, it.w, it.h, corner(it));
+    });
   }
   lc.fill();
   ctx.save();
@@ -595,8 +613,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
 
   drawBranches(ctx, s);
   for (const it of s.items) {
-    const box = it.type === 'frame' ? { ...it, y: it.y - 40, h: it.h + 40 } : it;
-    if (rectsIntersect(box, view)) drawItem(ctx, it, s);
+    const box = it.type === 'frame' ? { ...it, y: it.y - 40, h: it.h + 40 } : boxOf(it);
+    if (rectsIntersect(box, view)) turned(ctx, it, () => drawItem(ctx, it, s));
   }
 
   if (s.links.length) drawLinks(ctx, s, view);
@@ -634,7 +652,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       ctx.strokeStyle = SELECT_COLOR;
       ctx.lineWidth = 2 / cam.z;
       ctx.beginPath();
-      ctx.roundRect(it.x + it.w + off - hs / 2, it.y + it.h + off - hs / 2, hs, hs, 3 / cam.z);
+      turned(ctx, it, () => ctx.roundRect(it.x + it.w + off - hs / 2, it.y + it.h + off - hs / 2, hs, hs, 3 / cam.z));
       ctx.fill();
       ctx.stroke();
       ctx.fillStyle = SELECT_COLOR;
@@ -657,7 +675,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     let curve: Bezier;
     if (fromSide) {
       const toSide = target ? nearestSide(target, to) : null;
-      curve = curveBetween(sidePoint(from, fromSide), fromSide, target && toSide ? sidePoint(target, toSide) : to, toSide);
+      curve = curveBetween(sidePoint(from, fromSide), fromSide, target && toSide ? sidePoint(target, toSide) : to, toSide, angleOf(from), target ? angleOf(target) : 0);
     } else {
       const end = target ? edgePoint(target, center(from)) : to, start = edgePoint(from, end);
       curve = [start, start, end, end];

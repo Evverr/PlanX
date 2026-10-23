@@ -1,8 +1,8 @@
 import type { Board } from '../model/board';
 import type { Item, ItemType, Link, PolyShape, Side } from '../model/types';
-import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, uid } from '../model/types';
+import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, ROTATABLE, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
-import { boundsOf, hitItem, hitLink, nearestSide, nearInk, normRect, onAudioButton, onTaskBox, pointInRect, rectContains, rectsIntersect, sidePoint, SIDES } from '../canvas/geometry';
+import { angleOf, boundsOf, boxOf, center, hitItem, hitLink, nearestSide, nearInk, normRect, onAudioButton, onTaskBox, pointInRect, rectContains, rectsIntersect, resizedAt, sidePoint, SIDES, toLocal, turn } from '../canvas/geometry';
 import { clearTextCache, DOT_GAP, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
 import { fitHeight, font, itemTextHeight, mindSize } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
@@ -55,7 +55,8 @@ type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
   | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean }
-  | { type: 'resize'; id: string; start: Point; w0: number; h0: number }
+  | { type: 'resize'; id: string; start: Point; orig: Item }
+  | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; corner: number }
   | { type: 'create'; id: string; origin: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' }
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
@@ -66,6 +67,27 @@ type Gesture =
 
 /** What a new mind map's central topic says until it's typed over. */
 const MIND_TOPIC = 'Центральная тема';
+
+/** How far outside a corner (in screen pixels) the pointer turns the item, and how close to a square
+ *  angle (in degrees) the turn sticks to it. */
+const ROTATE_ZONE = 18, ROTATE_SNAP = 3;
+
+/** Cursors for turning: a curved double arrow around the top left corner, turned by deg. Kept by
+ *  the degree. */
+const rotateCursors = new Map<number, string>();
+function rotateCursor(deg: number): string {
+  const d = Math.round(deg);
+  let c = rotateCursors.get(d);
+  if (!c) {
+    // Drawn twice, white and wide under dark, so it shows on any background.
+    const arrow = (ink: string, width: number) => `<path fill="none" stroke="${ink}" stroke-width="${width}" d="M6.5 17.5A11 11 0 0 1 17.5 6.5"/>`
+      + `<path fill="${ink}" stroke="${ink}" stroke-width="${width - 1.6}" stroke-linejoin="round" d="M3.5 16.5 6.5 21 9.5 16.5Z M16.5 3.5 21 6.5 16.5 9.5Z"/>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g transform="rotate(${d} 12 12)">${arrow('#fff', 4.4)}${arrow('#1A1A1A', 1.8)}</g></svg>`;
+    c = `url("data:image/svg+xml,${encodeURIComponent(svg)}") 12 12, crosshair`;
+    rotateCursors.set(d, c);
+  }
+  return c;
+}
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const MIN_Z = 0.08, MAX_Z = 4;
@@ -605,7 +627,7 @@ export class Editor {
       } else if (value !== (it.text ?? '')) {
         const patch: Partial<Item> = { text: value, ...this.mindFit(it, value) };
         const h = fitHeight(it, value);
-        if (h) patch.h = h;
+        if (h) Object.assign(patch, { h }, it.rot && resizedAt(it, it.w, h));
         this.board.update(id, patch);
       }
     }
@@ -617,7 +639,7 @@ export class Editor {
   previewText(id: string, text: string): void {
     const it = this.board.get(id);
     const h = it && fitHeight(it, text);
-    if (it && h && h !== it.h) this.board.update(id, { h });
+    if (it && h && h !== it.h) this.board.update(id, { h, ...(it.rot && resizedAt(it, it.w, h)) });
     if (it?.type === 'mind') this.board.update(id, this.mindFit(it, text));
   }
 
@@ -745,7 +767,14 @@ export class Editor {
     }
     if (single && this.onHandle(single, w)) {
       this.board.beginGesture();
-      this.gesture = { type: 'resize', id: single.id, start: w, w0: single.w, h0: single.h };
+      this.gesture = { type: 'resize', id: single.id, start: w, orig: { ...single } };
+      this.setMoving(true);
+      return;
+    }
+    if (single && this.rotateCorner(single, w) !== null) {
+      this.board.beginGesture();
+      const c = center(single);
+      this.gesture = { type: 'rotate', id: single.id, c, a0: Math.atan2(w.y - c.y, w.x - c.x), rot0: single.rot ?? 0, corner: this.rotateCorner(single, w)! };
       this.setMoving(true);
       return;
     }
@@ -808,7 +837,7 @@ export class Editor {
     const sel = items.filter((i) => this.selection.has(i.id));
     sel.forEach((i) => orig.set(i.id, { x: i.x, y: i.y }));
     for (const f of sel.filter((i) => i.type === 'frame')) {
-      for (const i of items) if (i.type !== 'frame' && !orig.has(i.id) && rectContains(f, i)) orig.set(i.id, { x: i.x, y: i.y });
+      for (const i of items) if (i.type !== 'frame' && !orig.has(i.id) && rectContains(f, boxOf(i))) orig.set(i.id, { x: i.x, y: i.y });
     }
     // A mind map node brings its branches along.
     for (const id of descendants(orig.keys(), items)) {
@@ -821,7 +850,18 @@ export class Editor {
   private onHandle(it: Item, w: Point): boolean {
     if (it.type === 'mind') return false;
     const hs = (HANDLE + 6) / this.cam.z, off = 3 / this.cam.z;
-    return pointInRect(w, { x: it.x + it.w + off - hs / 2, y: it.y + it.h + off - hs / 2, w: hs, h: hs });
+    return pointInRect(toLocal(it, w), { x: it.x + it.w + off - hs / 2, y: it.y + it.h + off - hs / 2, w: hs, h: hs });
+  }
+
+  /** Which corner, other than the resize handle's, the point is just outside of, for turning the
+   *  item: 0 top left, 1 top right, 3 bottom left (2, bottom right, is the handle's). */
+  private rotateCorner(it: Item, w: Point): number | null {
+    if (!ROTATABLE.includes(it.type)) return null;
+    const p = toLocal(it, w), r = ROTATE_ZONE / this.cam.z;
+    if (pointInRect(p, it)) return null;
+    const corners = [{ x: it.x, y: it.y }, { x: it.x + it.w, y: it.y }, null, { x: it.x, y: it.y + it.h }];
+    const i = corners.findIndex((c) => c && Math.hypot(p.x - c.x, p.y - c.y) <= r);
+    return i < 0 ? null : i;
   }
 
   /** The link dot under the point, if any. */
@@ -876,19 +916,31 @@ export class Editor {
         const it = this.board.get(g.id);
         if (!it) return;
         const min = it.type === 'frame' ? 80 : it.type === 'ink' ? 4 : it.type === 'audio' ? 32 : it.type === 'icon' || it.type === 'emoji' || it.type === 'image' ? 16 : 40;
-        let nw = Math.max(min, Math.round(g.w0 + w.x - g.start.x));
-        let nh = Math.max(min, Math.round(g.h0 + w.y - g.start.y));
+        // A turned item is stretched along its own sides.
+        const { w: w0, h: h0 } = g.orig, d = turn({ x: w.x - g.start.x, y: w.y - g.start.y }, { x: 0, y: 0 }, -angleOf(g.orig));
+        let nw = Math.max(min, Math.round(w0 + d.x));
+        let nh = Math.max(min, Math.round(h0 + d.y));
         // Stickers, icons, emoji, drawings and pictures keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
         const keep = it.type === 'sticky' || it.type === 'image' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || it.type === 'ink' || it.type === 'audio' || e.shiftKey;
         if (keep) {
-          const k = Math.max(nw / g.w0, nh / g.h0);
-          nw = Math.round(g.w0 * k);
-          nh = Math.round(g.h0 * k);
+          const k = Math.max(nw / w0, nh / h0);
+          nw = Math.round(w0 * k);
+          nh = Math.round(h0 * k);
         }
         if (it.type === 'text') nh = itemTextHeight(it, it.text, nw);
         // A task can be made taller by hand, never shorter than its text.
         if (it.type === 'task') nh = Math.max(nh, fitHeight(it, it.text, nw)!);
-        this.board.update(g.id, it.type === 'table' ? withScale(it, nw, nh) : { w: nw, h: nh });
+        this.board.update(g.id, it.type === 'table' ? withScale(it, nw, nh) : g.orig.rot ? { w: nw, h: nh, ...resizedAt(g.orig, nw, nh) } : { w: nw, h: nh });
+        return;
+      }
+      case 'rotate': {
+        // Shift turns in steps of 15°; otherwise the turn sticks to the square angles when near them.
+        let deg = g.rot0 + ((Math.atan2(w.y - g.c.y, w.x - g.c.x) - g.a0) * 180) / Math.PI;
+        if (e.shiftKey) deg = Math.round(deg / 15) * 15;
+        else if (Math.abs(deg - Math.round(deg / 90) * 90) < ROTATE_SNAP) deg = Math.round(deg / 90) * 90;
+        deg = Math.round((((deg % 360) + 540) % 360 - 180) * 10) / 10;
+        this.board.update(g.id, { rot: deg || undefined });
+        if (this.canvas) this.canvas.style.cursor = rotateCursor(deg + g.corner * 90);
         return;
       }
       case 'tableLine': {
@@ -933,7 +985,7 @@ export class Editor {
         g.rect = normRect(g.start, w);
         const next = new Set(g.base);
         for (const it of this.board.list()) {
-          const inside = it.type === 'frame' ? rectContains(g.rect, it) : rectsIntersect(g.rect, it);
+          const inside = it.type === 'frame' ? rectContains(g.rect, it) : rectsIntersect(g.rect, boxOf(it));
           if (inside) next.add(it.id);
         }
         this.setSelection(next);
@@ -961,6 +1013,7 @@ export class Editor {
         }
         return;
       case 'resize':
+      case 'rotate':
       case 'tableLine':
         this.board.endGesture();
         return;
@@ -1037,7 +1090,7 @@ export class Editor {
       const box = { x: it.x - tol, y: it.y - tol, w: it.w + tol * 2, h: it.h + tol * 2 };
       for (let i = 0; i <= steps; i++) {
         const p = { x: a.x + (b.x - a.x) * i / steps, y: a.y + (b.y - a.y) * i / steps };
-        if (pointInRect(p, box) && nearInk(it, p, tol)) { gone.add(it.id); break; }
+        if (pointInRect(toLocal(it, p), box) && nearInk(it, p, tol)) { gone.add(it.id); break; }
       }
     }
     if (gone.size) this.board.remove(gone);
@@ -1047,7 +1100,7 @@ export class Editor {
     const g = this.gesture;
     if (!g) return;
     if (g.type === 'create') { this.board.remove([g.id]); this.board.endGesture(); }
-    if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'erase' || g.type === 'tableLine') this.board.endGesture();
+    if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'rotate' || g.type === 'erase' || g.type === 'tableLine') this.board.endGesture();
     this.gesture = null;
     this.setMoving(false);
     this.requestRender();
@@ -1064,6 +1117,7 @@ export class Editor {
     if (!same && (line || this.hotLine)) { this.hotLine = line; this.requestRender(); }
     if (dot) cursor = 'crosshair';
     else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
+    else if (single && this.rotateCorner(single, w) !== null) cursor = rotateCursor((single.rot ?? 0) + this.rotateCorner(single, w)! * 90);
     else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
     else if (hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
     else {

@@ -8,6 +8,36 @@ export const FRAME_LABEL = 30;
 
 export const center = (r: Rect): Point => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
 
+/** An item's turn in radians (items keep it in degrees). */
+export const angleOf = (it: { rot?: number }): number => ((it.rot ?? 0) * Math.PI) / 180;
+
+/** p turned by a radians about c, clockwise on screen. */
+export function turn(p: Point, c: Point, a: number): Point {
+  if (!a) return p;
+  const cos = Math.cos(a), sin = Math.sin(a), dx = p.x - c.x, dy = p.y - c.y;
+  return { x: c.x + dx * cos - dy * sin, y: c.y + dx * sin + dy * cos };
+}
+
+type Turned = Rect & { rot?: number };
+
+/** A board point in a turned item's own frame, where the item lies square: and back again. */
+export const toLocal = (it: Turned, p: Point): Point => turn(p, center(it), -angleOf(it));
+export const fromLocal = (it: Turned, p: Point): Point => turn(p, center(it), angleOf(it));
+
+/** Where an item resized to w × h goes so that its top left corner stays put, turned or not. */
+export function resizedAt(it: Turned, w: number, h: number): Point {
+  const tl = fromLocal(it, it), c = turn({ x: tl.x + w / 2, y: tl.y + h / 2 }, tl, angleOf(it));
+  return { x: c.x - w / 2, y: c.y - h / 2 };
+}
+
+/** The box square to the board around an item, turned or not. */
+export function boxOf(it: Turned): Rect {
+  const a = angleOf(it);
+  if (!a) return it;
+  const c = Math.abs(Math.cos(a)), s = Math.abs(Math.sin(a)), w = it.w * c + it.h * s, h = it.w * s + it.h * c;
+  return { x: it.x + it.w / 2 - w / 2, y: it.y + it.h / 2 - h / 2, w, h };
+}
+
 export const normRect = (a: Point, b: Point): Rect => ({
   x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y),
 });
@@ -69,6 +99,7 @@ function polyExit(pts: Point[], c: Point, dx: number, dy: number): number {
 
 /** Where the line from the item's centre toward `toward` leaves the item's outline. */
 export function edgePoint(item: Item, toward: Point): Point {
+  if (item.rot) return fromLocal(item, edgePoint({ ...item, rot: undefined }, toLocal(item, toward)));
   const c = center(item), hw = item.w / 2, hh = item.h / 2;
   const dx = toward.x - c.x, dy = toward.y - c.y;
   if (!dx && !dy) return c;
@@ -89,14 +120,15 @@ export function linkEnds(link: Link, get: (id: string) => Item | undefined): [Po
 export const SIDES: Side[] = ['top', 'right', 'bottom', 'left'];
 const NORMAL: Record<Side, Point> = { top: { x: 0, y: -1 }, right: { x: 1, y: 0 }, bottom: { x: 0, y: 1 }, left: { x: -1, y: 0 } };
 
-/** Midpoint of an item's side, pushed `gap` outward. Curved links attach here, the selection dots sit just outside. */
-export function sidePoint(r: Rect, side: Side, gap = 0): Point {
+/** Midpoint of an item's side, pushed `gap` outward, on the board: turned with the item. Curved links
+ *  attach here, the selection dots sit just outside. */
+export function sidePoint(r: Turned, side: Side, gap = 0): Point {
   const c = center(r), n = NORMAL[side];
-  return { x: c.x + n.x * (r.w / 2 + gap), y: c.y + n.y * (r.h / 2 + gap) };
+  return fromLocal(r, { x: c.x + n.x * (r.w / 2 + gap), y: c.y + n.y * (r.h / 2 + gap) });
 }
 
 /** The side whose midpoint is closest to p. */
-export function nearestSide(r: Rect, p: Point): Side {
+export function nearestSide(r: Turned, p: Point): Side {
   let best: Side = 'top', d = Infinity;
   for (const s of SIDES) {
     const q = sidePoint(r, s), dq = Math.hypot(p.x - q.x, p.y - q.y);
@@ -107,10 +139,11 @@ export function nearestSide(r: Rect, p: Point): Side {
 
 export type Bezier = [Point, Point, Point, Point];
 
-/** Smooth curve from a to b that leaves and enters square to the given sides. A missing side means a loose end. */
-export function curveBetween(a: Point, aSide: Side, b: Point, bSide: Side | null): Bezier {
-  const k = Math.max(30, Math.min(220, Math.hypot(b.x - a.x, b.y - a.y) * 0.45));
-  const na = NORMAL[aSide], nb = bSide ? NORMAL[bSide] : { x: 0, y: 0 };
+/** Smooth curve from a to b that leaves and enters square to the given sides, of items turned by
+ *  aRot and bRot radians. A missing side means a loose end. */
+export function curveBetween(a: Point, aSide: Side, b: Point, bSide: Side | null, aRot = 0, bRot = 0): Bezier {
+  const k = Math.max(30, Math.min(220, Math.hypot(b.x - a.x, b.y - a.y) * 0.45)), o = { x: 0, y: 0 };
+  const na = turn(NORMAL[aSide], o, aRot), nb = bSide ? turn(NORMAL[bSide], o, bRot) : o;
   return [a, { x: a.x + na.x * k, y: a.y + na.y * k }, { x: b.x + nb.x * k, y: b.y + nb.y * k }, b];
 }
 
@@ -118,7 +151,9 @@ export function curveBetween(a: Point, aSide: Side, b: Point, bSide: Side | null
 export function linkCurve(link: Link, get: (id: string) => Item | undefined): Bezier | null {
   const a = get(link.from), b = get(link.to);
   if (!a || !b) return null;
-  if (link.fromSide && link.toSide) return curveBetween(sidePoint(a, link.fromSide), link.fromSide, sidePoint(b, link.toSide), link.toSide);
+  if (link.fromSide && link.toSide) {
+    return curveBetween(sidePoint(a, link.fromSide), link.fromSide, sidePoint(b, link.toSide), link.toSide, angleOf(a), angleOf(b));
+  }
   const [p, q] = linkEnds(link, get)!;
   return [p, p, q, q];
 }
@@ -165,6 +200,7 @@ export function taskBox(it: Rect, zoom = 1): Point & { r: number } {
 /** Whether the point is on a task's checkbox, with a little room around it. */
 export function onTaskBox(it: Item, p: Point, zoom = 1): boolean {
   const c = taskBox(it, zoom);
+  p = toLocal(it, p);
   return Math.hypot(p.x - c.x, p.y - c.y) <= c.r * 1.5;
 }
 
@@ -187,6 +223,7 @@ export function inkPoints(it: Item): Point[] {
 
 /** Whether the point is within `tol` of the stroke's line. */
 export function nearInk(it: Item, p: Point, tol: number): boolean {
+  p = toLocal(it, p);
   const pts = inkPoints(it), r = (it.sw ?? 2) * (it.w / (it.iw || it.w || 1)) / 2 + tol;
   if (pts.length === 1) return Math.hypot(p.x - pts[0].x, p.y - pts[0].y) <= r;
   for (let i = 1; i < pts.length; i++) if (distToSegment(p, pts[i - 1], pts[i]) <= r) return true;
@@ -198,15 +235,18 @@ export function nearInk(it: Item, p: Point, tol: number): boolean {
  * anywhere inside, so it can be grabbed by any empty spot (frames lie under everything else).
  */
 export function hitItem(items: Item[], p: Point, zoom: number): Item | null {
+  const at = p;
   for (let i = items.length - 1; i >= 0; i--) {
     const it = items[i];
+    // A turned item is tested in its own frame, where it lies square.
+    p = it.rot ? toLocal(it, at) : at;
     if (it.type === 'frame') {
       const onLabel = p.x >= it.x && p.x <= it.x + it.w && p.y >= it.y - FRAME_LABEL && p.y < it.y;
       if (onLabel || pointInRect(p, it)) return it;
       continue;
     }
     if (it.type === 'ink') {
-      if (pointInRect(p, it) && nearInk(it, p, 5 / zoom)) return it;
+      if (pointInRect(p, it) && nearInk(it, at, 5 / zoom)) return it;
       continue;
     }
     if (it.type === 'polygon') {
@@ -236,10 +276,11 @@ export function boundsOf(items: Item[]): Rect | null {
   if (!items.length) return null;
   let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
   for (const it of items) {
-    x1 = Math.min(x1, it.x);
-    y1 = Math.min(y1, it.y - (it.type === 'frame' ? FRAME_LABEL : 0));
-    x2 = Math.max(x2, it.x + it.w);
-    y2 = Math.max(y2, it.y + it.h);
+    const b = boxOf(it);
+    x1 = Math.min(x1, b.x);
+    y1 = Math.min(y1, b.y - (it.type === 'frame' ? FRAME_LABEL : 0));
+    x2 = Math.max(x2, b.x + b.w);
+    y2 = Math.max(y2, b.y + b.h);
   }
   return { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
 }
