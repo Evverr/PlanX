@@ -171,16 +171,22 @@ export class Board {
     });
   }
 
-  /** Merges every change until endGesture() into one undo step (a drag, a resize). */
+  /** Merges every change until endGesture() into one undo step (a drag, a resize). Gestures can
+   *  nest (a colour picked while a picker is dragged): the outermost one makes the step. */
   beginGesture(): void {
+    if (this.gestures++ > 0) return;
     this.undoManager.stopCapturing();
     this.undoManager.captureTimeout = Number.MAX_SAFE_INTEGER;
   }
 
   endGesture(): void {
+    if (this.gestures > 1) { this.gestures--; return; }
+    this.gestures = 0;
     this.undoManager.captureTimeout = 0;
     this.undoManager.stopCapturing();
   }
+
+  private gestures = 0;
 
   undo(): void {
     this.undoManager.undo();
