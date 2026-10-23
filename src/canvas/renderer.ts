@@ -1,3 +1,4 @@
+import './compat';
 import type { Item, Link, Side } from '../model/types';
 import { alignOf, FILLS, textPad, textPadY, ICON_COLORS, INK_COLORS, MARK_COLORS, STROKE_COLORS, TEXT_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
