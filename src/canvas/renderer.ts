@@ -419,15 +419,17 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   if (!editing) drawText(ctx, it, textPad(it), depth === 0 ? '#fff' : theme.ink, true, s);
 }
 
-/** The branches of mind maps, under the nodes and half see-through: thicker near the centre, thinner further out. */
+/** The branches of mind maps, under the nodes and half see-through (but for those to picked nodes):
+ *  thicker near the centre, thinner further out. */
 function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
   ctx.lineCap = 'round';
-  ctx.globalAlpha = 0.5;
   for (const it of s.items) {
     if (it.type !== 'mind' || !it.parent) continue;
     const up = s.get(it.parent);
     if (!up) continue;
     const [a, c1, c2, b] = branchCurve(up, it);
+    // The branch to a picked node comes up to full strength with its edge.
+    ctx.globalAlpha = s.selection.has(it.id) ? 1 : 0.5;
     ctx.strokeStyle = shade(mindColor(it, s.get), s.theme.dim);
     ctx.lineWidth = up.parent ? 0.75 : 1.5;
     ctx.beginPath();
