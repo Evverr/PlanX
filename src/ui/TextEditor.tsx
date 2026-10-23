@@ -23,7 +23,8 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
     const el = ref.current!;
     el.value = item.text ?? '';
     el.focus();
-    el.select();
+    if (editor.editCaret === 'end') el.setSelectionRange(el.value.length, el.value.length);
+    else el.select();
     const onCommit = () => commit();
     window.addEventListener('planx:commit-edit', onCommit);
     return () => {

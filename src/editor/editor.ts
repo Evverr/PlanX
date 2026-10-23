@@ -271,7 +271,8 @@ export class Editor {
       const from = this.board.get(g.from);
       if (from) linkPreview = { from, fromSide: g.fromSide, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null };
     }
-    const plusKey = `${[...this.selection].join()}|${this.moving}|${this.editingId}`;
+    // A mind map node's buttons stay while its text is being typed (one click opens it for typing).
+    const plusKey = `${[...this.selection].join()}|${this.moving}|${this.editingId && this.board.get(this.editingId)?.type !== 'mind' ? this.editingId : ''}`;
     if (plusKey !== this.plusKey) {
       this.plusKey = plusKey;
       this.plusFrom = performance.now() + PLUS_DELAY;
@@ -663,9 +664,13 @@ export class Editor {
   /* ---------- text editing ---------- */
 
   /** Opens an item's text for typing; for a table, one cell's (the first unless given). */
-  startEditing(id: string, cell?: number | null): void {
+  /** Whether the text overlay opens with all the text picked (to type over it) or the caret at its end. */
+  editCaret: 'all' | 'end' = 'all';
+
+  startEditing(id: string, cell?: number | null, caret: 'all' | 'end' = 'all'): void {
     const it = this.board.get(id);
     if (!it || !EDITABLE.includes(it.type)) return;
+    this.editCaret = caret;
     this.editingId = id;
     this.editingCell = it.type === 'table' ? cell ?? 0 : null;
     this.selection = new Set([id]);
@@ -1006,7 +1011,8 @@ export class Editor {
 
   /** How far the selected mind map node's "+" buttons have faded in, 0…1. */
   private plusFade(): number {
-    return this.moving || this.editingId ? 0 : clamp((performance.now() - this.plusFrom) / PLUS_FADE, 0, 1);
+    const typing = this.editingId && this.board.get(this.editingId)?.type !== 'mind';
+    return this.moving || typing ? 0 : clamp((performance.now() - this.plusFrom) / PLUS_FADE, 0, 1);
   }
 
   /** Which of a mind map node's buttons is under the point, once they're showing. */
@@ -1190,6 +1196,9 @@ export class Editor {
         else if (g.dbl) {
           const it = this.board.get(g.id);
           this.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
+        } else if (this.board.get(g.id)?.type === 'mind' && this.selection.size === 1 && !e.shiftKey) {
+          // A mind map node opens for typing on a single click, the caret after its text.
+          this.startEditing(g.id, null, 'end');
         }
         return;
       case 'resize':
