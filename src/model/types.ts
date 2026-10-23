@@ -54,6 +54,9 @@ export interface Item {
   cols?: number[];
   rows?: number[];
   cells?: string[];
+  /** Frames: what was put in them and moves with them. Frames from before this have none and hold
+   *  whatever lies inside. */
+  members?: string[];
   sw?: number;
   hl?: boolean;
 }
