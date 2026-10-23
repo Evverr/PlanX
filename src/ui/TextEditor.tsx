@@ -97,6 +97,11 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey || isFrame))) {
           e.preventDefault();
           commit();
+        } else if (item.type === 'mind' && item.parent && (e.key === 'Backspace' || e.key === 'Delete') && !e.currentTarget.value) {
+          // An empty mind map node goes on Delete or Backspace.
+          e.preventDefault();
+          done.current = true;
+          editor.removeMindNode(id);
         } else if (item.type === 'mind' && e.key === 'Tab') {
           // In a mind map, Tab goes on typing in a new branch of this node; Enter starts a new line.
           e.preventDefault();
