@@ -294,10 +294,13 @@ button { font: inherit; color: inherit; }
 .icon-grid button:hover { background: var(--fmt-hover); }
 .icon-grid svg { width: 26px; height: 26px; }
 .emoji-grid { grid-template-columns: repeat(auto-fill, minmax(34px, 1fr)); gap: 6px; }
-.emoji-grid img { width: 27px; height: 27px; object-fit: contain; pointer-events: none; }
+.emoji-grid .pick-emoji { width: 27px; height: 27px; }
+/* An emoji's square; its picture is placed in it as in the Figma set, and may stick out of it. */
+.pick-emoji { position: relative; display: block; pointer-events: none; }
+.pick-emoji img { position: absolute; display: block; }
 /* An emoji or icon being dragged out of the picker: twice its size in the picker, under the pointer. */
 .pick-ghost { position: fixed; z-index: 10; pointer-events: none; transform: translate(-50%, -50%); color: var(--ink); filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .2)); }
-.pick-ghost img { display: block; width: 54px; height: 54px; }
+.pick-ghost .pick-emoji { width: 54px; height: 54px; }
 .pick-ghost .pick-glyph { display: block; width: 52px; height: 52px; }
 .pick-ghost .pick-glyph svg { display: block; width: 100%; height: 100%; }
 /* Outside the picker the ghost is a preview of the item at its board size. */
