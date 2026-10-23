@@ -5,11 +5,12 @@ describe('alignment guides', () => {
   const other = { x: 0, y: 0, w: 100, h: 100 };
 
   it('nudges a box to line up when close, with a guide across both', () => {
-    // Its top 4 under the other's: pulled up to it, a level guide along y 0 from one box to the other.
+    // Its top 4 under the other's: pulled up to it, a level guide along y 0 from one box to the other
+    // (and its bottom now lines up with the other's middle, so another along y 50).
     const { dx, dy, guides } = snapToGuides({ x: 300, y: 4, w: 50, h: 50 }, [other], 6);
     expect(dx).toBe(0);
     expect(dy).toBe(-4);
-    expect(guides).toEqual([{ x1: 0, y1: 0, x2: 350, y2: 0 }]);
+    expect(guides).toEqual([{ x1: 0, y1: 0, x2: 350, y2: 0 }, { x1: 0, y1: 50, x2: 350, y2: 50 }]);
   });
 
   it('lines up middles too', () => {
