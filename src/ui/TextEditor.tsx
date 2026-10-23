@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import type { Editor } from '../editor/editor';
 import { alignOf, TEXT_COLORS, textPad, type Item } from '../model/types';
 import { fontOf, FONTS, LINE_HEIGHT } from '../canvas/text';
-import { TASK_INSET } from '../canvas/geometry';
+import { center, TASK_INSET } from '../canvas/geometry';
 
 /**
  * A textarea laid over the item being edited, scaled with the board so the
@@ -43,14 +43,21 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   const top = isFrame ? item.y - 30 : item.y + pad;
   const p = editor.toScreen({ x: item.x + (isFrame ? 0 : inset + pad), y: top });
 
-  // Centre the text vertically in stickers and shapes, like the canvas does.
+  // Centre the text vertically in stickers and shapes, like the canvas does; and turn it with a
+  // turned item, about the item's centre.
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el || isFrame || item.type === 'text') return;
-    el.style.height = '0px';
-    const content = Math.min(el.scrollHeight, item.h - pad * 2);
-    el.style.height = `${content}px`;
-    el.style.marginTop = `${((item.h - pad * 2 - content) / 2) * z}px`;
+    if (!el || isFrame) return;
+    let top = 0;
+    if (item.type !== 'text') {
+      el.style.height = '0px';
+      const content = Math.min(el.scrollHeight, item.h - pad * 2);
+      el.style.height = `${content}px`;
+      top = ((item.h - pad * 2 - content) / 2) * z;
+      el.style.marginTop = `${top}px`;
+    }
+    const c = editor.toScreen(center(item)), dx = c.x - p.x, dy = c.y - p.y - top;
+    el.style.transform = item.rot ? `translate(${dx}px, ${dy}px) rotate(${item.rot}deg) translate(${-dx}px, ${-dy}px) scale(${z})` : `scale(${z})`;
   });
 
   return (

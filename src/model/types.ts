@@ -40,6 +40,8 @@ export interface Item {
   parent?: string;
   /** Which figure a polygon item is. */
   shape?: PolyShape;
+  /** Turned clockwise about its centre by this many degrees (see ROTATABLE). */
+  rot?: number;
   /** Audio notes: length in seconds and a coarse waveform, 0…1 per bar. */
   dur?: number;
   peaks?: number[];
@@ -149,6 +151,8 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
 
 export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse', 'polygon', 'task'];
 export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'task', 'table', 'polygon', 'mind'];
+/** What can be turned by its corners. Frames, tables, mind map nodes and audio notes stay square to the board. */
+export const ROTATABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'polygon', 'task', 'icon', 'emoji', 'image', 'ink'];
 export const EDITABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'frame', 'task', 'table', 'polygon', 'mind'];
 
 export const uid = (): string =>

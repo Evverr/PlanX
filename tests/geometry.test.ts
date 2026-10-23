@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { distToSegment, edgePoint, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, onTaskBox, rectContains, sidePoint, taskBox } from '../src/canvas/geometry';
+import { boxOf, distToSegment, edgePoint, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, onTaskBox, rectContains, resizedAt, sidePoint, taskBox } from '../src/canvas/geometry';
 import { withList, wrapText } from '../src/canvas/text';
 import type { Item } from '../src/model/types';
 
@@ -117,3 +117,23 @@ describe('wrapText', () => {
     expect(wrapText('абвгдежзик', 4, mono)).toEqual(['абвг', 'дежз', 'ик']);
   });
 });
+
+describe('turned items', () => {
+  const box = { id: 'r', type: 'rect', x: 0, y: 0, w: 200, h: 100, z: 1, rot: 90 } as Item;
+  it('are hit in their own frame', () => {
+    // Turned a quarter, the 200×100 box stands 100 wide and 200 tall about its centre (100, 50).
+    expect(hitItem([box], { x: 100, y: -40 }, 1)?.id).toBe('r');
+    expect(hitItem([box], { x: 10, y: 50 }, 1)).toBeNull();
+  });
+  it('have a box square to the board around them', () => {
+    expect(boxOf(box)).toEqual({ x: 50, y: -50, w: 100, h: 200 });
+  });
+  it('keep their top left corner when resized', () => {
+    // The top left corner of the turned box is at (150, -50).
+    const p = resizedAt(box, 300, 100);
+    const c = { x: p.x + 150, y: p.y + 50 };
+    expect(c.x + 50).toBeCloseTo(150);
+    expect(c.y - 150).toBeCloseTo(-50);
+  });
+});
+

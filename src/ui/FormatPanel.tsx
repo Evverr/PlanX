@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import type { Editor } from '../editor/editor';
 import { alignOf, baseWeight, DEFAULTS, MARK_COLORS, TEXT_COLORS, type Item, type ListKind, type TextAlign } from '../model/types';
 import { DOT_GAP, DOT_R } from '../canvas/renderer';
+import { boxOf } from '../canvas/geometry';
 import { FONTS } from '../canvas/text';
 import { PanelIcon as Icon, type PanelIconName as IconName } from './PanelIcon';
 import { useSortable } from './sortable';
@@ -63,8 +64,10 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
   useLayoutEffect(() => {
     const box = el.current!;
     const w = box.offsetWidth, h = box.offsetHeight;
-    const top = editor.toScreen({ x: item.x + item.w / 2, y: item.y });
-    const bottom = editor.toScreen({ x: 0, y: item.y + item.h }).y;
+    // A turned item's box square to the screen.
+    const b = boxOf(item);
+    const top = editor.toScreen({ x: b.x + b.w / 2, y: b.y });
+    const bottom = editor.toScreen({ x: 0, y: b.y + b.h }).y;
     const reach = DOT_GAP + DOT_R + GAP;
     // Above the item if it fits under the top bar (when level with it), otherwise below.
     const bar = document.querySelector('.topbar')?.getBoundingClientRect();
