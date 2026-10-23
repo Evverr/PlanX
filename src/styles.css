@@ -241,7 +241,7 @@ button { font: inherit; color: inherit; }
 .fb.sw-btn::before { inset: -6px -9px; }
 .fb.sw-btn > .pi { margin: 0 -3px; }
 .fb .swatch { position: absolute; left: 4px; right: 4px; bottom: -1px; height: 4px; border-radius: 2px; }
-.fpick { position: relative; isolation: isolate; flex: none; height: 30px; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; padding: 0; cursor: pointer; font: 500 16px/1 "Inter", var(--ui); color: var(--fmt-ink); white-space: nowrap; }
+.fpick { position: relative; isolation: isolate; flex: none; height: 30px; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; padding: 0; cursor: pointer; font: 500 15px/1 "Inter", var(--ui); color: var(--fmt-ink); white-space: nowrap; }
 
 /* Popups, as the Figma "Clear the board" one: 20px in from every edge, a 12px corner, a soft
    shadow, Inter 13 on 21px lines; buttons 28px under the text, 9px apart, at the right. */
@@ -385,5 +385,9 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 .menu-switch i { position: absolute; top: 29.17%; bottom: 29.17%; left: 12.5%; right: 45.83%; border-radius: 220px; background: #fff;
   box-shadow: 0 1px 1px rgba(0, 0, 0, .07); transition: left .15s ease-out, right .15s ease-out; }
 .menu-switch.on i { left: 45.83%; right: 12.5%; box-shadow: 0 1px 1px rgba(0, 0, 0, .17); }
-/* A further level opens beside its row, 8px off the menu's edge, its first row level with it. */
-.board-menu.sub { left: calc(100% + 26px); top: -20px; bottom: auto; }
+/* A further level opens beside its row, 3px over the menu's edge, its first row level with it. */
+.board-menu.sub { left: calc(100% + 15px); top: -20px; bottom: auto; }
+/* A row lights up under the pointer, and while its further level is open. */
+.menu-row { isolation: isolate; }
+.menu-row::before { content: ""; position: absolute; inset: -5px -8px -5px -6px; z-index: -1; border-radius: 8px; transition: background-color .12s ease-out; }
+.menu-row:hover::before, .menu-row[aria-expanded="true"]::before { background: var(--fmt-hover); }
