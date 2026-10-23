@@ -1347,13 +1347,17 @@ export class Editor {
   wheel(e: WheelEvent, sp: Point = this.local(e)): void {
     e.preventDefault();
     const mouseWheel = e.deltaMode !== 0 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
-    if (e.ctrlKey || e.metaKey) this.zoomAt(sp.x, sp.y, Math.exp(-e.deltaY * 0.004));
-    // Mouse wheel zooms linearly: every notch adds or takes the same WHEEL_STEP.
-    else if (mouseWheel && !e.shiftKey) this.zoomAt(sp.x, sp.y, (this.cam.z - Math.sign(e.deltaY) * WHEEL_STEP) / this.cam.z);
+    const pan = (dx: number, dy: number) => { this.cam = { ...this.cam, x: this.cam.x - dx, y: this.cam.y - dy }; this.camChanged(); };
+    // Cmd + wheel scrolls up and down, Shift + wheel sideways; a sideways swipe moves sideways.
+    if (e.metaKey) pan(e.deltaX, e.deltaY);
+    else if (e.shiftKey) pan(e.deltaX || e.deltaY, 0);
+    // A trackpad pinch (it comes as Ctrl + wheel) zooms with the fingers.
+    else if (e.ctrlKey) this.zoomAt(sp.x, sp.y, Math.exp(-e.deltaY * 0.004));
+    else if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) pan(e.deltaX, 0);
+    // The wheel zooms linearly: every notch adds or takes the same WHEEL_STEP, a smooth wheel as much per 100px.
     else {
-      const horiz = e.shiftKey && !e.deltaX;
-      this.cam = { ...this.cam, x: this.cam.x - (horiz ? e.deltaY : e.deltaX), y: this.cam.y - (horiz ? 0 : e.deltaY) };
-      this.camChanged();
+      const step = mouseWheel ? Math.sign(e.deltaY) * WHEEL_STEP : (e.deltaY / 100) * WHEEL_STEP;
+      this.zoomAt(sp.x, sp.y, (this.cam.z - step) / this.cam.z);
     }
   }
 
