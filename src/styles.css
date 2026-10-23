@@ -371,16 +371,19 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 .board-menu { position: absolute; left: -6px; top: calc(100% + 14px); z-index: 7; width: 286px; box-sizing: border-box;
   display: flex; flex-direction: column; gap: 14px; padding: 20px 18px 24px 14px;
   background: var(--surface); border-radius: 12px; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .15)); animation: fade-in .12s ease-out; }
+.menu-item { position: relative; width: 100%; }
 .menu-row { position: relative; display: flex; align-items: center; gap: 11px; width: 100%; border: 0; background: none; padding: 0;
   font: 400 13px/normal "Inter", var(--ui); color: var(--menu-ink); text-align: left; white-space: nowrap; cursor: pointer; }
 .menu-row.light { color: var(--fmt-ink); }
 .menu-row img { flex: none; display: block; }
 .menu-more { position: absolute; right: -5px; top: 1px; }
 .menu-line { width: 259px; height: 1px; background: #6E6E6E; opacity: .1; }
-/* The switch: an 18×10 track, blue when on, and a white knob at its right end (left when off). */
+/* The switch: a 24×14 track, grey with the knob at its left, blue with it at its right when on. */
 .menu-switch { position: absolute; right: -4px; top: 50%; width: 24px; height: 24px; transform: translateY(-50%); }
-.menu-switch::before { content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 10px; transform: translate(-50%, -50%); border-radius: 220px; background: #C9CDD3; transition: background-color .15s ease-out; }
+.menu-switch::before { content: ""; position: absolute; left: 0; top: 5px; width: 24px; height: 14px; border-radius: 220px; background: #D9D9D9; transition: background-color .15s ease-out; }
 .menu-switch.on::before { background: #007CFF; }
-.menu-switch i { position: absolute; top: 33.33%; bottom: 33.33%; left: 16.67%; right: 50%; border-radius: 220px; background: #fff;
-  box-shadow: 0 1px 1px rgba(0, 0, 0, .05); transition: left .15s ease-out, right .15s ease-out; }
-.menu-switch.on i { left: 50%; right: 16.67%; }
+.menu-switch i { position: absolute; top: 29.17%; bottom: 29.17%; left: 12.5%; right: 45.83%; border-radius: 220px; background: #fff;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .07); transition: left .15s ease-out, right .15s ease-out; }
+.menu-switch.on i { left: 45.83%; right: 12.5%; box-shadow: 0 1px 1px rgba(0, 0, 0, .17); }
+/* A further level opens beside its row, 8px off the menu's edge, its first row level with it. */
+.board-menu.sub { left: calc(100% + 26px); top: -20px; bottom: auto; }
