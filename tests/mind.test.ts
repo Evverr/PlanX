@@ -50,10 +50,13 @@ describe('mind map', () => {
     expect(above.get('a1')).toBe(-116);
   });
 
-  it('moves what is below a node that grows as it is typed in', () => {
-    const a2 = node('a2', 160, 0, { parent: 'r' });
-    const moves = makeRoom('a', 20, [...items, a2]);
+  it('moves the branches of the same parent below a node that grows as it is typed in', () => {
+    const a2 = node('a2', 160, 0, { parent: 'r' }), a3 = node('a3', 320, 40, { parent: 'a2' });
+    // a1 grows: nothing else hangs from a, so nothing moves (a2, a level up, stays put).
+    expect(makeRoom('a1', 20, [...items, a2, a3]).size).toBe(0);
+    const moves = makeRoom('a', 20, [...items, a2, a3]);
     expect(moves.get('a2')).toBe(20);
+    expect(moves.get('a3')).toBe(60);
     expect(moves.has('a')).toBe(false);
     expect(moves.has('b')).toBe(false);  // on the other side of the centre
   });
