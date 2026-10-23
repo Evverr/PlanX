@@ -155,8 +155,8 @@ export const ICON_COLORS: Record<string, string> = {
 export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }> = {
   sticky: { w: 160, h: 160, color: 'yellow', fs: 16, text: '' },
   text: { w: 260, h: 26, fs: 20, text: '' },
-  rect: { w: 180, h: 110, color: 'blue', fs: 16, text: '' },
-  ellipse: { w: 170, h: 110, color: 'green', fs: 16, text: '' },
+  rect: { w: 180, h: 110, color: 'blue', fs: 16, text: '', ta: 'left' },
+  ellipse: { w: 170, h: 110, color: 'green', fs: 16, text: '', ta: 'left' },
   frame: { w: 520, h: 380, text: 'Фрейм' },
   icon: { w: 64, h: 64, color: 'ink' },
   emoji: { w: 64, h: 64 },
@@ -165,7 +165,7 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   task: { w: 180, h: 110, color: 'blue', fs: 16, text: '' },
   table: { w: 360, h: 120, fs: 14 },
   audio: { w: 300, h: 64 },
-  polygon: { w: 160, h: 150, color: 'purple', fs: 16, text: '' },
+  polygon: { w: 160, h: 150, color: 'purple', fs: 16, text: '', ta: 'left' },
   mind: { w: 200, h: 56, fs: 18, text: '' },
 };
 
