@@ -8,8 +8,8 @@ import { useSortable } from './sortable';
 
 const same = (vals: Array<string | undefined>) => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] : null);
 
-/** Rearrangeable buttons; the bin isn't among them, it always comes last. */
-const ORDER = ['paint', 'sep6', 'fills', 'sep', 'icons', 'rows', 'cols', 'front', 'back', 'duplicate'];
+/** Rearrangeable buttons; the bin comes last until moved. */
+const ORDER = ['paint', 'sep6', 'fills', 'sep', 'icons', 'rows', 'cols', 'front', 'back', 'duplicate', 'trash'];
 
 /** A chequered circle that opens a slider for how see-through the colour is, in percent. Dragging
  *  the slider is one change (onStart … onEnd). */
@@ -44,10 +44,10 @@ function Opacity({ value, label, onStart, onChange, onEnd }: {
 /** Room between the panel and the zoom panel or the tool rail beside it. */
 const GAP = 16;
 
-/** How wide the panel may be: the screen less its margin and the tool rail, less the bin (40 and a gap). */
+/** How wide the panel may be: the screen less its margin and the tool rail. */
 function selectionRoom(): number {
   const rail = document.querySelector('.tools')?.getBoundingClientRect();
-  return innerWidth - 16 - (rail ? rail.right + GAP : 16) - 44;
+  return innerWidth - 16 - (rail ? rail.right + GAP : 16);
 }
 
 export function SelectionPanel({ editor, items, linkCount, docked }: { editor: Editor; items: Item[]; linkCount: number; docked: boolean }) {
@@ -194,8 +194,8 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
         back: items.length > 0 ? btn('to-back', 'На задний план', () => editor.sendToBack()) : undefined,
         duplicate: items.length > 0 ? btn('duplicate', 'Дублировать (Ctrl+D)', () => editor.duplicate()) : undefined,
         sep: <div className="sep" />,
+        trash: btn('trashcan', 'Удалить (Del)', () => editor.deleteSelection()),
       }, selectionRoom(), 'above')}
-      {btn('trashcan', 'Удалить (Del)', () => editor.deleteSelection())}
     </div>
   );
 }
