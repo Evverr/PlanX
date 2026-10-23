@@ -97,8 +97,8 @@ function rotateCursor(deg: number): string {
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const MIN_Z = 0.08, MAX_Z = 4;
-/** Zoom change per mouse wheel notch: one and a half percentage points. */
-const WHEEL_STEP = 0.015;
+/** Zoom change per mouse wheel notch: three percentage points. */
+const WHEEL_STEP = 0.03;
 
 /**
  * Owns the canvas: turns pointer and keyboard input into board changes and
@@ -477,6 +477,8 @@ export class Editor {
   setColor(color: string): void {
     this.board.transact(() => {
       for (const it of this.selectedItems()) {
+        // Mind map nodes take only their own strong colours (or any picked one), not the pale fills.
+        if (it.type === 'mind' && !color.startsWith('#')) continue;
         if (COLORABLE.includes(it.type) && !(color === 'none' && it.type === 'sticky')) this.board.update(it.id, { color });
       }
     });

@@ -3,9 +3,22 @@ import type { Point } from '../canvas/geometry';
 
 /**
  * Mind maps, as in MindMeister: a central topic (a 'mind' item without a parent) and nodes that
- * branch from it, each pointing at its parent. Every branch is the one blue.
+ * branch from it, each pointing at its parent. Branches are blue unless coloured otherwise.
  */
 export const MIND_COLOR = '#3E7BFA';
+
+/** Colours a node can be given; what grows from it takes its colour unless given its own. */
+export const MIND_PALETTE = ['#3E7BFA', '#0C8599', '#30A46C', '#E8892B', '#E5484D', '#D6409F', '#8E4EC6', '#5B6170'];
+
+/** A node's colour: its own, or that of the nearest node it grows from that has one, or the blue. */
+export function mindColor(it: Item, get: (id: string) => Item | undefined): string {
+  let cur: Item | undefined = it;
+  for (let i = 0; cur && i < 50; i++) {
+    if (cur.color?.startsWith('#')) return cur.color;
+    cur = cur.parent ? get(cur.parent) : undefined;
+  }
+  return MIND_COLOR;
+}
 
 type Get = (id: string) => Item | undefined;
 
