@@ -16,6 +16,7 @@ import { readPictures } from './canvas/pictures';
 import { cellItem } from './model/table';
 import { useSortable } from './ui/sortable';
 import { Tooltips } from './ui/Tooltips';
+import { CatMenu } from './ui/CatMenu';
 import type { Item, Link } from './model/types';
 
 /** Where a board copied into a new tab waits for it, followed by the new board's id. */
@@ -115,6 +116,8 @@ export function App({ boardId }: { boardId: string }) {
   }, [board]);
 
   const [title, setTitle] = useState(board.title);
+  const [catMenu, setCatMenu] = useState(false);
+  const catTimer = useRef(0);
   useEffect(() => setTitle(board.title), [board.title]);
   useEffect(() => { document.title = board.title ? `${board.title} · PlanX` : 'PlanX'; }, [board.title]);
 
@@ -190,7 +193,10 @@ export function App({ boardId }: { boardId: string }) {
 
       <div ref={zoomSort.ref as React.RefObject<HTMLDivElement>} className={`bar zoom sortable ${docked ? 'docked' : ''} ${zoomSort.sorting ? 'sorting' : ''}`} {...zoomSort.container}>
         {zoomSort.renderFit({
-        people: <div className="avatars">
+        // The menu shows while the pointer is over the cats (or the menu), and a moment after it leaves.
+        people: <div className="avatars" onPointerEnter={() => { clearTimeout(catTimer.current); setCatMenu(true); }}
+          onPointerLeave={() => { catTimer.current = window.setTimeout(() => setCatMenu(false), 250); }}>
+          {catMenu && <CatMenu />}
           <button className="avatar me" title={`${conn.me.name} (вы). Нажмите, чтобы убрать все панели`}
             aria-label="Убрать панели" onClick={() => setBare(true)}>
             <img src={catFor()} alt="" draggable={false} />

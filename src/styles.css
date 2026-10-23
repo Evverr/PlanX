@@ -6,7 +6,7 @@
   --grad-1: #FAFAFA; --grad-2: #FCF0FA; --grad-3: #ECF2FC; --grid: 0, 0, 0;
   /* Format panel (Figma "Mol / Bar") and how much board fills are dimmed. */
   --fmt-bg: rgba(255, 255, 255, .9); --fmt-ink: #454545; --fmt-line: rgba(0, 0, 0, .07); --fmt-hover: rgba(0, 0, 0, .05);
-  --fmt-on: rgba(75, 145, 255, .14); --fmt-shadow: 0 2px 6px rgba(0, 0, 0, .18); --fmt-on-ink: #0080FF; --fmt-off-ink: #CDD0D5; --op-track: #E2E4E9; --fmt-marker: #5A5A5A; --fill-dim: 1;
+  --fmt-on: rgba(75, 145, 255, .14); --fmt-shadow: 0 2px 6px rgba(0, 0, 0, .18); --fmt-on-ink: #0080FF; --fmt-off-ink: #CDD0D5; --menu-ink: #292929; --op-track: #E2E4E9; --fmt-marker: #5A5A5A; --fill-dim: 1;
   /* Every panel and popover casts the tool rail's shadow. */
   --shadow: var(--fmt-shadow);
   --sticky-ink: #1B2130; --shape-stroke: rgba(20, 25, 40, .45);
@@ -22,7 +22,7 @@
     --accent: #43BCCB; --accent-soft: rgba(67, 188, 203, .18); --frame: rgba(255, 255, 255, .035); --danger: #F07A63;
     --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
     --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
-    --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --op-track: #3A404B; --fmt-marker: #BFC4CC; --fill-dim: .85;
+    --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --menu-ink: var(--ink); --op-track: #3A404B; --fmt-marker: #BFC4CC; --fill-dim: .85;
     --shape-stroke: rgba(10, 12, 16, .6); --avatar-bg: transparent; --avatar-fade: .85;
     color-scheme: dark;
   }
@@ -32,7 +32,7 @@
   --accent: #43BCCB; --accent-soft: rgba(67, 188, 203, .18); --frame: rgba(255, 255, 255, .035); --danger: #F07A63;
   --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
   --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
-  --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --op-track: #3A404B; --fmt-marker: #BFC4CC; --fill-dim: .85;
+  --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --menu-ink: var(--ink); --op-track: #3A404B; --fmt-marker: #BFC4CC; --fill-dim: .85;
   --shape-stroke: rgba(10, 12, 16, .6); --avatar-bg: transparent; --avatar-fade: .85;
   color-scheme: dark;
 }
@@ -45,8 +45,9 @@ button { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .board-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
-.board-canvas[data-tool="hand"], .board-canvas.space { cursor: grab !important; }
-.board-canvas.panning { cursor: grabbing !important; }
+/* Panning (Space held, or the hand tool): an open hand, and a closed one while holding on. */
+.board-canvas[data-tool="hand"], .board-canvas.space { cursor: url(./ui/cursors/hand.svg) 12 12, grab !important; }
+.board-canvas.panning { cursor: url(./ui/cursors/hand-catch.svg) 12 12, grabbing !important; }
 .board-canvas[data-tool="sticky"], .board-canvas[data-tool="text"], .board-canvas[data-tool="rect"],
 .board-canvas[data-tool="ellipse"], .board-canvas[data-tool="frame"], .board-canvas[data-tool="link"],
 .board-canvas[data-tool="pen"], .board-canvas[data-tool="marker"], .board-canvas[data-tool="triangle"], .board-canvas[data-tool="rhombus"],
@@ -135,7 +136,7 @@ button { font: inherit; color: inherit; }
 .tb:hover { background: var(--fmt-hover); color: var(--ink); }
 
 
-.avatars { display: flex; align-items: center; padding: 0 4px 0 4px; }
+.avatars { position: relative; display: flex; align-items: center; padding: 0 4px 0 4px; }
 .avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--avatar-bg); border: 2px solid var(--surface); margin-left: 0; cursor: default; padding: 0; }
 .avatar img { width: 22px; height: 22px; display: block; pointer-events: none; opacity: var(--avatar-fade); }
 .avatar:first-child { margin-left: 0; }
@@ -351,3 +352,22 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
   background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); animation: fade-in .12s ease-out; }
 .more-pop.above { bottom: calc(100% + 14px); }
 .more-pop.below { top: calc(100% + 14px); }
+
+/* The menu over the cat, 1:1 with the Figma "Mol / Menu right": 286 wide, rows of a 24px icon and
+   Inter 13 text 11px apart, 14px between rows, a faint line between groups. */
+.cat-menu { position: absolute; right: -10px; bottom: calc(100% + 14px); z-index: 7; width: 286px; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 14px; padding: 20px 18px 24px 14px;
+  background: var(--surface); border-radius: 12px; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .15)); animation: fade-in .12s ease-out; }
+.menu-row { position: relative; display: flex; align-items: center; gap: 11px; width: 100%; border: 0; background: none; padding: 0;
+  font: 400 13px/normal "Inter", var(--ui); color: var(--menu-ink); text-align: left; white-space: nowrap; cursor: pointer; }
+.menu-row.light { color: var(--fmt-ink); }
+.menu-row img { flex: none; display: block; }
+.menu-more { position: absolute; right: -5px; top: 1px; }
+.menu-line { width: 259px; height: 1px; background: #6E6E6E; opacity: .1; }
+/* The switch: an 18×10 track, blue when on, and a white knob at its right end (left when off). */
+.menu-switch { position: absolute; right: -4px; top: 50%; width: 24px; height: 24px; transform: translateY(-50%); }
+.menu-switch::before { content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 10px; transform: translate(-50%, -50%); border-radius: 220px; background: #C9CDD3; transition: background-color .15s ease-out; }
+.menu-switch.on::before { background: #007CFF; }
+.menu-switch i { position: absolute; top: 33.33%; bottom: 33.33%; left: 16.67%; right: 50%; border-radius: 220px; background: #fff;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .05); transition: left .15s ease-out, right .15s ease-out; }
+.menu-switch.on i { left: 50%; right: 16.67%; }
