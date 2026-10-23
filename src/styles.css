@@ -6,7 +6,7 @@
   --grad-1: #FAFAFA; --grad-2: #FCF0FA; --grad-3: #ECF2FC; --grid: 0, 0, 0;
   /* Format panel (Figma "Mol / Bar") and how much board fills are dimmed. */
   --fmt-bg: rgba(255, 255, 255, .9); --fmt-ink: #454545; --fmt-line: rgba(0, 0, 0, .07); --fmt-hover: rgba(0, 0, 0, .05);
-  --fmt-on: rgba(75, 145, 255, .14); --fmt-shadow: 0 2px 6px rgba(0, 0, 0, .18); --fmt-on-ink: #0080FF; --fmt-off-ink: #CDD0D5; --menu-ink: #292929; --op-track: #E2E4E9; --fmt-marker: #5A5A5A; --fill-dim: 1;
+  --fmt-on: rgba(75, 145, 255, .14); --fmt-shadow: 0 2px 6px rgba(0, 0, 0, .18); --fmt-on-ink: #0080FF; --fmt-off-ink: #CDD0D5; --menu-ink: #292929; --btn-ink: #2F2F2F; --btn-line: rgba(0, 0, 0, .08); --op-track: #E2E4E9; --fmt-marker: #5A5A5A; --fill-dim: 1;
   /* Every panel and popover casts the tool rail's shadow. */
   --shadow: var(--fmt-shadow);
   --sticky-ink: #1B2130; --shape-stroke: rgba(20, 25, 40, .45);
@@ -22,7 +22,7 @@
     --accent: #43BCCB; --accent-soft: rgba(67, 188, 203, .18); --frame: rgba(255, 255, 255, .035); --danger: #F07A63;
     --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
     --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
-    --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --menu-ink: var(--ink); --op-track: #3A404B; --fmt-marker: #BFC4CC; --fill-dim: .85;
+    --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --menu-ink: var(--ink); --btn-ink: var(--ink); --btn-line: rgba(255, 255, 255, .12); --op-track: #3A404B; --fmt-marker: #BFC4CC; --fill-dim: .85;
     --shape-stroke: rgba(10, 12, 16, .6); --avatar-bg: transparent; --avatar-fade: .85;
     color-scheme: dark;
   }
@@ -32,7 +32,7 @@
   --accent: #43BCCB; --accent-soft: rgba(67, 188, 203, .18); --frame: rgba(255, 255, 255, .035); --danger: #F07A63;
   --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
   --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
-  --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --menu-ink: var(--ink); --op-track: #3A404B; --fmt-marker: #BFC4CC; --fill-dim: .85;
+  --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --menu-ink: var(--ink); --btn-ink: var(--ink); --btn-line: rgba(255, 255, 255, .12); --op-track: #3A404B; --fmt-marker: #BFC4CC; --fill-dim: .85;
   --shape-stroke: rgba(10, 12, 16, .6); --avatar-bg: transparent; --avatar-fade: .85;
   color-scheme: dark;
 }
@@ -244,12 +244,23 @@ button { font: inherit; color: inherit; }
 .fb .swatch { position: absolute; left: 4px; right: 4px; bottom: -1px; height: 4px; border-radius: 2px; }
 .fpick { position: relative; isolation: isolate; flex: none; height: 30px; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; padding: 0; cursor: pointer; font: 500 17px/1 "Inter", var(--ui); color: var(--fmt-ink); white-space: nowrap; }
 
-.pop { position: fixed; z-index: 6; background: var(--surface); box-shadow: var(--shadow); border-radius: 12px; padding: 14px 16px; font-size: 13px; line-height: 1.5; }
+/* Popups, as the Figma "Clear the board" one: 20px in from every edge, a 12px corner, a soft
+   shadow, Inter 13 on 21px lines; buttons 28px under the text, 9px apart, at the right. */
+.pop { position: fixed; z-index: 6; background: var(--surface); box-shadow: 0 6px 12px rgba(0, 0, 0, .15); border-radius: 12px; padding: 20px;
+  font: 400 13px/21px "Inter", var(--ui); color: var(--menu-ink); }
 .pop p { margin: 0 0 10px; }
-.pop .row { display: flex; gap: 6px; justify-content: flex-end; }
-.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 13px; font-weight: 500; }
-.btn.red { background: var(--danger); border-color: var(--danger); color: #fff; }
-.btn.blue { background: #0080FF; border-color: #0080FF; color: #fff; }
+.pop p:has(+ .row) { margin-bottom: 0; }
+.pop .row { display: flex; gap: 9px; justify-content: flex-end; margin-top: 18px; }
+.pop p + .row { margin-top: 28px; }
+/* Buttons: 32px tall, 7px corners, Inter Semi Bold 12. The plain one has only a faint edge inside;
+   the main one is the blue gradient, both at 90%. */
+.btn { position: relative; isolation: isolate; height: 32px; box-sizing: border-box; padding: 0 14px; border: 0; border-radius: 7px; background: none;
+  font: 600 12px/32px "Inter", var(--ui); color: var(--btn-ink); white-space: nowrap; cursor: pointer; }
+.btn::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; opacity: .9; box-shadow: inset 0 0 0 1px var(--btn-line); transition: filter .12s ease-out; }
+.btn:hover::before { background: var(--fmt-hover); }
+.btn.primary { color: #fff; }
+.btn.primary::before { box-shadow: none; background: linear-gradient(#1A7AFF, #0054C9); }
+.btn.primary:hover::before { filter: brightness(1.08); }
 
 /* Audio note recorder beside the tool rail. */
 .recorder { left: calc(84px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: 320px; max-width: calc(100vw - 96px);
@@ -270,7 +281,8 @@ button { font: inherit; color: inherit; }
 .rec-preview { width: 100%; height: 40px; }
 .recorder .row { align-self: stretch; justify-content: space-between; }
 .recorder .row .btn { flex: 1; white-space: nowrap; }
-.confirm { left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(70px + env(safe-area-inset-top, 0px)); width: 270px; }
+.confirm { left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(70px + env(safe-area-inset-top, 0px)); width: 286px; box-sizing: border-box; }
+.confirm p { max-width: 207px; }
 .namepop { right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(72px + env(safe-area-inset-bottom, 0px)); width: 240px; }
 .namepop input, .icon-pick input { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 8px 10px; font: inherit; margin-bottom: 10px; }
 .toast { left: 50%; transform: translateX(-50%); top: calc(70px + env(safe-area-inset-top, 0px)); padding: 10px 14px; }
@@ -311,7 +323,7 @@ button { font: inherit; color: inherit; }
 .pick-tabs button.on { background: var(--fmt-on); color: var(--ink); }
 .muted { color: var(--muted); }
 
-.help { right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); width: 300px; max-width: calc(100vw - 24px); }
+.help { right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); width: 380px; max-width: calc(100vw - 24px); box-sizing: border-box; }
 .help h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
 .help dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
 .help dt { font-weight: 600; white-space: nowrap; }

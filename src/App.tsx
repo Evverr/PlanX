@@ -237,10 +237,10 @@ export function App({ boardId }: { boardId: string }) {
 
       {pop === 'clear' && (
         <div className="pop confirm" role="dialog" aria-label="Очистить доску">
-          <p>Удалить всё с доски у всех участников? Отменить можно через <kbd>Ctrl</kbd>+<kbd>Z</kbd>.</p>
+          <p>Удалить всё с доски у всех участников? Отменить можно через <b>Ctrl+Z</b></p>
           <div className="row">
             <button className="btn" onClick={() => setPop(null)}>Отмена</button>
-            <button className="btn red" onClick={() => { editor.clearBoard(); setPop(null); }}>Очистить</button>
+            <button className="btn primary" onClick={() => { editor.clearBoard(); setPop(null); }}>Очистить</button>
           </div>
         </div>
       )}
@@ -284,7 +284,7 @@ function NamePopover({ name, onSave }: { name: string; onSave: (n: string) => vo
     <form className="pop namepop" onSubmit={(e) => { e.preventDefault(); onSave(v); }}>
       <p>Как вас подписать для остальных?</p>
       <input id="my-name" autoFocus value={v} maxLength={24} onChange={(e) => setV(e.target.value)} aria-label="Ваше имя" />
-      <div className="row"><button className="btn" type="submit">Сохранить</button></div>
+      <div className="row"><button className="btn primary" type="submit">Сохранить</button></div>
     </form>
   );
 }

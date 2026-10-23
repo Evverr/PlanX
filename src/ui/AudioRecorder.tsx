@@ -93,7 +93,7 @@ export function AudioRecorder({ onAdd, onClose }: { onAdd: (note: AudioNote) => 
           <audio className="rec-preview" src={state.note.src} controls />
           <div className="row">
             <button className="btn" onClick={() => void start()}>Записать заново</button>
-            <button className="btn blue" onClick={() => onAdd(state.note)}>Добавить на доску</button>
+            <button className="btn primary" onClick={() => onAdd(state.note)}>Добавить на доску</button>
           </div>
         </>
       )}
