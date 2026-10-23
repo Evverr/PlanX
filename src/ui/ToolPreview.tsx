@@ -26,7 +26,8 @@ export function ToolPreview({ tool, zoom }: { tool: Tool; zoom: number }) {
         </span>
       );
     case 'mind':
-      return <span className="tp-mind" style={{ fontSize: Math.max(11, 20 * k), padding: `${12 * k}px ${16 * k}px` }}>Центральная тема</span>;
+      // The central topic as it's drawn: the blue, corners of 14, padding of 15 and 16.
+      return <span className="tp-mind" style={{ fontSize: Math.max(11, 18 * k), padding: `${15 * k}px ${16 * k}px`, borderRadius: 14 * k }}>Центральная тема</span>;
     case 'frame':
       return <span className="tp-frame" style={{ width: w, height: h }}><b style={{ fontSize: Math.max(10, 15 * k) }}>Фрейм</b></span>;
     case 'table': {

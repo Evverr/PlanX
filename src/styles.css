@@ -304,7 +304,7 @@ button { font: inherit; color: inherit; }
 .icon-grid button.dragging { opacity: .25; }
 /* Previews of what a rail tool makes, while it's dragged onto the board (ui/ToolPreview.tsx). */
 .tp-sticky { display: block; box-shadow: 0 2px 4px rgba(0, 0, 0, .15); }
-.tp-mind { display: block; white-space: nowrap; border-radius: 14px; background: var(--ink); color: var(--surface); font-weight: 600; }
+.tp-mind { display: block; white-space: nowrap; background: #3E7BFA; color: #fff; font-weight: 600; }
 .tp-text { display: block; color: var(--ink); white-space: nowrap; }
 .tp-task { display: grid; place-items: center; position: relative; box-sizing: border-box; border: 2px solid var(--shape-stroke); border-radius: 8px; color: var(--sticky-ink); font-weight: 600; }
 .tp-task i { position: absolute; top: 8px; right: 8px; border-radius: 50%; border: 1.6px solid var(--shape-stroke); box-sizing: border-box; }
@@ -376,6 +376,8 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
   font: 400 13px/normal "Inter", var(--ui); color: var(--menu-ink); text-align: left; white-space: nowrap; cursor: pointer; }
 .menu-row.light { color: var(--fmt-ink); }
 .menu-row img { flex: none; display: block; }
+.menu-icon { flex: none; width: 24px; height: 24px; color: #A6A6A6; }
+.menu-row { min-height: 24px; }
 .menu-more { position: absolute; right: -5px; top: 1px; }
 .menu-line { width: 259px; height: 1px; background: #6E6E6E; opacity: .1; }
 /* The switch: a 24×14 track, grey with the knob at its left, blue with it at its right when on. */
