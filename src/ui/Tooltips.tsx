@@ -6,7 +6,8 @@ import { createPortal } from 'react-dom';
 const WAIT = 2000, STILL = 3;
 
 type Side = 'right' | 'left' | 'above' | 'below';
-interface Tip { text: string; left: number; top: number; side: Side }
+/** `px` is where along the bubble its pointer is, over or under a button. */
+interface Tip { text: string; left: number; top: number; side: Side; px: number }
 
 /** The bubble's height, its distance from the screen's edges and its width for a text (the text in
  *  Inter Semi Bold 12 and 15.5px padding each side). */
@@ -34,16 +35,16 @@ export function Tooltips() {
       const text = el.dataset.tip;
       shown = true;
       if (!text) return;
-      // Beside the button its pointer (5.89 wide) reaches 2px over the button's highlight (6px round
-      // the icon of a rail button); over or under, it clears the whole bar by 8px.
+      // On whichever side, its pointer (5.89 long) reaches 2px over the button's highlight (6px round
+      // the icon of a panel button).
       const w = tipWidth(text), r = el.getBoundingClientRect(), hl = el.matches('.fb') ? 6 : 0;
       const bar = (el.closest('.bar, .tfmt, .tools, .draw-panel, .tools-more') ?? el).getBoundingClientRect();
       const midY = r.top + r.height / 2 - H / 2, midX = Math.min(Math.max(r.left + r.width / 2 - w / 2, EDGE), innerWidth - EDGE - w);
       const places: Record<Side, { left: number; top: number }> = {
         right: { left: r.right + hl - 2 + 5.89, top: midY },
         left: { left: r.left - hl + 2 - 5.89 - w, top: midY },
-        above: { left: midX, top: bar.top - 8 - H },
-        below: { left: midX, top: bar.bottom + 8 },
+        above: { left: midX, top: r.top - hl + 2 - 5.89 - H },
+        below: { left: midX, top: r.bottom + hl - 2 + 5.89 },
       };
       // Where it goes first: beside an upright panel, over or under a flat bar (whichever is towards
       // the middle of the screen); then wherever it fits.
@@ -51,7 +52,9 @@ export function Tooltips() {
       const order: Side[] = upright ? ['right', 'left', 'above', 'below'] : high ? ['below', 'above', 'right', 'left'] : ['above', 'below', 'right', 'left'];
       const fits = ({ left, top }: { left: number; top: number }) => left >= EDGE && left + w <= innerWidth - EDGE && top >= EDGE && top + H <= innerHeight - EDGE;
       const side = order.find((s) => fits(places[s])) ?? order[0];
-      setTip({ text, ...places[side], side });
+      // Over or under, the pointer stands at the button's middle, kept clear of the rounded corners.
+      const px = Math.min(Math.max(r.left + r.width / 2 - places[side].left, 15), w - 15);
+      setTip({ text, ...places[side], side, px });
     };
     const hide = () => {
       clearTimeout(timer);
@@ -94,7 +97,7 @@ export function Tooltips() {
   }, []);
   if (!tip) return null;
   return createPortal(
-    <div className={`tip ${tip.side}`} role="tooltip" style={{ left: tip.left, top: tip.top }}>{tip.text}</div>,
+    <div className={`tip ${tip.side}`} role="tooltip" style={{ left: tip.left, top: tip.top, '--px': `${tip.px}px` } as React.CSSProperties}>{tip.text}</div>,
     document.body,
   );
 }

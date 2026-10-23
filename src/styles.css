@@ -331,11 +331,14 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 .tip { position: fixed; z-index: 60; pointer-events: none; box-sizing: border-box; height: 33px; display: flex; align-items: center;
   white-space: nowrap; font: 600 12px/1 "Inter", var(--ui); color: #fff; animation: fade-in .6s ease-out;
   background: rgba(0, 95, 228, .9); border-radius: 7px; padding: 0 15.5px; }
-.tip.right::before, .tip.left::before { content: ""; position: absolute; top: 50%; width: 5.89px; height: 15px;
+.tip::before { content: ""; position: absolute; width: 5.89px; height: 15px;
   background: url(./ui/tip-bubble.svg) 0 -7px / 80.89px 29px no-repeat; }
-.tip.right::before { left: -5.89px; transform: translateY(-50%); }
-/* On the left of its button, the pointer turned round to the right. */
-.tip.left::before { right: -5.89px; transform: translateY(-50%) scaleX(-1); }
+.tip.right::before { top: 50%; left: -5.89px; transform: translateY(-50%); }
+/* The pointer turned to face its button: right from the left of it, down from above, up from below
+   (turned a quarter about its middle, so it's placed 4.555px off to land just outside the bubble). */
+.tip.left::before { top: 50%; right: -5.89px; transform: translateY(-50%) scaleX(-1); }
+.tip.above::before { left: calc(var(--px) - 2.945px); top: calc(100% - 4.555px); transform: rotate(-90deg); }
+.tip.below::before { left: calc(var(--px) - 2.945px); top: -10.445px; transform: rotate(90deg); }
 
 /* A bar's "more" button and the popover with what didn't fit, 8px outside the bar. */
 .more-wrap { position: relative; display: flex; flex: none; }
