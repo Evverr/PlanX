@@ -7,6 +7,7 @@ import { cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/tab
 import { audioProgress, clock } from './audio';
 import { branchCurve, mindButtons, mindColor, mindDepth, type MindButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
+import type { Guide } from './guides';
 import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
@@ -68,6 +69,8 @@ export interface Scene {
   tableLines: TableLine[];
   /** The pen or highlighter line being drawn, in board units. */
   stroke: InkStroke | null;
+  /** Alignment guides of what's being dragged, faint grey dashed lines. */
+  guides: Guide[];
   /** The table cell being edited, its text left to the overlay. */
   editingCell: number | null;
 }
@@ -678,6 +681,17 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
 
   if (s.links.length) drawLinks(ctx, s, view);
   if (s.stroke) strokeInk(ctx, s.stroke, theme);
+  if (s.guides.length) {
+    ctx.strokeStyle = theme.muted;
+    ctx.globalAlpha = 0.45;
+    ctx.lineWidth = 1 / cam.z;
+    ctx.setLineDash([4 / cam.z, 4 / cam.z]);
+    ctx.beginPath();
+    for (const g of s.guides) { ctx.moveTo(g.x1, g.y1); ctx.lineTo(g.x2, g.y2); }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+  }
 
   for (const p of s.peers) {
     for (const id of p.selection) {

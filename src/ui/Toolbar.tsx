@@ -20,9 +20,7 @@ const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
 };
 
 /** Buttons from the mockup that have no feature behind them yet. */
-const LATER: Partial<Record<string, [PanelIconName, string]>> = {
-  paint: ['paint', 'Копировать формат'],
-};
+const LATER: Partial<Record<string, [PanelIconName, string]>> = {};
 
 /** Everything on the rail, top to bottom, until someone rearranges it. */
 const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'link', 'table', 'mind', 'frames', 'draw', 'image', 'audio', 'smile', 'paint'];
@@ -42,8 +40,8 @@ function savedShape(): Tool {
   return 'rect';
 }
 
-export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleIcons, recorderOpen, onToggleRecorder }: {
-  editor: Editor; tool: Tool; pens: Pens; zoom: number; docked: boolean; iconsOpen: boolean; onToggleIcons: () => void;
+export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, onToggleIcons, recorderOpen, onToggleRecorder }: {
+  editor: Editor; tool: Tool; pens: Pens; zoom: number; guides: boolean; docked: boolean; iconsOpen: boolean; onToggleIcons: () => void;
   recorderOpen: boolean; onToggleRecorder: () => void;
 }) {
   // The drawing button brings back whichever of pen, highlighter and eraser was used last.
@@ -154,6 +152,8 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     if (key === 'image') return button(key, false, 'Картинка', 'image', () => { pictureAt.current = undefined; filePicker.current?.click(); });
     if (key === 'audio') return button(key, recorderOpen, 'Аудиозаметка', 'microphone', onToggleRecorder, { 'aria-expanded': recorderOpen });
     if (key === 'smile') return button(key, iconsOpen, 'Смайлы, стикеры и иконки (I)', 'smile', onToggleIcons, { 'aria-expanded': iconsOpen });
+    // The roller turns lining up along guides on and off while dragging.
+    if (key === 'paint') return button(key, guides, guides ? 'Направляющие включены' : 'Направляющие', 'paint', () => editor.toggleGuides(), { 'aria-pressed': guides });
     if (later) return button(key, false, `${later[1]} (скоро)`, later[0]);
     return null;
   };
