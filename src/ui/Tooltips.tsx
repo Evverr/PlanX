@@ -23,7 +23,8 @@ export function Tooltips() {
       shown = true;
       if (!text) return;
       const r = el.getBoundingClientRect(), panel = el.closest('.tools, .draw-panel');
-      if (panel) setTip({ text, x: panel.getBoundingClientRect().right + 6, y: r.top + r.height / 2, side: 'right' });
+      // The pointer (5.89 wide) reaches 2px over the button's highlight (6px round the icon of a rail button).
+      if (panel) setTip({ text, x: r.right + (el.matches('.fb') ? 6 : 0) - 2 + 5.89, y: r.top + r.height / 2, side: 'right' });
       else {
         const bar = (el.closest('.bar, .tfmt, .tools-more') ?? el).getBoundingClientRect();
         const below = bar.top + bar.height / 2 < innerHeight / 2;
