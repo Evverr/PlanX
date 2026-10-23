@@ -72,7 +72,7 @@ export type ListKind = 'bullet' | 'number';
 export const baseWeight = (type: ItemType): number => (type === 'text' || type === 'table' ? 400 : type === 'sticky' ? 500 : 600);
 /** Inset of the text in stickers and shapes; figures without square corners keep it further in. */
 export const textPad = (it: Item): number =>
-  it.type === 'sticky' ? 14 : it.type === 'rect' || it.type === 'task' ? 10 : it.type === 'table' ? 8 : it.type === 'mind' ? 12
+  it.type === 'sticky' ? 14 : it.type === 'rect' || it.type === 'task' ? 10 : it.type === 'table' ? 8 : it.type === 'mind' ? (it.parent ? 12 : 15)
     : it.type === 'ellipse' ? Math.min(it.w, it.h) * 0.15 + 6 : it.type === 'polygon' ? Math.min(it.w, it.h) * 0.22 + 6 : 0;
 export const alignOf = (it: Item): TextAlign => it.ta ?? (it.type === 'text' || it.type === 'table' ? 'left' : 'center');
 

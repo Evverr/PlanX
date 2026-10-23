@@ -9,7 +9,7 @@ import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCount, withScale, type TableLine } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
-import { balance, childPlace, descendants, mindSide, plusButton, siblingButton } from '../model/mind';
+import { balance, canMoveTo, childPlace, descendants, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | 'mind' | PolyShape;
 export type PenTool = 'pen' | 'marker';
@@ -61,6 +61,7 @@ type Gesture =
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' }
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
+  | { type: 'mindMove'; id: string; from: Point; to: Point; target: string | null }
   | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
   | { type: 'draw'; tool: PenTool; pts: Point[] }
   | { type: 'erase'; last: Point };
@@ -72,7 +73,7 @@ const MIND_TOPIC = 'Центральная тема';
  *  angle (in degrees) the turn sticks to it. */
 const ROTATE_ZONE = 18, ROTATE_SNAP = 3;
 /** The mind map "+" buttons' wait after a node is picked, and their fade in, in ms. */
-const PLUS_DELAY = 600, PLUS_FADE = 300;
+const PLUS_DELAY = 330, PLUS_FADE = 300;
 
 /** Cursors for turning: a curved double arrow around the top left corner, turned by deg. Kept by
  *  the degree. */
@@ -129,9 +130,9 @@ export class Editor {
   private needsFit: boolean;
   private lastCursorSent = 0;
   private hotDot: Side | null = null;
-  /** The mind map "+" under the pointer; and when the "+" buttons of the node picked now start to
-   *  fade in (they come 0.6 s after it's picked or let go, like the text panel). */
-  private hotPlus: 'child' | 'sibling' | null = null;
+  /** The mind map node button under the pointer; and when the buttons of the node picked now start
+   *  to fade in (they come a moment after it's picked or let go). */
+  private hotPlus: MindButton | null = null;
   private plusKey = '';
   private plusFrom = 0;
   private plusTimer = 0;
@@ -287,6 +288,7 @@ export class Editor {
       hotDot: this.hotDot,
       hotPlus: this.hotPlus,
       plusFade,
+      mindMove: g?.type === 'mindMove' ? { from: g.from, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null } : null,
       tableLines: this.hotLine ? [...this.pickedLines, this.hotLine] : this.pickedLines,
       editingCell: this.editingCell,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker' } : null,
@@ -702,15 +704,16 @@ export class Editor {
     if (it.type !== 'mind') return {};
     const { w, h } = mindSize(it, text), up = it.parent ? this.board.get(it.parent) : undefined;
     const left = up && mindSide(it, up) < 0;
-    return { w, h, x: left ? it.x + it.w - w : it.x, y: Math.round(it.y + it.h / 2 - h / 2) };
+    // New lines grow it downwards.
+    return { w, h, x: left ? it.x + it.w - w : it.x };
   }
 
-  /** Adds a node to a mind map: a child of `from`, or (`sibling`) another child of its parent, and
-   *  opens it for typing. A new branch off the centre gets the next branch colour. */
-  addMindNode(fromId: string, kind: 'child' | 'sibling'): void {
+  /** Adds a node to a mind map: a child of `from`, or another child of its parent right after it
+   *  (`below`) or before it (`above`), and opens it for typing. */
+  addMindNode(fromId: string, kind: 'child' | 'above' | 'below'): void {
     const from = this.board.get(fromId);
     if (from?.type !== 'mind') return;
-    const parent = kind === 'sibling' && from.parent ? this.board.get(from.parent) : from;
+    const parent = kind !== 'child' && from.parent ? this.board.get(from.parent) : from;
     if (!parent) return;
     const items = this.board.list(), get = (id: string) => this.board.get(id);
     const depth = (n: Item): number => (n.parent ? 1 + depth(this.board.get(n.parent) ?? n) : 0);
@@ -719,8 +722,12 @@ export class Editor {
     const { w, h } = mindSize(draft, '');
     // A parallel branch grows on the same side of the centre as the node it's added beside.
     const at = childPlace(parent, items, get, w, h, parent !== from ? mindSide(from, parent) : undefined);
-    // A parallel branch goes right after the node it's added beside; then the branches re-centre.
-    if (parent !== from) at.y = from.y + from.h / 2 + 0.5 - h / 2;
+    // A parallel branch goes right after (or before) the node it's added beside, lined up with it
+    // on the side towards the parent; then the branches re-centre.
+    if (parent !== from) {
+      at.y = from.y + from.h / 2 + (kind === 'above' ? -2 : 2) - h / 2;
+      at.x = mindSide(from, parent) > 0 ? from.x : from.x + from.w - w;
+    }
     const it = this.newItem('mind', at.x, at.y, { w, h, fs: draft.fs, parent: parent.id });
     this.board.beginGesture();
     this.board.add(it);
@@ -820,7 +827,11 @@ export class Editor {
     // Select tool.
     const single = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
     const plus = single && this.plusAt(single, w);
-    if (single && plus) { this.addMindNode(single.id, plus); return; }
+    if (single && plus) {
+      if (plus === 'move') this.gesture = { type: 'mindMove', id: single.id, from: w, to: w, target: null };
+      else this.addMindNode(single.id, plus);
+      return;
+    }
     const dot = single && !this.editingId ? this.dotAt(single, w) : null;
     if (single && dot) {
       this.gesture = { type: 'link', from: single.id, fromSide: dot, to: w, target: null };
@@ -986,13 +997,10 @@ export class Editor {
     return this.moving || this.editingId ? 0 : clamp((performance.now() - this.plusFrom) / PLUS_FADE, 0, 1);
   }
 
-  /** Which of a mind map node's "+" buttons is under the point, once they're showing. */
-  private plusAt(it: Item, w: Point): 'child' | 'sibling' | null {
+  /** Which of a mind map node's buttons is under the point, once they're showing. */
+  private plusAt(it: Item, w: Point): MindButton | null {
     if (it.type !== 'mind' || this.plusFade() === 0) return null;
-    const p = plusButton(it, (id) => this.board.get(id), this.cam.z), q = siblingButton(it, this.cam.z);
-    if (Math.hypot(w.x - p.x, w.y - p.y) <= p.r * 1.5) return 'child';
-    if (q && Math.hypot(w.x - q.x, w.y - q.y) <= q.r * 1.5) return 'sibling';
-    return null;
+    return mindButtons(it, (id) => this.board.get(id), this.cam.z).find((b) => Math.hypot(w.x - b.x, w.y - b.y) <= b.r * 1.5)?.kind ?? null;
   }
 
   /** Whether the point is just outside the item's top right corner, where it is turned. */
@@ -1110,6 +1118,13 @@ export class Editor {
         this.board.update(g.id, { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.w), h: Math.round(r.h) });
         return;
       }
+      case 'mindMove': {
+        const t = hitItem(this.board.list(), w, this.cam.z);
+        g.to = w;
+        g.target = t && canMoveTo(g.id, t.id, this.board.list()) ? t.id : null;
+        this.requestRender();
+        return;
+      }
       case 'link': {
         const t = hitItem(this.board.list(), w, this.cam.z);
         g.to = w;
@@ -1206,6 +1221,18 @@ export class Editor {
           this.board.addLink(l);
           this.setTool('select');
           this.setSelection([l.id]);
+        }
+        this.requestRender();
+        return;
+      case 'mindMove':
+        // The branch hangs from the node it's dropped on now, on that side of a central topic.
+        if (g.target) {
+          const target = this.board.get(g.target)!, toward = g.to.x >= target.x + target.w / 2 ? 1 : -1;
+          const moves = moveBranch(g.id, g.target, this.board.list(), toward);
+          this.board.transact(() => {
+            this.board.update(g.id, { parent: g.target! });
+            moves.forEach((p, id) => this.board.update(id, p));
+          });
         }
         this.requestRender();
         return;
@@ -1346,7 +1373,7 @@ export class Editor {
     const one = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
     if (one?.type === 'mind' && (e.key === 'Tab' || e.key === 'Enter')) {
       e.preventDefault();
-      this.addMindNode(one.id, e.key === 'Enter' && one.parent ? 'sibling' : 'child');
+      this.addMindNode(one.id, e.key === 'Enter' && one.parent ? 'below' : 'child');
       return;
     }
     if (e.key === 'Enter' && this.selection.size === 1) { e.preventDefault(); this.startEditing([...this.selection][0]); return; }

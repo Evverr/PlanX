@@ -5,7 +5,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchCurve, MIND_COLOR, mindDepth, plusButton, siblingButton } from '../model/mind';
+import { branchCurve, MIND_COLOR, mindButtons, mindDepth, type MindButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
@@ -58,10 +58,12 @@ export interface Scene {
   showHandle: boolean;
   /** The dot under the pointer, drawn larger and at full strength; the others are faint. */
   hotDot: Side | null;
-  /** The mind map "+" under the pointer, drawn full size and strength; the other is smaller and faint. */
-  hotPlus: 'child' | 'sibling' | null;
-  /** How far the "+" buttons have faded in, 0…1: they come a moment after the node is picked. */
+  /** The mind map node button under the pointer, drawn full size and strength; the others are smaller and faint. */
+  hotPlus: MindButton | null;
+  /** How far the node buttons have faded in, 0…1: they come a moment after the node is picked. */
   plusFade: number;
+  /** A mind map branch being dragged by its arrow button to hang from another node. */
+  mindMove: { from: Point; to: Point; target: Item | null } | null;
   /** Table lines drawn blue: the one under the pointer and those picked to drag together. */
   tableLines: TableLine[];
   /** The pen or highlighter line being drawn, in board units. */
@@ -382,13 +384,13 @@ function outlinePolygon(ctx: CanvasRenderingContext2D, it: Item) {
   ctx.closePath();
 }
 
-/** A mind map node: the central topic dark and solid, first-level nodes tinted blue, the rest white
+/** A mind map node: the central topic solid blue, first-level nodes tinted blue, the rest white
  *  with a blue edge. */
 function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
   const { theme } = s, depth = mindDepth(it, s.get), color = MIND_COLOR;
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.h / 2, depth === 0 ? 14 : 10));
-  ctx.fillStyle = depth === 0 ? theme.ink : theme.surface;
+  ctx.fillStyle = depth === 0 ? color : theme.surface;
   ctx.fill();
   if (depth > 0) {
     if (depth === 1) { ctx.fillStyle = color + '2E'; ctx.fill(); }
@@ -396,7 +398,7 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
     ctx.strokeStyle = color;
     ctx.stroke();
   }
-  if (!editing) drawText(ctx, it, textPad(it), depth === 0 ? theme.surface : theme.ink, true, s);
+  if (!editing) drawText(ctx, it, textPad(it), depth === 0 ? '#fff' : theme.ink, true, s);
 }
 
 /** The branches of mind maps, under the nodes and half see-through: thicker near the centre, thinner further out. */
@@ -673,10 +675,9 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && s.editingId !== id && it.type === 'mind') {
       if (s.plusFade > 0) {
-        for (const [kind, b] of [['child', plusButton(it, s.get, cam.z)], ['sibling', siblingButton(it, cam.z)]] as const) {
-          if (!b) continue;
+        for (const b of mindButtons(it, s.get, cam.z)) {
           // Smaller and faint until the pointer comes over it.
-          const hot = s.hotPlus === kind, r = hot ? b.r : b.r / 1.5;
+          const hot = s.hotPlus === b.kind, r = hot ? b.r : b.r * 0.9;
           ctx.globalAlpha = (hot ? 1 : 0.5) * s.plusFade;
           ctx.fillStyle = SELECT_COLOR;
           ctx.beginPath();
@@ -685,9 +686,17 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
           ctx.strokeStyle = '#fff';
           ctx.lineWidth = (hot ? 2 : 1.5) / cam.z;
           ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
           ctx.beginPath();
-          ctx.moveTo(b.x - r * 0.5, b.y); ctx.lineTo(b.x + r * 0.5, b.y);
-          ctx.moveTo(b.x, b.y - r * 0.5); ctx.lineTo(b.x, b.y + r * 0.5);
+          if (b.kind === 'move') {
+            // An arrow pointing away from the node.
+            const d = b.x < it.x ? -1 : 1;
+            ctx.moveTo(b.x - d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.5, b.y);
+            ctx.moveTo(b.x + d * r * 0.1, b.y - r * 0.4); ctx.lineTo(b.x + d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.1, b.y + r * 0.4);
+          } else {
+            ctx.moveTo(b.x - r * 0.5, b.y); ctx.lineTo(b.x + r * 0.5, b.y);
+            ctx.moveTo(b.x, b.y - r * 0.5); ctx.lineTo(b.x, b.y + r * 0.5);
+          }
           ctx.stroke();
         }
         ctx.globalAlpha = 1;
@@ -713,6 +722,12 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       }
       ctx.globalAlpha = 1;
     }
+  }
+
+  if (s.mindMove) {
+    const { from, to, target } = s.mindMove;
+    if (target) outline(ctx, target, cam.z, SELECT_COLOR, [4, 4]);
+    arrow(ctx, [from, from, to, to], SELECT_COLOR, cam.z, [6, 6]);
   }
 
   if (s.linkPreview) {

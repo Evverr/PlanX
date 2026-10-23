@@ -89,20 +89,66 @@ export function balance(id: string, items: Item[]): Map<string, number> {
   return out;
 }
 
-/** How far the "+" buttons' centres sit from the node, in screen pixels: their radius and 2 more. */
-const PLUS_OFF = 11;
-
-/** The "+" beside a selected node that adds a child: on the side it grows towards, sized in screen
- *  pixels (radius 9, a couple of pixels clear of the node) whatever the zoom. */
-export function plusButton(it: Item, get: Get, zoom: number): Point & { r: number } {
-  const up = it.parent ? get(it.parent) : undefined, side = up ? mindSide(it, up) : 1;
-  return { x: side > 0 ? it.x + it.w + PLUS_OFF / zoom : it.x - PLUS_OFF / zoom, y: it.y + it.h / 2, r: 9 / zoom };
+/** Whether node `id` can be moved to hang from `to`: another node, not one growing from it. */
+export function canMoveTo(id: string, to: string, items: Item[]): boolean {
+  const it = items.find((i) => i.id === id), target = items.find((i) => i.id === to);
+  return !!it?.parent && target?.type === 'mind' && id !== to && it.parent !== to && !descendants([id], items).includes(to);
 }
 
-/** The "+" under a selected node that adds a node beside it, a parallel branch of the same parent;
- *  the central topic has none. */
-export function siblingButton(it: Item, zoom: number): (Point & { r: number }) | null {
-  return it.parent ? { x: it.x + it.w / 2, y: it.y + it.h + PLUS_OFF / zoom, r: 9 / zoom } : null;
+/**
+ * Where everything goes when node `id`, with all that grows from it, moves to hang from `to`: after
+ * the branches `to` has on its side (`toward` picks the side of a central topic), the whole branch
+ * mirrored if it changes sides, and the branches round both its old and new place re-centred.
+ */
+export function moveBranch(id: string, to: string, items: Item[], toward: 1 | -1): Map<string, Point> {
+  const all = items.map((i) => ({ ...i })), byId = new Map(all.map((i) => [i.id, i]));
+  const node = byId.get(id)!, target = byId.get(to)!, old = byId.get(node.parent!)!, get = (k: string) => byId.get(k);
+  const sub = descendants([id], all).map((k) => byId.get(k)!);
+  const moving = new Set([id, ...sub.map((d) => d.id)]);
+  const oldSide = mindSide(node, old), up = target.parent ? byId.get(target.parent) : undefined;
+  const side = up ? mindSide(target, up) : toward;
+  const at = childPlace(target, all.filter((i) => !moving.has(i.id)), get, node.w, node.h, side);
+  const cx = node.x + node.w / 2, flip = side !== oldSide, dy = at.y - node.y;
+  for (const d of sub) {
+    const rel = d.x + d.w / 2 - cx;
+    d.x = at.x + node.w / 2 + (flip ? -rel : rel) - d.w / 2;
+    d.y += dy;
+  }
+  Object.assign(node, at, { parent: to });
+  // Re-centre round the new place, then round the old one if anything is left there.
+  for (const k of [id, all.find((i) => i.parent === old.id && i.type === 'mind' && mindSide(i, old) === oldSide && !moving.has(i.id))?.id]) {
+    if (k) balance(k, all).forEach((y, n) => { byId.get(n)!.y = y; });
+  }
+  const out = new Map<string, Point>();
+  for (const i of items) {
+    const n = byId.get(i.id)!, x = Math.round(n.x), y = Math.round(n.y);
+    if (x !== i.x || y !== i.y) out.set(i.id, { x, y });
+  }
+  return out;
+}
+
+/** How far the buttons' centres sit from the node, in screen pixels: their radius and 2 more. */
+const BUTTON_OFF = 11;
+
+/**
+ * The buttons round a selected node: "+" on its far side for a branch of its own, "+" above and
+ * below for a parallel branch before or after it, and on the side of its parent a circle with an
+ * arrow, dragged onto another node to move the branch there. The central topic has only the first.
+ */
+export type MindButton = 'child' | 'above' | 'below' | 'move';
+
+/** Where each of a node's buttons is and its radius, sized in screen pixels whatever the zoom. */
+export function mindButtons(it: Item, get: Get, zoom: number): Array<Point & { kind: MindButton; r: number }> {
+  const up = it.parent ? get(it.parent) : undefined, side = up ? mindSide(it, up) : 1;
+  const off = BUTTON_OFF / zoom, r = 9 / zoom, mid = it.y + it.h / 2, far = side > 0 ? it.x + it.w + off : it.x - off;
+  const child = { kind: 'child' as const, x: far, y: mid, r };
+  if (!up) return [child];
+  return [
+    child,
+    { kind: 'above', x: it.x + it.w / 2, y: it.y - off, r },
+    { kind: 'below', x: it.x + it.w / 2, y: it.y + it.h + off, r },
+    { kind: 'move', x: side > 0 ? it.x - off : it.x + it.w + off, y: mid, r },
+  ];
 }
 
 /** The connecting branch from a parent to a child: from the parent's facing side to the child's,
