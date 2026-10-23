@@ -1,9 +1,11 @@
 import type { Item } from './types';
+import { FILLS } from './types';
 import type { Point } from '../canvas/geometry';
 
 /**
  * Mind maps, as in MindMeister: a central topic (a 'mind' item without a parent) and nodes that
- * branch from it, each pointing at its parent. Nodes are blue unless coloured otherwise, each on its own.
+ * branch from it, each pointing at its parent. Nodes are blue unless coloured otherwise; a coloured node
+ * tints its parallel branches (not its parent, not its children) a lighter shade of it.
  */
 export const MIND_COLOR = '#3E7BFA';
 
@@ -12,6 +14,38 @@ export const MIND_PALETTE = ['#3E7BFA', '#0C8599', '#30A46C', '#E8892B', '#E5484
 
 /** A node's colour: its own, or the blue. */
 export const mindColor = (it: Item): string => (it.color?.startsWith('#') ? it.color : MIND_COLOR);
+
+/** A '#rrggbb' colour halfway to white. */
+export function lighter(hex: string): string {
+  const n = parseInt(hex.slice(1), 16), mix = (sh: number) => Math.round(((n >> sh) & 255) / 2 + 127.5);
+  return `#${[16, 8, 0].map((sh) => mix(sh).toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** The edge colour and fill a node takes from a parallel branch (same parent) that has its own, by parent. */
+export function siblingTints(items: Item[]): Map<string, { color?: string; fill?: string }> {
+  const out = new Map<string, { color?: string; fill?: string }>();
+  for (const it of items) {
+    if (it.type !== 'mind' || !it.parent) continue;
+    const t = out.get(it.parent) ?? {};
+    if (!t.color && it.color?.startsWith('#')) t.color = it.color;
+    if (!t.fill && it.fc) t.fill = it.fc.startsWith('#') ? it.fc : FILLS[it.fc];
+    out.set(it.parent, t);
+  }
+  return out;
+}
+
+/**
+ * A node's edge colour and fill (null: the usual): its own, or else, when a parallel branch has been
+ * coloured, the same colour in a lighter shade (halfway to white).
+ */
+export function nodeColors(it: Item, tints: Map<string, { color?: string; fill?: string }>): { color: string; fill: string | null } {
+  const t = it.parent ? tints.get(it.parent) : undefined;
+  const own = it.color?.startsWith('#') ? it.color : null, fill = it.fc ? (it.fc.startsWith('#') ? it.fc : FILLS[it.fc]) : null;
+  return {
+    color: own ?? (t?.color ? lighter(t.color) : MIND_COLOR),
+    fill: fill ?? (t?.fill && t.fill.startsWith('#') ? lighter(t.fill) : null),
+  };
+}
 
 type Get = (id: string) => Item | undefined;
 

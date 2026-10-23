@@ -5,7 +5,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchCurve, mindButtons, mindColor, mindDepth, type MindButton } from '../model/mind';
+import { branchCurve, mindButtons, mindDepth, nodeColors, siblingTints, type MindButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
@@ -396,12 +396,12 @@ function outlinePolygon(ctx: CanvasRenderingContext2D, it: Item) {
  *  with an edge of it. */
 function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
   // Dimmed in the dark theme like the other fills.
-  const { theme } = s, depth = mindDepth(it, s.get), color = shade(mindColor(it), theme.dim);
+  const { theme } = s, depth = mindDepth(it, s.get), own = nodeColors(it, tints), color = shade(own.color, theme.dim);
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.h / 2, depth === 0 ? 14 : 10));
   ctx.globalAlpha = it.fo ?? 1;
   // A node but the central topic can have a fill of its own (instead of the tint or white).
-  const fill = depth >= 1 && it.fc ? shade(it.fc.startsWith('#') ? it.fc : FILLS[it.fc] ?? FILLS.blue, theme.dim) : null;
+  const fill = depth >= 1 && own.fill ? shade(own.fill, theme.dim) : null;
   ctx.fillStyle = depth === 0 ? color : theme.surface;
   ctx.fill();
   if (fill) { ctx.fillStyle = fill; ctx.fill(); }
@@ -441,7 +441,7 @@ function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
     const [a, c1, c2, b] = branchCurve(up, it);
     // The branch to a picked node comes up to full strength with its edge.
     ctx.globalAlpha = s.selection.has(it.id) ? 1 : 0.5;
-    ctx.strokeStyle = shade(mindColor(it), s.theme.dim);
+    ctx.strokeStyle = shade(nodeColors(it, tints).color, s.theme.dim);
     ctx.lineWidth = up.parent ? 0.75 : 1.5;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
@@ -700,8 +700,12 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
   ctx.restore();
 }
 
+/** Mind map colours parallel branches take from a coloured one, worked out once per drawing. */
+let tints = new Map<string, { color?: string; fill?: string }>();
+
 export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   const { cam, theme, dpr } = s;
+  tints = siblingTints(s.items);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   drawBackground(ctx, s);
 
