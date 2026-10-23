@@ -15,6 +15,10 @@ import { catFor } from './emoji/emoji';
 import { readPictures } from './canvas/pictures';
 import { cellRect, cellText } from './model/table';
 import { useSortable } from './ui/sortable';
+import type { Item, Link } from './model/types';
+
+/** Where a board copied into a new tab waits for it, followed by the new board's id. */
+const COPY_KEY = 'planx-copy:';
 
 type Pop = 'clear' | 'icons' | 'help' | 'name' | null;
 
@@ -79,21 +83,32 @@ export function App({ boardId }: { boardId: string }) {
   useEffect(() => { document.documentElement.dataset.ui = bare ? 'bare' : ''; }, [bare]);
   const [recorder, setRecorder] = useState(false);
   // Buttons in the top bar and the zoom panel can be rearranged by holding them.
-  const topSort = useSortable('planx-order-top', ['logo', 'sep', 'title', 'sep2', 'undo', 'redo', 'new', 'clear'], 'x');
+  const topSort = useSortable('planx-order-top2', ['logo', 'sep', 'title', 'sep2', 'new', 'clear', 'sep3', 'undo', 'redo'], 'x');
   const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'share', 'help', 'theme', 'fit', 'dock', 'people'], 'x');
   const closeMinimap = useCallback(() => setMinimap(false), []);
 
-  // A new board opens in a new tab, named after this one with a number added ("План" → "План 2" → "План 3").
+  // A copy of this board opens in a new tab, named after it with a number added ("План" → "План 2"
+  // → "План 3"). What's on it is handed over through the browser's storage, for the new tab to take.
   const openNewBoard = () => {
     const t = board.title.trim() || 'Доска', m = t.match(/^(.*?)(\d+)$/);
-    const name = m ? `${m[1]}${Number(m[2]) + 1}` : `${t} 2`;
-    window.open(`${location.pathname}?board=${newBoardId()}&title=${encodeURIComponent(name)}`, '_blank');
+    const name = m ? `${m[1]}${Number(m[2]) + 1}` : `${t} 2`, id = newBoardId();
+    try { localStorage.setItem(`${COPY_KEY}${id}`, JSON.stringify({ items: board.list(), links: board.linkList() })); } catch { /* too big or no storage: it opens empty */ }
+    window.open(`${location.pathname}?board=${id}&title=${encodeURIComponent(name)}`, '_blank');
   };
-  // Opened that way, the board takes the name from the address, which is then tidied away.
+  // Opened that way, the board takes the copy and the name from the address, which is then tidied away.
   useEffect(() => {
-    const params = new URLSearchParams(location.search), name = params.get('title');
+    const params = new URLSearchParams(location.search), name = params.get('title'), key = `${COPY_KEY}${params.get('board')}`;
+    try {
+      const copy = localStorage.getItem(key);
+      if (copy) {
+        localStorage.removeItem(key);
+        const { items, links } = JSON.parse(copy) as { items: Item[]; links: Link[] };
+        board.replaceAll(items, links);
+      }
+    } catch { /* storage can be unavailable */ }
     if (!name) return;
     if (!board.title) board.setTitle(name.slice(0, 30));
+    board.undoManager.clear();  // the copy and its name are where this board starts, not something to undo
     params.delete('title');
     history.replaceState(null, '', `${location.pathname}?${params}`);
   }, [board]);
@@ -152,10 +167,11 @@ export function App({ boardId }: { boardId: string }) {
             </div>
           ),
           sep2: <div className="sep" />,
+          sep3: <div className="sep" />,
           // Light grey, and not pressable, while there's nothing to undo or redo.
           undo: <button className="ib hide-narrow" title="Отменить (Ctrl+Z)" aria-label="Отменить" disabled={!ui.canUndo} onClick={() => editor.undo()}><PanelIcon name="undo-on" /></button>,
           redo: <button className="ib hide-narrow" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" disabled={!ui.canRedo} onClick={() => editor.redo()}><PanelIcon name="redo-on" /></button>,
-          new: <button className="ib hide-narrow" title="Новая доска в новой вкладке" aria-label="Новая доска" onClick={openNewBoard}><PanelIcon name="plus" /></button>,
+          new: <button className="ib hide-narrow" title="Копия доски в новой вкладке" aria-label="Копия доски" onClick={openNewBoard}><PanelIcon name="plus" /></button>,
           clear: <button className={`ib ${pop === 'clear' ? 'on' : ''}`} title="Очистить доску" aria-label="Очистить доску" onClick={() => toggle('clear')}><PanelIcon name="cross" /></button>,
         })}
       </header>

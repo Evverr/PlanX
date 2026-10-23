@@ -202,13 +202,15 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
         return cloneElement(el, { key: k, ...this.item(k), className });
       });
     },
-    /** Keys to draw, in order: those `present` keeps, without separators left at an end or doubled up. */
-    visible: (present: (key: string) => boolean = () => true): string[] => {
-      const out: string[] = [];
+    /** Keys to draw, in order: those `present` keeps, without separators left at an end or doubled up;
+     *  only the first `limit` when the panel has room for no more. */
+    visible: (present: (key: string) => boolean = () => true, limit = Infinity): string[] => {
+      let out: string[] = [];
       for (const k of order.filter(present)) {
         if (isSeparator(k) && (!out.length || isSeparator(out[out.length - 1]))) continue;
         out.push(k);
       }
+      out = out.slice(0, limit);
       while (out.length && isSeparator(out[out.length - 1])) out.pop();
       shown.current = out;
       return out;

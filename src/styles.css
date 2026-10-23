@@ -6,7 +6,7 @@
   --grad-1: #FAFAFA; --grad-2: #FCF0FA; --grad-3: #ECF2FC; --grid: 0, 0, 0;
   /* Format panel (Figma "Mol / Bar") and how much board fills are dimmed. */
   --fmt-bg: rgba(255, 255, 255, .9); --fmt-ink: #454545; --fmt-line: rgba(0, 0, 0, .07); --fmt-hover: rgba(0, 0, 0, .05);
-  --fmt-on: rgba(75, 145, 255, .14); --fmt-shadow: 0 2px 6px rgba(0, 0, 0, .18); --fmt-on-ink: #0080FF; --fmt-off-ink: #CDD0D5; --fmt-marker: #5A5A5A; --fill-dim: 1;
+  --fmt-on: rgba(75, 145, 255, .14); --fmt-shadow: 0 2px 6px rgba(0, 0, 0, .18); --fmt-on-ink: #0080FF; --fmt-off-ink: #CDD0D5; --op-track: #E2E4E9; --fmt-marker: #5A5A5A; --fill-dim: 1;
   /* Every panel and popover casts the tool rail's shadow. */
   --shadow: var(--fmt-shadow);
   --sticky-ink: #1B2130; --shape-stroke: rgba(20, 25, 40, .45);
@@ -22,7 +22,7 @@
     --accent: #43BCCB; --accent-soft: rgba(67, 188, 203, .18); --frame: rgba(255, 255, 255, .035); --danger: #F07A63;
     --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
     --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
-    --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --fmt-marker: #BFC4CC; --fill-dim: .85;
+    --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --op-track: #3A404B; --fmt-marker: #BFC4CC; --fill-dim: .85;
     --shape-stroke: rgba(10, 12, 16, .6); --avatar-bg: transparent; --avatar-fade: .85;
     color-scheme: dark;
   }
@@ -32,7 +32,7 @@
   --accent: #43BCCB; --accent-soft: rgba(67, 188, 203, .18); --frame: rgba(255, 255, 255, .035); --danger: #F07A63;
   --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
   --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
-  --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --fmt-marker: #BFC4CC; --fill-dim: .85;
+  --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --op-track: #3A404B; --fmt-marker: #BFC4CC; --fill-dim: .85;
   --shape-stroke: rgba(10, 12, 16, .6); --avatar-bg: transparent; --avatar-fade: .85;
   color-scheme: dark;
 }
@@ -85,12 +85,15 @@ button { font: inherit; color: inherit; }
 /* Tool panel, 1:1 with the Figma component "Mol / Bar vertical"; buttons share the format panel's styles. */
 .tools { position: fixed; z-index: 5; left: calc(12px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; align-items: center; width: 60px; padding: 21px 15px;
-  /* 18px gaps as in the mockup; on a short screen it fits between the top bar and the bottom edge
-     by tightening them (492px is the buttons, separator and padding; there are 15 gaps). */
-  --gap: clamp(6px, calc((100vh - 150px - 492px) / 15), 18px);
+  /* 18px gaps as in the mockup, whatever the screen: what doesn't fit goes under the "more" button. */
+  --gap: 18px;
   gap: var(--gap);
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
 .tools.docked { left: 0; border-radius: 0 12px 12px 0; }
+/* The rail's buttons that didn't fit, in a row beside its "more" button. */
+.tools-more { position: fixed; z-index: 5; left: calc(84px + env(safe-area-inset-left, 0px)); transform: translateY(-50%);
+  display: flex; align-items: center; gap: 18px; padding: 11px 16px; background: var(--surface); border-radius: 12px; box-shadow: var(--shadow);
+  animation: fade-in .12s ease-out; }
 /* Panels whose buttons can be rearranged: holding one lifts it so it can be moved (see ui/sortable.ts). */
 .sortable { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .sortable.sorting, .sortable.sorting * { cursor: grabbing !important; }
@@ -121,10 +124,10 @@ button { font: inherit; color: inherit; }
 .topbar .logo + .sep { margin-left: 7px; }
 .logo { font-family: "Inter", var(--ui); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; white-space: nowrap; }
 /* The title field and an invisible copy of its text share one grid cell, so the copy sets the width. */
-.title-fit { display: inline-grid; min-width: 0; flex: 0 1 auto; }
+.title-fit { display: inline-grid; min-width: 0; flex: 0 1 auto; font-size: 15px; }
 .title-fit::after { content: attr(data-text) " "; visibility: hidden; white-space: pre; overflow: hidden; font-weight: 500; padding: 6px 8px; grid-area: 1 / 1; }
 .title-input { grid-area: 1 / 1; width: 100%; min-width: 0; border: 0; background: transparent; font: inherit; font-weight: 500; color: var(--ink); padding: 6px 8px; border-radius: 6px; transition: background-color .12s ease-out; }
-.title-input:hover, .title-input:focus { background: var(--fmt-hover); outline: none; }
+.title-input:focus { outline: none; }
 .tb { border: 0; background: transparent; border-radius: 6px; padding: 8px 10px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); white-space: nowrap; transition: background-color .12s ease-out; }
 .tb:hover { background: var(--fmt-hover); color: var(--ink); }
 
@@ -134,7 +137,7 @@ button { font: inherit; color: inherit; }
 .avatar img { width: 22px; height: 22px; display: block; pointer-events: none; opacity: var(--avatar-fade); }
 .avatar:first-child { margin-left: 0; }
 /* With the panels cleared away by your cat, only the cat stays, in the bottom right corner. */
-[data-ui="bare"] .bar, [data-ui="bare"] .tools, [data-ui="bare"] .draw-panel, [data-ui="bare"] .pop, [data-ui="bare"] .tfmt { display: none !important; }
+[data-ui="bare"] .bar, [data-ui="bare"] .tools, [data-ui="bare"] .tools-more, [data-ui="bare"] .draw-panel, [data-ui="bare"] .pop, [data-ui="bare"] .tfmt { display: none !important; }
 .cat-corner { position: fixed; z-index: 5; right: 0; bottom: 0; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px 0 0 0; cursor: pointer;
   display: grid; place-items: center; background: var(--surface); box-shadow: var(--shadow); }
 .cat-corner img { width: 24px; height: 24px; display: block; pointer-events: none; opacity: var(--avatar-fade); }
@@ -172,7 +175,12 @@ button { font: inherit; color: inherit; }
 .sw.checker { background: repeating-conic-gradient(#E3E3E3 0 25%, #fff 0 50%) 50% / 10px 10px; }
 /* As tall as the panel under it, with its shadow. */
 .op-pop { position: absolute; bottom: calc(100% + 18px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; height: 52px; box-sizing: border-box; padding: 0 16px; background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); white-space: nowrap; animation: fade-in .12s ease-out; }
-.op-pop input { width: 150px; margin: 0; accent-color: var(--fmt-on-ink); cursor: pointer; }
+/* The slider drawn by hand: a plain grey track (no outline), blue up to the knob, and a knob 2px
+   bigger than the browser's. --p is how far along it is. */
+.op-pop input { -webkit-appearance: none; appearance: none; width: 150px; height: 4px; margin: 0; border-radius: 2px; cursor: pointer;
+  background: linear-gradient(to right, var(--fmt-on-ink) var(--p), var(--op-track) var(--p)); }
+.op-pop input::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border: 0; border-radius: 50%; background: var(--fmt-on-ink); }
+.op-pop input::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: var(--fmt-on-ink); }
 .op-pop span { min-width: 38px; text-align: right; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink); }
 .paint-fill, .paint-stroke { width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box; }
 .paint-fill { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }

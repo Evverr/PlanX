@@ -31,7 +31,7 @@ function Opacity({ value, label, onStart, onChange, onEnd }: {
       <button className={`sw checker ${open ? 'on' : ''}`} title={label} aria-label={label} aria-expanded={open} onClick={() => setOpen(!open)} />
       {open && (
         <div className="op-pop" data-nosort>
-          <input type="range" min={0} max={100} value={pct} aria-label={`${label}, %`}
+          <input type="range" min={0} max={100} value={pct} aria-label={`${label}, %`} style={{ '--p': `${pct}%` } as React.CSSProperties}
             onPointerDown={() => { onStart(); window.addEventListener('pointerup', onEnd, { once: true }); }}
             onChange={(e) => onChange(Number(e.target.value) / 100)} />
           <span>{pct}%</span>

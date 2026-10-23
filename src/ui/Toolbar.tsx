@@ -1,10 +1,10 @@
-import { useRef, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from 'react';
 import { SHAPE_TOOLS, type Editor, type Pens, type Tool } from '../editor/editor';
 import { readPictures } from '../canvas/pictures';
 import { DrawPanel, isDrawTool } from './DrawPanel';
 import { ShapePanel, SHAPES } from './ShapePanel';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
-import { useSortable } from './sortable';
+import { isSeparator, useSortable } from './sortable';
 import { ToolPreview } from './ToolPreview';
 
 /** Tool panel from the Figma mockup (Mol / Bar vertical). */
@@ -29,6 +29,9 @@ const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task'
 
 /** Rail buttons that make something on the board when dragged off the rail, and their icons. */
 const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape', paint: 'paint' };
+
+/** Room kept clear above the tool rail (the top bar) and as much below it. */
+const RAIL_CLEAR = 72;
 
 const SHAPE_KEY = 'planx-last-shape';
 function savedShape(): Tool {
@@ -82,13 +85,58 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
   // tables, so saved orders keep them in place.
   const sort = useSortable('planx-tools-order', DEFAULT_ORDER, 'y', { ellipse: 'task', frame: 'table' }, dropOut);
 
-  const button = (key: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}): ReactNode => (
-    <button key={key} {...sort.item(key)} className={`fb ${on ? 'on' : ''} ${sort.lifted(key) ? 'lifted' : ''}`}
-      title={label} aria-label={label.replace(/ \(.*\)$/, '')} onClick={onClick} {...extra}>
+  // On a screen too short for the whole rail, the buttons that don't fit go under a "more" button
+  // at its end, which opens them in a row beside it.
+  const all = sort.visible();
+  const [fit, setFit] = useState(Infinity);
+  const [moreAt, setMoreAt] = useState<number | null>(null);
+  const moreRef = useRef<HTMLButtonElement>(null), menuRef = useRef<HTMLDivElement>(null);
+  const [, redraw] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    window.addEventListener('resize', redraw);
+    return () => window.removeEventListener('resize', redraw);
+  }, []);
+  useLayoutEffect(() => {
+    const el = sort.ref.current, btn = el?.querySelector<HTMLElement>('.fb');
+    if (!el || !btn) return;
+    const cs = getComputedStyle(el), gap = parseFloat(cs.rowGap) || 0;
+    const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const tall = (ks: string[]) => pad + ks.reduce((t, k) => t + (isSeparator(k) ? 7 : btn.offsetHeight), 0) + gap * (ks.length - 1);
+    // Centred on the screen, clear of the top bar above and as far from the bottom edge.
+    const room = innerHeight - RAIL_CLEAR * 2;
+    let n = all.length;
+    if (tall(all) > room) {
+      n = all.length - 1;
+      while (n > 1 && tall([...sort.visible(undefined, n), 'more']) > room) n--;
+    }
+    const next = n >= all.length ? Infinity : n;
+    if (next !== fit) setFit(next);
+  });
+  const main = sort.visible(undefined, fit);
+  const hidden = all.filter((k) => !main.includes(k) && !isSeparator(k));
+  // A press anywhere but the row and its button closes it.
+  useEffect(() => {
+    if (moreAt === null) return;
+    const close = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!menuRef.current?.contains(t) && !moreRef.current?.contains(t)) setMoreAt(null);
+    };
+    window.addEventListener('pointerdown', close, true);
+    return () => window.removeEventListener('pointerdown', close, true);
+  }, [moreAt]);
+  if (moreAt !== null && !hidden.length) setMoreAt(null);
+
+  /** A rail button; in the "more" row (`inMenu`) it isn't rearrangeable and closes the row when used. */
+  const railButton = (key: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}, inMenu = false): ReactNode => (
+    <button key={key} {...(inMenu ? {} : sort.item(key))} className={`fb ${on ? 'on' : ''} ${!inMenu && sort.lifted(key) ? 'lifted' : ''}`}
+      title={label} aria-label={label.replace(/ \(.*\)$/, '')} {...extra}
+      onClick={() => { onClick?.(); if (inMenu) setMoreAt(null); }}>
       <PanelIcon name={icon} />
     </button>
   );
-  const item = (key: string): ReactNode => {
+  const item = (key: string, inMenu = false): ReactNode => {
+    const button = (k: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}) =>
+      railButton(k, on, label, icon, onClick, extra, inMenu);
     const t = TOOLS[key], later = LATER[key];
     if (key === 'sep') return <div key={key} {...sort.item(key)} className={`tsep ${sort.lifted(key) ? 'lifted' : ''}`} />;
     if (t) return button(key, tool === t[0], t[2], t[1], () => editor.setTool(t[0]), { 'aria-pressed': tool === t[0] });
@@ -108,8 +156,22 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     <>
     <nav ref={sort.ref} className={`tools sortable ${docked ? 'docked' : ''} ${sort.sorting ? 'sorting' : ''}`} aria-label="Инструменты"
       {...sort.container}>
-      {sort.visible().map(item)}
+      {main.map((k) => item(k))}
+      {hidden.length > 0 && (
+        <button ref={moreRef} className={`fb ${moreAt !== null ? 'on' : ''}`} title="Ещё" aria-label="Ещё" aria-expanded={moreAt !== null} data-nosort
+          onClick={() => {
+            const r = moreRef.current!.getBoundingClientRect();
+            setMoreAt(moreAt === null ? r.top + r.height / 2 : null);
+          }}>
+          <PanelIcon name="more" />
+        </button>
+      )}
     </nav>
+    {moreAt !== null && hidden.length > 0 && (
+      <div ref={menuRef} className="tools-more" role="toolbar" aria-label="Ещё инструменты" style={{ top: moreAt }}>
+        {hidden.map((k) => item(k, true))}
+      </div>
+    )}
     {drawing && <DrawPanel editor={editor} tool={tool} pens={pens} />}
     {shaping && <ShapePanel editor={editor} tool={tool} />}
     <input ref={filePicker} type="file" accept="image/*" multiple hidden
