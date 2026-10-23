@@ -117,11 +117,11 @@ export function App({ boardId }: { boardId: string }) {
 
   const [title, setTitle] = useState(board.title);
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   // The menu closes on a press anywhere else, and on Escape.
   useEffect(() => {
     if (!menuOpen) return;
-    const close = (e: PointerEvent) => { if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false); };
+    // (By its class: the panel puts its own ref on the wrapper.)
+    const close = (e: PointerEvent) => { if (!(e.target as Element | null)?.closest?.('.menu-wrap')) setMenuOpen(false); };
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
     window.addEventListener('pointerdown', close, true);
     window.addEventListener('keydown', esc);
@@ -181,7 +181,7 @@ export function App({ boardId }: { boardId: string }) {
           ),
           // The board's menu, after its name; a click opens it under the button.
           menu: (
-            <div className="menu-wrap" ref={menuRef}>
+            <div className="menu-wrap">
               <button className={`ib ${menuOpen ? 'on' : ''}`} title="Меню" aria-label="Меню" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
                 <PanelIcon name="burger" />
               </button>
