@@ -54,9 +54,14 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
   const [, redraw] = useReducer((n: number) => n + 1, 0);
   // Whether the colour circles set the fill or the outline of shapes.
   const [paint, setPaint] = useState<'fill' | 'stroke'>('fill');
+  // It finds its place again when the window changes size or a panel opens or closes beside the rail.
   useEffect(() => {
     window.addEventListener('resize', redraw);
-    return () => window.removeEventListener('resize', redraw);
+    window.addEventListener('planx:side-panels', redraw);
+    return () => {
+      window.removeEventListener('resize', redraw);
+      window.removeEventListener('planx:side-panels', redraw);
+    };
   }, []);
   useLayoutEffect(() => {
     const zoom = document.querySelector('.zoom')?.getBoundingClientRect(), el = sort.ref.current;
@@ -65,9 +70,10 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
     const kids = [...el.children] as HTMLElement[];
     const outer = (k: HTMLElement) => { const cs = getComputedStyle(k); return k.offsetWidth + parseFloat(cs.marginLeft) + parseFloat(cs.marginRight); };
     const w = kids.reduce((t, k) => t + outer(k), 0) + 4 * (kids.length - 1) + 32, h = el.offsetHeight;
-    const rail = document.querySelector('.tools')?.getBoundingClientRect();
-    // How far left it may go with its top at `top`: to the screen edge, or clear of the rail beside it.
-    const min = (top: number) => (rail && rail.bottom > top ? rail.right + GAP : 16);
+    // How far left it may go with its top at `top`: to the screen edge, or clear of the tool rail and
+    // whatever panel is open beside it, where level with them.
+    const side = ['.tools', '.tools-more', '.draw-panel'].map((q) => document.querySelector(q)?.getBoundingClientRect()).filter((r): r is DOMRect => !!r);
+    const min = (top: number) => Math.max(16, ...side.filter((r) => r.bottom > top).map((r) => r.right + GAP));
     const centred = (innerWidth - w) / 2;
     let next = { left: null as number | null, raised: false };
     if (centred + w + GAP > zoom.left) {

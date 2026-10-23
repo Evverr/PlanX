@@ -91,9 +91,9 @@ button { font: inherit; color: inherit; }
   gap: var(--gap);
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
 .tools.docked { left: 0; border-radius: 0 12px 12px 0; }
-/* The rail's buttons that didn't fit, upright beside it like the rail itself, in as many columns
-   as the screen's height needs (the rows are set in Toolbar.tsx). */
-.tools-more { position: fixed; z-index: 5; left: calc(84px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
+/* The rail's buttons that didn't fit, upright beside it like the rail itself and level with its
+   bottom, in as many columns as the screen's height needs (rows and place set in Toolbar.tsx). */
+.tools-more { position: fixed; z-index: 5; left: calc(84px + env(safe-area-inset-left, 0px));
   display: grid; grid-auto-flow: column; grid-auto-columns: 30px; gap: 18px; padding: 21px 15px;
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow);
   animation: fade-in .12s ease-out; }
@@ -161,7 +161,8 @@ button { font: inherit; color: inherit; }
 .zpct { min-width: 52px; text-align: center; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; border: 0; background: transparent; cursor: pointer; padding: 8px 6px; border-radius: 6px; transition: background-color .12s ease-out; }
 .zpct:hover { background: var(--fmt-hover); }
 
-.panel { left: 50%; transform: translateX(-50%); width: max-content; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 32px); transition: bottom .2s ease; }
+/* Wrapped onto two rows, each keeps the bar's own 6px above and below (12px between them). */
+.panel { left: 50%; transform: translateX(-50%); width: max-content; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; flex-wrap: wrap; row-gap: 12px; justify-content: center; max-width: calc(100vw - 32px); transition: bottom .2s ease; }
 /* Too wide to sit beside the zoom panel: one bar's height (52px) and a gap higher. */
 .panel.raised { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 .panel.docked.raised { bottom: 60px; border-radius: 12px; }
