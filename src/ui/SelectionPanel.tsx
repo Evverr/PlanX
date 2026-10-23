@@ -3,6 +3,7 @@ import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { COLORABLE, FILLS, ICON_COLORS, STROKABLE, STROKE_COLORS } from '../model/types';
 import { MIND_PALETTE } from '../model/mind';
+import { colsOf, rowsOf } from '../model/table';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
 
@@ -11,9 +12,14 @@ const same = (vals: Array<string | undefined>) => (vals.length && vals.every((v)
 /** Rearrangeable buttons; the bin comes last until moved. */
 const ORDER = ['paint', 'sep6', 'fills', 'sep', 'icons', 'cellfill', 'rows', 'cols', 'front', 'back', 'duplicate', 'trash'];
 
-/** A brush button for the picked cells of a table, opening the fill colours above it. */
-function CellFill({ value, onPick }: { value: string | null; onPick: (color: string) => void }) {
+/**
+ * The palette button of a selected table: fill colours for its picked cells (every cell when none
+ * is picked) or colours for its lines, picked with the switch at the start (Shift picks both), and
+ * an opacity slider; in a popover above the button.
+ */
+function TableColors({ editor, table, cells }: { editor: Editor; table: Item; cells: number[] }) {
   const [open, setOpen] = useState(false);
+  const [paint, setPaint] = useState<Array<'fill' | 'stroke'>>(['fill']);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
@@ -21,21 +27,66 @@ function CellFill({ value, onPick }: { value: string | null; onPick: (color: str
     window.addEventListener('pointerdown', close, true);
     return () => window.removeEventListener('pointerdown', close, true);
   }, [open]);
-  const custom = value?.startsWith('#') ? value : null;
+  const pick = (which: 'fill' | 'stroke', shift: boolean) => {
+    if (!shift) setPaint([which]);
+    else if (!paint.includes(which)) setPaint([...paint, which]);
+    else if (paint.length > 1) setPaint(paint.filter((p) => p !== which));
+  };
+  const n = colsOf(table).length * rowsOf(table).length, mine = cells.length ? cells : Array.from({ length: n }, (_, i) => i);
+  const own = (i: number, k: string) => table.cellFmt?.[i]?.[k];
+  const fill = same(mine.map((i) => { const v = own(i, 'bg'); return typeof v === 'string' ? v : 'none'; }));
+  const stroke = table.sc ?? 'gray';
+  const fillOpacity = Number(same(mine.map((i) => String(own(i, 'bgo') ?? 1))) ?? 1), lineOpacity = table.so ?? 1;
+  const both = paint.length > 1, target = paint.includes('fill') ? 'fill' : 'stroke';
+  const current = target === 'fill' ? fill : stroke;
+  const swatches: Array<[string, string]> = target === 'fill' ? Object.entries(FILLS)
+    : [...Object.entries(STROKE_COLORS).map(([k, v]): [string, string] => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--line)')]), ['none', '']];
+  const custom = current?.startsWith('#') && !swatches.some(([k]) => k === current) ? current : null;
+  const setColor = (c: string) => {
+    editor.beginChange();
+    if (paint.includes('fill')) editor.setCellFill(c);
+    // Together, the lines take the fill's colour itself.
+    if (paint.includes('stroke')) editor.setTableLines({ sc: both && c !== 'none' && FILLS[c] ? FILLS[c] : c });
+    editor.endChange();
+  };
+  const opacity = target === 'fill' ? fillOpacity : lineOpacity, pct = Math.round(opacity * 100);
+  const setOpacity = (v: number) => {
+    if (paint.includes('fill')) editor.setCellOpacity(v);
+    if (paint.includes('stroke')) editor.setTableLines({ so: v });
+  };
+  const label = cells.length ? 'Цвет ячеек и линий' : 'Цвет таблицы и линий';
   return (
     <div ref={ref} className="op-wrap">
-      <button className={`ib ${open ? 'on' : ''}`} title="Цвет ячеек" aria-label="Цвет ячеек" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <PanelIcon name="paint" />
+      <button className={`ib ${open ? 'on' : ''}`} title={label} aria-label={label} aria-expanded={open} onClick={() => setOpen(!open)}>
+        <PanelIcon name="palette" />
       </button>
       {open && (
-        <div className="op-pop start" data-nosort>
-          {Object.entries(FILLS).map(([k, v]) => (
-            <button key={k} className={`sw ${k === 'none' ? 'none' : ''} ${(value ?? 'none') === k ? 'on' : ''}`} style={{ background: v }}
-              title={k === 'none' ? 'Без заливки' : 'Цвет'} aria-label={k === 'none' ? 'Без заливки' : `Цвет ячеек ${k}`} onClick={() => onPick(k)} />
+        <div className="op-pop start table-colors" data-nosort>
+          <div className="sw-group paint-target">
+            <button className={`ib ${paint.includes('fill') ? 'on' : ''}`} title="Заливка ячеек (с Shift — вместе с линиями)" aria-label="Заливка ячеек"
+              aria-pressed={paint.includes('fill')} onClick={(e) => pick('fill', e.shiftKey)}>
+              <span className={`paint-fill ${fill === 'none' ? 'none' : ''}`} style={{ background: !fill || fill === 'none' ? 'var(--surface)' : fill.startsWith('#') ? fill : FILLS[fill] }} />
+            </button>
+            <button className={`ib ${paint.includes('stroke') ? 'on' : ''}`} title="Линии (с Shift — вместе с заливкой)" aria-label="Линии"
+              aria-pressed={paint.includes('stroke')} onClick={(e) => pick('stroke', e.shiftKey)}>
+              <span className={`paint-stroke ${stroke === 'none' ? 'none' : ''}`}
+                style={{ borderColor: stroke.startsWith('#') ? stroke : stroke === 'ink' ? 'var(--ink)' : STROKE_COLORS[stroke] || 'var(--line)' }} />
+            </button>
+          </div>
+          <div className="sep" />
+          {swatches.map(([k, v]) => (
+            <button key={k} className={`sw ${k === 'none' ? 'none' : ''} ${current === k ? 'on' : ''}`} style={{ background: v }}
+              title={k === 'none' ? (target === 'fill' ? 'Без заливки' : 'Без линий') : 'Цвет'}
+              aria-label={k === 'none' ? (target === 'fill' ? 'Без заливки' : 'Без линий') : `${target === 'fill' ? 'Цвет ячеек' : 'Цвет линий'} ${k}`} onClick={() => setColor(k)} />
           ))}
           <label className={`sw custom ${custom ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет">
-            <input type="color" aria-label="Свой цвет ячеек" value={custom ?? FILLS.yellow.toLowerCase()} onChange={(e) => onPick(e.target.value)} />
+            <input type="color" aria-label="Свой цвет" value={custom ?? FILLS.yellow.toLowerCase()} onChange={(e) => setColor(e.target.value)} />
           </label>
+          <div className="sep" />
+          <input type="range" min={0} max={100} value={pct} aria-label="Прозрачность, %" style={{ '--p': `${pct}%` } as React.CSSProperties}
+            onPointerDown={() => { editor.beginChange(); window.addEventListener('pointerup', () => editor.endChange(), { once: true }); }}
+            onChange={(e) => setOpacity(Number(e.target.value) / 100)} />
+          <span>{pct}%</span>
         </div>
       )}
     </div>
@@ -204,10 +255,8 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
             ))}
           </div>
         ) : undefined,
-        // The picked cells of a table get a brush for their fill.
-        cellfill: tables.length === 1 && items.length === 1 && cells.length > 0
-          ? <CellFill value={same(cells.map((i) => { const bg = tables[0].cellFmt?.[i]?.bg; return typeof bg === 'string' ? bg : 'none'; })) ?? null} onPick={(c) => editor.setCellFill(c)} />
-          : undefined,
+        // A table on its own gets a palette for its cells' fill and its lines.
+        cellfill: tables.length === 1 && items.length === 1 ? <TableColors editor={editor} table={tables[0]} cells={cells} /> : undefined,
         // Rows and columns of the selected tables: add or take away the last one.
         rows: tables.length > 0 ? (
           <div className="sw-group table-count">

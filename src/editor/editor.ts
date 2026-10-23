@@ -411,10 +411,31 @@ export class Editor {
 
   /** Fills the picked cells of the selected table with a colour ('none' takes it away). */
   setCellFill(color: string): void {
+    this.formatCells({ bg: color === 'none' ? undefined : color });
+  }
+
+  /** Opacity (0…1) of the picked cells' fill, or every cell's when none is picked. */
+  setCellOpacity(value: number): void {
+    this.formatCells({ bgo: value >= 1 ? undefined : Math.round(value * 100) / 100 });
+  }
+
+  /** The selected table's lines: their colour ('gray' the usual, 'none' none) and opacity. */
+  setTableLines(patch: { sc?: string; so?: number }): void {
     const it = this.selectedItems()[0];
-    if (it?.type !== 'table' || !this.cells.length) return;
+    if (it?.type !== 'table') return;
+    const next: Partial<Item> = {};
+    if ('sc' in patch) next.sc = patch.sc === 'gray' ? undefined : patch.sc;
+    if ('so' in patch) next.so = patch.so! >= 1 ? undefined : Math.round(patch.so! * 100) / 100;
+    this.board.update(it.id, next);
+  }
+
+  /** Sets a cell field on the picked cells of the selected table, or on every cell when none is. */
+  private formatCells(fields: Record<string, unknown>): void {
+    const it = this.selectedItems()[0];
+    if (it?.type !== 'table') return;
+    const all = Array.from({ length: colsOf(it).length * rowsOf(it).length }, (_, i) => i);
     let patch: Partial<Item> = {};
-    for (const i of this.cells) patch = withCellFormat({ ...it, ...patch }, i, { bg: color === 'none' ? undefined : color } as Partial<Item>);
+    for (const i of this.cells.length ? this.cells : all) patch = withCellFormat({ ...it, ...patch }, i, fields as Partial<Item>);
     this.board.update(it.id, patch);
   }
 
