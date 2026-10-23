@@ -31,7 +31,7 @@ const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: '
 /** Room kept clear above the tool rail (the top bar) and as much below it. */
 const RAIL_CLEAR = 72;
 
-/** Rail buttons with variants, opened by holding the button still; a mark in its corner says so. */
+/** Rail buttons with variants, opened by holding the button still. */
 const VARIANTS = new Set(['oval', 'draw']);
 
 const SHAPE_KEY = 'planx-last-shape';
@@ -144,6 +144,8 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   const moreRows = Math.max(1, Math.min(hidden.length, Math.floor((railBottom - RAIL_CLEAR - 42 + 18) / 48)));
   // The selection panel keeps clear of what opens beside the rail.
   useEffect(() => { window.dispatchEvent(new Event('planx:side-panels')); }, [moreOpen, variants]);
+  // Held and then pulled away, the button is dragged, and its variants close.
+  if (variants && sort.sorting) setVariants(null);
 
   /** A rail button; in the "more" row (`inMenu`) it isn't rearrangeable and closes the row when used. */
   const railButton = (key: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}, inMenu = false): ReactNode => (
@@ -151,7 +153,6 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
       title={label} aria-label={label.replace(/ \(.*\)$/, '')} {...extra}
       onClick={() => { onClick?.(); if (inMenu) setMoreOpen(false); }}>
       <PanelIcon name={icon} />
-      {VARIANTS.has(key) && <i className="variants-mark" />}
     </button>
   );
   const item = (key: string, inMenu = false): ReactNode => {

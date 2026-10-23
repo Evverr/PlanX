@@ -92,9 +92,6 @@ button { font: inherit; color: inherit; }
   gap: var(--gap);
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
 .tools.docked { left: 0; border-radius: 0 12px 12px 0; }
-/* The mark in the corner of a rail button with variants (held still, it opens them). */
-.variants-mark { position: absolute; right: -4px; bottom: -4px; width: 0; height: 0; border-left: 5px solid transparent; border-bottom: 5px solid var(--fmt-ink); opacity: .45; pointer-events: none; }
-.on > .variants-mark { border-bottom-color: var(--fmt-on-ink); opacity: .8; }
 /* With the rail stuck to the edge, what opens beside it moves in with it (keeping its 12px gap). */
 .tools.docked ~ .tools-more, .tools.docked ~ .draw-panel, .tools.docked ~ .recorder, .tools.docked ~ .icon-pick { left: calc(72px + env(safe-area-inset-left, 0px)); }
 /* The rail's buttons that didn't fit, upright beside it like the rail itself and level with its
@@ -128,7 +125,7 @@ button { font: inherit; color: inherit; }
 .tsep::after { content: ""; position: absolute; left: 0; top: 3px; width: 20px; height: 1px; background: var(--fmt-line); }
 
 
-.topbar { left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); padding: 6px 12px 6px 22px; gap: 8px; max-width: calc(100vw - 24px); }
+.topbar { left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); padding: 6px 12px 6px 20px; gap: 8px; max-width: calc(100vw - 24px); }
 /* 15px from the logo to its separator. */
 .topbar .logo + .sep { margin-left: 7px; }
 .logo { font-family: "Inter", var(--ui); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; white-space: nowrap; }
@@ -371,9 +368,9 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 
 /* The board's menu, 1:1 with the Figma "Mol / Menu right": 286 wide, rows of a 24px icon and
    Inter 13 text 11px apart, 14px between rows, a faint line between groups; under its button,
-   2px below the top bar. */
+   6px below the top bar. */
 .menu-wrap { position: relative; display: flex; }
-.board-menu { position: absolute; left: -6px; top: calc(100% + 8px); z-index: 7; width: 286px; box-sizing: border-box;
+.board-menu { position: absolute; left: -6px; top: calc(100% + 12px); z-index: 7; width: 286px; box-sizing: border-box;
   display: flex; flex-direction: column; gap: 14px; padding: 20px 18px 24px 14px;
   background: var(--surface); border-radius: 12px; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .15)); animation: fade-in .12s ease-out; }
 .menu-item { position: relative; width: 100%; }

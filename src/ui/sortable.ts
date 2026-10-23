@@ -70,7 +70,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     /** Out of the panel, where the pointer is on screen, and the order from before the drag. */
     out: boolean; x: number; y: number; x0: number; y0: number; before: string[];
   } | null>(null);
-  const press = useRef<{ el: HTMLElement; key: string; x0: number; y0: number; x: number; y: number; timer: number } | null>(null);
+  const press = useRef<{ el: HTMLElement; key: string; x0: number; y0: number; x: number; y: number; timer: number; held?: boolean } | null>(null);
   const ref = useRef<HTMLElement>(null);
   const els = useRef(new Map<string, HTMLElement>());
   const offsets = useRef(new Map<string, number>());
@@ -123,17 +123,28 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     const target = e.target as Element;
     const el = target.closest<HTMLElement>('[data-key]');
     if (!el || e.button !== 0 || target.closest('[data-nosort]') || !ref.current?.contains(el)) return;
-    const p = { el, key: el.dataset.key!, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, timer: 0 };
+    const p = { el, key: el.dataset.key!, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, timer: 0, held: false };
     p.timer = window.setTimeout(() => {
+      // A hold that opens the button's variants keeps the press: moving on still drags the button.
+      // It's followed on the window from then on, as whatever opened may now lie under the pointer.
+      if (dropOut?.hold?.(p.key)) {
+        swallowClick.current = true;
+        p.held = true;
+        const off = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+        const move = (ev: PointerEvent) => { if (press.current === p) onPointerMove(ev); if (press.current !== p) off(); };
+        const up = () => { off(); onPointerUp(); };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+        return;
+      }
       press.current = null;
-      if (dropOut?.hold?.(p.key)) swallowClick.current = true;
-      else lift(p);
+      lift(p);
     }, HOLD_MS);
     press.current = p;
   };
   // Wandering off the button before it lifts cancels the hold, except in a panel whose buttons can
   // be dragged onto the board: there pulling a button away picks it up at once.
-  const onPointerMove = (e: ReactPointerEvent<HTMLElement>) => {
+  const onPointerMove = (e: { clientX: number; clientY: number }) => {
     const p = press.current;
     if (!p) return;
     p.x = e.clientX;
@@ -169,9 +180,10 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     setDrag({ ...drag, at, moved, out, x: e.clientX, y: e.clientY });
   };
   const onPointerUp = () => {
+    const held = press.current?.held;
     if (press.current) { clearTimeout(press.current.timer); press.current = null; }
     // A hold that did something of its own: the click that comes with letting go goes nowhere.
-    if (swallowClick.current && !drag) setTimeout(() => { swallowClick.current = false; }, 0);
+    if (held && !drag) setTimeout(() => { swallowClick.current = false; }, 0);
   };
   const dragEnd = () => {
     if (!drag) return;
