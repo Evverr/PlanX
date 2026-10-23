@@ -901,6 +901,21 @@ export class Editor {
 
   /* ---------- pointer input ---------- */
 
+  /**
+   * A mind map node being typed in that's pressed at `from` (on screen) and dragged: typing stops and
+   * the node is dragged from there like any item, its text or not under the pointer.
+   */
+  dragFromText(id: string, from: { x: number; y: number }, e: PointerEvent): void {
+    if (!this.canvas || this.gesture) return;
+    this.stopEditing();
+    const r = this.canvas.getBoundingClientRect(), start = this.toWorld(from.x - r.left, from.y - r.top);
+    try { this.canvas.setPointerCapture(e.pointerId); } catch { /* the pointer's already gone */ }
+    this.pointers.set(e.pointerId, this.local(e));
+    this.setSelection([id]);
+    this.gesture = { type: 'drag', start, orig: this.dragSet(this.board.list()), moved: false, id, dbl: false };
+    this.onPointerMove(e);
+  }
+
   private local(e: PointerEvent | WheelEvent): Point {
     const r = this.canvas!.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
