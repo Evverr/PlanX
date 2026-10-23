@@ -45,7 +45,7 @@ export interface Item {
   /** Outline colour of shapes and tasks: a key of STROKE_COLORS, '#rrggbb', or 'none' for no outline;
    *  unset is the usual grey (see strokeOf in the renderer). */
   sc?: string;
-  /** Mind map nodes past the first level: their own fill (a key of FILLS or '#rrggbb'); unset is white. */
+  /** Mind map nodes but central topics: their own fill (a key of FILLS or '#rrggbb'); unset is the usual. */
   fc?: string;
   /** Opacity of the fill and of the outline, 0…1; unset is solid. */
   fo?: number;

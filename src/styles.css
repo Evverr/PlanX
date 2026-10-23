@@ -378,6 +378,10 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 .menu-row img { flex: none; display: block; }
 .menu-icon { flex: none; width: 24px; height: 24px; color: #A6A6A6; }
 .menu-row { min-height: 24px; }
+/* A menu without icons sits 4px further in; in one with some, a row without lines its text up with
+   theirs (an icon's 24px and the 11px after it). */
+.board-menu.plain { padding-left: 18px; }
+.menu-row.indent { padding-left: 35px; }
 .menu-more { position: absolute; right: -5px; top: 1px; }
 .menu-line { width: 259px; height: 1px; background: #6E6E6E; opacity: .1; }
 /* The switch: a 24×14 track, grey with the knob at its left, blue with it at its right when on. */

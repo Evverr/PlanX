@@ -117,8 +117,8 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
   const [paint, pick] = usePaint();
   const colorable = items.filter((i) => COLORABLE.includes(i.type)), icons = items.filter((i) => i.type === 'icon');
   const strokable = items.filter((i) => STROKABLE.includes(i.type));
-  // Mind map nodes past the first level (all the selected) get a fill and an edge of their own.
-  const deepMind = colorable.length > 0 && colorable.every((i) => i.type === 'mind' && mindDepth(i, (id) => editor.board.get(id)) >= 2);
+  // Mind map nodes but central topics (all the selected) get a fill and an edge of their own.
+  const deepMind = colorable.length > 0 && colorable.every((i) => i.type === 'mind' && mindDepth(i, (id) => editor.board.get(id)) >= 1);
   if (deepMind) return <MindColors editor={editor} nodes={colorable} />;
   const fill = same(colorable.map((i) => i.color)), stroke = same(strokable.map((i) => i.sc ?? 'gray'));
   // Outlines are set only while shapes or tasks are among the selected; with both picked, colour and
@@ -156,7 +156,7 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
   );
 }
 
-/** The colours of mind map nodes past the first level: their fill (pale, or white) and their edge
+/** The colours of mind map nodes but central topics: their fill (pale, or the usual) and their edge
  *  and branch (the strong ones), with opacity for either; Shift picks both. */
 function MindColors({ editor, nodes }: { editor: Editor; nodes: Item[] }) {
   const [paint, pick] = usePaint();
