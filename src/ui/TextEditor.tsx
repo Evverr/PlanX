@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { Editor } from '../editor/editor';
-import { alignOf, TEXT_COLORS, textPad, type Item } from '../model/types';
-import { fontOf, FONTS, LINE_HEIGHT } from '../canvas/text';
+import { alignOf, TEXT_COLORS, textPad, textPadY, type Item } from '../model/types';
+import { fontOf, FONTS, LINE_HEIGHT, textBlockHeight } from '../canvas/text';
 import { center, TASK_INSET } from '../canvas/geometry';
 
 /**
@@ -38,11 +38,11 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   const z = editor.cam.z;
   const isFrame = item.type === 'frame';
   const fs = isFrame ? 15 : item.fs ?? 16;
-  const pad = textPad(item);
+  const pad = textPad(item), padY = textPadY(item);
   // A task's text starts right of its checkbox.
   const inset = item.type === 'task' ? TASK_INSET : 0;  // a task's text keeps clear of its checkbox
   const width = isFrame ? Math.max(160, item.w * 0.6) : item.w - inset * 2 - pad * 2;
-  const top = isFrame ? item.y - 30 : item.y + pad;
+  const top = isFrame ? item.y - 30 : item.y + padY;
   const p = editor.toScreen({ x: item.x + (isFrame ? 0 : inset + pad), y: top });
 
   // Centre the text vertically in stickers and shapes, like the canvas does; and turn it with a
@@ -52,10 +52,10 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
     if (!el) return;
     let top = 0;
     if (item.type !== 'text' && !isFrame) {
-      el.style.height = '0px';
-      const content = Math.min(el.scrollHeight, item.h - pad * 2);
+      // As tall as the canvas lays the lines out (exactly, not rounded), so they land where it drew them.
+      const content = Math.min(textBlockHeight(el.value, width, fs, fontOf(item)), item.h - padY * 2);
       el.style.height = `${content}px`;
-      top = item.va === 'top' ? 0 : ((item.h - pad * 2 - content) / 2) * z;
+      top = item.va === 'top' ? 0 : ((item.h - padY * 2 - content) / 2) * z;
       el.style.marginTop = `${top}px`;
     }
     const c = editor.toScreen(center(item)), dx = c.x - p.x, dy = c.y - p.y - top;
@@ -99,9 +99,9 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
       onInput={(e) => {
         if (item.type === 'text' || item.type === 'task' || item.type === 'mind') editor.previewText(id, e.currentTarget.value);
         if (item.type !== 'text' && !isFrame) {
-          const el = e.currentTarget;
-          el.style.height = '0px';
-          el.style.height = `${Math.min(el.scrollHeight, item.h - pad * 2)}px`;
+          const el = e.currentTarget, content = Math.min(textBlockHeight(el.value, width, fs, fontOf(item)), item.h - padY * 2);
+          el.style.height = `${content}px`;
+          if (item.va !== 'top') el.style.marginTop = `${((item.h - padY * 2 - content) / 2) * z}px`;
         }
       }}
       onBlur={commit}
