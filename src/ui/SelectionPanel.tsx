@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react'
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { COLORABLE, FILLS, ICON_COLORS, STROKABLE, STROKE_COLORS } from '../model/types';
+import { MIND_PALETTE } from '../model/mind';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
 
@@ -91,12 +92,15 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
   // Outlines are set only while shapes or tasks are among the selected.
   const target = strokable.length ? paint : 'fill';
   const current = target === 'fill' ? fill : stroke;
-  const custom = current?.startsWith('#') ? current : null;
   const opacity = Number(same(target === 'fill' ? colorable.map((i) => String(i.fo ?? 1)) : strokable.map((i) => String(i.so ?? 1))) ?? 1);
   const setColor = (c: string) => (target === 'fill' ? editor.setColor(c) : editor.setStroke(c));
-  const swatches: Array<[string, string]> = target === 'fill'
+  // Mind map nodes on their own get their strong colours instead of the pale fills.
+  const mind = colorable.length > 0 && colorable.every((i) => i.type === 'mind');
+  const swatches: Array<[string, string]> = mind ? MIND_PALETTE.map((c) => [c, c]) : target === 'fill'
     ? Object.entries(FILLS).filter(([k]) => k !== 'none' || allowNone)
     : [...Object.entries(STROKE_COLORS).map(([k, v]): [string, string] => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--shape-stroke)')]), ['none', '']];
+  // A picked colour of its own, not one of the circles.
+  const custom = current?.startsWith('#') && !swatches.some(([k]) => k === current) ? current : null;
   // How a fill or an outline colour shows on the switch.
   const fillLook = !fill ? 'var(--line)' : fill.startsWith('#') ? fill : fill === 'none' ? 'transparent' : FILLS[fill] ?? FILLS.blue;
   const strokeLook = !stroke ? 'var(--line)' : stroke.startsWith('#') ? stroke : stroke === 'none' ? 'transparent'

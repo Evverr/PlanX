@@ -5,7 +5,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchCurve, MIND_COLOR, mindButtons, mindDepth, type MindButton } from '../model/mind';
+import { branchCurve, mindButtons, mindColor, mindDepth, type MindButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
@@ -384,20 +384,22 @@ function outlinePolygon(ctx: CanvasRenderingContext2D, it: Item) {
   ctx.closePath();
 }
 
-/** A mind map node: the central topic solid blue, first-level nodes tinted blue, the rest white
- *  with a blue edge. */
+/** A mind map node in its colour: the central topic solid, first-level nodes tinted, the rest white
+ *  with an edge of it. */
 function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
-  const { theme } = s, depth = mindDepth(it, s.get), color = MIND_COLOR;
+  const { theme } = s, depth = mindDepth(it, s.get), color = mindColor(it, s.get);
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.h / 2, depth === 0 ? 14 : 10));
+  ctx.globalAlpha = it.fo ?? 1;
   ctx.fillStyle = depth === 0 ? color : theme.surface;
   ctx.fill();
+  if (depth === 1) { ctx.fillStyle = color + '2E'; ctx.fill(); }
+  ctx.globalAlpha = 1;
   // A node a branch is being dragged onto shows it with its edge dashed (the solid central topic,
   // with a white dashed line just inside its edge).
   const target = s.mindMove?.target?.id === it.id;
   if (target) ctx.setLineDash([5, 4]);
   if (depth > 0) {
-    if (depth === 1) { ctx.fillStyle = color + '2E'; ctx.fill(); }
     ctx.lineWidth = depth === 1 ? 2 : 1.5;
     ctx.strokeStyle = color;
     ctx.stroke();
@@ -421,7 +423,7 @@ function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
     const up = s.get(it.parent);
     if (!up) continue;
     const [a, c1, c2, b] = branchCurve(up, it);
-    ctx.strokeStyle = MIND_COLOR;
+    ctx.strokeStyle = mindColor(it, s.get);
     ctx.lineWidth = up.parent ? 0.75 : 1.5;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
@@ -694,6 +696,9 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
           ctx.beginPath();
           ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
           ctx.fill();
+          // The plus or arrow on a faint circle is drawn stronger than the circle, so it stands out
+          // half as far from white as it would at the circle's strength.
+          ctx.globalAlpha = (hot ? 1 : 0.75) * s.plusFade;
           ctx.strokeStyle = '#fff';
           ctx.lineWidth = (hot ? 2 : 1.5) / cam.z;
           ctx.lineCap = 'round';

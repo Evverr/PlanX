@@ -74,7 +74,7 @@ export const baseWeight = (type: ItemType): number => (type === 'text' || type =
 export const textPad = (it: Item): number =>
   it.type === 'sticky' ? 14 : it.type === 'rect' || it.type === 'task' ? 10 : it.type === 'table' ? 8 : it.type === 'mind' ? (it.parent ? 12 : 15)
     : it.type === 'ellipse' ? Math.min(it.w, it.h) * 0.15 + 6 : it.type === 'polygon' ? Math.min(it.w, it.h) * 0.22 + 6 : 0;
-export const alignOf = (it: Item): TextAlign => it.ta ?? (it.type === 'text' || it.type === 'table' ? 'left' : 'center');
+export const alignOf = (it: Item): TextAlign => it.ta ?? (it.type === 'text' || it.type === 'table' || it.type === 'mind' ? 'left' : 'center');
 
 /** Text colours; "ink" is the item's usual text colour. */
 export const TEXT_COLORS: Record<string, string> = {
@@ -169,7 +169,7 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   mind: { w: 200, h: 56, fs: 20, text: '' },
 };
 
-export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse', 'polygon', 'task'];
+export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse', 'polygon', 'task', 'mind'];
 /** What has an outline whose colour can be set apart from the fill. */
 export const STROKABLE: ItemType[] = ['rect', 'ellipse', 'polygon', 'task'];
 export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'task', 'table', 'polygon', 'mind'];
