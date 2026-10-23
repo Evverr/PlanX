@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from 'react';
 import { SHAPE_TOOLS, type Editor, type Pens, type Tool } from '../editor/editor';
 import { readPictures } from '../canvas/pictures';
 import { DrawPanel, isDrawTool } from './DrawPanel';
-import { ShapePanel } from './ShapePanel';
+import { ShapePanel, SHAPES } from './ShapePanel';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
 import { ToolPreview } from './ToolPreview';
@@ -30,6 +30,15 @@ const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task'
 /** Rail buttons that make something on the board when dragged off the rail, and their icons. */
 const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape', paint: 'paint' };
 
+const SHAPE_KEY = 'planx-last-shape';
+function savedShape(): Tool {
+  try {
+    const t = localStorage.getItem(SHAPE_KEY) as Tool | null;
+    if (t && SHAPE_TOOLS.includes(t)) return t;
+  } catch { /* storage can be unavailable */ }
+  return 'rect';
+}
+
 export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleIcons, recorderOpen, onToggleRecorder }: {
   editor: Editor; tool: Tool; pens: Pens; zoom: number; docked: boolean; iconsOpen: boolean; onToggleIcons: () => void;
   recorderOpen: boolean; onToggleRecorder: () => void;
@@ -38,10 +47,14 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
   const lastDraw = useRef<Tool>('pen');
   const drawing = isDrawTool(tool);
   if (drawing) lastDraw.current = tool;
-  // Likewise the shapes button brings back the figure used last.
-  const lastShape = useRef<Tool>('rect');
+  // Likewise the shapes button brings back the figure used last, and shows it, the next time too.
+  const lastShape = useRef<Tool>(savedShape());
   const shaping = SHAPE_TOOLS.includes(tool);
-  if (shaping) lastShape.current = tool;
+  if (shaping && lastShape.current !== tool) {
+    lastShape.current = tool;
+    try { localStorage.setItem(SHAPE_KEY, tool); } catch { /* storage can be unavailable */ }
+  }
+  const shapeIcon = SHAPES.find(([t]) => t === lastShape.current)?.[1] ?? 'landscape';
 
   const filePicker = useRef<HTMLInputElement>(null);
   /** Where pictures from the file dialog go: a drop point when the picture button was dragged onto the board. */
@@ -82,7 +95,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     // With two or more items selected, the frame button puts a frame around them instead.
     if (key === 'frames') return button(key, tool === 'frame', 'Фрейм (F; вокруг выделенного — Ctrl+G)', 'frame',
       () => { if (!editor.frameSelection()) editor.setTool('frame'); }, { 'aria-pressed': tool === 'frame' });
-    if (key === 'oval') return button(key, shaping, 'Фигуры', 'landscape', () => editor.setTool(shaping ? 'select' : lastShape.current), { 'aria-pressed': shaping });
+    if (key === 'oval') return button(key, shaping, 'Фигуры', shapeIcon, () => editor.setTool(shaping ? 'select' : lastShape.current), { 'aria-pressed': shaping });
     if (key === 'draw') return button(key, drawing, 'Рисование (P)', 'marker', () => editor.setTool(drawing ? 'select' : lastDraw.current), { 'aria-pressed': drawing });
     if (key === 'image') return button(key, false, 'Картинка', 'image', () => { pictureAt.current = undefined; filePicker.current?.click(); });
     if (key === 'audio') return button(key, recorderOpen, 'Аудиозаметка', 'microphone', onToggleRecorder, { 'aria-expanded': recorderOpen });

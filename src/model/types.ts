@@ -40,6 +40,9 @@ export interface Item {
   parent?: string;
   /** Which figure a polygon item is. */
   shape?: PolyShape;
+  /** Outline colour of shapes and tasks: a key of STROKE_COLORS, '#rrggbb', or 'none' for no outline;
+   *  unset is the usual grey (see strokeOf in the renderer). */
+  sc?: string;
   /** Turned clockwise about its centre by this many degrees (see ROTATABLE). */
   rot?: number;
   /** Audio notes: length in seconds and a coarse waveform, 0…1 per bar. */
@@ -122,6 +125,17 @@ export const INK_COLORS: Record<string, string> = {
   pink: '#F17AC1',
 };
 
+/** Outline colours of shapes; "gray" is the usual outline (unset on the item), "ink" the theme's text colour. */
+export const STROKE_COLORS: Record<string, string> = {
+  gray: '',
+  ink: '',
+  red: '#E5484D',
+  orange: '#F5A524',
+  green: '#30A46C',
+  blue: '#3E7BFA',
+  purple: '#8E4EC6',
+};
+
 /** Icon colours; "ink" follows the theme's text colour. */
 export const ICON_COLORS: Record<string, string> = {
   ink: '',
@@ -150,6 +164,8 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
 };
 
 export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse', 'polygon', 'task'];
+/** What has an outline whose colour can be set apart from the fill. */
+export const STROKABLE: ItemType[] = ['rect', 'ellipse', 'polygon', 'task'];
 export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'task', 'table', 'polygon', 'mind'];
 /** What can be turned by its corners. Frames, tables, mind map nodes and audio notes stay square to the board. */
 export const ROTATABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'polygon', 'task', 'icon', 'emoji', 'image', 'ink'];

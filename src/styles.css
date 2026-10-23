@@ -166,6 +166,11 @@ button { font: inherit; color: inherit; }
 .table-count { gap: 2px; font-size: 13px; color: var(--muted); }
 .table-count span { padding: 0 4px 0 8px; }
 .sw.custom { position: relative; overflow: hidden; display: inline-block; background: conic-gradient(#FF5E5E, #FFD25E, #8CE35E, #5ED9E3, #5E8CFF, #C45EFF, #FF5E5E); }
+.paint-target { gap: 2px; margin-right: 4px; }
+.paint-fill, .paint-stroke { width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box; }
+.paint-fill { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
+.paint-stroke { border: 3.5px solid; }
+.paint-fill.none, .paint-stroke.none { background: linear-gradient(135deg, transparent 44%, var(--danger) 44%, var(--danger) 56%, transparent 56%) !important; box-shadow: inset 0 0 0 1px var(--line); border: 0; }
 .sw.custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .sw.none { background: linear-gradient(135deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%), var(--surface) !important; }
 

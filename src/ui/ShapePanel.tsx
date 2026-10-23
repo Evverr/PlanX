@@ -2,7 +2,7 @@ import type { Editor, Tool } from '../editor/editor';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
 
-const SHAPES: Array<[Tool, PanelIconName, string]> = [
+export const SHAPES: Array<[Tool, PanelIconName, string]> = [
   ['rect', 'landscape', 'Прямоугольник (R)'],
   ['ellipse', 'ellipse', 'Эллипс (O)'],
   ['triangle', 'triangle', 'Треугольник'],
