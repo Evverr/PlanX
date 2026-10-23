@@ -20,7 +20,17 @@ const ORDER = ['paint', 'sep6', 'fills', 'sep', 'icons', 'cellfill', 'rows', 'co
 function TableColors({ editor, table, cells }: { editor: Editor; table: Item; cells: number[] }) {
   const [open, setOpen] = useState(false);
   const [paint, setPaint] = useState<Array<'fill' | 'stroke'>>(['fill']);
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null), popRef = useRef<HTMLDivElement>(null);
+  // Centred on the button, moved in just enough to stay 8px clear of the screen's edges and of the
+  // tool rail when level with it.
+  useLayoutEffect(() => {
+    const pop = popRef.current;
+    if (!pop) return;
+    pop.style.marginLeft = '0px';
+    const r = pop.getBoundingClientRect(), rail = document.querySelector('.tools')?.getBoundingClientRect();
+    const min = rail && rail.bottom > r.top && rail.top < r.bottom ? rail.right + 8 : 8;
+    pop.style.marginLeft = `${Math.max(0, min - r.left) - Math.max(0, r.right - (innerWidth - 8))}px`;
+  });
   useEffect(() => {
     if (!open) return;
     const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
@@ -61,7 +71,7 @@ function TableColors({ editor, table, cells }: { editor: Editor; table: Item; ce
         <PanelIcon name="palette" />
       </button>
       {open && (
-        <div className="op-pop start table-colors" data-nosort>
+        <div ref={popRef} className="op-pop table-colors" data-nosort>
           <div className="sw-group paint-target">
             <button className={`ib ${paint.includes('fill') ? 'on' : ''}`} title="Заливка ячеек (с Shift — вместе с линиями)" aria-label="Заливка ячеек"
               aria-pressed={paint.includes('fill')} onClick={(e) => pick('fill', e.shiftKey)}>
