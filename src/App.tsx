@@ -183,7 +183,7 @@ export function App({ boardId }: { boardId: string }) {
           menu: (
             <div className="menu-wrap" ref={menuRef}>
               <button className={`ib ${menuOpen ? 'on' : ''}`} title="Меню" aria-label="Меню" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
-                <PanelIcon name="more-vertical" />
+                <PanelIcon name="chevron-down" />
               </button>
               {menuOpen && <BoardMenu />}
             </div>
