@@ -58,6 +58,10 @@ export interface Scene {
   showHandle: boolean;
   /** The dot under the pointer, drawn larger and at full strength; the others are faint. */
   hotDot: Side | null;
+  /** The mind map "+" under the pointer, drawn full size and strength; the other is smaller and faint. */
+  hotPlus: 'child' | 'sibling' | null;
+  /** How far the "+" buttons have faded in, 0…1: they come a moment after the node is picked. */
+  plusFade: number;
   /** Table lines drawn blue: the one under the pointer and those picked to drag together. */
   tableLines: TableLine[];
   /** The pen or highlighter line being drawn, in board units. */
@@ -405,7 +409,7 @@ function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
     if (!up) continue;
     const [a, c1, c2, b] = branchCurve(up, it);
     ctx.strokeStyle = MIND_COLOR;
-    ctx.lineWidth = up.parent ? 1.5 : 3;
+    ctx.lineWidth = up.parent ? 0.75 : 1.5;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, b.x, b.y);
@@ -668,19 +672,25 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     // A mind map node sizes itself and links by its branches: instead of the handle and dots it
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && s.editingId !== id && it.type === 'mind') {
-      for (const p of [plusButton(it, s.get, cam.z), siblingButton(it, cam.z)]) {
-        if (!p) continue;
-        ctx.fillStyle = SELECT_COLOR;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2 / cam.z;
-        ctx.lineCap = 'round';
-        ctx.beginPath();
-        ctx.moveTo(p.x - p.r * 0.5, p.y); ctx.lineTo(p.x + p.r * 0.5, p.y);
-        ctx.moveTo(p.x, p.y - p.r * 0.5); ctx.lineTo(p.x, p.y + p.r * 0.5);
-        ctx.stroke();
+      if (s.plusFade > 0) {
+        for (const [kind, b] of [['child', plusButton(it, s.get, cam.z)], ['sibling', siblingButton(it, cam.z)]] as const) {
+          if (!b) continue;
+          // Smaller and faint until the pointer comes over it.
+          const hot = s.hotPlus === kind, r = hot ? b.r : b.r / 1.5;
+          ctx.globalAlpha = (hot ? 1 : 0.5) * s.plusFade;
+          ctx.fillStyle = SELECT_COLOR;
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = (hot ? 2 : 1.5) / cam.z;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(b.x - r * 0.5, b.y); ctx.lineTo(b.x + r * 0.5, b.y);
+          ctx.moveTo(b.x, b.y - r * 0.5); ctx.lineTo(b.x, b.y + r * 0.5);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
       }
     } else if (s.showHandle && s.editingId !== id) {
       const hs = HANDLE / cam.z, off = 3 / cam.z;
