@@ -5,14 +5,26 @@ import { createPortal } from 'react-dom';
  *  may drift meanwhile, in px. */
 const WAIT = 2000, STILL = 3;
 
-interface Tip { text: string; x: number; y: number; side: 'right' | 'above' | 'below' }
+type Side = 'right' | 'left' | 'above' | 'below';
+interface Tip { text: string; left: number; top: number; side: Side }
+
+/** The bubble's height, its distance from the screen's edges and its width for a text (the text in
+ *  Inter Semi Bold 12 and 15.5px padding each side). */
+const H = 33, EDGE = 8;
+let measure: CanvasRenderingContext2D | null = null;
+function tipWidth(text: string): number {
+  measure ??= document.createElement('canvas').getContext('2d');
+  if (!measure) return text.length * 7 + 31;
+  measure.font = '600 12px Inter, sans-serif';
+  return Math.ceil(measure.measureText(text).width) + 31;
+}
 
 /**
  * The hints of the panels' buttons, from the Figma "Alt" bubble, once the pointer has stayed still
  * on one for two seconds: shown in place of the browser's own, which they take over by moving each
  * button's title into data-tip when the pointer comes.
  * Beside the upright panels the bubble points at its button; over or under the flat bars it sits
- * centred on it.
+ * centred on it; where that doesn't fit on screen, it goes to whichever side does.
  */
 export function Tooltips() {
   const [tip, setTip] = useState<Tip | null>(null);
@@ -22,14 +34,24 @@ export function Tooltips() {
       const text = el.dataset.tip;
       shown = true;
       if (!text) return;
-      const r = el.getBoundingClientRect(), panel = el.closest('.tools, .draw-panel, .tools-more');
-      // The pointer (5.89 wide) reaches 2px over the button's highlight (6px round the icon of a rail button).
-      if (panel) setTip({ text, x: r.right + (el.matches('.fb') ? 6 : 0) - 2 + 5.89, y: r.top + r.height / 2, side: 'right' });
-      else {
-        const bar = (el.closest('.bar, .tfmt') ?? el).getBoundingClientRect();
-        const below = bar.top + bar.height / 2 < innerHeight / 2;
-        setTip({ text, x: r.left + r.width / 2, y: below ? bar.bottom + 8 : bar.top - 8, side: below ? 'below' : 'above' });
-      }
+      // Beside the button its pointer (5.89 wide) reaches 2px over the button's highlight (6px round
+      // the icon of a rail button); over or under, it clears the whole bar by 8px.
+      const w = tipWidth(text), r = el.getBoundingClientRect(), hl = el.matches('.fb') ? 6 : 0;
+      const bar = (el.closest('.bar, .tfmt, .tools, .draw-panel, .tools-more') ?? el).getBoundingClientRect();
+      const midY = r.top + r.height / 2 - H / 2, midX = Math.min(Math.max(r.left + r.width / 2 - w / 2, EDGE), innerWidth - EDGE - w);
+      const places: Record<Side, { left: number; top: number }> = {
+        right: { left: r.right + hl - 2 + 5.89, top: midY },
+        left: { left: r.left - hl + 2 - 5.89 - w, top: midY },
+        above: { left: midX, top: bar.top - 8 - H },
+        below: { left: midX, top: bar.bottom + 8 },
+      };
+      // Where it goes first: beside an upright panel, over or under a flat bar (whichever is towards
+      // the middle of the screen); then wherever it fits.
+      const upright = !!el.closest('.tools, .draw-panel, .tools-more'), high = bar.top + bar.height / 2 < innerHeight / 2;
+      const order: Side[] = upright ? ['right', 'left', 'above', 'below'] : high ? ['below', 'above', 'right', 'left'] : ['above', 'below', 'right', 'left'];
+      const fits = ({ left, top }: { left: number; top: number }) => left >= EDGE && left + w <= innerWidth - EDGE && top >= EDGE && top + H <= innerHeight - EDGE;
+      const side = order.find((s) => fits(places[s])) ?? order[0];
+      setTip({ text, ...places[side], side });
     };
     const hide = () => {
       clearTimeout(timer);
@@ -72,7 +94,7 @@ export function Tooltips() {
   }, []);
   if (!tip) return null;
   return createPortal(
-    <div className={`tip ${tip.side}`} role="tooltip" style={{ left: tip.x, top: tip.y }}>{tip.text}</div>,
+    <div className={`tip ${tip.side}`} role="tooltip" style={{ left: tip.left, top: tip.top }}>{tip.text}</div>,
     document.body,
   );
 }
