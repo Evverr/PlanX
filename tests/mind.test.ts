@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { balance, canMoveTo, childPlace, descendants, mindDepth, moveBranch } from '../src/model/mind';
+import { balance, canMoveTo, childPlace, descendants, insertBeside, mindDepth, moveBranch } from '../src/model/mind';
 import type { Item } from '../src/model/types';
 
 const node = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item =>
@@ -33,6 +33,21 @@ describe('mind map', () => {
     expect(canMoveTo('r', 'b', items)).toBe(false);   // the centre stays the centre
     // b grows left of the centre, so a1 goes to its left, level with it.
     expect(moveBranch('a1', 'b', items, 1).get('a1')).toEqual({ x: -420, y: 0 });
+  });
+
+  it('puts a node above or below another without moving it, the others making room', () => {
+    const a2 = node('a2', 160, 0, { parent: 'r' }), x = node('x', 160, 0, { parent: 'r' });
+    const all = [...items, a2, x];
+    // Below a (at -60): x goes 16 under it, a2 (further down) moves down by x's height and a gap.
+    const below = insertBeside('x', 'a', 'below', all);
+    expect(below.get('x')).toBe(-4);
+    expect(below.get('a2')).toBe(56);
+    expect(below.has('a')).toBe(false);
+    // Above a2: x goes over it, and a with its branch moves up instead.
+    const above = insertBeside('x', 'a2', 'above', all);
+    expect(above.get('x')).toBe(-56);
+    expect(above.get('a')).toBe(-116);
+    expect(above.get('a1')).toBe(-116);
   });
 
   it('finds everything branching from a node', () => {

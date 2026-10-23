@@ -102,6 +102,36 @@ export function balance(id: string, items: Item[]): Map<string, number> {
   return out;
 }
 
+/**
+ * New y positions (by id, the new node's among them) for putting node `id` (already among the
+ * items) right above or below node `from`, a branch of the same parent, without `from` moving:
+ * the new node goes next to `from` and everything it grows, and the branches beyond it on that
+ * side, and beyond each node further up the way to the centre, move out of the way.
+ */
+export function insertBeside(id: string, from: string, where: 'above' | 'below', items: Item[]): Map<string, number> {
+  const all = items.map((i) => ({ ...i })), byId = new Map(all.map((i) => [i.id, i]));
+  const node = byId.get(id)!, start = byId.get(from)!, dir = where === 'below' ? 1 : -1;
+  const block = (k: Item) => [k, ...descendants([k.id], all).map((d) => byId.get(d)!)];
+  const own = block(start);
+  node.y = dir > 0 ? Math.max(...own.map((n) => n.y + n.h)) + MIND_GAP_Y : Math.min(...own.map((n) => n.y)) - MIND_GAP_Y - node.h;
+  const shift = (node.h + MIND_GAP_Y) * dir, mid = (i: Item) => i.y + i.h / 2;
+  // At each level, the branches past this one (on its side) make room.
+  for (let cur: Item | undefined = start, guard = 0; cur?.parent && guard < 50; guard++) {
+    const p: Item = byId.get(cur.parent)!, side = mindSide(cur, p), here: Item = cur;
+    for (const k of all) {
+      if (k.type !== 'mind' || k.parent !== p.id || k === here || k === node || mindSide(k, p) !== side) continue;
+      if ((mid(k) - mid(here)) * dir > 0) block(k).forEach((n) => { n.y += shift; });
+    }
+    cur = p;
+  }
+  const out = new Map<string, number>();
+  for (const i of items) {
+    const y = Math.round(byId.get(i.id)!.y);
+    if (y !== i.y) out.set(i.id, y);
+  }
+  return out;
+}
+
 /** Whether node `id` can be moved to hang from `to`: another node, not one growing from it. */
 export function canMoveTo(id: string, to: string, items: Item[]): boolean {
   const it = items.find((i) => i.id === id), target = items.find((i) => i.id === to);

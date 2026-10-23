@@ -402,9 +402,12 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   // The same dashes as the dragged arrow's, 6px on and off on screen.
   if (target) ctx.setLineDash([6 / s.cam.z, 6 / s.cam.z]);
   if (depth > 0) {
+    // The edge is at 70% until the node is picked (or a branch is dropped on it).
+    ctx.globalAlpha = s.selection.has(it.id) || target ? 1 : 0.7;
     ctx.lineWidth = depth === 1 ? 2 : 1.5;
     ctx.strokeStyle = color;
     ctx.stroke();
+    ctx.globalAlpha = 1;
   } else if (target) {
     ctx.beginPath();
     ctx.roundRect(it.x + 3, it.y + 3, it.w - 6, it.h - 6, Math.min(it.h / 2 - 3, 11));
