@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { balance, canMoveTo, childPlace, descendants, insertBeside, mindDepth, moveBranch } from '../src/model/mind';
+import { balance, canMoveTo, childPlace, descendants, insertBeside, makeRoom, mindDepth, moveBranch } from '../src/model/mind';
 import type { Item } from '../src/model/types';
 
 const node = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item =>
@@ -48,6 +48,14 @@ describe('mind map', () => {
     expect(above.get('x')).toBe(-56);
     expect(above.get('a')).toBe(-116);
     expect(above.get('a1')).toBe(-116);
+  });
+
+  it('moves what is below a node that grows as it is typed in', () => {
+    const a2 = node('a2', 160, 0, { parent: 'r' });
+    const moves = makeRoom('a', 20, [...items, a2]);
+    expect(moves.get('a2')).toBe(20);
+    expect(moves.has('a')).toBe(false);
+    expect(moves.has('b')).toBe(false);  // on the other side of the centre
   });
 
   it('finds everything branching from a node', () => {
