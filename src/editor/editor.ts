@@ -64,7 +64,7 @@ export interface UIState {
 }
 
 type Gesture =
-  | { type: 'pan'; sx: number; sy: number; cx: number; cy: number }
+  | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
   | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean }
   | { type: 'resize'; id: string; start: Point; orig: Item }
@@ -972,7 +972,8 @@ export class Editor {
     const onControl = !!picked && !this.editingId && (this.onHandle(picked, w) || !!this.dotAt(picked, w) || this.onRotate(picked, w) || !!this.plusAt(picked, w));
     const touchPan = e.pointerType === 'touch' && this.tool === 'select' && !hit && !link && !onControl && !this.tableLineAt(w, hit);
     if (e.button === 1 || this.spaceDown || this.tool === 'hand' || touchPan) {
-      this.gesture = { type: 'pan', sx: sp.x, sy: sp.y, cx: this.cam.x, cy: this.cam.y };
+      // A finger on the empty board pans it; let go without moving, it's a tap that drops the selection.
+      this.gesture = { type: 'pan', sx: sp.x, sy: sp.y, cx: this.cam.x, cy: this.cam.y, tap: touchPan };
       this.canvas!.classList.add('panning');
       return;
     }
@@ -1239,6 +1240,7 @@ export class Editor {
         return;
       }
       case 'pan':
+        if (Math.hypot(sp.x - g.sx, sp.y - g.sy) > 4) g.moved = true;
         this.cam = { ...this.cam, x: g.cx + sp.x - g.sx, y: g.cy + sp.y - g.sy };
         this.camChanged();
         return;
@@ -1379,6 +1381,12 @@ export class Editor {
     this.setMoving(false);
 
     switch (g.type) {
+      case 'pan':
+        if (g.tap && !g.moved && (this.selection.size || this.pickedLines.length)) {
+          this.pickedLines = [];
+          this.setSelection([]);
+        }
+        return;
       case 'drag':
         if (g.moved) {
           // What was dragged into a frame is in it now, and what was dragged out of one is out.
