@@ -383,7 +383,7 @@ export class Editor {
     const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
     const n = at ? 0 : this.board.list().filter((i) => i.type === 'icon').length % 6;
     const it = this.newItem('icon', c.x - 32 + n * 12, c.y - 32 + n * 12, { icon });
-    this.board.add(it);
+    this.addItem(it);
     this.setTool('select');
     this.setSelection([it.id]);
   }
@@ -393,7 +393,7 @@ export class Editor {
     const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
     const d = DEFAULTS.sticky, n = at ? 0 : this.board.list().filter((i) => i.type === 'sticky').length % 6;
     const it = this.newItem('sticky', c.x - d.w / 2 + n * 12, c.y - d.h / 2 + n * 12, { color });
-    this.board.add(it);
+    this.addItem(it);
     this.setTool('select');
     this.setSelection([it.id]);
     this.startEditing(it.id);
@@ -410,7 +410,9 @@ export class Editor {
       const w = Math.max(16, Math.round(p.w * k)), h = Math.max(16, Math.round(p.h * k));
       return this.newItem('image', c.x - w / 2 + i * 24, c.y - h / 2 + i * 24, { w, h, src: p.src });
     });
-    this.board.transact(() => items.forEach((it) => this.board.add(it)));
+    this.board.beginGesture();
+    items.forEach((it) => this.addItem(it));
+    this.board.endGesture();
     this.setTool('select');
     this.setSelection(items.map((i) => i.id));
   }
@@ -419,7 +421,7 @@ export class Editor {
   addAudio(note: AudioNote): void {
     const c = this.toWorld(this.width / 2, this.height / 2), d = DEFAULTS.audio;
     const it = this.newItem('audio', c.x - d.w / 2, c.y - d.h / 2, { src: note.src, dur: Math.round(note.dur * 10) / 10, peaks: note.peaks });
-    this.board.add(it);
+    this.addItem(it);
     this.setTool('select');
     this.setSelection([it.id]);
   }
@@ -429,7 +431,7 @@ export class Editor {
     const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
     const n = at ? 0 : this.board.list().filter((i) => i.type === 'emoji').length % 6;
     const it = this.newItem('emoji', c.x - 32 + n * 12, c.y - 32 + n * 12, { emoji });
-    this.board.add(it);
+    this.addItem(it);
     this.setTool('select');
     this.setSelection([it.id]);
   }
@@ -493,7 +495,7 @@ export class Editor {
     const c = this.toWorld(at.x, at.y), d = { ...DEFAULTS[type], ...extra };
     const it = this.newItem(type, c.x - d.w / 2, c.y - d.h / 2, extra);
     if (type === 'text') it.h = itemTextHeight(it);
-    this.board.add(it);
+    this.addItem(it);
     this.setTool('select');
     this.setSelection([it.id]);
     if (type === 'text' || type === 'task' || type === 'frame' || type === 'mind') this.startEditing(it.id);
@@ -506,8 +508,12 @@ export class Editor {
     if (this.selectedItems().length < 2 || !b) return false;
     // Just under the lowest of them, not under everything: a frame they already sit in stays below.
     const pad = 40, z = Math.min(...this.selectedItems().map((i) => i.z)) - 0.5;
-    const it = this.newItem('frame', b.x - pad, b.y - pad, { w: Math.round(b.w + pad * 2), h: Math.round(b.h + pad * 2), z });
+    const it = this.newItem('frame', b.x - pad, b.y - pad, { w: Math.round(b.w + pad * 2), h: Math.round(b.h + pad * 2), z, members: [] });
+    // Only the selected go in: whatever else lies under the new frame stays out of it.
+    this.board.beginGesture();
     this.board.add(it);
+    this.settle([...this.selection, it.id], it.id);
+    this.board.endGesture();
     this.setTool('select');
     this.setSelection([it.id]);
     this.startEditing(it.id);
@@ -546,6 +552,9 @@ export class Editor {
     if (!this.clipboard) return;
     const data = JSON.parse(this.clipboard) as { items: Item[]; links: Link[] };
     const { items, links } = this.insertCopies(data.items, data.links, offset);
+    // Copies land in the frame they're pasted into, unless they came with their own.
+    const held = new Set(items.flatMap((i) => i.members ?? []));
+    this.settle(items.filter((i) => !held.has(i.id)).map((i) => i.id));
     // Paste again lands one step further.
     this.clipboard = JSON.stringify({ items, links });
     this.setSelection(items.map((i) => i.id));
@@ -562,6 +571,8 @@ export class Editor {
     }).map((it) => {
       // Copied mind map nodes hang from the copies of their parents (or still from the original ones).
       if (it.parent && map.has(it.parent)) it.parent = map.get(it.parent);
+      // A copied frame holds the copies of what it held.
+      if (it.members) it.members = it.members.map((m) => map.get(m)).filter((m): m is string => !!m);
       return it;
     });
     const links = srcLinks.map((l) => ({ ...l, id: uid(), from: map.get(l.from)!, to: map.get(l.to)! }));
@@ -838,13 +849,24 @@ export class Editor {
     this.gesture = { type: 'marquee', start: w, base: new Set(this.selection), rect: null };
   }
 
-  /** Selected items plus everything sitting inside a selected frame. */
+  /** Selected items plus what the selected frames hold. */
   private dragSet(items: Item[]): Map<string, Point> {
+    return this.carried(items.filter((i) => this.selection.has(i.id)), items);
+  }
+
+  /** These items, what the frames among them hold (frames in frames too) and the branches of mind
+   *  map nodes, each with where it is now. */
+  private carried(sel: Item[], items: Item[]): Map<string, Point> {
     const orig = new Map<string, Point>();
-    const sel = items.filter((i) => this.selection.has(i.id));
     sel.forEach((i) => orig.set(i.id, { x: i.x, y: i.y }));
-    for (const f of sel.filter((i) => i.type === 'frame')) {
-      for (const i of items) if (i.type !== 'frame' && !orig.has(i.id) && rectContains(f, boxOf(i))) orig.set(i.id, { x: i.x, y: i.y });
+    const frames = sel.filter((i) => i.type === 'frame');
+    while (frames.length) {
+      for (const id of this.membersOf(frames.pop()!, items)) {
+        const i = this.board.get(id);
+        if (!i || orig.has(id)) continue;
+        orig.set(id, { x: i.x, y: i.y });
+        if (i.type === 'frame') frames.push(i);
+      }
     }
     // A mind map node brings its branches along.
     for (const id of descendants(orig.keys(), items)) {
@@ -852,6 +874,56 @@ export class Editor {
       if (i) orig.set(id, { x: i.x, y: i.y });
     }
     return orig;
+  }
+
+  /** What a frame holds: what was put in it, or, in a frame from before frames kept a list,
+   *  everything lying inside. */
+  private membersOf(f: Item, items: Item[]): string[] {
+    if (f.members) return f.members.filter((id) => this.board.get(id));
+    return items.filter((i) => i.type !== 'frame' && rectContains(f, boxOf(i))).map((i) => i.id);
+  }
+
+  /**
+   * Puts each of these items in the innermost frame its middle lies in, or takes it out of frames
+   * when it lies in none. Only this puts things in frames: an item that merely ends up under a frame
+   * (a frame put around others, or dragged over it) stays out until it's moved or made there.
+   */
+  private settle(ids: Iterable<string>, fresh?: string): void {
+    // Worked out on one look at the board (it reads back stale within a change), then written at once.
+    const items = this.board.list(), frames = items.filter((f) => f.type === 'frame');
+    const held = new Map(frames.map((f) => [f.id, f.id === fresh ? [] : this.membersOf(f, items)]));
+    const changed = new Set<string>();
+    for (const id of ids) {
+      const it = this.board.get(id);
+      // Mind map branches go wherever their node goes.
+      if (!it || (it.type === 'mind' && it.parent)) continue;
+      const c = center(it);
+      const inside = it.type === 'frame' ? new Set(this.carried([it], items).keys()) : new Set([id]);
+      const home = frames
+        .filter((f) => !inside.has(f.id) && pointInRect(c, f) && (it.type !== 'frame' || f.w * f.h > it.w * it.h))
+        .sort((a, b) => a.w * a.h - b.w * b.h)[0];
+      for (const f of frames) {
+        const list = held.get(f.id)!, has = list.includes(id);
+        if (f === home && (!has || !f.members)) { held.set(f.id, has ? list : [...list, id]); changed.add(f.id); }
+        else if (f !== home && has) { held.set(f.id, list.filter((m) => m !== id)); changed.add(f.id); }
+      }
+    }
+    if (fresh) changed.add(fresh);
+    this.board.transact(() => changed.forEach((f) => this.board.update(f, { members: held.get(f) })));
+  }
+
+  /** Adds a newly made item: into the frame it's made in; a new frame takes in what lies inside it. */
+  private addItem(it: Item): void {
+    this.board.add(it);
+    this.settleNew(it.id);
+  }
+
+  private settleNew(id: string): void {
+    const it = this.board.get(id);
+    if (!it) return;
+    if (it.type !== 'frame') { this.settle([id]); return; }
+    const items = this.board.list();
+    this.settle([...items.filter((i) => i.id !== id && pointInRect(center(i), it)).map((i) => i.id), id], id);
   }
 
   private onHandle(it: Item, w: Point): boolean {
@@ -874,7 +946,7 @@ export class Editor {
   /** The link dot under the point, if any. */
   private dotAt(it: Item, w: Point): Side | null {
     if (it.type === 'mind') return null;
-    const r = 11 / this.cam.z;  // as easy to catch as before the dots got smaller
+    const r = 16.5 / this.cam.z;  // well beyond the dot itself, so it is easy to catch
     for (const side of SIDES) {
       const p = sidePoint(it, side, DOT_GAP / this.cam.z);
       if (Math.hypot(w.x - p.x, w.y - p.y) <= r) return side;
@@ -1013,7 +1085,11 @@ export class Editor {
 
     switch (g.type) {
       case 'drag':
-        if (g.moved) this.board.endGesture();
+        if (g.moved) {
+          // What was dragged into a frame is in it now, and what was dragged out of one is out.
+          this.settle([...this.selection]);
+          this.board.endGesture();
+        }
         else if (g.dbl) {
           const it = this.board.get(g.id);
           this.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
@@ -1031,7 +1107,7 @@ export class Editor {
           : this.newItem(g.tool, g.at.x - d.w / 2, g.at.y - d.h / 2, g.tool === 'table' ? newTable() : g.tool === 'mind' ? { text: MIND_TOPIC } : {});
         if (it.type === 'text') it.h = itemTextHeight(it);
         if (it.type === 'mind') Object.assign(it, mindSize(it), { x: Math.round(g.at.x - mindSize(it).w / 2) });
-        this.board.add(it);
+        this.addItem(it);
         this.setTool('select');
         this.setSelection([it.id]);
         this.startEditing(it.id);
@@ -1043,6 +1119,7 @@ export class Editor {
           const d = DEFAULTS[it.type];
           if (it.w < 10 && it.h < 10) this.board.update(it.id, { w: d.w, h: d.h, x: Math.round(g.origin.x - d.w / 2), y: Math.round(g.origin.y - d.h / 2) });
           else this.board.update(it.id, { w: Math.max(it.w, 30), h: Math.max(it.h, 30) });
+          this.settleNew(it.id);
         }
         this.board.endGesture();
         this.setTool('select');
@@ -1082,7 +1159,7 @@ export class Editor {
     const x = Math.floor(x1 - sw / 2), y = Math.floor(y1 - sw / 2);
     const w = Math.ceil(x2 + sw / 2) - x, h = Math.ceil(y2 + sw / 2) - y;
     const r = (v: number) => Math.round(v * 10) / 10;
-    this.board.add(this.newItem('ink', x, y, {
+    this.addItem(this.newItem('ink', x, y, {
       w, h, iw: w, sw: r(sw), color: style.color, hl: tool === 'marker' || undefined,
       pts: pts.flatMap((p) => [r(p.x - x), r(p.y - y)]),
     }));
