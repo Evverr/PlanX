@@ -1,5 +1,6 @@
 import { cloneElement, createElement, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactElement, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { PanelIcon } from './PanelIcon';
 
 /** How long to hold a button before it lifts, and how far the pointer may wander meanwhile; a lifted
  *  button let go without moving more than HOLD_SLOP still counts as a click. */
@@ -17,6 +18,17 @@ export interface DropOut {
 
 /** Separators are items too, keyed 'sep…' (a line) or 'gap…' (a space). */
 export const isSeparator = (key: string) => key.startsWith('sep') || key.startsWith('gap');
+
+/** Keys without separators left at either end. */
+const trimSeparators = (ks: string[]) => {
+  let a = 0, b = ks.length;
+  while (a < b && isSeparator(ks[a])) a++;
+  while (b > a && isSeparator(ks[b - 1])) b--;
+  return ks.slice(a, b);
+};
+
+/** The "more" button's width in a bar, with the gap before it. */
+const MORE_SIZE = 40;
 
 /** The saved order (with renamed keys renamed), minus anything no longer in the panel, plus anything new at the end. */
 export function readOrder(storageKey: string, defaults: string[], renames: Record<string, string>): string[] {
@@ -61,6 +73,15 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
   const offsets = useRef(new Map<string, number>());
   const swallowClick = useRef(false);
   const shown = useRef<string[]>(order);
+  // Panels too long for the screen: how many elements fit, their sizes as last seen (the hidden ones
+  // aren't there to measure), the room there is, and whether the "more" popover is open.
+  const [fit, setFit] = useState(Infinity);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const sizes = useRef(new Map<string, number>());
+  const room = useRef<number | null>(null);
+  const keys = useRef<string[]>([]);
+  const moreRef = useRef<HTMLElement | null>(null);
+  const [, redraw] = useState(0);
 
   const pos = (e: { clientX: number; clientY: number }) => (axis === 'y' ? e.clientY : e.clientX);
   const offset = (el: HTMLElement) => (axis === 'y' ? el.offsetTop : el.offsetLeft);
@@ -159,6 +180,42 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     setTimeout(() => { swallowClick.current = false; }, 0);
   };
 
+  // With a room set (see renderFit), what doesn't fit goes under a "more" button at the end.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (room.current === null || !el) return;
+    for (const c of Array.from(el.children) as HTMLElement[]) {
+      const k = c.dataset.key;
+      if (!k) continue;
+      const cs = getComputedStyle(c);
+      sizes.current.set(k, axis === 'y' ? c.offsetHeight + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom) : c.offsetWidth + parseFloat(cs.marginLeft) + parseFloat(cs.marginRight));
+    }
+    const cs = getComputedStyle(el), gap = parseFloat(axis === 'y' ? cs.rowGap : cs.columnGap) || 0;
+    const pad = axis === 'y' ? parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) : parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const moreSize = MORE_SIZE;
+    const long = (ks: string[], more: boolean) => pad + ks.reduce((t, k) => t + (sizes.current.get(k) ?? 0), 0) + (more ? moreSize : 0) + gap * (ks.length - (more ? 0 : 1));
+    const all = keys.current;
+    let n = all.length;
+    if (long(all, false) > room.current) {
+      n = all.length - 1;
+      while (n > 0 && long(trimSeparators(all.slice(0, n)), true) > room.current) n--;
+    }
+    const next = n >= all.length ? Infinity : n;
+    if (next !== fit) setFit(next);
+  });
+  useEffect(() => {
+    const again = () => redraw((n) => n + 1);
+    window.addEventListener('resize', again);
+    return () => window.removeEventListener('resize', again);
+  }, []);
+  // The popover closes on a press anywhere else.
+  useEffect(() => {
+    if (!moreOpen) return;
+    const close = (e: globalThis.PointerEvent) => { if (!moreRef.current?.contains(e.target as Node)) setMoreOpen(false); };
+    window.addEventListener('pointerdown', close, true);
+    return () => window.removeEventListener('pointerdown', close, true);
+  }, [moreOpen]);
+
   const handlers = useRef({ move: dragMove, end: dragEnd });
   handlers.current = { move: dragMove, end: dragEnd };
   const lifted = !!drag;
@@ -201,6 +258,28 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
         const className = [el.props.className, drag?.key === k && 'lifted'].filter(Boolean).join(' ');
         return cloneElement(el, { key: k, ...this.item(k), className });
       });
+    },
+    /**
+     * Like render, for a panel that has `space` px along it: the elements that don't fit go under a
+     * "more" button at its end, which opens them in a popover above or below the panel.
+     */
+    renderFit(items: Partial<Record<string, ReactElement>>, space: number, place: 'above' | 'below'): ReactElement[] {
+      room.current = space;
+      keys.current = this.visible((k) => !!items[k]);
+      const shownKeys = this.visible((k) => !!items[k], fit);
+      const out = shownKeys.map((k) => {
+        const el = items[k]!;
+        const className = [el.props.className, drag?.key === k && 'lifted'].filter(Boolean).join(' ');
+        return cloneElement(el, { key: k, ...this.item(k), className });
+      });
+      const hidden = keys.current.filter((k) => !shownKeys.includes(k) && !isSeparator(k));
+      if (!hidden.length) { if (moreOpen) setMoreOpen(false); return out; }
+      out.push(createElement('div', { key: '__more', className: 'more-wrap', 'data-nosort': true, ref: (e: HTMLElement | null): void => { moreRef.current = e; } },
+        createElement('button', { className: `ib ${moreOpen ? 'on' : ''}`, title: 'Ещё', 'aria-label': 'Ещё', 'aria-expanded': moreOpen, onClick: () => setMoreOpen(!moreOpen) },
+          createElement(PanelIcon, { name: 'more' })),
+        moreOpen && createElement('div', { className: `more-pop ${place}`, role: 'toolbar', 'aria-label': 'Ещё' },
+          ...trimSeparators(keys.current.filter((k) => !shownKeys.includes(k))).map((k) => cloneElement(items[k]!, { key: k })))));
+      return out;
     },
     /** Keys to draw, in order: those `present` keeps, without separators left at an end or doubled up;
      *  only the first `limit` when the panel has room for no more. */

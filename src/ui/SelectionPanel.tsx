@@ -9,7 +9,7 @@ import { useSortable } from './sortable';
 const same = (vals: Array<string | undefined>) => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] : null);
 
 /** Rearrangeable buttons; the bin isn't among them, it always comes last. */
-const ORDER = ['paint', 'sep6', 'fills', 'sep', 'icons', 'sep2', 'rows', 'sep7', 'cols', 'sep4', 'front', 'back', 'duplicate'];
+const ORDER = ['paint', 'sep6', 'fills', 'sep', 'icons', 'sep9', 'rows', 'sep7', 'cols', 'sep8', 'front', 'back', 'duplicate'];
 
 /** A chequered circle that opens a slider for how see-through the colour is, in percent. Dragging
  *  the slider is one change (onStart … onEnd). */
@@ -44,6 +44,12 @@ function Opacity({ value, label, onStart, onChange, onEnd }: {
 /** Room between the panel and the zoom panel or the tool rail beside it. */
 const GAP = 16;
 
+/** How wide the panel may be: the screen less its margin and the tool rail, less the bin (40 and a gap). */
+function selectionRoom(): number {
+  const rail = document.querySelector('.tools')?.getBoundingClientRect();
+  return innerWidth - 16 - (rail ? rail.right + GAP : 16) - 44;
+}
+
 export function SelectionPanel({ editor, items, linkCount, docked }: { editor: Editor; items: Item[]; linkCount: number; docked: boolean }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
   const sort = useSortable('planx-order-selection', ORDER, 'x');
@@ -66,7 +72,7 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
   useLayoutEffect(() => {
     const zoom = document.querySelector('.zoom')?.getBoundingClientRect(), el = sort.ref.current;
     if (!zoom || !el) return;
-    // The width it has on one row, whatever it has now (moved over, it may wrap onto two).
+    // Its width, from what's in it.
     const kids = [...el.children] as HTMLElement[];
     const outer = (k: HTMLElement) => { const cs = getComputedStyle(k); return k.offsetWidth + parseFloat(cs.marginLeft) + parseFloat(cs.marginRight); };
     const w = kids.reduce((t, k) => t + outer(k), 0) + 4 * (kids.length - 1) + 32, h = el.offsetHeight;
@@ -116,9 +122,9 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
   );
   return (
     <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${docked ? 'docked' : ''} ${place.raised ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
-      style={place.left !== null ? { left: place.left, transform: 'none', maxWidth: innerWidth - place.left - 16 } : undefined}
+      style={place.left !== null ? { left: place.left, transform: 'none' } : undefined}
       role="toolbar" aria-label="Выделенное" {...sort.container}>
-      {sort.render({
+      {sort.renderFit({
         // Fill and outline: which one the circles beside set, each showing its colour now.
         paint: strokable.length > 0 ? (
           <div className="sw-group paint-target">
@@ -173,13 +179,15 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
         sep7: <div className="sep" />,
         // Between the fill/outline switch and the colours, so the two can't be taken for each other.
         sep6: <div className="sep" />,
-        sep4: <div className="sep" />,
+        // Either side of the table's rows and columns (new keys, so orders saved with the old ones out of
+        // place get them back where they belong); left out where nothing is beside them.
+        sep8: <div className="sep" />,
         front: items.length > 0 ? btn('to-front', 'На передний план', () => editor.bringToFront()) : undefined,
         back: items.length > 0 ? btn('to-back', 'На задний план', () => editor.sendToBack()) : undefined,
         duplicate: items.length > 0 ? btn('duplicate', 'Дублировать (Ctrl+D)', () => editor.duplicate()) : undefined,
         sep: <div className="sep" />,
-        sep2: <div className="sep" />,
-      })}
+        sep9: <div className="sep" />,
+      }, selectionRoom(), 'above')}
       {btn('trashcan', 'Удалить (Del)', () => editor.deleteSelection())}
     </div>
   );
