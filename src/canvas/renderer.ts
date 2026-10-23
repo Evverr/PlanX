@@ -387,13 +387,14 @@ function outlinePolygon(ctx: CanvasRenderingContext2D, it: Item) {
 /** A mind map node in its colour: the central topic solid, first-level nodes tinted, the rest white
  *  with an edge of it. */
 function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
-  const { theme } = s, depth = mindDepth(it, s.get), color = mindColor(it, s.get);
+  // Dimmed in the dark theme like the other fills.
+  const { theme } = s, depth = mindDepth(it, s.get), color = shade(mindColor(it, s.get), theme.dim);
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.h / 2, depth === 0 ? 14 : 10));
   ctx.globalAlpha = it.fo ?? 1;
   ctx.fillStyle = depth === 0 ? color : theme.surface;
   ctx.fill();
-  if (depth === 1) { ctx.fillStyle = color + '2E'; ctx.fill(); }
+  if (depth === 1) { ctx.globalAlpha = (it.fo ?? 1) * 0.18; ctx.fillStyle = color; ctx.fill(); }
   ctx.globalAlpha = 1;
   // A node a branch is being dragged onto shows it with its edge dashed (the solid central topic,
   // with a white dashed line just inside its edge).
@@ -424,7 +425,7 @@ function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
     const up = s.get(it.parent);
     if (!up) continue;
     const [a, c1, c2, b] = branchCurve(up, it);
-    ctx.strokeStyle = mindColor(it, s.get);
+    ctx.strokeStyle = shade(mindColor(it, s.get), s.theme.dim);
     ctx.lineWidth = up.parent ? 0.75 : 1.5;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
