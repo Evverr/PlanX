@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { balance, childPlace, descendants, mindDepth } from '../src/model/mind';
+import { balance, canMoveTo, childPlace, descendants, mindDepth, moveBranch } from '../src/model/mind';
 import type { Item } from '../src/model/types';
 
 const node = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item =>
@@ -25,6 +25,14 @@ describe('mind map', () => {
     expect(moves.get('a1')).toBe(-28);
     expect(moves.get('a2')).toBe(28);
     expect(moves.has('b')).toBe(false);
+  });
+
+  it('moves a branch to another node, over to its side', () => {
+    expect(canMoveTo('a1', 'b', items)).toBe(true);
+    expect(canMoveTo('a', 'a1', items)).toBe(false);  // not under its own branch
+    expect(canMoveTo('r', 'b', items)).toBe(false);   // the centre stays the centre
+    // b grows left of the centre, so a1 goes to its left, level with it.
+    expect(moveBranch('a1', 'b', items, 1).get('a1')).toEqual({ x: -420, y: 0 });
   });
 
   it('finds everything branching from a node', () => {

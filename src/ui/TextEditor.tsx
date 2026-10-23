@@ -78,12 +78,12 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           fontStyle: item.fi ? 'italic' : undefined,
           textAlign: alignOf(item),
           textDecoration: [item.fu && 'underline', item.fx && 'line-through'].filter(Boolean).join(' ') || undefined,
-          color: item.tc && (item.tc.startsWith('#') ? item.tc : TEXT_COLORS[item.tc]) || (item.type === 'mind' && !item.parent ? 'var(--surface)' : undefined),
+          color: item.tc && (item.tc.startsWith('#') ? item.tc : TEXT_COLORS[item.tc]) || (item.type === 'mind' && !item.parent ? '#fff' : undefined),
         }),
         padding: isFrame ? '0 4px' : 0,
       }}
       onInput={(e) => {
-        if (item.type === 'text' || item.type === 'task') editor.previewText(id, e.currentTarget.value);
+        if (item.type === 'text' || item.type === 'task' || item.type === 'mind') editor.previewText(id, e.currentTarget.value);
         if (item.type !== 'text' && !isFrame) {
           const el = e.currentTarget;
           el.style.height = '0px';
@@ -96,11 +96,11 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey || isFrame))) {
           e.preventDefault();
           commit();
-        } else if (item.type === 'mind' && (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey))) {
-          // In a mind map, typing goes on in a new node: Tab a branch of this one, Enter one beside it.
+        } else if (item.type === 'mind' && e.key === 'Tab') {
+          // In a mind map, Tab goes on typing in a new branch of this node; Enter starts a new line.
           e.preventDefault();
           commit();
-          editor.addMindNode(id, e.key === 'Enter' && item.parent ? 'sibling' : 'child');
+          editor.addMindNode(id, 'child');
         }
       }}
     />
