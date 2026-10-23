@@ -192,6 +192,7 @@ button { font: inherit; color: inherit; }
 .op-pop input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border: 0; border-radius: 50%; background: var(--fmt-on-ink); }
 .op-pop input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: var(--fmt-on-ink); }
 .op-pop.start { left: -10px; transform: none; gap: 0; padding: 0 12px; }
+.op-pop.table-colors { gap: 0; padding: 0 12px; }
 .op-pop.table-colors .paint-target { gap: 2px; }
 .op-pop.table-colors .sep { margin: 0 8px; }
 .op-pop.table-colors input[type="range"] { width: 110px; margin-right: 10px; }
