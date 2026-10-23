@@ -7,7 +7,7 @@ import { clearTextCache, DOT_GAP, drawScene, HANDLE, readTheme, type Camera, typ
 import { fitHeight, font, itemTextHeight, mindSize } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
-import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCount, withScale, type TableLine } from '../model/table';
+import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCellFormat, withCount, withScale, withTableFormat, type TableLine } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
 import { snapToGuides, type Guide } from '../canvas/guides';
 import { balance, canMoveTo, childPlace, descendants, insertBeside, makeRoom, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
@@ -542,7 +542,12 @@ export class Editor {
       }
     });
     this.board.transact(() => {
-      for (const it of items) this.board.update(it.id, patch);
+      for (const it of items) {
+        // In a table, the cell being typed in takes it on its own; otherwise the whole table, every cell.
+        if (it.type !== 'table') this.board.update(it.id, patch);
+        else if (this.editingId === it.id && this.editingCell !== null) this.board.update(it.id, withCellFormat(it, this.editingCell, patch));
+        else this.board.update(it.id, withTableFormat(it, patch));
+      }
       refit();
     });
     if (patch.ff && document.fonts) {
