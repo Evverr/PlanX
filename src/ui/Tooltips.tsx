@@ -22,7 +22,7 @@ function tipWidth(text: string): number {
 
 /**
  * The hints of the panels' buttons, from the Figma "Alt" bubble, once the pointer has stayed still
- * on one for two seconds: shown in place of the browser's own, which they take over by moving each
+ * on one for two seconds (then at once for the rest of that panel's buttons): shown in place of the browser's own, which they take over by moving each
  * button's title into data-tip when the pointer comes.
  * Beside the upright panels the bubble points at its button; over or under the flat bars it sits
  * centred on it; where that doesn't fit on screen, it goes to whichever side does.
@@ -31,9 +31,14 @@ export function Tooltips() {
   const [tip, setTip] = useState<Tip | null>(null);
   useEffect(() => {
     let timer = 0, current: HTMLElement | null = null, rest = { x: 0, y: 0 }, shown = false;
+    // Once a hint has been waited for, the others in the same panel come at once, until the pointer
+    // leaves that panel.
+    let warm: Element | null = null;
+    const panelOf = (el: Element) => el.closest('.bar, .tfmt, .tools, .draw-panel, .tools-more, .more-pop, .op-pop');
     const show = (el: HTMLElement) => {
       const text = el.dataset.tip;
       shown = true;
+      warm = panelOf(el);
       if (!text) return;
       // On whichever side, its pointer (5.89 long) reaches 2px over the button's highlight (6px round
       // the icon of a panel button).
@@ -68,14 +73,17 @@ export function Tooltips() {
       timer = window.setTimeout(() => show(el), WAIT);
     };
     const over = (e: PointerEvent) => {
-      const el = (e.target as Element | null)?.closest?.<HTMLElement>('[title], [data-tip]') ?? null;
+      const target = e.target as Element | null;
+      if (warm && !(target && warm.contains(target))) warm = null;
+      const el = target?.closest?.<HTMLElement>('[title], [data-tip]') ?? null;
       if (el === current) return;
       hide();
       if (!el || el.closest('.board-canvas')) return;
       // Take the hint over from the browser.
       if (el.title) { el.dataset.tip = el.title; el.removeAttribute('title'); }
       current = el;
-      wait(el, e);
+      if (warm && panelOf(el) === warm) show(el);
+      else wait(el, e);
     };
     // Moving on the button starts the wait over, until the hint is up.
     const move = (e: PointerEvent) => {
