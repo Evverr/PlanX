@@ -5,7 +5,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchColor, branchCurve, mindDepth, plusButton } from '../model/mind';
+import { branchColor, branchCurve, mindDepth, plusButton, siblingButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
@@ -663,20 +663,22 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     if (!it) continue;
     outline(ctx, it, cam.z, SELECT_COLOR);
     // A mind map node sizes itself and links by its branches: instead of the handle and dots it
-    // gets a "+" for adding a branch.
+    // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && s.editingId !== id && it.type === 'mind') {
-      const p = plusButton(it, s.get, cam.z);
-      ctx.fillStyle = SELECT_COLOR;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2 / cam.z;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(p.x - p.r * 0.5, p.y); ctx.lineTo(p.x + p.r * 0.5, p.y);
-      ctx.moveTo(p.x, p.y - p.r * 0.5); ctx.lineTo(p.x, p.y + p.r * 0.5);
-      ctx.stroke();
+      for (const p of [plusButton(it, s.get, cam.z), siblingButton(it, cam.z)]) {
+        if (!p) continue;
+        ctx.fillStyle = SELECT_COLOR;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2 / cam.z;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p.x - p.r * 0.5, p.y); ctx.lineTo(p.x + p.r * 0.5, p.y);
+        ctx.moveTo(p.x, p.y - p.r * 0.5); ctx.lineTo(p.x, p.y + p.r * 0.5);
+        ctx.stroke();
+      }
     } else if (s.showHandle && s.editingId !== id) {
       const hs = HANDLE / cam.z, off = 3 / cam.z;
       ctx.fillStyle = theme.surface;

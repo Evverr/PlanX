@@ -49,11 +49,12 @@ export const MIND_GAP_X = 60, MIND_GAP_Y = 16;
 /**
  * Where a new node of size w × h goes under `parent`: beside it, on the parent's own side of the
  * centre, below everything branching from the parent there (level with the parent when it's the
- * first), and further down still while that spot is taken by another node.
+ * first), and further down still while that spot is taken by another node. `toward` picks the side
+ * of a central topic, which has both.
  */
-export function childPlace(parent: Item, items: Item[], get: Get, w: number, h: number): Point {
+export function childPlace(parent: Item, items: Item[], get: Get, w: number, h: number, toward?: 1 | -1): Point {
   const up = parent.parent ? get(parent.parent) : undefined;
-  const side = up ? mindSide(parent, up) : 1;
+  const side = up ? mindSide(parent, up) : toward ?? 1;
   const x = side > 0 ? parent.x + parent.w + MIND_GAP_X : parent.x - MIND_GAP_X - w;
   const kids = items.filter((i) => i.type === 'mind' && i.parent === parent.id && mindSide(i, parent) === side);
   const below = kids.flatMap((k) => [k, ...descendants([k.id], items).map(get)]).filter((i): i is Item => !!i);
@@ -72,6 +73,12 @@ export function childPlace(parent: Item, items: Item[], get: Get, w: number, h: 
 export function plusButton(it: Item, get: Get, zoom: number): Point & { r: number } {
   const up = it.parent ? get(it.parent) : undefined, side = up ? mindSide(it, up) : 1;
   return { x: side > 0 ? it.x + it.w + 18 / zoom : it.x - 18 / zoom, y: it.y + it.h / 2, r: 9 / zoom };
+}
+
+/** The "+" under a selected node that adds a node beside it, a parallel branch of the same parent;
+ *  the central topic has none. */
+export function siblingButton(it: Item, zoom: number): (Point & { r: number }) | null {
+  return it.parent ? { x: it.x + it.w / 2, y: it.y + it.h + 18 / zoom, r: 9 / zoom } : null;
 }
 
 /** The connecting branch from a parent to a child: from the parent's facing side to the child's,
