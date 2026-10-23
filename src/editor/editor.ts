@@ -9,7 +9,7 @@ import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCount, withScale, type TableLine } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
-import { balance, canMoveTo, childPlace, descendants, insertBeside, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
+import { balance, canMoveTo, childPlace, descendants, insertBeside, makeRoom, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | 'mind' | PolyShape;
 export type PenTool = 'pen' | 'marker';
@@ -714,7 +714,15 @@ export class Editor {
     const it = this.board.get(id);
     const h = it && fitHeight(it, text);
     if (it && h && h !== it.h) this.board.update(id, { h, ...(it.rot && resizedAt(it, it.w, h)) });
-    if (it?.type === 'mind') this.board.update(id, this.mindFit(it, text));
+    if (it?.type === 'mind') {
+      // A node getting a line taller (or shorter) moves what's below it along, so nothing overlaps.
+      const fit = this.mindFit(it, text), dh = (fit.h ?? it.h) - it.h;
+      const moves = dh ? makeRoom(id, dh, this.board.list()) : new Map<string, number>();
+      this.board.transact(() => {
+        this.board.update(id, fit);
+        moves.forEach((y, k) => this.board.update(k, { y }));
+      });
+    }
   }
 
   /** A mind map node's size for its text; one growing leftwards keeps its right edge where it is. */
