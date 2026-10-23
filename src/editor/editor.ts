@@ -9,7 +9,7 @@ import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCount, withScale, type TableLine } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
-import { childPlace, descendants, MIND_COLORS, mindSide, plusButton } from '../model/mind';
+import { childPlace, descendants, MIND_COLORS, mindSide, plusButton, siblingButton } from '../model/mind';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | 'mind' | PolyShape;
 export type PenTool = 'pen' | 'marker';
@@ -696,7 +696,8 @@ export class Editor {
     const level = depth(parent) + 1;
     const draft = { ...DEFAULTS.mind, type: 'mind', fs: level === 1 ? 16 : 14, text: '' } as Item;
     const { w, h } = mindSize(draft, '');
-    const at = childPlace(parent, items, get, w, h);
+    // A parallel branch grows on the same side of the centre as the node it's added beside.
+    const at = childPlace(parent, items, get, w, h, parent !== from ? mindSide(from, parent) : undefined);
     const branches = items.filter((i) => i.type === 'mind' && i.parent === parent.id).length;
     const it = this.newItem('mind', at.x, at.y, {
       w, h, fs: draft.fs, parent: parent.id, ...(level === 1 && { color: MIND_COLORS[branches % MIND_COLORS.length] }),
@@ -790,8 +791,9 @@ export class Editor {
     // Select tool.
     const single = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
     if (single?.type === 'mind' && !this.editingId) {
-      const p = plusButton(single, (id) => this.board.get(id), this.cam.z);
+      const p = plusButton(single, (id) => this.board.get(id), this.cam.z), q = siblingButton(single, this.cam.z);
       if (Math.hypot(w.x - p.x, w.y - p.y) <= p.r * 1.5) { this.addMindNode(single.id, 'child'); return; }
+      if (q && Math.hypot(w.x - q.x, w.y - q.y) <= q.r * 1.5) { this.addMindNode(single.id, 'sibling'); return; }
     }
     const dot = single && !this.editingId ? this.dotAt(single, w) : null;
     if (single && dot) {
@@ -1227,7 +1229,10 @@ export class Editor {
     const line = this.editingId || dot ? null : this.tableLineAt(w, hitItem(this.board.list(), w, this.cam.z));
     const same = line && this.hotLine && line.id === this.hotLine.id && line.axis === this.hotLine.axis && line.index === this.hotLine.index;
     if (!same && (line || this.hotLine)) { this.hotLine = line; this.requestRender(); }
-    if (dot) cursor = 'crosshair';
+    const onPlus = single?.type === 'mind' && !this.editingId && [plusButton(single, (id) => this.board.get(id), this.cam.z), siblingButton(single, this.cam.z)]
+      .some((p) => p && Math.hypot(w.x - p.x, w.y - p.y) <= p.r * 1.5);
+    if (onPlus) cursor = 'pointer';
+    else if (dot) cursor = 'crosshair';
     else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
     else if (single && this.onRotate(single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);
     else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
