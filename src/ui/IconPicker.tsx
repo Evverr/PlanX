@@ -2,7 +2,7 @@ import { useEffect, useReducer, useRef, useState, type PointerEvent as ReactPoin
 import { createPortal } from 'react-dom';
 import type { Point } from '../canvas/geometry';
 import { ICONS, searchIcons } from '../icons/icons';
-import { EMOJI, emojiSrc, onEmojiLoad } from '../emoji/emoji';
+import { EMOJI, emojiRect, emojiSrc, onEmojiLoad } from '../emoji/emoji';
 import { DEFAULTS, FILLS } from '../model/types';
 import { Glyph } from './glyphs';
 import { readOrder } from './sortable';
@@ -23,7 +23,15 @@ const DRAG_SLOP = 4;
  *  at the size it will have on the board (`px` across). */
 function Tile({ kind, id, px }: { kind: PickKind; id: string; px?: number }): ReactNode {
   const size = px ? { width: px, height: px } : undefined;
-  if (kind === 'emoji') return <img src={emojiSrc(id)} alt="" draggable={false} style={size} />;
+  if (kind === 'emoji') {
+    // Laid in its square as in the Figma set (in percent, so it holds at any size).
+    const r = emojiRect(id, 0, 0, 100);
+    return (
+      <span className="pick-emoji" style={size}>
+        <img src={emojiSrc(id)} alt="" draggable={false} style={{ left: `${r.x}%`, top: `${r.y}%`, width: `${r.w}%`, height: `${r.h}%` }} />
+      </span>
+    );
+  }
   if (kind === 'sticky') return <i className="pick-sticky" style={{ background: FILLS[id], ...size }} />;
   return <span className="pick-glyph" style={size}><Glyph id={id} /></span>;
 }
