@@ -648,9 +648,11 @@ export class Editor {
     this.clipboard = keep;
   }
 
+  /** Empties the board and goes back to 100% zoom, about the middle of the screen. */
   clearBoard(): void {
     this.board.replaceAll([], []);
     this.setSelection([]);
+    this.zoomCenter(1 / this.cam.z);
   }
 
   undo(): void {
