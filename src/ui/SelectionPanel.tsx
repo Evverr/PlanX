@@ -9,7 +9,38 @@ import { useSortable } from './sortable';
 const same = (vals: Array<string | undefined>) => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['paint', 'sep6', 'fills', 'sep', 'icons', 'rows', 'cols', 'front', 'back', 'duplicate', 'trash'];
+const ORDER = ['paint', 'sep6', 'fills', 'sep', 'icons', 'cellfill', 'rows', 'cols', 'front', 'back', 'duplicate', 'trash'];
+
+/** A brush button for the picked cells of a table, opening the fill colours above it. */
+function CellFill({ value, onPick }: { value: string | null; onPick: (color: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    window.addEventListener('pointerdown', close, true);
+    return () => window.removeEventListener('pointerdown', close, true);
+  }, [open]);
+  const custom = value?.startsWith('#') ? value : null;
+  return (
+    <div ref={ref} className="op-wrap">
+      <button className={`ib ${open ? 'on' : ''}`} title="Цвет ячеек" aria-label="Цвет ячеек" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <PanelIcon name="paint" />
+      </button>
+      {open && (
+        <div className="op-pop start" data-nosort>
+          {Object.entries(FILLS).map(([k, v]) => (
+            <button key={k} className={`sw ${k === 'none' ? 'none' : ''} ${(value ?? 'none') === k ? 'on' : ''}`} style={{ background: v }}
+              title={k === 'none' ? 'Без заливки' : 'Цвет'} aria-label={k === 'none' ? 'Без заливки' : `Цвет ячеек ${k}`} onClick={() => onPick(k)} />
+          ))}
+          <label className={`sw custom ${custom ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет">
+            <input type="color" aria-label="Свой цвет ячеек" value={custom ?? FILLS.yellow.toLowerCase()} onChange={(e) => onPick(e.target.value)} />
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** A chequered circle that opens a slider for how see-through the colour is, in percent. Dragging
  *  the slider is one change (onStart … onEnd). */
@@ -50,7 +81,7 @@ function selectionRoom(): number {
   return innerWidth - 16 - (rail ? rail.right + GAP : 16);
 }
 
-export function SelectionPanel({ editor, items, linkCount, docked }: { editor: Editor; items: Item[]; linkCount: number; docked: boolean }) {
+export function SelectionPanel({ editor, items, cells, linkCount, docked }: { editor: Editor; items: Item[]; cells: number[]; linkCount: number; docked: boolean }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
   const sort = useSortable('planx-order-selection', ORDER, 'x');
   // When it would run into the zoom panel beside it, the panel first moves left as far as it can
@@ -173,6 +204,10 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
             ))}
           </div>
         ) : undefined,
+        // The picked cells of a table get a brush for their fill.
+        cellfill: tables.length === 1 && items.length === 1 && cells.length > 0
+          ? <CellFill value={same(cells.map((i) => { const bg = tables[0].cellFmt?.[i]?.bg; return typeof bg === 'string' ? bg : 'none'; })) ?? null} onPick={(c) => editor.setCellFill(c)} />
+          : undefined,
         // Rows and columns of the selected tables: add or take away the last one.
         rows: tables.length > 0 ? (
           <div className="sw-group table-count">

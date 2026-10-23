@@ -223,7 +223,7 @@ export function App({ boardId }: { boardId: string }) {
       {textItem && textShown === textItem.id && <TextPanel editor={editor}
         item={editing?.id === textItem.id && editing.type === 'table' && ui.editingCell !== null ? cellItem(editing, ui.editingCell) : textItem} />}
 
-      {!editing && <SelectionPanel editor={editor} items={selItems} linkCount={linkCount} docked={docked} />}
+      {!editing && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={linkCount} docked={docked} />}
       {/* A table cell is typed into as if it were an item of its own, the size of the cell. */}
       {editing && (editing.type === 'table' && ui.editingCell !== null
         ? <TextEditor key={`${editing.id}:${ui.editingCell}`} editor={editor} item={cellItem(editing, ui.editingCell)} />

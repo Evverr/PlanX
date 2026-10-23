@@ -56,6 +56,8 @@ export interface UIState {
   pens: Pens;
   /** Whether dragged items line up with others along guides. */
   guides: boolean;
+  /** Cells picked in the one selected table (by index, row by row). */
+  cells: number[];
   /** Whether there's anything of this person's to undo, or to redo. */
   canUndo: boolean;
   canRedo: boolean;
@@ -64,7 +66,7 @@ export interface UIState {
 type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[] }
+  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean }
   | { type: 'resize'; id: string; start: Point; orig: Item }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point }
@@ -150,6 +152,9 @@ export class Editor {
   private hotLine: TableLine | null = null;
   private pickedLines: TableLine[] = [];
   private guides = readJSON<boolean>(GUIDES_KEY) ?? false;
+  /** Cells picked in the selected table: a click on a cell of a table already selected picks it,
+   *  Shift-click adds or drops one. */
+  private cells: number[] = [];
 
   constructor(board: Board, opts: { presence?: Presence; storageKey?: string } = {}) {
     this.board = board;
@@ -178,7 +183,7 @@ export class Editor {
 
   private snapshot(): UIState {
     return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, editingCell: this.editingCell, moving: this.moving, cam: { ...this.cam }, pens: this.pens,
-      guides: this.guides, canUndo: this.board.undoManager.undoStack.length > 0, canRedo: this.board.undoManager.redoStack.length > 0 };
+      guides: this.guides, cells: this.cells, canUndo: this.board.undoManager.undoStack.length > 0, canRedo: this.board.undoManager.redoStack.length > 0 };
   }
 
   private setMoving(moving: boolean): void {
@@ -312,6 +317,7 @@ export class Editor {
       tableLines: this.hotLine ? [...this.pickedLines, this.hotLine] : this.pickedLines,
       editingCell: this.editingCell,
       guides: g?.type === 'drag' ? g.guides ?? [] : [],
+      pickedCells: this.cells.length && this.selection.size === 1 ? { id: [...this.selection][0], cells: this.cells } : null,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker' } : null,
     });
   }
@@ -379,6 +385,22 @@ export class Editor {
     return set.presets[set.active] ?? DEFAULT_PENS[tool].presets[0];
   }
 
+  /** Picks a cell of the selected table, or with `add` adds it to the picked ones (or drops it). */
+  pickCell(i: number, add: boolean): void {
+    this.cells = !add ? [i] : this.cells.includes(i) ? this.cells.filter((c) => c !== i) : [...this.cells, i];
+    this.emit();
+    this.requestRender();
+  }
+
+  /** Fills the picked cells of the selected table with a colour ('none' takes it away). */
+  setCellFill(color: string): void {
+    const it = this.selectedItems()[0];
+    if (it?.type !== 'table' || !this.cells.length) return;
+    let patch: Partial<Item> = {};
+    for (const i of this.cells) patch = withCellFormat({ ...it, ...patch }, i, { bg: color === 'none' ? undefined : color } as Partial<Item>);
+    this.board.update(it.id, patch);
+  }
+
   /** Turns lining up along guides on or off. */
   toggleGuides(): void {
     this.guides = !this.guides;
@@ -401,7 +423,9 @@ export class Editor {
   }
 
   setSelection(ids: Iterable<string>): void {
+    const was = [...this.selection];
     this.selection = new Set(ids);
+    if (this.cells.length && (this.selection.size !== 1 || !this.selection.has(was[0]))) this.cells = [];
     this.presence?.setSelection([...this.selection]);
     this.emit();
     this.requestRender();
@@ -546,6 +570,12 @@ export class Editor {
         // In a table, the cell being typed in takes it on its own; otherwise the whole table, every cell.
         if (it.type !== 'table') this.board.update(it.id, patch);
         else if (this.editingId === it.id && this.editingCell !== null) this.board.update(it.id, withCellFormat(it, this.editingCell, patch));
+        else if (this.cells.length) {
+          // The picked cells, each on its own.
+          let next: Partial<Item> = {};
+          for (const i of this.cells) next = withCellFormat({ ...it, ...next }, i, patch);
+          this.board.update(it.id, next);
+        }
         else this.board.update(it.id, withTableFormat(it, patch));
       }
       refit();
@@ -972,12 +1002,15 @@ export class Editor {
       const now = performance.now();
       const dbl = this.lastTap.id === hit.id && now - this.lastTap.t < 380 && !e.shiftKey;
       this.lastTap = { id: hit.id, t: now };
-      if (e.shiftKey) {
+      // A click on a cell of the table already selected picks that cell (on letting go, if not dragged).
+      const cell = hit.type === 'table' && this.selection.size === 1 && this.selection.has(hit.id);
+      if (cell) { /* keeps the table selected */ }
+      else if (e.shiftKey) {
         const next = new Set(this.selection);
         if (next.has(hit.id)) next.delete(hit.id); else next.add(hit.id);
         this.setSelection(next);
       } else if (!this.selection.has(hit.id)) this.setSelection([hit.id]);
-      this.gesture = { type: 'drag', start: w, orig: this.dragSet(items), moved: false, id: hit.id, dbl };
+      this.gesture = { type: 'drag', start: w, orig: this.dragSet(items), moved: false, id: hit.id, dbl, cell };
       return;
     }
     this.lastTap = { id: '', t: 0 };
@@ -1275,6 +1308,9 @@ export class Editor {
         else if (g.dbl) {
           const it = this.board.get(g.id);
           this.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
+        } else if (g.cell) {
+          const it = this.board.get(g.id), i = it ? cellAt(it, g.start) : null;
+          if (i !== null) this.pickCell(i, e.shiftKey);
         } else if (this.board.get(g.id)?.type === 'mind' && this.selection.size === 1 && !e.shiftKey) {
           // A mind map node opens for typing on a single click, the caret after its text.
           this.startEditing(g.id, null, 'end');
@@ -1471,7 +1507,15 @@ export class Editor {
       }
       return;
     }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && this.cells.length) {
+      // With cells picked, their text goes, not the table.
+      e.preventDefault();
+      const it = this.selectedItems()[0];
+      if (it?.type === 'table') this.board.update(it.id, { cells: (it.cells ?? []).map((c, i) => (this.cells.includes(i) ? '' : c)) });
+      return;
+    }
     if (e.key === 'Delete' || e.key === 'Backspace') { if (this.selection.size) { e.preventDefault(); this.deleteSelection(); } return; }
+    if (e.key === 'Escape' && this.cells.length) { this.cells = []; this.emit(); this.requestRender(); return; }
     if (e.key === 'Escape') { this.pickedLines = []; this.setSelection([]); this.setTool('select'); window.dispatchEvent(new CustomEvent('planx:close-popovers')); return; }
     // On a mind map node, Tab adds a branch to it and Enter one beside it (to the centre: a branch).
     const one = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
