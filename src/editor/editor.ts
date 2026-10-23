@@ -458,6 +458,21 @@ export class Editor {
     });
   }
 
+  /** Opacity (0…1) of the selected items' fill or, for shapes and tasks, their outline. A run of
+   *  calls between beginChange and endChange (a slider being dragged) is one undo step. */
+  setOpacity(of: 'fill' | 'stroke', value: number): void {
+    const v = value >= 1 ? undefined : Math.max(0, Math.round(value * 100) / 100);
+    this.board.transact(() => {
+      for (const it of this.selectedItems()) {
+        if (of === 'fill' && COLORABLE.includes(it.type)) this.board.update(it.id, { fo: v });
+        if (of === 'stroke' && STROKABLE.includes(it.type)) this.board.update(it.id, { so: v });
+      }
+    });
+  }
+
+  beginChange(): void { this.board.beginGesture(); }
+  endChange(): void { this.board.endGesture(); }
+
   setIconColor(color: string): void {
     this.board.transact(() => {
       for (const it of this.selectedItems()) if (it.type === 'icon') this.board.update(it.id, { color });
