@@ -169,7 +169,8 @@ button { font: inherit; color: inherit; }
 .paint-target { gap: 2px; margin-right: 4px; }
 .op-wrap { position: relative; display: flex; }
 .sw.checker { background: repeating-conic-gradient(#E3E3E3 0 25%, #fff 0 50%) 50% / 10px 10px; }
-.op-pop { position: absolute; bottom: calc(100% + 16px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); white-space: nowrap; animation: fade-in .12s ease-out; }
+/* As tall as the panel under it, with its shadow. */
+.op-pop { position: absolute; bottom: calc(100% + 18px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; height: 52px; box-sizing: border-box; padding: 0 16px; background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); white-space: nowrap; animation: fade-in .12s ease-out; }
 .op-pop input { width: 150px; margin: 0; accent-color: var(--fmt-on-ink); cursor: pointer; }
 .op-pop span { min-width: 38px; text-align: right; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink); }
 .paint-fill, .paint-stroke { width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box; }
