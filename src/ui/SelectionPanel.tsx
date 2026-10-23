@@ -59,7 +59,13 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
   const [place, setPlace] = useState<{ left: number | null; raised: boolean }>({ left: null, raised: false });
   const [, redraw] = useReducer((n: number) => n + 1, 0);
   // Whether the colour circles set the fill or the outline of shapes.
-  const [paint, setPaint] = useState<'fill' | 'stroke'>('fill');
+  // With Shift both can be picked, and the colour and opacity then go to both.
+  const [paint, setPaint] = useState<Array<'fill' | 'stroke'>>(['fill']);
+  const pick = (which: 'fill' | 'stroke', shift: boolean) => {
+    if (!shift) setPaint([which]);
+    else if (!paint.includes(which)) setPaint([...paint, which]);
+    else if (paint.length > 1) setPaint(paint.filter((p) => p !== which));
+  };
   // It finds its place again when the window changes size or a panel opens or closes beside the rail.
   useEffect(() => {
     window.addEventListener('resize', redraw);
@@ -102,10 +108,17 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
   const strokable = items.filter((i) => STROKABLE.includes(i.type));
   const stroke = same(strokable.map((i) => i.sc ?? 'gray'));
   // Outlines are set only while shapes or tasks are among the selected.
-  const target = strokable.length ? paint : 'fill';
+  const targets: Array<'fill' | 'stroke'> = strokable.length ? paint : ['fill'];
+  const target = targets.includes('fill') ? 'fill' : 'stroke', both = targets.length > 1;
   const current = target === 'fill' ? fill : stroke;
   const opacity = Number(same(target === 'fill' ? colorable.map((i) => String(i.fo ?? 1)) : strokable.map((i) => String(i.so ?? 1))) ?? 1);
-  const setColor = (c: string) => (target === 'fill' ? editor.setColor(c) : editor.setStroke(c));
+  const setColor = (c: string) => {
+    editor.beginChange();
+    if (targets.includes('fill')) editor.setColor(c);
+    // Together, the outline takes the fill's colour itself.
+    if (targets.includes('stroke')) editor.setStroke(both && c !== 'none' && FILLS[c] ? FILLS[c] : c);
+    editor.endChange();
+  };
   // Mind map nodes on their own get their strong colours instead of the pale fills.
   const mind = colorable.length > 0 && colorable.every((i) => i.type === 'mind');
   const swatches: Array<[string, string]> = mind ? MIND_PALETTE.map((c) => [c, c]) : target === 'fill'
@@ -128,10 +141,10 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
         // Fill and outline: which one the circles beside set, each showing its colour now.
         paint: strokable.length > 0 ? (
           <div className="sw-group paint-target">
-            <button className={`ib ${target === 'fill' ? 'on' : ''}`} title="Заливка" aria-label="Заливка" aria-pressed={target === 'fill'} onClick={() => setPaint('fill')}>
+            <button className={`ib ${targets.includes('fill') ? 'on' : ''}`} title="Заливка (с Shift — вместе с обводкой)" aria-label="Заливка" aria-pressed={targets.includes('fill')} onClick={(e) => pick('fill', e.shiftKey)}>
               <span className={`paint-fill ${fill === 'none' ? 'none' : ''}`} style={{ background: fillLook }} />
             </button>
-            <button className={`ib ${target === 'stroke' ? 'on' : ''}`} title="Обводка" aria-label="Обводка" aria-pressed={target === 'stroke'} onClick={() => setPaint('stroke')}>
+            <button className={`ib ${targets.includes('stroke') ? 'on' : ''}`} title="Обводка (с Shift — вместе с заливкой)" aria-label="Обводка" aria-pressed={targets.includes('stroke')} onClick={(e) => pick('stroke', e.shiftKey)}>
               <span className={`paint-stroke ${stroke === 'none' ? 'none' : ''}`} style={{ borderColor: strokeLook }} />
             </button>
           </div>
@@ -148,8 +161,8 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
             <label className={`sw custom ${custom ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет">
               <input type="color" aria-label="Свой цвет" value={custom ?? (target === 'fill' ? FILLS.yellow : STROKE_COLORS.blue).toLowerCase()} onChange={(e) => setColor(e.target.value)} />
             </label>
-            <Opacity value={opacity} label={target === 'fill' ? 'Прозрачность заливки' : 'Прозрачность обводки'}
-              onStart={() => editor.beginChange()} onChange={(v) => editor.setOpacity(target, v)} onEnd={() => editor.endChange()} />
+            <Opacity value={opacity} label={both ? 'Прозрачность заливки и обводки' : target === 'fill' ? 'Прозрачность заливки' : 'Прозрачность обводки'}
+              onStart={() => editor.beginChange()} onChange={(v) => targets.forEach((t) => editor.setOpacity(t, v))} onEnd={() => editor.endChange()} />
           </div>
         ) : undefined,
         icons: icons.length > 0 ? (
