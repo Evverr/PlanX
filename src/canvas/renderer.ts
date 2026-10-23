@@ -688,7 +688,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     if (it.type !== 'mind') outline(ctx, it, cam.z, SELECT_COLOR);
     // A mind map node sizes itself and links by its branches: instead of the handle and dots it
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
-    if (s.showHandle && s.editingId !== id && it.type === 'mind') {
+    if (s.showHandle && it.type === 'mind') {
       if (s.plusFade > 0) {
         for (const b of mindButtons(it, s.get, cam.z)) {
           // Smaller and faint until the pointer comes over it.
