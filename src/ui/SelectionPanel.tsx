@@ -43,8 +43,9 @@ function Opacity({ value, label, onStart, onChange, onEnd }: {
 export function SelectionPanel({ editor, items, linkCount, docked }: { editor: Editor; items: Item[]; linkCount: number; docked: boolean }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
   const sort = useSortable('planx-order-selection', ORDER, 'x');
-  // When it would run into the zoom panel beside it, the panel moves up above the bottom bars.
-  const [raised, setRaised] = useState(false);
+  // When it would run into the zoom panel beside it, the panel first moves left as far as it can
+  // (up to the screen edge, or the tool rail when level with it), and only then up above the bottom bars.
+  const [place, setPlace] = useState<{ left: number | null; raised: boolean }>({ left: null, raised: false });
   const [, redraw] = useReducer((n: number) => n + 1, 0);
   // Whether the colour circles set the fill or the outline of shapes.
   const [paint, setPaint] = useState<'fill' | 'stroke'>('fill');
@@ -53,10 +54,19 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
     return () => window.removeEventListener('resize', redraw);
   }, []);
   useLayoutEffect(() => {
-    const zoom = document.querySelector('.zoom')?.getBoundingClientRect(), own = sort.ref.current?.getBoundingClientRect();
-    if (!zoom || !own) return;
-    const clash = own.right + 8 > zoom.left && own.left < zoom.right + 8;
-    if (clash !== raised) setRaised(clash);
+    const zoom = document.querySelector('.zoom')?.getBoundingClientRect(), el = sort.ref.current;
+    if (!zoom || !el) return;
+    // Worked out from the panel's size alone, wherever it is now.
+    const w = el.offsetWidth, h = el.offsetHeight, gap = 8;
+    let next = { left: null as number | null, raised: false };
+    if (innerWidth / 2 + w / 2 + gap > zoom.left) {
+      const rail = document.querySelector('.tools')?.getBoundingClientRect();
+      const top = zoom.bottom - h;  // level with the zoom panel
+      const min = rail && rail.bottom > top ? rail.right + 12 : 16;
+      const left = zoom.left - gap - w;
+      next = left >= min ? { left: Math.round(left), raised: false } : { left: null, raised: true };
+    }
+    if (next.left !== place.left || next.raised !== place.raised) setPlace(next);
   });
   if (!items.length && !linkCount) return null;
   const colorable = items.filter((i) => COLORABLE.includes(i.type));
@@ -84,7 +94,8 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
     <button className="ib" title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
   );
   return (
-    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${docked ? 'docked' : ''} ${raised ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
+    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${docked ? 'docked' : ''} ${place.raised ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
+      style={place.left !== null ? { left: place.left, transform: 'none' } : undefined}
       role="toolbar" aria-label="Выделенное" {...sort.container}>
       {sort.render({
         // Fill and outline: which one the circles beside set, each showing its colour now.
