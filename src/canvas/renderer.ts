@@ -398,7 +398,8 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   // A node a branch is being dragged onto shows it with its edge dashed (the solid central topic,
   // with a white dashed line just inside its edge).
   const target = s.mindMove?.target?.id === it.id;
-  if (target) ctx.setLineDash([5, 4]);
+  // The same dashes as the dragged arrow's, 6px on and off on screen.
+  if (target) ctx.setLineDash([6 / s.cam.z, 6 / s.cam.z]);
   if (depth > 0) {
     ctx.lineWidth = depth === 1 ? 2 : 1.5;
     ctx.strokeStyle = color;
