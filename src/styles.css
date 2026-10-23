@@ -381,7 +381,7 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
    6px below the top bar. */
 .menu-wrap { position: relative; display: flex; }
 .board-menu { position: absolute; left: -6px; top: calc(100% + 12px); z-index: 7; width: 286px; box-sizing: border-box;
-  display: flex; flex-direction: column; gap: 14px; padding: 20px 18px 24px 14px;
+  display: flex; flex-direction: column; gap: 0; padding: 13px 18px 17px 14px;
   background: var(--surface); border-radius: 12px; box-shadow: 0 6px 6px rgba(0, 0, 0, .15); animation: fade-in .12s ease-out; }
 .menu-item { position: relative; width: 100%; }
 .menu-row { position: relative; display: flex; align-items: center; gap: 11px; width: 100%; border: 0; background: none; padding: 0;
@@ -389,13 +389,14 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 .menu-row.light { color: var(--fmt-ink); }
 .menu-row img { flex: none; display: block; }
 .menu-icon { flex: none; width: 24px; height: 24px; color: #A6A6A6; }
-.menu-row { min-height: 24px; }
+.menu-row { box-sizing: border-box; min-height: 38px; padding: 7px 0; }
 /* A menu without icons sits 4px further in; in one with some, a row without lines its text up with
    theirs (an icon's 24px and the 11px after it). */
 .board-menu.plain { padding-left: 18px; }
 .menu-row.indent { padding-left: 35px; }
-.menu-more { position: absolute; right: -5px; top: 1px; }
-.menu-line { width: 259px; height: 1px; background: #6E6E6E; opacity: .1; }
+/* Rows touch (the 14px between them is 7px of each), so the pointer lights them up edge to edge. */
+.menu-more { position: absolute; right: -5px; top: 8px; }
+.menu-line { width: 259px; height: 1px; margin: 7px 0; background: #6E6E6E; opacity: .1; }
 /* The switch: a 24×14 track, grey with the knob at its left, blue with it at its right when on. */
 .menu-switch { position: absolute; right: -2px; top: 50%; width: 24px; height: 24px; transform: translateY(-50%); }
 .menu-switch::before { content: ""; position: absolute; left: 0; top: 5px; width: 24px; height: 14px; border-radius: 220px; background: #D9D9D9; transition: background-color .15s ease-out; }
@@ -404,13 +405,14 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
   box-shadow: 0 1px 1px rgba(0, 0, 0, .07); transition: left .15s ease-out, right .15s ease-out; }
 .menu-switch.on i { left: 45.83%; right: 12.5%; box-shadow: 0 1px 1px rgba(0, 0, 0, .17); }
 /* A further level opens beside its row, 3px over the menu's edge, its first row level with it. */
-.board-menu.sub { left: calc(100% + 15px); top: -20px; bottom: auto; }
+.board-menu.sub { left: calc(100% + 15px); top: -13px; bottom: auto; }
 /* Where the screen ends, it opens to the left instead, 3px over the menu's other edge. */
 .board-menu.sub.leftward { left: auto; right: calc(100% + 11px); }
 .board-menu.plain > .menu-item > .board-menu.sub.leftward { right: calc(100% + 15px); }
 /* A row lights up under the pointer, and while its further level is open. */
 .menu-row { isolation: isolate; }
-.menu-row::before { content: ""; position: absolute; inset: -5px -8px -5px -6px; z-index: -1; border-radius: 8px; transition: background-color .12s ease-out; }
+.menu-row::before { content: ""; position: absolute; inset: 0 -18px 0 -14px; z-index: -1; transition: background-color .12s ease-out; }
+.board-menu.plain > .menu-item > .menu-row::before { left: -18px; }
 .menu-row:hover::before, .menu-row[aria-expanded="true"]::before { background: var(--fmt-hover); }
 
 /* Any colour: the picker in the app's popover style (12px corners, the popups' shadow, 12px in
