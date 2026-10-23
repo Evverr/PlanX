@@ -7,7 +7,6 @@
   /* Format panel (Figma "Mol / Bar") and how much board fills are dimmed. */
   --fmt-bg: rgba(255, 255, 255, .9); --fmt-ink: #454545; --fmt-line: rgba(0, 0, 0, .07); --fmt-hover: rgba(0, 0, 0, .05);
   --fmt-on: rgba(75, 145, 255, .14); --fmt-shadow: 0 2px 6px rgba(0, 0, 0, .18); --fmt-on-ink: #0080FF; --fmt-marker: #5A5A5A; --fill-dim: 1;
-  --logo-x: #0080FF;
   /* Every panel and popover casts the tool rail's shadow. */
   --shadow: var(--fmt-shadow);
   --sticky-ink: #1B2130; --shape-stroke: rgba(20, 25, 40, .45);
@@ -23,7 +22,7 @@
     --accent: #43BCCB; --accent-soft: rgba(67, 188, 203, .18); --frame: rgba(255, 255, 255, .035); --danger: #F07A63;
     --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
     --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
-    --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-marker: #BFC4CC; --fill-dim: .85; --logo-x: #4DA3FF;
+    --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-marker: #BFC4CC; --fill-dim: .85;
     --shape-stroke: rgba(10, 12, 16, .6); --avatar-bg: transparent; --avatar-fade: .85;
     color-scheme: dark;
   }
@@ -33,7 +32,7 @@
   --accent: #43BCCB; --accent-soft: rgba(67, 188, 203, .18); --frame: rgba(255, 255, 255, .035); --danger: #F07A63;
   --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
   --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
-  --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-marker: #BFC4CC; --fill-dim: .85; --logo-x: #4DA3FF;
+  --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-marker: #BFC4CC; --fill-dim: .85;
   --shape-stroke: rgba(10, 12, 16, .6); --avatar-bg: transparent; --avatar-fade: .85;
   color-scheme: dark;
 }
@@ -120,7 +119,6 @@ button { font: inherit; color: inherit; }
 /* 15px from the logo to its separator. */
 .topbar .logo + .sep { margin-left: 7px; }
 .logo { font-family: var(--display); font-weight: 600; font-size: 16px; white-space: nowrap; }
-.logo span { color: var(--logo-x); }
 /* The title field and an invisible copy of its text share one grid cell, so the copy sets the width. */
 .title-fit { display: inline-grid; min-width: 0; flex: 0 1 auto; }
 .title-fit::after { content: attr(data-text) " "; visibility: hidden; white-space: pre; overflow: hidden; font-weight: 500; padding: 6px 8px; grid-area: 1 / 1; }
@@ -166,13 +164,13 @@ button { font: inherit; color: inherit; }
 .table-count { gap: 2px; font-size: 13px; color: var(--muted); }
 .table-count span { padding: 0 4px 0 8px; }
 .sw.custom { position: relative; overflow: hidden; display: inline-block; background: conic-gradient(#FF5E5E, #FFD25E, #8CE35E, #5ED9E3, #5E8CFF, #C45EFF, #FF5E5E); }
+.sw.custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.sw.none { background: linear-gradient(135deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%), var(--surface) !important; }
 .paint-target { gap: 2px; margin-right: 4px; }
 .paint-fill, .paint-stroke { width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box; }
 .paint-fill { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
 .paint-stroke { border: 3.5px solid; }
 .paint-fill.none, .paint-stroke.none { background: linear-gradient(135deg, transparent 44%, var(--danger) 44%, var(--danger) 56%, transparent 56%) !important; box-shadow: inset 0 0 0 1px var(--line); border: 0; }
-.sw.custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
-.sw.none { background: linear-gradient(135deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%), var(--surface) !important; }
 
 /* Panel icons (Figma SVGs used as masks): the panel's ink, blue on a pressed button. */
 .pi { display: block; flex: none; width: 30px; height: 30px; pointer-events: none; background: var(--fmt-ink);
