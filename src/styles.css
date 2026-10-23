@@ -80,10 +80,11 @@ button { font: inherit; color: inherit; }
 .tools .fb::after, .draw-panel .fb::after, .draw-panel .ink-preset::after {
   content: ""; position: absolute; left: 50%; width: 62px; transform: translateX(-50%);
   top: calc(var(--gap) / -2); bottom: calc(var(--gap) / -2); }
+.tools .fb::after { width: 60px; }
 
 /* Tool panel, 1:1 with the Figma component "Mol / Bar vertical"; buttons share the format panel's styles. */
 .tools { position: fixed; z-index: 5; left: calc(12px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
-  display: flex; flex-direction: column; align-items: center; width: 62px; padding: 21px 16px;
+  display: flex; flex-direction: column; align-items: center; width: 60px; padding: 21px 15px;
   /* 18px gaps as in the mockup; on a short screen it fits between the top bar and the bottom edge
      by tightening them (492px is the buttons, separator and padding; there are 15 gaps). */
   --gap: clamp(6px, calc((100vh - 150px - 492px) / 15), 18px);
@@ -98,7 +99,7 @@ button { font: inherit; color: inherit; }
 .sortable .lifted:not(.fb, .sep, .tsep, .fsep) { background: var(--surface); box-shadow: var(--fmt-shadow); border-radius: 6px; }
 .tsep { flex: none; width: 20px; height: 7px; position: relative; }
 /* Drawing tools, opened from the rail's drawing button: a second rail beside the first. */
-.draw-panel { position: fixed; z-index: 5; left: calc(86px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
+.draw-panel { position: fixed; z-index: 5; left: calc(84px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 18px; width: 62px; padding: 21px 16px;
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
 .ink-preset, .ink-size { position: relative; flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--fmt-line); background: transparent;
@@ -227,7 +228,7 @@ button { font: inherit; color: inherit; }
 .btn.blue { background: #0080FF; border-color: #0080FF; color: #fff; }
 
 /* Audio note recorder beside the tool rail. */
-.recorder { left: calc(86px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: 320px; max-width: calc(100vw - 98px);
+.recorder { left: calc(84px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: 320px; max-width: calc(100vw - 96px);
   display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
 .recorder-head { align-self: stretch; display: flex; align-items: center; justify-content: space-between; margin: -6px -8px 0 0; }
 .recorder-head h3 { margin: 0; font-size: 14px; font-weight: 600; }
@@ -250,7 +251,7 @@ button { font: inherit; color: inherit; }
 .namepop input, .icon-pick input { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 8px 10px; font: inherit; margin-bottom: 10px; }
 .toast { left: 50%; transform: translateX(-50%); top: calc(70px + env(safe-area-inset-top, 0px)); padding: 10px 14px; }
 
-.icon-pick { left: calc(86px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: 316px; max-width: calc(100vw - 86px); padding: 12px; }
+.icon-pick { left: calc(84px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: 316px; max-width: calc(100vw - 84px); padding: 12px; }
 .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 4px; max-height: min(340px, 55vh); overflow-y: auto; }
 .icon-grid button { aspect-ratio: 1; border: 0; background: transparent; border-radius: 6px; cursor: pointer; color: var(--ink); display: grid; place-items: center; padding: 0; transition: background-color .12s ease-out; }
 .icon-grid button:hover { background: var(--fmt-hover); }
