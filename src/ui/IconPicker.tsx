@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useEffect, useReducer, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { Point } from '../canvas/geometry';
 import { ICONS, searchIcons } from '../icons/icons';
-import { EMOJI } from '../emoji/emoji';
+import { EMOJI, emojiSrc, onEmojiLoad } from '../emoji/emoji';
 import { DEFAULTS, FILLS } from '../model/types';
 import { Glyph } from './glyphs';
 import { readOrder } from './sortable';
@@ -23,7 +23,7 @@ const DRAG_SLOP = 4;
  *  at the size it will have on the board (`px` across). */
 function Tile({ kind, id, px }: { kind: PickKind; id: string; px?: number }): ReactNode {
   const size = px ? { width: px, height: px } : undefined;
-  if (kind === 'emoji') return <img src={EMOJI.find((e) => e.id === id)?.url} alt="" draggable={false} style={size} />;
+  if (kind === 'emoji') return <img src={emojiSrc(id)} alt="" draggable={false} style={size} />;
   if (kind === 'sticky') return <i className="pick-sticky" style={{ background: FILLS[id], ...size }} />;
   return <span className="pick-glyph" style={size}><Glyph id={id} /></span>;
 }
@@ -36,6 +36,9 @@ function Tile({ kind, id, px }: { kind: PickKind; id: string; px?: number }): Re
 export function IconPicker({ zoom, onPick }: { zoom: number; onPick: (kind: PickKind, id: string, at?: Point) => void }) {
   const root = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<Tab>('emoji');
+  // The emoji show as they come ready, cut to size.
+  const [, redraw] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => onEmojiLoad(redraw), []);
   const [q, setQ] = useState('');
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
