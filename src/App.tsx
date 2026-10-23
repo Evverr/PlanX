@@ -140,7 +140,7 @@ export function App({ boardId }: { boardId: string }) {
 
       <header ref={topSort.ref} className={`bar topbar sortable ${docked ? 'docked' : ''} ${topSort.sorting ? 'sorting' : ''}`} {...topSort.container}>
         {topSort.render({
-          logo: <div className="logo">Plan<span>X</span></div>,
+          logo: <div className="logo">Plan</div>,
           sep: <div className="sep" />,
           // The field is as wide as its text (the copy in data-text sizes it), up to 30 characters.
           title: (
