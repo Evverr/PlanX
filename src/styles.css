@@ -118,7 +118,7 @@ button { font: inherit; color: inherit; }
 .topbar { left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); padding: 6px 16px 6px 24px; gap: 8px; max-width: calc(100vw - 24px); }
 /* 15px from the logo to its separator. */
 .topbar .logo + .sep { margin-left: 7px; }
-.logo { font-family: var(--display); font-weight: 600; font-size: 16px; white-space: nowrap; }
+.logo { font-family: "Inter", var(--ui); font-weight: 700; font-size: 17px; letter-spacing: -0.01em; white-space: nowrap; }
 /* The title field and an invisible copy of its text share one grid cell, so the copy sets the width. */
 .title-fit { display: inline-grid; min-width: 0; flex: 0 1 auto; }
 .title-fit::after { content: attr(data-text) " "; visibility: hidden; white-space: pre; overflow: hidden; font-weight: 500; padding: 6px 8px; grid-area: 1 / 1; }
