@@ -84,6 +84,18 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         }),
         padding: isFrame ? '0 4px' : 0,
       }}
+      // A mind map node dragged by its text moves, as it would anywhere else on it.
+      onPointerDown={item.type === 'mind' ? (e) => {
+        const from = { x: e.clientX, y: e.clientY }, id0 = e.pointerId;
+        const move = (ev: PointerEvent) => {
+          if (ev.pointerId !== id0 || Math.hypot(ev.clientX - from.x, ev.clientY - from.y) < 4) return;
+          stop();
+          editor.dragFromText(id, from, ev);
+        };
+        const stop = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', stop); };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', stop);
+      } : undefined}
       onInput={(e) => {
         if (item.type === 'text' || item.type === 'task' || item.type === 'mind') editor.previewText(id, e.currentTarget.value);
         if (item.type !== 'text' && !isFrame) {
