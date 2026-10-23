@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cellAt, cellRect, lineAt, newTable, withCount, withScale, withSize } from '../src/model/table';
+import { cellAt, cellRect, lineAt, newTable, withCount, movedLines, withScale, withSize } from '../src/model/table';
 import type { Item } from '../src/model/types';
 
 const table = (extra: Partial<Item> = {}): Item => ({ id: 't', type: 'table', x: 0, y: 0, z: 0, ...newTable(), ...extra } as Item);
@@ -34,5 +34,13 @@ describe('table', () => {
     expect(withCount(t, 'row', 1)).toMatchObject({ rows: [40, 40, 40, 40], h: 160 });
     expect(withCount(t, 'row', -1).cells).toEqual(['a', 'b', 'c', 'd', 'e', 'f']);
     expect(withCount(table({ cols: [100], cells: ['x', 'y', 'z'] }), 'col', -1)).toEqual({});
+  });
+  it('moves picked lines together, keeping the gaps between them', () => {
+    // Lines 0 and 2 move right by 30: the column between keeps its size, the one after line 0 shrinks.
+    expect(movedLines([100, 100, 100, 100], [0, 2], 30, 24)).toEqual([130, 70, 130, 100]);
+    // Lines 0 and 1 together: the second column keeps its width.
+    expect(movedLines([100, 100, 100], [0, 1], 30, 24)).toEqual([130, 100, 100]);
+    // Held back so the shrinking column stays at least the minimum.
+    expect(movedLines([100, 50, 100], [0, 2], 40, 24)).toEqual([126, 24, 126]);
   });
 });
