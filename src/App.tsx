@@ -16,7 +16,7 @@ import { readPictures } from './canvas/pictures';
 import { cellItem } from './model/table';
 import { useSortable } from './ui/sortable';
 import { Tooltips } from './ui/Tooltips';
-import { CatMenu } from './ui/CatMenu';
+import { BoardMenu } from './ui/BoardMenu';
 import type { Item, Link } from './model/types';
 
 /** Where a board copied into a new tab waits for it, followed by the new board's id. */
@@ -85,7 +85,7 @@ export function App({ boardId }: { boardId: string }) {
   useEffect(() => { document.documentElement.dataset.ui = bare ? 'bare' : ''; }, [bare]);
   const [recorder, setRecorder] = useState(false);
   // Buttons in the top bar and the zoom panel can be rearranged by holding them.
-  const topSort = useSortable('planx-order-top2', ['logo', 'sep', 'title', 'sep2', 'new', 'clear', 'sep3', 'undo', 'redo'], 'x');
+  const topSort = useSortable('planx-order-top2', ['logo', 'sep', 'title', 'menu', 'new', 'clear', 'sep3', 'undo', 'redo'], 'x');
   const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'share', 'help', 'theme', 'fit', 'dock', 'people'], 'x');
   const closeMinimap = useCallback(() => setMinimap(false), []);
 
@@ -116,8 +116,17 @@ export function App({ boardId }: { boardId: string }) {
   }, [board]);
 
   const [title, setTitle] = useState(board.title);
-  const [catMenu, setCatMenu] = useState(false);
-  const catTimer = useRef(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // The menu closes on a press anywhere else, and on Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e: PointerEvent) => { if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
+    window.addEventListener('pointerdown', close, true);
+    window.addEventListener('keydown', esc);
+    return () => { window.removeEventListener('pointerdown', close, true); window.removeEventListener('keydown', esc); };
+  }, [menuOpen]);
   useEffect(() => setTitle(board.title), [board.title]);
   useEffect(() => { document.title = board.title ? `${board.title} · PlanX` : 'PlanX'; }, [board.title]);
 
@@ -170,7 +179,15 @@ export function App({ boardId }: { boardId: string }) {
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur(); }} />
             </div>
           ),
-          sep2: <div className="sep" />,
+          // The board's menu, after its name; a click opens it under the button.
+          menu: (
+            <div className="menu-wrap" ref={menuRef}>
+              <button className={`ib ${menuOpen ? 'on' : ''}`} title="Меню" aria-label="Меню" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
+                <PanelIcon name="more-vertical" />
+              </button>
+              {menuOpen && <BoardMenu />}
+            </div>
+          ),
           sep3: <div className="sep" />,
           // Light grey, and not pressable, while there's nothing to undo or redo.
           undo: <button className="ib" title="Отменить (Ctrl+Z)" aria-label="Отменить" disabled={!ui.canUndo} onClick={() => editor.undo()}><PanelIcon name="undo-on" /></button>,
@@ -193,10 +210,7 @@ export function App({ boardId }: { boardId: string }) {
 
       <div ref={zoomSort.ref as React.RefObject<HTMLDivElement>} className={`bar zoom sortable ${docked ? 'docked' : ''} ${zoomSort.sorting ? 'sorting' : ''}`} {...zoomSort.container}>
         {zoomSort.renderFit({
-        // The menu shows while the pointer is over the cats (or the menu), and a moment after it leaves.
-        people: <div className="avatars" onPointerEnter={() => { clearTimeout(catTimer.current); setCatMenu(true); }}
-          onPointerLeave={() => { catTimer.current = window.setTimeout(() => setCatMenu(false), 250); }}>
-          {catMenu && <CatMenu />}
+        people: <div className="avatars">
           <button className="avatar me" title={`${conn.me.name} (вы). Нажмите, чтобы убрать все панели`}
             aria-label="Убрать панели" onClick={() => setBare(true)}>
             <img src={catFor()} alt="" draggable={false} />

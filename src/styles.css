@@ -136,7 +136,7 @@ button { font: inherit; color: inherit; }
 .tb:hover { background: var(--fmt-hover); color: var(--ink); }
 
 
-.avatars { position: relative; display: flex; align-items: center; padding: 0 4px 0 4px; }
+.avatars { display: flex; align-items: center; padding: 0 4px 0 4px; }
 .avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--avatar-bg); border: 2px solid var(--surface); margin-left: 0; cursor: default; padding: 0; }
 .avatar img { width: 22px; height: 22px; display: block; pointer-events: none; opacity: var(--avatar-fade); }
 .avatar:first-child { margin-left: 0; }
@@ -365,9 +365,11 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 .more-pop.above { bottom: calc(100% + 14px); }
 .more-pop.below { top: calc(100% + 14px); }
 
-/* The menu over the cat, 1:1 with the Figma "Mol / Menu right": 286 wide, rows of a 24px icon and
-   Inter 13 text 11px apart, 14px between rows, a faint line between groups. */
-.cat-menu { position: absolute; right: -10px; bottom: calc(100% + 14px); z-index: 7; width: 286px; box-sizing: border-box;
+/* The board's menu, 1:1 with the Figma "Mol / Menu right": 286 wide, rows of a 24px icon and
+   Inter 13 text 11px apart, 14px between rows, a faint line between groups; under its button,
+   8px below the top bar. */
+.menu-wrap { position: relative; display: flex; }
+.board-menu { position: absolute; left: -6px; top: calc(100% + 14px); z-index: 7; width: 286px; box-sizing: border-box;
   display: flex; flex-direction: column; gap: 14px; padding: 20px 18px 24px 14px;
   background: var(--surface); border-radius: 12px; filter: drop-shadow(0 6px 6px rgba(0, 0, 0, .15)); animation: fade-in .12s ease-out; }
 .menu-row { position: relative; display: flex; align-items: center; gap: 11px; width: 100%; border: 0; background: none; padding: 0;
