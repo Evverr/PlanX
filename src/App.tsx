@@ -79,7 +79,7 @@ export function App({ boardId }: { boardId: string }) {
   useEffect(() => { document.documentElement.dataset.ui = bare ? 'bare' : ''; }, [bare]);
   const [recorder, setRecorder] = useState(false);
   // Buttons in the top bar and the zoom panel can be rearranged by holding them.
-  const topSort = useSortable('planx-order-top', ['logo', 'sep', 'title', 'undo', 'redo', 'new', 'clear'], 'x');
+  const topSort = useSortable('planx-order-top', ['logo', 'sep', 'title', 'sep2', 'undo', 'redo', 'new', 'clear'], 'x');
   const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'share', 'help', 'theme', 'fit', 'dock', 'people'], 'x');
   const closeMinimap = useCallback(() => setMinimap(false), []);
 
@@ -151,8 +151,10 @@ export function App({ boardId }: { boardId: string }) {
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur(); }} />
             </div>
           ),
-          undo: <button className="ib hide-narrow" title="Отменить (Ctrl+Z)" aria-label="Отменить" onClick={() => editor.undo()}><PanelIcon name="undo-on" /></button>,
-          redo: <button className="ib hide-narrow" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" onClick={() => editor.redo()}><PanelIcon name="redo-on" /></button>,
+          sep2: <div className="sep" />,
+          // Light grey, and not pressable, while there's nothing to undo or redo.
+          undo: <button className="ib hide-narrow" title="Отменить (Ctrl+Z)" aria-label="Отменить" disabled={!ui.canUndo} onClick={() => editor.undo()}><PanelIcon name="undo-on" /></button>,
+          redo: <button className="ib hide-narrow" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" disabled={!ui.canRedo} onClick={() => editor.redo()}><PanelIcon name="redo-on" /></button>,
           new: <button className="ib hide-narrow" title="Новая доска в новой вкладке" aria-label="Новая доска" onClick={openNewBoard}><PanelIcon name="plus" /></button>,
           clear: <button className={`ib ${pop === 'clear' ? 'on' : ''}`} title="Очистить доску" aria-label="Очистить доску" onClick={() => toggle('clear')}><PanelIcon name="cross" /></button>,
         })}

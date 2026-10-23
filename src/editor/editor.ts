@@ -49,6 +49,9 @@ export interface UIState {
   moving: boolean;
   cam: Camera;
   pens: Pens;
+  /** Whether there's anything of this person's to undo, or to redo. */
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 type Gesture =
@@ -148,6 +151,12 @@ export class Editor {
     this.needsFit = !saved;
     if (saved) this.cam = saved;
     this.ui = this.snapshot();
+    // The undo and redo buttons follow the history.
+    const history = () => {
+      const s = this.snapshot();
+      if (s.canUndo !== this.ui.canUndo || s.canRedo !== this.ui.canRedo) this.emit();
+    };
+    for (const ev of ['stack-item-added', 'stack-item-popped', 'stack-cleared'] as const) board.undoManager.on(ev, history);
   }
 
   /* ---------- React bridge ---------- */
@@ -160,7 +169,8 @@ export class Editor {
   };
 
   private snapshot(): UIState {
-    return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, editingCell: this.editingCell, moving: this.moving, cam: { ...this.cam }, pens: this.pens };
+    return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, editingCell: this.editingCell, moving: this.moving, cam: { ...this.cam }, pens: this.pens,
+      canUndo: this.board.undoManager.undoStack.length > 0, canRedo: this.board.undoManager.redoStack.length > 0 };
   }
 
   private setMoving(moving: boolean): void {
