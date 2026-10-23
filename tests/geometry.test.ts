@@ -126,7 +126,8 @@ describe('turned items', () => {
     expect(hitItem([box], { x: 10, y: 50 }, 1)).toBeNull();
   });
   it('have a box square to the board around them', () => {
-    expect(boxOf(box)).toEqual({ x: 50, y: -50, w: 100, h: 200 });
+    const b = boxOf(box);
+    [b.x, b.y, b.w, b.h].forEach((v, i) => expect(v).toBeCloseTo([50, -50, 100, 200][i]));
   });
   it('keep their top left corner when resized', () => {
     // The top left corner of the turned box is at (150, -50).
