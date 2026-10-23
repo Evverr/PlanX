@@ -11,15 +11,15 @@ export const SHAPES: Array<[Tool, PanelIconName, string]> = [
   ['star', 'star', 'Звезда'],
 ];
 
-/** Figures next to the tool rail, opened from its shapes button; pick one, then drag out its box on the board. */
-export function ShapePanel({ editor, tool }: { editor: Editor; tool: Tool }) {
+/** Figures next to the tool rail, opened by holding its shapes button; pick one, then drag out its box on the board. */
+export function ShapePanel({ editor, tool, onPick }: { editor: Editor; tool: Tool; onPick: () => void }) {
   const sort = useSortable('planx-order-shapes', SHAPES.map(([t]) => t), 'y');
   return (
-    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`draw-panel sortable ${sort.sorting ? 'sorting' : ''}`} role="toolbar" aria-label="Фигуры"
+    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`draw-panel shape-panel sortable ${sort.sorting ? 'sorting' : ''}`} role="toolbar" aria-label="Фигуры"
       {...sort.container}>
       {sort.render(Object.fromEntries(SHAPES.map(([t, icon, label]) => [t, (
         <button className={`fb ${tool === t ? 'on' : ''}`} title={label} aria-label={label.replace(/ \(.*\)$/, '')} aria-pressed={tool === t}
-          onClick={() => editor.setTool(t)}>
+          onClick={() => { editor.setTool(t); onPick(); }}>
           <PanelIcon name={icon} />
         </button>
       )])))}
