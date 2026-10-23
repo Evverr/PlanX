@@ -169,12 +169,12 @@ button { font: inherit; color: inherit; }
 .sw { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; margin: 0 3.5px; }
 .sw.on { box-shadow: 0 0 0 2px var(--accent); }
 .sw-group, .sort-wrap { display: flex; align-items: center; }
-.table-count { gap: 2px; font-size: 13px; color: var(--muted); }
+.table-count { gap: 2px; font-size: 14px; color: var(--fmt-ink); }
 .table-count span { padding: 0 4px 0 8px; }
 .sw.custom { position: relative; overflow: hidden; display: inline-block; background: conic-gradient(#FF5E5E, #FFD25E, #8CE35E, #5ED9E3, #5E8CFF, #C45EFF, #FF5E5E); }
 .sw.custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .sw.none { background: linear-gradient(135deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%), var(--surface) !important; }
-.paint-target { gap: 2px; margin-right: 4px; }
+.paint-target { gap: 2px; }
 .op-wrap { position: relative; display: flex; }
 .sw.checker { background: repeating-conic-gradient(#E3E3E3 0 25%, #fff 0 50%) 50% / 10px 10px; }
 /* As tall as the panel under it, with its shadow. */
@@ -188,7 +188,7 @@ button { font: inherit; color: inherit; }
 .op-pop span { min-width: 38px; text-align: right; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink); }
 .paint-fill, .paint-stroke { width: 18px; height: 18px; border-radius: 50%; box-sizing: border-box; }
 .paint-fill { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
-.paint-stroke { border: 3.5px solid; }
+.paint-stroke { border: 2.5px solid; }
 .paint-fill.none, .paint-stroke.none { background: linear-gradient(135deg, transparent 44%, var(--danger) 44%, var(--danger) 56%, transparent 56%) !important; box-shadow: inset 0 0 0 1px var(--line); border: 0; }
 
 /* Panel icons (Figma SVGs used as masks): the panel's ink, blue on a pressed button. */
