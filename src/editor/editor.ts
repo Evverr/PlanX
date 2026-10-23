@@ -84,6 +84,8 @@ const MIND_TOPIC = 'Центральная тема';
 /** How far outside a corner (in screen pixels) the pointer turns the item, and how close to a square
  *  angle (in degrees) the turn sticks to it. */
 const ROTATE_ZONE = 18, ROTATE_SNAP = 3;
+/** How big a finger's target is, in screen pixels. */
+const FINGER = 40;
 /** The mind map "+" buttons' wait after a node is picked, and their fade in, in ms. */
 const PLUS_DELAY = 330, PLUS_FADE = 300;
 
@@ -145,6 +147,15 @@ export class Editor {
   /** The mind map node button under the pointer; and when the buttons of the node picked now start
    *  to fade in (they come a moment after it's picked or let go). */
   private hotPlus: MindButton | null = null;
+  /** Whether the last press was a finger's: small things to grab (the resize handle, the link dots,
+   *  the turning corner, a mind map node's buttons) then reach FINGER px across, not their own size. */
+  private byFinger = false;
+
+  /** How far (in board units) a small thing of radius `px` on screen reaches for the pointer: for a
+   *  finger, at least half of FINGER. */
+  private reach(px: number): number {
+    return (this.byFinger ? Math.max(px, FINGER / 2) : px) / this.cam.z;
+  }
   private plusKey = '';
   private plusFrom = 0;
   private plusTimer = 0;
@@ -312,6 +323,7 @@ export class Editor {
       linkPreview,
       peers: this.presence?.peers() ?? [],
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]),
+      byFinger: this.byFinger,
       hotDot: this.hotDot,
       hotPlus: this.hotPlus,
       plusFade,
@@ -931,6 +943,7 @@ export class Editor {
   }
 
   private onPointerDown(e: PointerEvent): void {
+    this.byFinger = e.pointerType === 'touch';
     this.stopEditing();
     // Same as in newItem: once someone works on the board, leave the camera to them.
     this.needsFit = false;
@@ -953,7 +966,11 @@ export class Editor {
     const link = hit && hit.type !== 'frame' ? null : hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z);
     if (link) hit = null;
 
-    const touchPan = e.pointerType === 'touch' && this.tool === 'select' && !hit && !link;
+    // A finger on the empty board moves the board, but not on the controls of what's selected (its
+    // resize handle, link dots, turning corner, mind map buttons) or on a table's line.
+    const picked = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
+    const onControl = !!picked && !this.editingId && (this.onHandle(picked, w) || !!this.dotAt(picked, w) || this.onRotate(picked, w) || !!this.plusAt(picked, w));
+    const touchPan = e.pointerType === 'touch' && this.tool === 'select' && !hit && !link && !onControl && !this.tableLineAt(w, hit);
     if (e.button === 1 || this.spaceDown || this.tool === 'hand' || touchPan) {
       this.gesture = { type: 'pan', sx: sp.x, sy: sp.y, cx: this.cam.x, cy: this.cam.y };
       this.canvas!.classList.add('panning');
@@ -1167,7 +1184,7 @@ export class Editor {
 
   private onHandle(it: Item, w: Point): boolean {
     if (it.type === 'mind') return false;
-    const hs = (HANDLE + 6) / this.cam.z, off = 3 / this.cam.z;
+    const hs = this.reach((HANDLE + 6) / 2) * 2, off = 3 / this.cam.z;
     return pointInRect(toLocal(it, w), { x: it.x + it.w + off - hs / 2, y: it.y + it.h + off - hs / 2, w: hs, h: hs });
   }
 
@@ -1180,20 +1197,20 @@ export class Editor {
   /** Which of a mind map node's buttons is under the point, once they're showing. */
   private plusAt(it: Item, w: Point): MindButton | null {
     if (it.type !== 'mind' || this.plusFade() === 0) return null;
-    return mindButtons(it, (id) => this.board.get(id), this.cam.z).find((b) => Math.hypot(w.x - b.x, w.y - b.y) <= b.r * 1.5)?.kind ?? null;
+    return mindButtons(it, (id) => this.board.get(id), this.cam.z).find((b) => Math.hypot(w.x - b.x, w.y - b.y) <= Math.max(b.r * 1.5, this.reach(0)))?.kind ?? null;
   }
 
   /** Whether the point is just outside the item's top right corner, where it is turned. */
   private onRotate(it: Item, w: Point): boolean {
     if (!ROTATABLE.includes(it.type)) return false;
     const p = toLocal(it, w);
-    return !pointInRect(p, it) && Math.hypot(p.x - (it.x + it.w), p.y - it.y) <= ROTATE_ZONE / this.cam.z;
+    return !pointInRect(p, it) && Math.hypot(p.x - (it.x + it.w), p.y - it.y) <= this.reach(ROTATE_ZONE);
   }
 
   /** The link dot under the point, if any. */
   private dotAt(it: Item, w: Point): Side | null {
     if (it.type === 'mind') return null;
-    const r = 16.5 / this.cam.z;  // well beyond the dot itself, so it is easy to catch
+    const r = this.reach(16.5);  // well beyond the dot itself, so it is easy to catch
     for (const side of SIDES) {
       const p = sidePoint(it, side, DOT_GAP / this.cam.z);
       if (Math.hypot(w.x - p.x, w.y - p.y) <= r) return side;
@@ -1202,6 +1219,7 @@ export class Editor {
   }
 
   private onPointerMove(e: PointerEvent): void {
+    if (!this.pointers.size) this.byFinger = e.pointerType === 'touch';
     const sp = this.local(e);
     const w = this.toWorld(sp.x, sp.y);
     this.sendCursor(w);
@@ -1513,7 +1531,8 @@ export class Editor {
   /** The table line under the point: of the table there, or just past a table's right or bottom edge. */
   private tableLineAt(w: Point, hit: Item | null): TableLine | null {
     if (hit && hit.type !== 'table' && hit.type !== 'frame') return null;
-    const tol = 5 / this.cam.z, items = this.board.list();
+    // A finger gets a wider band, but not so wide a small cell is all lines.
+    const tol = (this.byFinger ? 10 : 5) / this.cam.z, items = this.board.list();
     for (let i = items.length - 1; i >= 0; i--) {
       const it = items[i];
       if (it.type !== 'table') continue;

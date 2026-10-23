@@ -57,6 +57,8 @@ export interface Scene {
   linkPreview: { from: Item; fromSide: Side | null; to: Point; target: Item | null } | null;
   peers: Peer[];
   showHandle: boolean;
+  /** The last press was a finger's: the resize handle is drawn bigger, to be seen under it. */
+  byFinger: boolean;
   /** The dot under the pointer, drawn larger and at full strength; the others are faint. */
   hotDot: Side | null;
   /** The mind map node button under the pointer, drawn full size and strength; the others are smaller and faint. */
@@ -778,7 +780,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
         ctx.globalAlpha = 1;
       }
     } else if (s.showHandle && s.editingId !== id) {
-      const hs = HANDLE / cam.z, off = 3 / cam.z;
+      const hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z;
       ctx.fillStyle = theme.surface;
       ctx.strokeStyle = SELECT_COLOR;
       ctx.lineWidth = 2 / cam.z;
