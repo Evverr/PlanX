@@ -9,7 +9,7 @@ import { useSortable } from './sortable';
 const same = (vals: Array<string | undefined>) => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] : null);
 
 /** Rearrangeable buttons; the bin isn't among them, it always comes last. */
-const ORDER = ['paint', 'fills', 'sep', 'icons', 'sep2', 'rows', 'sep5', 'cols', 'sep4', 'front', 'back', 'duplicate'];
+const ORDER = ['paint', 'sep6', 'fills', 'sep', 'icons', 'sep2', 'rows', 'sep7', 'cols', 'sep4', 'front', 'back', 'duplicate'];
 
 /** A chequered circle that opens a slider for how see-through the colour is, in percent. Dragging
  *  the slider is one change (onStart … onEnd). */
@@ -169,7 +169,10 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
             {btn('plus-s', 'Добавить столбец', () => editor.changeTable('col', 1))}
           </div>
         ) : undefined,
-        sep5: <div className="sep" />,
+        // Between rows and columns; a new key, so orders saved with the old one at the end get it back in place.
+        sep7: <div className="sep" />,
+        // Between the fill/outline switch and the colours, so the two can't be taken for each other.
+        sep6: <div className="sep" />,
         sep4: <div className="sep" />,
         front: items.length > 0 ? btn('to-front', 'На передний план', () => editor.bringToFront()) : undefined,
         back: items.length > 0 ? btn('to-back', 'На задний план', () => editor.sendToBack()) : undefined,
