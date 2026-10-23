@@ -3,7 +3,7 @@ import { alignOf, FILLS, textPad, ICON_COLORS, INK_COLORS, MARK_COLORS, STROKE_C
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
-import { cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
+import { cellItem, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
 import { branchCurve, mindButtons, mindColor, mindDepth, type MindButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
@@ -521,7 +521,7 @@ function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCel
   const n = colsOf(it).length * rowsOf(it).length;
   for (let i = 0; i < n; i++) {
     const text = cellText(it, i);
-    if (text && i !== editingCell) drawText(ctx, { ...it, ...cellRect(it, i), text, ls: undefined }, 8, theme.ink, true, s);
+    if (text && i !== editingCell) drawText(ctx, cellItem(it, i), 8, theme.ink, true, s);
   }
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cellAt, cellRect, lineAt, newTable, withCount, movedLines, withScale, withSize } from '../src/model/table';
+import { cellAt, cellItem, cellRect, lineAt, movedLines, newTable, withCellFormat, withCount, withScale, withSize, withTableFormat } from '../src/model/table';
 import type { Item } from '../src/model/types';
 
 const table = (extra: Partial<Item> = {}): Item => ({ id: 't', type: 'table', x: 0, y: 0, z: 0, ...newTable(), ...extra } as Item);
@@ -42,5 +42,20 @@ describe('table', () => {
     expect(movedLines([100, 100, 100], [0, 1], 30, 24)).toEqual([130, 100, 100]);
     // Held back so the shrinking column stays at least the minimum.
     expect(movedLines([100, 50, 100], [0, 2], 40, 24)).toEqual([126, 24, 126]);
+  });
+  it('keeps each cell its own formatting', () => {
+    const t = { id: 't', type: 'table', x: 0, y: 0, z: 0, ...newTable(2, 2) } as Item;
+    const bold = { ...t, ...withCellFormat(t, 1, { fw: 700 }) } as Item;
+    expect(cellItem(bold, 1).fw).toBe(700);
+    expect(cellItem(bold, 0).fw).toBeUndefined();
+    // A new column keeps cell 1's formatting with its text (it's now the second cell of three).
+    const wider = { ...bold, ...withCount(bold, 'col', 1) } as Item;
+    expect(wider.cellFmt?.[1]).toEqual({ fw: 700 });
+    expect(wider.cellFmt?.[2]).toBeNull();
+    // Formatting the whole table takes the field off every cell.
+    expect(withTableFormat(bold, { fw: 400 })).toEqual({ fw: 400, cellFmt: undefined });
+    // On an italic table, a cell set back to upright keeps upright.
+    const italic = { ...t, fi: true } as Item;
+    expect(cellItem({ ...italic, ...withCellFormat(italic, 0, { fi: undefined }) } as Item, 0).fi).toBeUndefined();
   });
 });

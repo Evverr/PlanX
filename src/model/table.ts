@@ -76,20 +76,59 @@ export function movedLines(sizes: number[], picked: number[], d: number, min: nu
 /** Fields after adding (+1) or removing (-1) the last column or row; a table keeps at least one of each.
  *  A new column or row is as big as the last one. */
 export function withCount(it: Item, axis: 'col' | 'row', delta: 1 | -1): Partial<Item> {
-  const cols = colsOf(it), rows = rowsOf(it), n = cols.length;
-  const cells = Array.from({ length: n * rows.length }, (_, i) => cellText(it, i));
+  const cols = colsOf(it), rows = rowsOf(it), n = cols.length, size = n * rows.length;
+  const cells = Array.from({ length: size }, (_, i) => cellText(it, i));
+  const fmt = Array.from({ length: size }, (_, i) => it.cellFmt?.[i] ?? null);
+  // A cell's text and formatting move as one.
+  const regrid = <T>(all: T[], blank: T): T[] => axis === 'col'
+    ? rows.flatMap((_, r) => { const row = all.slice(r * n, r * n + n); return delta > 0 ? [...row, blank] : row.slice(0, -1); })
+    : delta > 0 ? [...all, ...Array<T>(n).fill(blank)] : all.slice(0, -n);
+  const keepFmt = (f: typeof fmt) => (f.some(Boolean) ? f : undefined);
   if (axis === 'col') {
     if (delta < 0 && n === 1) return {};
     const next = delta > 0 ? [...cols, cols[n - 1]] : cols.slice(0, -1);
-    const grid = rows.flatMap((_, r) => {
-      const row = cells.slice(r * n, r * n + n);
-      return delta > 0 ? [...row, ''] : row.slice(0, -1);
-    });
-    return { cols: next, cells: grid, w: sum(next) };
+    return { cols: next, cells: regrid(cells, ''), cellFmt: keepFmt(regrid(fmt, null)), w: sum(next) };
   }
   if (delta < 0 && rows.length === 1) return {};
   const next = delta > 0 ? [...rows, rows[rows.length - 1]] : rows.slice(0, -1);
-  return { rows: next, cells: delta > 0 ? [...cells, ...Array(n).fill('')] : cells.slice(0, -n), h: sum(next) };
+  return { rows: next, cells: regrid(cells, ''), cellFmt: keepFmt(regrid(fmt, null)), h: sum(next) };
+}
+
+/** The text formatting a cell can have of its own, over the table's. A null in a cell's formatting
+ *  means the usual look there, whatever the table's. */
+export const CELL_FORMAT = ['fs', 'ff', 'fw', 'fi', 'fu', 'fx', 'tc', 'mk', 'ta', 'ls'] as const;
+
+/** Cell i as an item of its own: its box and text, in the table's formatting with its own over it. */
+export function cellItem(it: Item, i: number): Item {
+  const own = Object.entries(it.cellFmt?.[i] ?? {}).map(([k, v]) => [k, v ?? undefined]);
+  return { ...it, ...cellRect(it, i), text: cellText(it, i), ls: undefined, ...Object.fromEntries(own) };
+}
+
+/** Fields for formatting cell i by `patch`; a field set back to the usual (undefined) is a null when
+ *  the table has formatting of its own there, so the cell keeps the usual look. */
+export function withCellFormat(it: Item, i: number, patch: Partial<Item>): Partial<Item> {
+  const size = colsOf(it).length * rowsOf(it).length;
+  const fmt = Array.from({ length: size }, (_, k) => it.cellFmt?.[k] ?? null);
+  const own: Record<string, unknown> = { ...(fmt[i] ?? {}) };
+  for (const [k, v] of Object.entries(patch)) {
+    if (!(CELL_FORMAT as readonly string[]).includes(k)) continue;
+    if (v !== undefined) own[k] = v;
+    else if ((it as unknown as Record<string, unknown>)[k] !== undefined) own[k] = null;
+    else delete own[k];
+  }
+  fmt[i] = Object.keys(own).length ? own : null;
+  return { cellFmt: fmt.some(Boolean) ? fmt : undefined };
+}
+
+/** Fields for formatting the whole table by `patch`: every cell takes it, dropping its own there. */
+export function withTableFormat(it: Item, patch: Partial<Item>): Partial<Item> {
+  const fmt = it.cellFmt?.map((f) => {
+    if (!f) return null;
+    const own = { ...f };
+    for (const k of Object.keys(patch)) delete own[k];
+    return Object.keys(own).length ? own : null;
+  });
+  return { ...patch, cellFmt: fmt?.some(Boolean) ? fmt : undefined };
 }
 
 /** Fields after resizing the whole table to w × h: every column and row scales alike. */

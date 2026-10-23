@@ -13,7 +13,7 @@ import { Minimap } from './ui/Minimap';
 import { AudioRecorder } from './ui/AudioRecorder';
 import { catFor } from './emoji/emoji';
 import { readPictures } from './canvas/pictures';
-import { cellRect, cellText } from './model/table';
+import { cellItem } from './model/table';
 import { useSortable } from './ui/sortable';
 import { Tooltips } from './ui/Tooltips';
 import type { Item, Link } from './model/types';
@@ -219,12 +219,14 @@ export function App({ boardId }: { boardId: string }) {
       {minimap && <Minimap editor={editor} items={board.list()} docked={docked} onClose={closeMinimap} />}
       <Tooltips />
 
-      {textItem && textShown === textItem.id && <TextPanel editor={editor} item={textItem} />}
+      {/* Typing in a table cell, the panel shows and sets that cell's own formatting. */}
+      {textItem && textShown === textItem.id && <TextPanel editor={editor}
+        item={editing?.id === textItem.id && editing.type === 'table' && ui.editingCell !== null ? cellItem(editing, ui.editingCell) : textItem} />}
 
       {!editing && <SelectionPanel editor={editor} items={selItems} linkCount={linkCount} docked={docked} />}
       {/* A table cell is typed into as if it were an item of its own, the size of the cell. */}
       {editing && (editing.type === 'table' && ui.editingCell !== null
-        ? <TextEditor key={`${editing.id}:${ui.editingCell}`} editor={editor} item={{ ...editing, ...cellRect(editing, ui.editingCell), text: cellText(editing, ui.editingCell), ls: undefined }} />
+        ? <TextEditor key={`${editing.id}:${ui.editingCell}`} editor={editor} item={cellItem(editing, ui.editingCell)} />
         : <TextEditor key={editing.id} editor={editor} item={editing} />)}
 
       {pop === 'clear' && (

@@ -59,6 +59,8 @@ export interface Item {
   cols?: number[];
   rows?: number[];
   cells?: string[];
+  /** Tables: each cell's own text formatting over the table's, row by row (see model/table.ts). */
+  cellFmt?: Array<Partial<Record<string, unknown>> | null>;
   /** Frames: what was put in them and moves with them. Frames from before this have none and hold
    *  whatever lies inside. */
   members?: string[];
