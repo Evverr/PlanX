@@ -118,19 +118,21 @@ export function insertBeside(id: string, from: string, where: 'above' | 'below',
 }
 
 /** New y positions (by id) for when node `id` has grown taller by dh as it's typed in (downwards;
- *  a negative dh when it shrinks): the branches below it, at each level up to the centre, follow. */
+ *  a negative dh when it shrinks): the branches of the same parent below it follow, with what grows
+ *  from them; the rest of the map stays put. */
 export function makeRoom(id: string, dh: number, items: Item[]): Map<string, number> {
   const all = items.map((i) => ({ ...i })), byId = new Map(all.map((i) => [i.id, i]));
   const node = byId.get(id);
-  if (node) pushPast(node, null, dh, 1, all, byId);
+  if (node) pushPast(node, null, dh, 1, all, byId, 1);
   return movedY(items, byId);
 }
 
 /** Moves by `shift` the branches past `start` (below it for dir 1, above for -1) on its side, with
- *  all that grows from them, and so on at each node up the way to the centre; `skip` stays put. */
-function pushPast(start: Item, skip: Item | null, shift: number, dir: 1 | -1, all: Item[], byId: Map<string, Item>): void {
+ *  all that grows from them, and so on at each node up the way to the centre (for `levels` levels);
+ *  `skip` stays put. */
+function pushPast(start: Item, skip: Item | null, shift: number, dir: 1 | -1, all: Item[], byId: Map<string, Item>, levels = 50): void {
   const block = (k: Item) => [k, ...descendants([k.id], all).map((d) => byId.get(d)!)], mid = (i: Item) => i.y + i.h / 2;
-  for (let cur: Item | undefined = start, guard = 0; cur?.parent && guard < 50; guard++) {
+  for (let cur: Item | undefined = start, guard = 0; cur?.parent && guard < levels; guard++) {
     const p: Item = byId.get(cur.parent)!, side = mindSide(cur, p), here: Item = cur;
     for (const k of all) {
       if (k.type !== 'mind' || k.parent !== p.id || k === here || k === skip || mindSide(k, p) !== side) continue;
