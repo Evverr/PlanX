@@ -504,17 +504,25 @@ function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCel
     const bg = f?.bg;
     if (typeof bg !== 'string') return;
     const r = cellRect(it, i);
+    ctx.globalAlpha = typeof f?.bgo === 'number' ? f.bgo : 1;
     ctx.fillStyle = shade(bg.startsWith('#') ? bg : FILLS[bg] ?? FILLS.blue, theme.dim);
     ctx.fillRect(r.x, r.y, r.w, r.h);
   });
-  ctx.strokeStyle = theme.line;
-  ctx.lineWidth = 1 / cam.z;
-  ctx.beginPath();
-  let x = it.x, y = it.y;
-  for (const w of colsOf(it).slice(0, -1)) { x += w; ctx.moveTo(x, it.y); ctx.lineTo(x, it.y + it.h); }
-  for (const h of rowsOf(it).slice(0, -1)) { y += h; ctx.moveTo(it.x, y); ctx.lineTo(it.x + it.w, y); }
-  ctx.rect(it.x, it.y, it.w, it.h);
-  ctx.stroke();
+  ctx.globalAlpha = 1;
+  // The grid in the table's line colour (like a shape's outline; the usual is the panels' line grey).
+  const line = it.sc === 'none' ? null : it.sc ? (it.sc === 'ink' ? theme.ink : shade(it.sc.startsWith('#') ? it.sc : STROKE_COLORS[it.sc] || theme.line, theme.dim)) : theme.line;
+  if (line) {
+    ctx.globalAlpha = it.so ?? 1;
+    ctx.strokeStyle = line;
+    ctx.lineWidth = 1 / cam.z;
+    ctx.beginPath();
+    let x = it.x, y = it.y;
+    for (const w of colsOf(it).slice(0, -1)) { x += w; ctx.moveTo(x, it.y); ctx.lineTo(x, it.y + it.h); }
+    for (const h of rowsOf(it).slice(0, -1)) { y += h; ctx.moveTo(it.x, y); ctx.lineTo(it.x + it.w, y); }
+    ctx.rect(it.x, it.y, it.w, it.h);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
   // Lines under the pointer or picked to drag, in blue.
   const marked = s.tableLines.filter((l) => l.id === it.id);
   if (marked.length) {

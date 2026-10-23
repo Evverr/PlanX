@@ -95,8 +95,8 @@ export function withCount(it: Item, axis: 'col' | 'row', delta: 1 | -1): Partial
 }
 
 /** The text formatting a cell can have of its own, over the table's, and its fill (bg: a key of
- *  FILLS or '#rrggbb'). A null in a cell's formatting means the usual look there, whatever the table's. */
-export const CELL_FORMAT = ['fs', 'ff', 'fw', 'fi', 'fu', 'fx', 'tc', 'mk', 'ta', 'ls', 'bg'] as const;
+ *  FILLS or '#rrggbb'; bgo: its opacity, 0…1). A null in a cell's formatting means the usual look there, whatever the table's. */
+export const CELL_FORMAT = ['fs', 'ff', 'fw', 'fi', 'fu', 'fx', 'tc', 'mk', 'ta', 'ls', 'bg', 'bgo'] as const;
 
 /** Cell i as an item of its own: its box and text, in the table's formatting with its own over it. */
 export function cellItem(it: Item, i: number): Item {
