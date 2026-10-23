@@ -97,8 +97,8 @@ function rotateCursor(deg: number): string {
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const MIN_Z = 0.08, MAX_Z = 4;
-/** Zoom change per mouse wheel notch: half a percentage point. */
-const WHEEL_STEP = 0.005;
+/** Zoom change per mouse wheel notch: one and a half percentage points. */
+const WHEEL_STEP = 0.015;
 
 /**
  * Owns the canvas: turns pointer and keyboard input into board changes and
