@@ -152,7 +152,7 @@ function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: s
   const rule = Math.max(1, l.size / 14);
   const total = l.lines.length * l.lineHeight;
   const x = align === 'center' ? it.x + it.w / 2 : align === 'right' ? it.x + it.w - pad : it.x + pad;
-  let y = shrink ? it.y + it.h / 2 - total / 2 : it.y + pad;
+  let y = shrink && it.va !== 'top' ? it.y + it.h / 2 - total / 2 : it.y + pad;
   for (const line of l.lines) {
     const mid = y + l.lineHeight / 2;
     if (line && (mark || it.fu || it.fx)) {

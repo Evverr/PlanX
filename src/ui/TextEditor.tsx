@@ -55,7 +55,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
       el.style.height = '0px';
       const content = Math.min(el.scrollHeight, item.h - pad * 2);
       el.style.height = `${content}px`;
-      top = ((item.h - pad * 2 - content) / 2) * z;
+      top = item.va === 'top' ? 0 : ((item.h - pad * 2 - content) / 2) * z;
       el.style.marginTop = `${top}px`;
     }
     const c = editor.toScreen(center(item)), dx = c.x - p.x, dy = c.y - p.y - top;
