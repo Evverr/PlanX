@@ -7,7 +7,7 @@ import { clearTextCache, DOT_GAP, drawScene, HANDLE, readTheme, type Camera, typ
 import { fitHeight, font, itemTextHeight, mindSize } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
-import { cellAt, colsOf, lineAt, newTable, rowsOf, withCount, withScale, withSize, type TableLine } from '../model/table';
+import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCount, withScale, type TableLine } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
 import { childPlace, descendants, MIND_COLORS, mindSide, plusButton } from '../model/mind';
 
@@ -58,7 +58,7 @@ type Gesture =
   | { type: 'resize'; id: string; start: Point; w0: number; h0: number }
   | { type: 'create'; id: string; origin: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' }
-  | { type: 'tableLine'; id: string; start: Point; lines: Array<TableLine & { size0: number }> }
+  | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
   | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
   | { type: 'draw'; tool: PenTool; pts: Point[] }
@@ -758,11 +758,10 @@ export class Editor {
       // Only Shift-clicks pick lines; a line dragged on its own isn't kept.
       this.pickedLines = e.shiftKey ? (was ? picked.filter((l) => !same(l)) : [...picked, tl]) : was ? picked : [];
       const table = this.board.get(tl.id)!;
-      const moving = e.shiftKey || was ? this.pickedLines : [tl];
-      const lines = moving.map((l) => ({ ...l, size0: (l.axis === 'col' ? colsOf(table) : rowsOf(table))[l.index] }));
+      const lines = e.shiftKey || was ? this.pickedLines : [tl];
       this.board.beginGesture();
       this.hotLine = tl;
-      this.gesture = { type: 'tableLine', id: tl.id, start: w, lines };
+      this.gesture = { type: 'tableLine', id: tl.id, start: w, lines, cols0: colsOf(table), rows0: rowsOf(table) };
       this.setMoving(true);
       this.requestRender();
       return;
@@ -895,12 +894,12 @@ export class Editor {
       case 'tableLine': {
         const it = this.board.get(g.id);
         if (!it) return;
-        // Every dragged line moves by the same amount; each change builds on the one before.
-        let patch: Partial<Item> = {};
-        for (const l of g.lines) {
-          const d = l.axis === 'col' ? w.x - g.start.x : w.y - g.start.y;
-          patch = { ...patch, ...withSize({ ...it, ...patch }, l.axis, l.index, l.size0 + d) };
-        }
+        // The dragged lines move together, the gaps between them kept.
+        const patch: Partial<Item> = {};
+        const cols = g.lines.filter((l) => l.axis === 'col').map((l) => l.index);
+        const rows = g.lines.filter((l) => l.axis === 'row').map((l) => l.index);
+        if (cols.length) { patch.cols = movedLines(g.cols0, cols, w.x - g.start.x, MIN_COL); patch.w = patch.cols.reduce((a, b) => a + b, 0); }
+        if (rows.length) { patch.rows = movedLines(g.rows0, rows, w.y - g.start.y, MIN_ROW); patch.h = patch.rows.reduce((a, b) => a + b, 0); }
         this.board.update(g.id, patch);
         return;
       }

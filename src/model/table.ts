@@ -59,6 +59,20 @@ export function withSize(it: Item, axis: 'col' | 'row', index: number, size: num
   return { rows, h: sum(rows) };
 }
 
+/**
+ * Sizes after moving the picked lines (line i ends column or row i) by d together, the gaps between
+ * them kept: the lines past the last picked one go along, those before the first stay put, and an
+ * unpicked line between picked ones stays put too. d is held back so nothing gets under `min`.
+ */
+export function movedLines(sizes: number[], picked: number[], d: number, min: number): number[] {
+  const last = Math.max(...picked), moves = (j: number) => j >= 0 && (picked.includes(j) || j > last);
+  const coef = sizes.map((_, j) => Number(moves(j)) - Number(moves(j - 1)));
+  let lo = -Infinity, hi = Infinity;
+  sizes.forEach((s, j) => { if (coef[j] > 0) lo = Math.max(lo, min - s); if (coef[j] < 0) hi = Math.min(hi, s - min); });
+  const k = Math.min(hi, Math.max(lo, d));
+  return sizes.map((s, j) => Math.round(s + coef[j] * k));
+}
+
 /** Fields after adding (+1) or removing (-1) the last column or row; a table keeps at least one of each.
  *  A new column or row is as big as the last one. */
 export function withCount(it: Item, axis: 'col' | 'row', delta: 1 | -1): Partial<Item> {
