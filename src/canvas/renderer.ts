@@ -392,12 +392,23 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.h / 2, depth === 0 ? 14 : 10));
   ctx.fillStyle = depth === 0 ? color : theme.surface;
   ctx.fill();
+  // A node a branch is being dragged onto shows it with its edge dashed (the solid central topic,
+  // with a white dashed line just inside its edge).
+  const target = s.mindMove?.target?.id === it.id;
+  if (target) ctx.setLineDash([5, 4]);
   if (depth > 0) {
     if (depth === 1) { ctx.fillStyle = color + '2E'; ctx.fill(); }
     ctx.lineWidth = depth === 1 ? 2 : 1.5;
     ctx.strokeStyle = color;
     ctx.stroke();
+  } else if (target) {
+    ctx.beginPath();
+    ctx.roundRect(it.x + 3, it.y + 3, it.w - 6, it.h - 6, Math.min(it.h / 2 - 3, 11));
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#fff';
+    ctx.stroke();
   }
+  ctx.setLineDash([]);
   if (!editing) drawText(ctx, it, textPad(it), depth === 0 ? '#fff' : theme.ink, true, s);
 }
 
@@ -725,8 +736,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   }
 
   if (s.mindMove) {
-    const { from, to, target } = s.mindMove;
-    if (target) outline(ctx, target, cam.z, SELECT_COLOR, [4, 4]);
+    const { from, to } = s.mindMove;
     arrow(ctx, [from, from, to, to], SELECT_COLOR, cam.z, [6, 6]);
   }
 
