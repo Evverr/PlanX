@@ -583,11 +583,11 @@ export class Editor {
     });
   }
 
-  /** Fill of the selected mind map nodes past the first level ('none' back to white). */
+  /** Fill of the selected mind map nodes but central topics ('none' back to the usual). */
   setMindFill(color: string): void {
     this.board.transact(() => {
       for (const it of this.selectedItems()) {
-        if (it.type === 'mind' && mindDepth(it, (id) => this.board.get(id)) >= 2) this.board.update(it.id, { fc: color === 'none' ? undefined : color });
+        if (it.type === 'mind' && mindDepth(it, (id) => this.board.get(id)) >= 1) this.board.update(it.id, { fc: color === 'none' ? undefined : color });
       }
     });
   }

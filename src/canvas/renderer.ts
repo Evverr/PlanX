@@ -400,12 +400,12 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.h / 2, depth === 0 ? 14 : 10));
   ctx.globalAlpha = it.fo ?? 1;
-  // Past the first level a node can have a fill of its own (white otherwise).
-  const fill = depth >= 2 && it.fc ? shade(it.fc.startsWith('#') ? it.fc : FILLS[it.fc] ?? FILLS.blue, theme.dim) : null;
+  // A node but the central topic can have a fill of its own (instead of the tint or white).
+  const fill = depth >= 1 && it.fc ? shade(it.fc.startsWith('#') ? it.fc : FILLS[it.fc] ?? FILLS.blue, theme.dim) : null;
   ctx.fillStyle = depth === 0 ? color : theme.surface;
   ctx.fill();
   if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-  if (depth === 1) { ctx.globalAlpha = (it.fo ?? 1) * 0.18; ctx.fillStyle = color; ctx.fill(); }
+  else if (depth === 1) { ctx.globalAlpha = (it.fo ?? 1) * 0.18; ctx.fillStyle = color; ctx.fill(); }
   ctx.globalAlpha = 1;
   // A node a branch is being dragged onto shows it with its edge dashed (the solid central topic,
   // with a white dashed line just inside its edge).
