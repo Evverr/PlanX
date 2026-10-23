@@ -169,6 +169,13 @@ button { font: inherit; color: inherit; }
 .sw.on { box-shadow: 0 0 0 2px var(--accent); }
 .sw-group, .sort-wrap { display: flex; align-items: center; }
 .table-count { gap: 2px; font-size: 14px; color: var(--fmt-ink); }
+/* A table's rows and columns carry their own separators, wherever they're moved to: a line either
+   side, spaced like the bar's separators, but none at the panel's end or doubling one already there. */
+.table-count::before, .table-count::after { content: ""; flex: none; width: 1px; height: 20px; background: var(--fmt-line); }
+.table-count::before { margin: 0 4px 0 2px; }
+.table-count::after { margin: 0 2px 0 4px; }
+.table-count:first-child::before, .sep + .table-count::before, .table-count + .table-count::before,
+.table-count:last-child::after, .table-count:has(+ .sep)::after { display: none; }
 .table-count span { padding: 0 4px 0 8px; }
 .sw.custom { position: relative; overflow: hidden; display: inline-block; background: conic-gradient(#FF5E5E, #FFD25E, #8CE35E, #5ED9E3, #5E8CFF, #C45EFF, #FF5E5E); }
 .sw.custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
