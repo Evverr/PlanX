@@ -250,14 +250,17 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     ghost: drag?.out && dropOut
       ? createPortal(createElement('div', { className: 'pick-ghost preview', style: { left: drag.x, top: drag.y } }, dropOut.preview(drag.key)), document.body)
       : null,
+    /** One element of the panel with its key, ref and 'lifted' class. A component can't take the ref,
+     *  so it goes in a wrapper that does: everything on a panel can be moved, components too. */
+    place(k: string, el: ReactElement): ReactElement {
+      const lifted = drag?.key === k && 'lifted';
+      if (typeof el.type !== 'string') return createElement('span', { key: k, ...this.item(k), className: ['sort-wrap', lifted].filter(Boolean).join(' ') }, el);
+      return cloneElement(el, { key: k, ...this.item(k), className: [el.props.className, lifted].filter(Boolean).join(' ') });
+    },
     /** Draws the panel's elements (by key) in order, each with its key, ref and 'lifted' class;
      *  elements left out of `items` are skipped. */
     render(items: Partial<Record<string, ReactElement>>): ReactElement[] {
-      return this.visible((k) => !!items[k]).map((k) => {
-        const el = items[k]!;
-        const className = [el.props.className, drag?.key === k && 'lifted'].filter(Boolean).join(' ');
-        return cloneElement(el, { key: k, ...this.item(k), className });
-      });
+      return this.visible((k) => !!items[k]).map((k) => this.place(k, items[k]!));
     },
     /**
      * Like render, for a panel that has `space` px along it: the elements that don't fit go under a
@@ -267,11 +270,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
       room.current = space;
       keys.current = this.visible((k) => !!items[k]);
       const shownKeys = this.visible((k) => !!items[k], fit);
-      const out = shownKeys.map((k) => {
-        const el = items[k]!;
-        const className = [el.props.className, drag?.key === k && 'lifted'].filter(Boolean).join(' ');
-        return cloneElement(el, { key: k, ...this.item(k), className });
-      });
+      const out = shownKeys.map((k) => this.place(k, items[k]!));
       const hidden = keys.current.filter((k) => !shownKeys.includes(k) && !isSeparator(k));
       if (!hidden.length) { if (moreOpen) setMoreOpen(false); return out; }
       out.push(createElement('div', { key: '__more', className: 'more-wrap', 'data-nosort': true, ref: (e: HTMLElement | null): void => { moreRef.current = e; } },
