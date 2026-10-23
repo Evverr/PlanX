@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { clock, MAX_SECONDS, startRecording, type AudioNote, type Recording } from '../canvas/audio';
-import { PanelIcon } from './PanelIcon';
+import micIcon from './recorder/mic.svg';
+import crossIcon from './recorder/cross.svg';
 
 type State =
   | { kind: 'idle' }
@@ -14,7 +15,7 @@ type State =
 const METER = 32;
 
 /**
- * Records an audio note next to the tool rail: start, watch the meter and the clock, stop (or hit
+ * Records an audio note next to the tool rail (Figma "Frame 12" for its start): start, watch the meter and the clock, stop (or hit
  * the three-minute limit), listen back, then put it on the board or record again. Closing the
  * panel throws away a recording in progress.
  */
@@ -67,14 +68,14 @@ export function AudioRecorder({ onAdd, onClose }: { onAdd: (note: AudioNote) => 
     <div className="pop recorder" role="dialog" aria-label="Аудиозаметка">
       <div className="recorder-head">
         <h3>Аудиозаметка</h3>
-        <button className="ib" aria-label="Закрыть" title="Закрыть" onClick={onClose}>×</button>
+        <button className="rec-close" aria-label="Закрыть" title="Закрыть" onClick={onClose}><img src={crossIcon} alt="" width={24} height={24} /></button>
       </div>
       {(state.kind === 'idle' || state.kind === 'starting') && (
         <>
-          <button className="rec-btn" aria-label="Начать запись" disabled={state.kind === 'starting'} onClick={() => void start()}>
-            <PanelIcon name="microphone" />
+          <button className="rec-mic" aria-label="Начать запись" title={`До ${MAX_SECONDS / 60} минут`} disabled={state.kind === 'starting'} onClick={() => void start()}>
+            <img src={micIcon} alt="" width={88} height={88} />
           </button>
-          <p className="muted">Нажмите, чтобы начать запись. До {MAX_SECONDS / 60} минут.</p>
+          <button className="btn primary" disabled={state.kind === 'starting'} onClick={() => void start()}>Начать запись</button>
         </>
       )}
       {(state.kind === 'recording' || state.kind === 'saving') && (
