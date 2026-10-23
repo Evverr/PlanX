@@ -26,7 +26,7 @@ const LATER: Partial<Record<string, [PanelIconName, string]>> = {};
 const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'link', 'table', 'mind', 'frames', 'draw', 'image', 'audio', 'smile', 'paint'];
 
 /** Rail buttons that make something on the board when dragged off the rail, and their icons. */
-const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape', paint: 'paint' };
+const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape', paint: 'node-pool' };
 
 /** Room kept clear above the tool rail (the top bar) and as much below it. */
 const RAIL_CLEAR = 72;
@@ -153,7 +153,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
     if (key === 'audio') return button(key, recorderOpen, 'Аудиозаметка', 'microphone', onToggleRecorder, { 'aria-expanded': recorderOpen });
     if (key === 'smile') return button(key, iconsOpen, 'Смайлы, стикеры и иконки (I)', 'smile', onToggleIcons, { 'aria-expanded': iconsOpen });
     // The roller turns lining up along guides on and off while dragging.
-    if (key === 'paint') return button(key, guides, guides ? 'Направляющие включены' : 'Направляющие', 'paint', () => editor.toggleGuides(), { 'aria-pressed': guides });
+    if (key === 'paint') return button(key, guides, guides ? 'Направляющие включены' : 'Направляющие', 'node-pool', () => editor.toggleGuides(), { 'aria-pressed': guides });
     if (later) return button(key, false, `${later[1]} (скоро)`, later[0]);
     return null;
   };
