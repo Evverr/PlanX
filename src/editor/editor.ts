@@ -153,8 +153,10 @@ export class Editor {
   private pickedLines: TableLine[] = [];
   private guides = readJSON<boolean>(GUIDES_KEY) ?? false;
   /** Cells picked in the selected table: a click on a cell of a table already selected picks it,
-   *  Shift-click adds or drops one. */
+   *  Shift-click picks the box from there to another, Cmd-click adds or drops one. */
   private cells: number[] = [];
+  /** The cell a Shift-click range is counted from: the one last clicked on its own. */
+  private cellAnchor: number | null = null;
 
   constructor(board: Board, opts: { presence?: Presence; storageKey?: string } = {}) {
     this.board = board;
@@ -386,8 +388,23 @@ export class Editor {
   }
 
   /** Picks a cell of the selected table, or with `add` adds it to the picked ones (or drops it). */
-  pickCell(i: number, add: boolean): void {
-    this.cells = !add ? [i] : this.cells.includes(i) ? this.cells.filter((c) => c !== i) : [...this.cells, i];
+  /** Picks a cell of the selected table: on its own (and as where a range starts), with `range` every
+   *  cell in the box from there to it (a row, a column, a corner), with `toggle` adding or dropping it. */
+  pickCell(i: number, how: 'one' | 'range' | 'toggle'): void {
+    const it = this.selectedItems()[0];
+    if (how === 'range' && it?.type === 'table' && this.cellAnchor !== null) {
+      const n = colsOf(it).length, a = this.cellAnchor;
+      const [r1, r2] = [Math.floor(a / n), Math.floor(i / n)].sort((x, y) => x - y), [c1, c2] = [a % n, i % n].sort((x, y) => x - y);
+      const box: number[] = [];
+      for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) box.push(r * n + c);
+      this.cells = box;
+    } else if (how === 'toggle') {
+      this.cells = this.cells.includes(i) ? this.cells.filter((c) => c !== i) : [...this.cells, i];
+      this.cellAnchor = i;
+    } else {
+      this.cells = [i];
+      this.cellAnchor = i;
+    }
     this.emit();
     this.requestRender();
   }
@@ -425,7 +442,7 @@ export class Editor {
   setSelection(ids: Iterable<string>): void {
     const was = [...this.selection];
     this.selection = new Set(ids);
-    if (this.cells.length && (this.selection.size !== 1 || !this.selection.has(was[0]))) this.cells = [];
+    if (this.cells.length && (this.selection.size !== 1 || !this.selection.has(was[0]))) { this.cells = []; this.cellAnchor = null; }
     this.presence?.setSelection([...this.selection]);
     this.emit();
     this.requestRender();
@@ -1310,7 +1327,7 @@ export class Editor {
           this.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
         } else if (g.cell) {
           const it = this.board.get(g.id), i = it ? cellAt(it, g.start) : null;
-          if (i !== null) this.pickCell(i, e.shiftKey);
+          if (i !== null) this.pickCell(i, e.shiftKey ? 'range' : e.metaKey || e.ctrlKey ? 'toggle' : 'one');
         } else if (this.board.get(g.id)?.type === 'mind' && this.selection.size === 1 && !e.shiftKey) {
           // A mind map node opens for typing on a single click, the caret after its text.
           this.startEditing(g.id, null, 'end');
