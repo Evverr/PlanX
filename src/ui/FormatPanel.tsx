@@ -56,6 +56,12 @@ type Menu = 'font' | 'style' | 'size' | 'color' | 'mark' | 'align' | 'list';
 /** Gap between the selected item's top dot and the text panel, and the panel's margin to the screen edge. */
 const GAP = 20, MARGIN = 12;
 
+/** How wide the text panel may be: the screen less its margins, and the tool rail beside it. */
+function textRoom(): number {
+  const rail = document.querySelector('.tools')?.getBoundingClientRect();
+  return innerWidth - MARGIN - (rail ? rail.right + MARGIN : MARGIN);
+}
+
 /** Hung 20px over the top dot of the selected text or sticker (under the bottom dot when there's no room above). */
 export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
   const sort = useSortable('planx-order-text', ORDER, 'x');
@@ -103,7 +109,7 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
     // components can't take the ref, so each sits in a wrapper.
     <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`tfmt sortable ${sort.sorting ? 'sorting' : ''}`} role="toolbar" aria-label="Форматирование текста"
       {...sort.container} onPointerDown={(e) => { e.preventDefault(); sort.container.onPointerDown(e); }}>
-      {sort.render({
+      {sort.renderFit({
         font: <span className="sort-wrap"><Drop open={menu === 'font'} menu={Object.entries(FONTS).map(([k, f]) => (
           <button key={k} className={`tf-item ${(item.ff ?? 'onest') === k ? 'on' : ''}`} style={{ fontFamily: f.css }}
             onClick={() => set({ ff: k === 'onest' ? undefined : k })}>{f.label}</button>
@@ -162,7 +168,7 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
         </div>}>
           <Btn icon={item.ls === 'number' ? 'numbered-list' : 'list'} label="Список" menu on={!!item.ls || menu === 'list'} onClick={() => toggle('list')} />
         </Drop></span>,
-      })}
+      }, textRoom(), 'above')}
     </div>
   );
 }

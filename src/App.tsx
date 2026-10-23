@@ -155,7 +155,7 @@ export function App({ boardId }: { boardId: string }) {
         }} />
 
       <header ref={topSort.ref} className={`bar topbar sortable ${docked ? 'docked' : ''} ${topSort.sorting ? 'sorting' : ''}`} {...topSort.container}>
-        {topSort.render({
+        {topSort.renderFit({
           logo: <div className="logo">Plan</div>,
           sep: <div className="sep" />,
           // The field is as wide as its text (the copy in data-text sizes it), up to 30 characters.
@@ -170,11 +170,11 @@ export function App({ boardId }: { boardId: string }) {
           sep2: <div className="sep" />,
           sep3: <div className="sep" />,
           // Light grey, and not pressable, while there's nothing to undo or redo.
-          undo: <button className="ib hide-narrow" title="Отменить (Ctrl+Z)" aria-label="Отменить" disabled={!ui.canUndo} onClick={() => editor.undo()}><PanelIcon name="undo-on" /></button>,
-          redo: <button className="ib hide-narrow" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" disabled={!ui.canRedo} onClick={() => editor.redo()}><PanelIcon name="redo-on" /></button>,
-          new: <button className="ib hide-narrow" title="Копия доски в новой вкладке" aria-label="Копия доски" onClick={openNewBoard}><PanelIcon name="plus" /></button>,
+          undo: <button className="ib" title="Отменить (Ctrl+Z)" aria-label="Отменить" disabled={!ui.canUndo} onClick={() => editor.undo()}><PanelIcon name="undo-on" /></button>,
+          redo: <button className="ib" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" disabled={!ui.canRedo} onClick={() => editor.redo()}><PanelIcon name="redo-on" /></button>,
+          new: <button className="ib" title="Копия доски в новой вкладке" aria-label="Копия доски" onClick={openNewBoard}><PanelIcon name="plus" /></button>,
           clear: <button className={`ib ${pop === 'clear' ? 'on' : ''}`} title="Очистить доску" aria-label="Очистить доску" onClick={() => toggle('clear')}><PanelIcon name="cross" /></button>,
-        })}
+        }, innerWidth - 24, 'below')}
       </header>
 
       <Toolbar editor={editor} tool={ui.tool} pens={ui.pens} zoom={ui.cam.z} guides={ui.guides} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => { toggle('icons'); setRecorder(false); }}
@@ -189,7 +189,7 @@ export function App({ boardId }: { boardId: string }) {
       }} />}
 
       <div ref={zoomSort.ref as React.RefObject<HTMLDivElement>} className={`bar zoom sortable ${docked ? 'docked' : ''} ${zoomSort.sorting ? 'sorting' : ''}`} {...zoomSort.container}>
-        {zoomSort.render({
+        {zoomSort.renderFit({
         people: <div className="avatars">
           <button className="avatar me" title={`${conn.me.name} (вы). Нажмите, чтобы убрать все панели`}
             aria-label="Убрать панели" onClick={() => setBare(true)}>
@@ -213,7 +213,7 @@ export function App({ boardId }: { boardId: string }) {
         help: <button className={`ib ${pop === 'help' ? 'on' : ''}`} title="Подсказки" aria-label="Подсказки" onClick={() => { toggle('help'); setMinimap(false); }}><PanelIcon name="question" /></button>,
         // A component can't take the ref, so the dock button sits in a wrapper.
         dock: <span className="sort-wrap"><DockButton edge="bottom" docked={docked} onToggle={toggleDock} /></span>,
-        })}
+        }, innerWidth - 24, 'above')}
       </div>
 
       {minimap && <Minimap editor={editor} items={board.list()} docked={docked} onClose={closeMinimap} />}

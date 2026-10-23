@@ -161,8 +161,7 @@ button { font: inherit; color: inherit; }
 .zpct { min-width: 52px; text-align: center; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; border: 0; background: transparent; cursor: pointer; padding: 8px 6px; border-radius: 6px; transition: background-color .12s ease-out; }
 .zpct:hover { background: var(--fmt-hover); }
 
-/* Wrapped onto two rows, each keeps the bar's own 6px above and below (12px between them). */
-.panel { left: 50%; transform: translateX(-50%); width: max-content; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; flex-wrap: wrap; row-gap: 12px; justify-content: center; max-width: calc(100vw - 32px); transition: bottom .2s ease; }
+.panel { left: 50%; transform: translateX(-50%); width: max-content; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; flex-wrap: nowrap; transition: bottom .2s ease; }
 /* Too wide to sit beside the zoom panel: one bar's height (52px) and a gap higher. */
 .panel.raised { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 .panel.docked.raised { bottom: 60px; border-radius: 12px; }
@@ -202,7 +201,7 @@ button { font: inherit; color: inherit; }
 .fsep { flex: none; width: 5px; height: 24px; position: relative; }
 .fsep.line::after { content: ""; position: absolute; left: 50%; top: 2px; width: 1px; height: 20px; background: var(--fmt-line); }
 /* Text controls over the selected text or sticker; TextPanel in FormatPanel.tsx places it. */
-.tfmt { position: fixed; z-index: 5; display: flex; flex-wrap: wrap; align-items: center; row-gap: 18px; column-gap: 14px; padding: 12px 18px; max-width: calc(100vw - 24px);
+.tfmt { position: fixed; z-index: 5; display: flex; flex-wrap: nowrap; align-items: center; column-gap: 14px; padding: 12px 18px; width: max-content;
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 16px; box-shadow: var(--fmt-shadow); color: var(--fmt-ink); }
 .tfmt .caret { margin: 0 -10px; }
 /* The text panel fades in when it shows up. */
@@ -315,9 +314,7 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 
 @media (max-width: 640px) {
   .title-fit { max-width: 120px; }
-  .hide-narrow { display: none; }
   .tools { top: auto; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: none; }
-  .zoom .fit { display: none; }
 }
 
 /* Hints of the panels' buttons (Figma "Alt"): Inter Semi Bold 12 in white on a 90% blue bubble with
@@ -332,3 +329,10 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
   background: url(./ui/tip-bubble.svg) 0 -7px / 80.89px 29px no-repeat; }
 .tip.above { transform: translate(-50%, -100%); }
 .tip.below { transform: translateX(-50%); }
+
+/* A bar's "more" button and the popover with what didn't fit, 8px outside the bar. */
+.more-wrap { position: relative; display: flex; flex: none; }
+.more-pop { position: absolute; right: -6px; z-index: 6; display: flex; align-items: center; gap: 4px; padding: 6px; white-space: nowrap;
+  background: var(--surface); border-radius: 12px; box-shadow: var(--shadow); animation: fade-in .12s ease-out; }
+.more-pop.above { bottom: calc(100% + 14px); }
+.more-pop.below { top: calc(100% + 14px); }
