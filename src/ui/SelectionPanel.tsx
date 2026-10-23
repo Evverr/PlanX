@@ -6,6 +6,7 @@ import { MIND_PALETTE, mindDepth } from '../model/mind';
 import { colsOf, rowsOf } from '../model/table';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
+import { ColorPicker } from './ColorPicker';
 
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
@@ -81,19 +82,30 @@ function PaintSwitch({ paint, pick, fill, stroke, fillLabel, strokeLabel }: {
 }
 
 /** Colour circles (the picked one marked) and any colour from the browser's own picker. */
-function Swatches({ swatches, current, onPick, label, noneLabel }: {
-  swatches: Array<[string, string]>; current: string | null; onPick: (c: string) => void; label: string; noneLabel: string;
+function Swatches({ swatches, current, onPick, label, noneLabel, editor }: {
+  swatches: Array<[string, string]>; current: string | null; onPick: (c: string) => void; label: string; noneLabel: string; editor: Editor;
 }) {
   const custom = current?.startsWith('#') && !swatches.some(([k]) => k === current) ? current : null;
+  // Any colour: the picker opens over its circle; a press anywhere else closes it.
+  const [picking, setPicking] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!picking) return;
+    const close = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node)) setPicking(false); };
+    window.addEventListener('pointerdown', close, true);
+    return () => window.removeEventListener('pointerdown', close, true);
+  }, [picking]);
   return (
     <>
       {swatches.map(([k, v]) => (
         <button key={k} className={`sw ${k === 'none' ? 'none' : ''} ${current === k ? 'on' : ''}`} style={{ background: v }}
           title={k === 'none' ? noneLabel : label} aria-label={k === 'none' ? noneLabel : `${label} ${k}`} onClick={() => onPick(k)} />
       ))}
-      <label className={`sw custom ${custom ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет">
-        <input type="color" aria-label="Свой цвет" value={custom ?? FILLS.yellow.toLowerCase()} onChange={(e) => onPick(e.target.value)} />
-      </label>
+      <div ref={wrap} className="cp-wrap">
+        <button className={`sw custom ${custom || picking ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет" aria-label="Свой цвет"
+          aria-expanded={picking} onClick={() => setPicking(!picking)} />
+        {picking && <ColorPicker value={custom ?? FILLS.yellow} onChange={onPick} onStart={() => editor.beginChange()} onEnd={() => editor.endChange()} />}
+      </div>
     </>
   );
 }
@@ -143,7 +155,7 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
     <Palette label="Цвет">
       {colorable.length > 0 && <>
         {strokable.length > 0 && <PaintSwitch paint={targets} pick={pick} fill={fill} stroke={stroke} fillLabel="Заливка" strokeLabel="Обводка" />}
-        <Swatches swatches={swatches} current={target === 'fill' ? fill : stroke} onPick={setColor}
+        <Swatches editor={editor} swatches={swatches} current={target === 'fill' ? fill : stroke} onPick={setColor}
           label={target === 'fill' ? 'Цвет' : 'Цвет обводки'} noneLabel={target === 'fill' ? 'Без заливки' : 'Без обводки'} />
         <OpacitySlider editor={editor} value={opacity} onChange={(v) => targets.forEach((t) => editor.setOpacity(t, v))} />
       </>}
@@ -174,7 +186,7 @@ function MindColors({ editor, nodes }: { editor: Editor; nodes: Item[] }) {
   return (
     <Palette label="Цвет">
       <PaintSwitch paint={paint} pick={pick} fill={fill} stroke={stroke ?? MIND_PALETTE[0]} fillLabel="Заливка" strokeLabel="Обводка" />
-      <Swatches swatches={swatches} current={target === 'fill' ? fill : stroke} onPick={setColor}
+      <Swatches editor={editor} swatches={swatches} current={target === 'fill' ? fill : stroke} onPick={setColor}
         label={target === 'fill' ? 'Цвет' : 'Цвет обводки'} noneLabel="Без заливки" />
       <OpacitySlider editor={editor} value={opacity} onChange={(v) => paint.forEach((t) => editor.setOpacity(t, v))} />
     </Palette>
@@ -205,7 +217,7 @@ function TableColors({ editor, table, cells }: { editor: Editor; table: Item; ce
   return (
     <Palette label={cells.length ? 'Цвет ячеек и линий' : 'Цвет таблицы и линий'}>
       <PaintSwitch paint={paint} pick={pick} fill={fill} stroke={stroke} fillLabel="Заливка ячеек" strokeLabel="Линии" />
-      <Swatches swatches={swatches} current={target === 'fill' ? fill : stroke} onPick={setColor}
+      <Swatches editor={editor} swatches={swatches} current={target === 'fill' ? fill : stroke} onPick={setColor}
         label={target === 'fill' ? 'Цвет ячеек' : 'Цвет линий'} noneLabel={target === 'fill' ? 'Без заливки' : 'Без линий'} />
       <OpacitySlider editor={editor} value={opacity} onChange={(v) => {
         if (paint.includes('fill')) editor.setCellOpacity(v);
