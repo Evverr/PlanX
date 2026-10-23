@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useReducer, useState } from 'react';
+import { useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { COLORABLE, FILLS, ICON_COLORS, STROKABLE, STROKE_COLORS } from '../model/types';
@@ -9,6 +9,36 @@ const same = (vals: Array<string | undefined>) => (vals.length && vals.every((v)
 
 /** Rearrangeable buttons; the bin isn't among them, it always comes last. */
 const ORDER = ['paint', 'fills', 'sep', 'icons', 'sep2', 'rows', 'sep5', 'cols', 'sep4', 'front', 'back', 'duplicate'];
+
+/** A chequered circle that opens a slider for how see-through the colour is, in percent. Dragging
+ *  the slider is one change (onStart … onEnd). */
+function Opacity({ value, label, onStart, onChange, onEnd }: {
+  value: number; label: string; onStart: () => void; onChange: (v: number) => void; onEnd: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  // A press anywhere else closes it.
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    window.addEventListener('pointerdown', close, true);
+    return () => window.removeEventListener('pointerdown', close, true);
+  }, [open]);
+  const pct = Math.round(value * 100);
+  return (
+    <div ref={ref} className="op-wrap">
+      <button className={`sw checker ${open ? 'on' : ''}`} title={label} aria-label={label} aria-expanded={open} onClick={() => setOpen(!open)} />
+      {open && (
+        <div className="op-pop" data-nosort>
+          <input type="range" min={0} max={100} value={pct} aria-label={`${label}, %`}
+            onPointerDown={() => { onStart(); window.addEventListener('pointerup', onEnd, { once: true }); }}
+            onChange={(e) => onChange(Number(e.target.value) / 100)} />
+          <span>{pct}%</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function SelectionPanel({ editor, items, linkCount, docked }: { editor: Editor; items: Item[]; linkCount: number; docked: boolean }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
@@ -41,6 +71,7 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
   const target = strokable.length ? paint : 'fill';
   const current = target === 'fill' ? fill : stroke;
   const custom = current?.startsWith('#') ? current : null;
+  const opacity = Number(same(target === 'fill' ? colorable.map((i) => String(i.fo ?? 1)) : strokable.map((i) => String(i.so ?? 1))) ?? 1);
   const setColor = (c: string) => (target === 'fill' ? editor.setColor(c) : editor.setStroke(c));
   const swatches: Array<[string, string]> = target === 'fill'
     ? Object.entries(FILLS).filter(([k]) => k !== 'none' || allowNone)
@@ -79,6 +110,8 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
             <label className={`sw custom ${custom ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет">
               <input type="color" aria-label="Свой цвет" value={custom ?? (target === 'fill' ? FILLS.yellow : STROKE_COLORS.blue).toLowerCase()} onChange={(e) => setColor(e.target.value)} />
             </label>
+            <Opacity value={opacity} label={target === 'fill' ? 'Прозрачность заливки' : 'Прозрачность обводки'}
+              onStart={() => editor.beginChange()} onChange={(v) => editor.setOpacity(target, v)} onEnd={() => editor.endChange()} />
           </div>
         ) : undefined,
         icons: icons.length > 0 ? (

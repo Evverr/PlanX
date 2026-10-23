@@ -43,6 +43,9 @@ export interface Item {
   /** Outline colour of shapes and tasks: a key of STROKE_COLORS, '#rrggbb', or 'none' for no outline;
    *  unset is the usual grey (see strokeOf in the renderer). */
   sc?: string;
+  /** Opacity of the fill and of the outline, 0…1; unset is solid. */
+  fo?: number;
+  so?: number;
   /** Turned clockwise about its centre by this many degrees (see ROTATABLE). */
   rot?: number;
   /** Audio notes: length in seconds and a coarse waveform, 0…1 per bar. */

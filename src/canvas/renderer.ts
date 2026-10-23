@@ -245,7 +245,9 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
   const editing = s.editingId === it.id;
   switch (it.type) {
     case 'sticky':
+      ctx.globalAlpha = it.fo ?? 1;
       drawSticky(ctx, it, cam.z * s.dpr, theme.dim);
+      ctx.globalAlpha = 1;
       if (!editing) drawText(ctx, it, 14, theme.stickyInk, true, s);
       break;
     case 'rect':
@@ -256,14 +258,20 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       if (it.type === 'rect') ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(CORNER, it.w / 2, it.h / 2));
       else if (it.type === 'ellipse') ctx.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
       else outlinePolygon(ctx, it);
-      if (!none) { ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : FILLS[it.color ?? 'blue'] ?? FILLS.blue, theme.dim); ctx.fill(); }
+      if (!none) {
+        ctx.globalAlpha = it.fo ?? 1;
+        ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : FILLS[it.color ?? 'blue'] ?? FILLS.blue, theme.dim);
+        ctx.fill();
+      }
       const line = strokeOf(it, theme);
       if (line) {
+        ctx.globalAlpha = it.so ?? 1;
         ctx.lineWidth = 2;
         ctx.lineJoin = 'round';
         ctx.strokeStyle = line;
         ctx.stroke();
       }
+      ctx.globalAlpha = 1;
       if (!editing) drawText(ctx, it, textPad(it), none ? theme.ink : theme.stickyInk, true, s);
       break;
     }
@@ -321,13 +329,19 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   // The card is a rectangle like any other, fill and outline alike.
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(CORNER, it.w / 2, it.h / 2));
-  if (!none) { ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : FILLS[it.color ?? 'blue'] ?? FILLS.blue, theme.dim); ctx.fill(); }
+  if (!none) {
+    ctx.globalAlpha = it.fo ?? 1;
+    ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : FILLS[it.color ?? 'blue'] ?? FILLS.blue, theme.dim);
+    ctx.fill();
+  }
   const line = strokeOf(it, theme);
   if (line) {
+    ctx.globalAlpha = it.so ?? 1;
     ctx.lineWidth = 2;
     ctx.strokeStyle = line;
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
   // The box and its tick are drawn for a radius of 10 and scaled to the radius it has at this zoom.
   const c = taskBox(it, cam.z), k = c.r / 10;
   ctx.beginPath();
