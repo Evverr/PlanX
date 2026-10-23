@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Glyph } from './glyphs';
 import dropIcon from './menu/drop.svg';
 
@@ -16,7 +16,15 @@ export function BoardMenu({ level = 0 }: { level?: number }) {
   // try out a menu where rows without one line their text up with the row that has one).
   let n = 0;
   const iconed = (i: number) => level === 0 || (level === 2 && i === 0);
-  const anyIcon = level !== 1;
+  const anyIcon = level === 0 || level === 2;
+  // A further level opens to the right of its row, or to the left where the screen ends.
+  const ref = useRef<HTMLDivElement>(null);
+  const [leftward, setLeftward] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !level || leftward) return;
+    if (el.getBoundingClientRect().right > innerWidth - 8) setLeftward(true);
+  }, [level, leftward]);
   const row = (icon: string, label: string, { end, onClick, light, more }: { end?: ReactNode; onClick?: () => void; light?: boolean; more?: boolean } = {}) => {
     const withIcon = iconed(n++);
     return (
@@ -32,7 +40,7 @@ export function BoardMenu({ level = 0 }: { level?: number }) {
     );
   };
   return (
-    <div className={`board-menu ${level ? 'sub' : ''} ${anyIcon ? '' : 'plain'}`} role="menu" data-nosort>
+    <div ref={ref} className={`board-menu ${level ? 'sub' : ''} ${leftward ? 'leftward' : ''} ${anyIcon ? '' : 'plain'}`} role="menu" data-nosort>
       {row('link-settings', 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
       {row('change-order', 'Оглавление', { light: true, more: true, end: <img className="menu-more" src={dropIcon} alt="" width={24} height={24} /> })}
       {row('broom', 'Преобразовать текст в таблицу')}
