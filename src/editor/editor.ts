@@ -940,8 +940,9 @@ export class Editor {
     if (tl) {
       const same = (l: TableLine) => l.id === tl.id && l.axis === tl.axis && l.index === tl.index;
       const picked = this.pickedLines.filter((l) => l.id === tl.id), was = picked.some(same);
-      // Only Shift-clicks pick lines; a line dragged on its own isn't kept.
-      this.pickedLines = e.shiftKey ? (was ? picked.filter((l) => !same(l)) : [...picked, tl]) : was ? picked : [];
+      // A click picks the line (it stays blue), Shift-click adds one or drops it; pressing a picked
+      // line keeps the others picked, to drag them all.
+      this.pickedLines = e.shiftKey ? (was ? picked.filter((l) => !same(l)) : [...picked, tl]) : was ? picked : [tl];
       const table = this.board.get(tl.id)!;
       const lines = e.shiftKey || was ? this.pickedLines : [tl];
       this.board.beginGesture();
