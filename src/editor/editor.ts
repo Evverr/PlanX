@@ -9,7 +9,7 @@ import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCount, withScale, type TableLine } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
-import { childPlace, descendants, MIND_COLORS, mindSide, plusButton, siblingButton } from '../model/mind';
+import { balance, childPlace, descendants, mindSide, plusButton, siblingButton } from '../model/mind';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | 'mind' | PolyShape;
 export type PenTool = 'pen' | 'marker';
@@ -662,6 +662,8 @@ export class Editor {
         const h = fitHeight(it, value);
         if (h) Object.assign(patch, { h }, it.rot && resizedAt(it, it.w, h));
         this.board.update(id, patch);
+        // A mind map node that grew taller makes room among its neighbours.
+        if (it.type === 'mind' && it.parent && patch.h !== it.h) this.rebalance(id);
       }
     }
     this.emit();
@@ -698,13 +700,21 @@ export class Editor {
     const { w, h } = mindSize(draft, '');
     // A parallel branch grows on the same side of the centre as the node it's added beside.
     const at = childPlace(parent, items, get, w, h, parent !== from ? mindSide(from, parent) : undefined);
-    const branches = items.filter((i) => i.type === 'mind' && i.parent === parent.id).length;
-    const it = this.newItem('mind', at.x, at.y, {
-      w, h, fs: draft.fs, parent: parent.id, ...(level === 1 && { color: MIND_COLORS[branches % MIND_COLORS.length] }),
-    });
+    // A parallel branch goes right after the node it's added beside; then the branches re-centre.
+    if (parent !== from) at.y = from.y + from.h / 2 + 0.5 - h / 2;
+    const it = this.newItem('mind', at.x, at.y, { w, h, fs: draft.fs, parent: parent.id });
+    this.board.beginGesture();
     this.board.add(it);
+    this.rebalance(it.id);
+    this.board.endGesture();
     this.setSelection([it.id]);
     this.startEditing(it.id);
+  }
+
+  /** Lays the mind map's branches out again around the way from this node to the centre. */
+  private rebalance(id: string): void {
+    const moves = balance(id, this.board.list());
+    this.board.transact(() => moves.forEach((y, k) => this.board.update(k, { y })));
   }
 
   private stopEditing(): void {

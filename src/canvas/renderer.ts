@@ -5,7 +5,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchColor, branchCurve, mindDepth, plusButton, siblingButton } from '../model/mind';
+import { branchCurve, MIND_COLOR, mindDepth, plusButton, siblingButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
@@ -378,10 +378,10 @@ function outlinePolygon(ctx: CanvasRenderingContext2D, it: Item) {
   ctx.closePath();
 }
 
-/** A mind map node: the central topic dark and solid, first-level nodes tinted with their branch
- *  colour, the rest white with a branch-coloured edge. */
+/** A mind map node: the central topic dark and solid, first-level nodes tinted blue, the rest white
+ *  with a blue edge. */
 function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
-  const { theme } = s, depth = mindDepth(it, s.get), color = branchColor(it, s.get);
+  const { theme } = s, depth = mindDepth(it, s.get), color = MIND_COLOR;
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.h / 2, depth === 0 ? 14 : 10));
   ctx.fillStyle = depth === 0 ? theme.ink : theme.surface;
@@ -395,21 +395,23 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   if (!editing) drawText(ctx, it, textPad(it), depth === 0 ? theme.surface : theme.ink, true, s);
 }
 
-/** The branches of mind maps, under the nodes: thick near the centre, thinner further out. */
+/** The branches of mind maps, under the nodes and half see-through: thicker near the centre, thinner further out. */
 function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
   ctx.lineCap = 'round';
+  ctx.globalAlpha = 0.5;
   for (const it of s.items) {
     if (it.type !== 'mind' || !it.parent) continue;
     const up = s.get(it.parent);
     if (!up) continue;
     const [a, c1, c2, b] = branchCurve(up, it);
-    ctx.strokeStyle = branchColor(it, s.get);
-    ctx.lineWidth = up.parent ? 2.5 : 4;
+    ctx.strokeStyle = MIND_COLOR;
+    ctx.lineWidth = up.parent ? 1.5 : 3;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, b.x, b.y);
     ctx.stroke();
   }
+  ctx.globalAlpha = 1;
 }
 
 /** Blue of the audio note's play button and of the played part of its waveform. */
@@ -661,7 +663,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   for (const id of s.selection) {
     const it = s.get(id);
     if (!it) continue;
-    outline(ctx, it, cam.z, SELECT_COLOR);
+    // A mind map node shows it's picked by its "+" buttons alone.
+    if (it.type !== 'mind') outline(ctx, it, cam.z, SELECT_COLOR);
     // A mind map node sizes itself and links by its branches: instead of the handle and dots it
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && s.editingId !== id && it.type === 'mind') {

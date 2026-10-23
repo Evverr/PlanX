@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { branchColor, childPlace, descendants, mindDepth, MIND_COLORS } from '../src/model/mind';
+import { balance, childPlace, descendants, mindDepth } from '../src/model/mind';
 import type { Item } from '../src/model/types';
 
 const node = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item =>
@@ -7,16 +7,24 @@ const node = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item
 
 describe('mind map', () => {
   const root = node('r', 0, 0);
-  const a = node('a', 160, -60, { parent: 'r', color: MIND_COLORS[2] });
+  const a = node('a', 160, -60, { parent: 'r' });
   const a1 = node('a1', 320, -60, { parent: 'a' });
-  const b = node('b', -260, 0, { parent: 'r', color: MIND_COLORS[3] });
+  const b = node('b', -260, 0, { parent: 'r' });
   const items = [root, a, a1, b];
   const get = (id: string) => items.find((i) => i.id === id);
 
-  it('knows how deep a node is and which branch colour it takes', () => {
+  it('knows how deep a node is', () => {
     expect(mindDepth(a1, get)).toBe(2);
-    expect(branchColor(a1, get)).toBe(MIND_COLORS[2]);
-    expect(branchColor(b, get)).toBe(MIND_COLORS[3]);
+  });
+
+  it('centres the branches on a side around their node', () => {
+    // A second branch on the right under a: the two stack 16 apart, centred on the root's middle (20).
+    const a2 = node('a2', 160, 40, { parent: 'r' });
+    const moves = balance('a2', [...items, a2]);
+    expect(moves.get('a')).toBe(-28);
+    expect(moves.get('a1')).toBe(-28);
+    expect(moves.get('a2')).toBe(28);
+    expect(moves.has('b')).toBe(false);
   });
 
   it('finds everything branching from a node', () => {
