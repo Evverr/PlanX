@@ -125,6 +125,12 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     return () => window.removeEventListener('pointerdown', close, true);
   }, [moreOpen]);
   if (moreOpen && !hidden.length) setMoreOpen(false);
+  // The "more" panel stands level with the rail's bottom edge, as tall as fits under the top bar
+  // (42 is its padding, 48 a button and a gap); further buttons go into more columns.
+  const railBottom = sort.ref.current?.getBoundingClientRect().bottom ?? innerHeight / 2;
+  const moreRows = Math.max(1, Math.min(hidden.length, Math.floor((railBottom - RAIL_CLEAR - 42 + 18) / 48)));
+  // The selection panel keeps clear of what opens beside the rail.
+  useEffect(() => { window.dispatchEvent(new Event('planx:side-panels')); }, [moreOpen, drawing, shaping]);
 
   /** A rail button; in the "more" row (`inMenu`) it isn't rearrangeable and closes the row when used. */
   const railButton = (key: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}, inMenu = false): ReactNode => (
@@ -166,7 +172,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     </nav>
     {moreOpen && hidden.length > 0 && (
       <div ref={menuRef} className="tools-more" role="toolbar" aria-label="Ещё инструменты" aria-orientation="vertical"
-        style={{ gridTemplateRows: `repeat(${Math.max(1, Math.min(hidden.length, Math.floor((innerHeight - RAIL_CLEAR * 2 - 42 + 18) / 48)))}, 30px)` }}>
+        style={{ bottom: innerHeight - railBottom, gridTemplateRows: `repeat(${moreRows}, 30px)` }}>
         {hidden.map((k) => item(k, true))}
       </div>
     )}
