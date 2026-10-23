@@ -728,7 +728,7 @@ export class Editor {
 
   /** Adds a node to a mind map: a child of `from`, or another child of its parent right after it
    *  (`below`) or before it (`above`), and opens it for typing. */
-  addMindNode(fromId: string, kind: 'child' | 'above' | 'below', later = false): void {
+  addMindNode(fromId: string, kind: 'child' | 'above' | 'below', byPlus = false): void {
     const from = this.board.get(fromId);
     if (from?.type !== 'mind') return;
     const parent = kind !== 'child' && from.parent ? this.board.get(from.parent) : from;
@@ -754,9 +754,24 @@ export class Editor {
       this.board.transact(() => moves.forEach((y, k) => this.board.update(k, { y })));
     }
     this.board.endGesture();
+    // From the "+" above or below, the node stays picked with its buttons under the pointer, so more
+    // can be added one click after another; they're typed in later.
+    if (byPlus && kind !== 'child') return;
     this.setSelection([it.id]);
-    if (later) setTimeout(() => this.startEditing(it.id), 0);
+    // From a "+", it opens for typing once the press is over, or the browser's focus moving on press
+    // closes it again.
+    if (byPlus) setTimeout(() => this.startEditing(it.id), 0);
     else this.startEditing(it.id);
+  }
+
+  /** Takes away a mind map node being typed in once it's emptied and Delete or Backspace is pressed
+   *  again, with whatever grows from it; its parent is picked instead. */
+  removeMindNode(id: string): void {
+    const it = this.board.get(id);
+    if (it?.type !== 'mind' || !it.parent) return;
+    this.editingId = null;
+    this.board.remove([id, ...descendants([id], this.board.list())]);
+    this.setSelection(this.board.get(it.parent) ? [it.parent] : []);
   }
 
   /** Mind map nodes already checked against the padding they're sized with now. */
@@ -866,7 +881,6 @@ export class Editor {
     const plus = single && this.plusAt(single, w);
     if (single && plus) {
       if (plus === 'move') this.gesture = { type: 'mindMove', id: single.id, from: w, to: w, target: null };
-      // Opened for typing once the press is over, or the browser's focus moving on press closes it again.
       else this.addMindNode(single.id, plus, true);
       return;
     }
