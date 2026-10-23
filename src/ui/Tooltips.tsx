@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-/** How long the pointer has to stay still on a button before its hint shows, in ms, and how far it
- *  may drift meanwhile, in px. */
-const WAIT = 2000, STILL = 3;
+/** How long the pointer has to stay on a button before its hint shows, in ms (moving about on the
+ *  button doesn't start it over); and how long hints keep coming at once after the pointer leaves
+ *  their panel, should it come back. */
+const WAIT = 1000, GRACE = 1000;
 
 type Side = 'right' | 'left' | 'above' | 'below';
 /** `px` is where along the bubble its pointer is, over or under a button. */
@@ -21,8 +22,8 @@ function tipWidth(text: string): number {
 }
 
 /**
- * The hints of the panels' buttons, from the Figma "Alt" bubble, once the pointer has stayed still
- * on one for two seconds (then at once for the rest of that panel's buttons): shown in place of the browser's own, which they take over by moving each
+ * The hints of the panels' buttons, from the Figma "Alt" bubble, once the pointer has been on one
+ * for a second (then at once for the rest of that panel's buttons): shown in place of the browser's own, which they take over by moving each
  * button's title into data-tip when the pointer comes.
  * Beside the upright panels the bubble points at its button; over or under the flat bars it sits
  * centred on it; where that doesn't fit on screen, it goes to whichever side does.
@@ -30,15 +31,15 @@ function tipWidth(text: string): number {
 export function Tooltips() {
   const [tip, setTip] = useState<Tip | null>(null);
   useEffect(() => {
-    let timer = 0, current: HTMLElement | null = null, rest = { x: 0, y: 0 }, shown = false;
+    let timer = 0, current: HTMLElement | null = null;
     // Once a hint has been waited for, the others in the same panel come at once, until the pointer
-    // leaves that panel.
-    let warm: Element | null = null;
+    // has been away from that panel for a second.
+    let warm: Element | null = null, leftAt: number | null = null;
     const panelOf = (el: Element) => el.closest('.bar, .tfmt, .tools, .draw-panel, .tools-more, .more-pop, .op-pop');
     const show = (el: HTMLElement) => {
       const text = el.dataset.tip;
-      shown = true;
       warm = panelOf(el);
+      leftAt = null;
       if (!text) return;
       // On whichever side, its pointer (5.89 long) reaches 2px over the button's highlight (6px round
       // the icon of a panel button).
@@ -64,17 +65,12 @@ export function Tooltips() {
     const hide = () => {
       clearTimeout(timer);
       current = null;
-      shown = false;
       setTip(null);
-    };
-    const wait = (el: HTMLElement, e: PointerEvent) => {
-      clearTimeout(timer);
-      rest = { x: e.clientX, y: e.clientY };
-      timer = window.setTimeout(() => show(el), WAIT);
     };
     const over = (e: PointerEvent) => {
       const target = e.target as Element | null;
-      if (warm && !(target && warm.contains(target))) warm = null;
+      if (warm && leftAt !== null && performance.now() - leftAt > GRACE) { warm = null; leftAt = null; }
+      if (warm) { if (target && warm.contains(target)) leftAt = null; else leftAt ??= performance.now(); }
       const el = target?.closest?.<HTMLElement>('[title], [data-tip]') ?? null;
       if (el === current) return;
       hide();
@@ -83,21 +79,15 @@ export function Tooltips() {
       if (el.title) { el.dataset.tip = el.title; el.removeAttribute('title'); }
       current = el;
       if (warm && panelOf(el) === warm) show(el);
-      else wait(el, e);
-    };
-    // Moving on the button starts the wait over, until the hint is up.
-    const move = (e: PointerEvent) => {
-      if (current && !shown && Math.hypot(e.clientX - rest.x, e.clientY - rest.y) > STILL) wait(current, e);
+      else timer = window.setTimeout(() => show(el), WAIT);
     };
     window.addEventListener('pointerover', over);
-    window.addEventListener('pointermove', move);
     window.addEventListener('pointerdown', hide, true);
     window.addEventListener('keydown', hide, true);
     window.addEventListener('blur', hide);
     return () => {
       clearTimeout(timer);
       window.removeEventListener('pointerover', over);
-      window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerdown', hide, true);
       window.removeEventListener('keydown', hide, true);
       window.removeEventListener('blur', hide);
