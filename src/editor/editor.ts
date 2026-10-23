@@ -71,6 +71,8 @@ const MIND_TOPIC = 'Центральная тема';
 /** How far outside a corner (in screen pixels) the pointer turns the item, and how close to a square
  *  angle (in degrees) the turn sticks to it. */
 const ROTATE_ZONE = 18, ROTATE_SNAP = 3;
+/** The mind map "+" buttons' wait after a node is picked, and their fade in, in ms. */
+const PLUS_DELAY = 600, PLUS_FADE = 300;
 
 /** Cursors for turning: a curved double arrow around the top left corner, turned by deg. Kept by
  *  the degree. */
@@ -127,6 +129,12 @@ export class Editor {
   private needsFit: boolean;
   private lastCursorSent = 0;
   private hotDot: Side | null = null;
+  /** The mind map "+" under the pointer; and when the "+" buttons of the node picked now start to
+   *  fade in (they come 0.6 s after it's picked or let go, like the text panel). */
+  private hotPlus: 'child' | 'sibling' | null = null;
+  private plusKey = '';
+  private plusFrom = 0;
+  private plusTimer = 0;
   /** The table line under the pointer, and the lines picked with Shift to be dragged together. */
   private hotLine: TableLine | null = null;
   private pickedLines: TableLine[] = [];
@@ -252,6 +260,15 @@ export class Editor {
       const from = this.board.get(g.from);
       if (from) linkPreview = { from, fromSide: g.fromSide, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null };
     }
+    const plusKey = `${[...this.selection].join()}|${this.moving}|${this.editingId}`;
+    if (plusKey !== this.plusKey) {
+      this.plusKey = plusKey;
+      this.plusFrom = performance.now() + PLUS_DELAY;
+      clearTimeout(this.plusTimer);
+      this.plusTimer = window.setTimeout(() => this.requestRender(), PLUS_DELAY);
+    }
+    const plusFade = this.plusFade();
+    if (plusFade > 0 && plusFade < 1) this.requestRender();
     drawScene(this.ctx, {
       items: this.board.list(),
       links: this.board.linkList(),
@@ -268,6 +285,8 @@ export class Editor {
       peers: this.presence?.peers() ?? [],
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]),
       hotDot: this.hotDot,
+      hotPlus: this.hotPlus,
+      plusFade,
       tableLines: this.hotLine ? [...this.pickedLines, this.hotLine] : this.pickedLines,
       editingCell: this.editingCell,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker' } : null,
@@ -800,11 +819,8 @@ export class Editor {
 
     // Select tool.
     const single = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
-    if (single?.type === 'mind' && !this.editingId) {
-      const p = plusButton(single, (id) => this.board.get(id), this.cam.z), q = siblingButton(single, this.cam.z);
-      if (Math.hypot(w.x - p.x, w.y - p.y) <= p.r * 1.5) { this.addMindNode(single.id, 'child'); return; }
-      if (q && Math.hypot(w.x - q.x, w.y - q.y) <= q.r * 1.5) { this.addMindNode(single.id, 'sibling'); return; }
-    }
+    const plus = single && this.plusAt(single, w);
+    if (single && plus) { this.addMindNode(single.id, plus); return; }
     const dot = single && !this.editingId ? this.dotAt(single, w) : null;
     if (single && dot) {
       this.gesture = { type: 'link', from: single.id, fromSide: dot, to: w, target: null };
@@ -963,6 +979,20 @@ export class Editor {
     if (it.type === 'mind') return false;
     const hs = (HANDLE + 6) / this.cam.z, off = 3 / this.cam.z;
     return pointInRect(toLocal(it, w), { x: it.x + it.w + off - hs / 2, y: it.y + it.h + off - hs / 2, w: hs, h: hs });
+  }
+
+  /** How far the selected mind map node's "+" buttons have faded in, 0…1. */
+  private plusFade(): number {
+    return this.moving || this.editingId ? 0 : clamp((performance.now() - this.plusFrom) / PLUS_FADE, 0, 1);
+  }
+
+  /** Which of a mind map node's "+" buttons is under the point, once they're showing. */
+  private plusAt(it: Item, w: Point): 'child' | 'sibling' | null {
+    if (it.type !== 'mind' || this.plusFade() === 0) return null;
+    const p = plusButton(it, (id) => this.board.get(id), this.cam.z), q = siblingButton(it, this.cam.z);
+    if (Math.hypot(w.x - p.x, w.y - p.y) <= p.r * 1.5) return 'child';
+    if (q && Math.hypot(w.x - q.x, w.y - q.y) <= q.r * 1.5) return 'sibling';
+    return null;
   }
 
   /** Whether the point is just outside the item's top right corner, where it is turned. */
@@ -1239,9 +1269,9 @@ export class Editor {
     const line = this.editingId || dot ? null : this.tableLineAt(w, hitItem(this.board.list(), w, this.cam.z));
     const same = line && this.hotLine && line.id === this.hotLine.id && line.axis === this.hotLine.axis && line.index === this.hotLine.index;
     if (!same && (line || this.hotLine)) { this.hotLine = line; this.requestRender(); }
-    const onPlus = single?.type === 'mind' && !this.editingId && [plusButton(single, (id) => this.board.get(id), this.cam.z), siblingButton(single, this.cam.z)]
-      .some((p) => p && Math.hypot(w.x - p.x, w.y - p.y) <= p.r * 1.5);
-    if (onPlus) cursor = 'pointer';
+    const plus = single ? this.plusAt(single, w) : null;
+    if (plus !== this.hotPlus) { this.hotPlus = plus; this.requestRender(); }
+    if (plus) cursor = 'pointer';
     else if (dot) cursor = 'crosshair';
     else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
     else if (single && this.onRotate(single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);
