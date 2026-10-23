@@ -15,6 +15,7 @@ import { catFor } from './emoji/emoji';
 import { readPictures } from './canvas/pictures';
 import { cellRect, cellText } from './model/table';
 import { useSortable } from './ui/sortable';
+import { Tooltips } from './ui/Tooltips';
 import type { Item, Link } from './model/types';
 
 /** Where a board copied into a new tab waits for it, followed by the new board's id. */
@@ -216,6 +217,7 @@ export function App({ boardId }: { boardId: string }) {
       </div>
 
       {minimap && <Minimap editor={editor} items={board.list()} docked={docked} onClose={closeMinimap} />}
+      <Tooltips />
 
       {textItem && textShown === textItem.id && <TextPanel editor={editor} item={textItem} />}
 

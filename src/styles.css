@@ -132,7 +132,7 @@ button { font: inherit; color: inherit; }
 .tb:hover { background: var(--fmt-hover); color: var(--ink); }
 
 
-.avatars { display: flex; align-items: center; padding: 0 2px 0 4px; }
+.avatars { display: flex; align-items: center; padding: 0 4px 0 4px; }
 .avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--avatar-bg); border: 2px solid var(--surface); margin-left: -6px; cursor: default; padding: 0; }
 .avatar img { width: 22px; height: 22px; display: block; pointer-events: none; opacity: var(--avatar-fade); }
 .avatar:first-child { margin-left: 0; }
@@ -315,3 +315,14 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
   .tools { top: auto; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: none; }
   .zoom .fit { display: none; }
 }
+
+/* Hints of the panels' buttons (Figma "Alt"): Inter Semi Bold 12 in white on a 90% blue bubble 29px
+   tall with 7px corners. Beside an upright panel it's the Figma bubble itself, stretched to the text
+   between its corners and its pointer; over or under a flat bar, the same bubble without the pointer. */
+.tip { position: fixed; z-index: 60; pointer-events: none; box-sizing: border-box; height: 29px; display: flex; align-items: center;
+  white-space: nowrap; font: 600 12px/1 "Inter", var(--ui); color: #fff; animation: fade-in .12s ease-out; }
+.tip.right { transform: translateY(-50%); border-style: solid; border-width: 7px 7px 7px 13px; padding: 0 8.5px 0 8.5px;
+  border-image: url(./ui/tip-bubble.svg) 7 7 7 13 fill / 7px 7px 7px 13px; }
+.tip.above, .tip.below { background: rgba(0, 95, 228, .9); border-radius: 7px; padding: 0 15.5px; }
+.tip.above { transform: translate(-50%, -100%); }
+.tip.below { transform: translateX(-50%); }
