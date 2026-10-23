@@ -4,11 +4,11 @@ import bookmarkIcon from './menu/bookmark.svg';
 import dropIcon from './menu/drop.svg';
 
 /**
- * The menu over the cat (Figma "Mol / Menu right"), for now with the mockup's items as they are: a
+ * The board's menu, opened from the button after its name (Figma "Mol / Menu right"), for now with the mockup's items as they are: a
  * row can end in a switch (two states, flipped by a click) or an arrow for a further level, and a
  * line splits the groups. The first rows' text is a shade lighter, as in the mockup.
  */
-export function CatMenu() {
+export function BoardMenu() {
   const [on, setOn] = useState(true);
   const row = (icon: string, label: string, { end, onClick, light }: { end?: ReactNode; onClick?: () => void; light?: boolean } = {}) => (
     <button className={`menu-row ${light ? 'light' : ''}`} role="menuitem" onClick={onClick}>
@@ -18,7 +18,7 @@ export function CatMenu() {
     </button>
   );
   return (
-    <div className="cat-menu" role="menu" data-nosort>
+    <div className="board-menu" role="menu" data-nosort>
       {row(imageIcon, 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
       {row(imageIcon, 'Оглавление', { light: true, end: <img className="menu-more" src={dropIcon} alt="" width={24} height={24} /> })}
       {row(imageIcon, 'Преобразовать текст в таблицу')}
