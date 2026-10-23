@@ -89,7 +89,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
   // at its end, which opens them in a row beside it.
   const all = sort.visible();
   const [fit, setFit] = useState(Infinity);
-  const [moreAt, setMoreAt] = useState<number | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLButtonElement>(null), menuRef = useRef<HTMLDivElement>(null);
   const [, redraw] = useReducer((n: number) => n + 1, 0);
   useEffect(() => {
@@ -116,21 +116,21 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
   const hidden = all.filter((k) => !main.includes(k) && !isSeparator(k));
   // A press anywhere but the row and its button closes it.
   useEffect(() => {
-    if (moreAt === null) return;
+    if (!moreOpen) return;
     const close = (e: PointerEvent) => {
       const t = e.target as Node;
-      if (!menuRef.current?.contains(t) && !moreRef.current?.contains(t)) setMoreAt(null);
+      if (!menuRef.current?.contains(t) && !moreRef.current?.contains(t)) setMoreOpen(false);
     };
     window.addEventListener('pointerdown', close, true);
     return () => window.removeEventListener('pointerdown', close, true);
-  }, [moreAt]);
-  if (moreAt !== null && !hidden.length) setMoreAt(null);
+  }, [moreOpen]);
+  if (moreOpen && !hidden.length) setMoreOpen(false);
 
   /** A rail button; in the "more" row (`inMenu`) it isn't rearrangeable and closes the row when used. */
   const railButton = (key: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}, inMenu = false): ReactNode => (
     <button key={key} {...(inMenu ? {} : sort.item(key))} className={`fb ${on ? 'on' : ''} ${!inMenu && sort.lifted(key) ? 'lifted' : ''}`}
       title={label} aria-label={label.replace(/ \(.*\)$/, '')} {...extra}
-      onClick={() => { onClick?.(); if (inMenu) setMoreAt(null); }}>
+      onClick={() => { onClick?.(); if (inMenu) setMoreOpen(false); }}>
       <PanelIcon name={icon} />
     </button>
   );
@@ -158,17 +158,15 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
       {...sort.container}>
       {main.map((k) => item(k))}
       {hidden.length > 0 && (
-        <button ref={moreRef} className={`fb ${moreAt !== null ? 'on' : ''}`} title="Ещё" aria-label="Ещё" aria-expanded={moreAt !== null} data-nosort
-          onClick={() => {
-            const r = moreRef.current!.getBoundingClientRect();
-            setMoreAt(moreAt === null ? r.top + r.height / 2 : null);
-          }}>
+        <button ref={moreRef} className={`fb ${moreOpen ? 'on' : ''}`} title="Ещё" aria-label="Ещё" aria-expanded={moreOpen} data-nosort
+          onClick={() => setMoreOpen(!moreOpen)}>
           <PanelIcon name="more" />
         </button>
       )}
     </nav>
-    {moreAt !== null && hidden.length > 0 && (
-      <div ref={menuRef} className="tools-more" role="toolbar" aria-label="Ещё инструменты" style={{ top: moreAt }}>
+    {moreOpen && hidden.length > 0 && (
+      <div ref={menuRef} className="tools-more" role="toolbar" aria-label="Ещё инструменты" aria-orientation="vertical"
+        style={{ gridTemplateRows: `repeat(${Math.max(1, Math.min(hidden.length, Math.floor((innerHeight - RAIL_CLEAR * 2 - 42 + 18) / 48)))}, 30px)` }}>
         {hidden.map((k) => item(k, true))}
       </div>
     )}

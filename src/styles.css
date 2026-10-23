@@ -81,6 +81,7 @@ button { font: inherit; color: inherit; }
   content: ""; position: absolute; left: 50%; width: 62px; transform: translateX(-50%);
   top: calc(var(--gap) / -2); bottom: calc(var(--gap) / -2); }
 .tools .fb::after { width: 60px; }
+.tools-more .fb::after { content: ""; position: absolute; left: -9px; right: -9px; top: -9px; bottom: -9px; }
 
 /* Tool panel, 1:1 with the Figma component "Mol / Bar vertical"; buttons share the format panel's styles. */
 .tools { position: fixed; z-index: 5; left: calc(12px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
@@ -90,9 +91,11 @@ button { font: inherit; color: inherit; }
   gap: var(--gap);
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
 .tools.docked { left: 0; border-radius: 0 12px 12px 0; }
-/* The rail's buttons that didn't fit, in a row beside its "more" button. */
-.tools-more { position: fixed; z-index: 5; left: calc(84px + env(safe-area-inset-left, 0px)); transform: translateY(-50%);
-  display: flex; align-items: center; gap: 18px; padding: 11px 16px; background: var(--surface); border-radius: 12px; box-shadow: var(--shadow);
+/* The rail's buttons that didn't fit, upright beside it like the rail itself, in as many columns
+   as the screen's height needs (the rows are set in Toolbar.tsx). */
+.tools-more { position: fixed; z-index: 5; left: calc(84px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
+  display: grid; grid-auto-flow: column; grid-auto-columns: 30px; gap: 18px; padding: 21px 15px;
+  background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow);
   animation: fade-in .12s ease-out; }
 /* Panels whose buttons can be rearranged: holding one lifts it so it can be moved (see ui/sortable.ts). */
 .sortable { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
