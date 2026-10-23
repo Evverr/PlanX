@@ -177,7 +177,7 @@ export function App({ boardId }: { boardId: string }) {
         })}
       </header>
 
-      <Toolbar editor={editor} tool={ui.tool} pens={ui.pens} zoom={ui.cam.z} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => { toggle('icons'); setRecorder(false); }}
+      <Toolbar editor={editor} tool={ui.tool} pens={ui.pens} zoom={ui.cam.z} guides={ui.guides} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => { toggle('icons'); setRecorder(false); }}
         recorderOpen={recorder} onToggleRecorder={() => { setRecorder(!recorder); setPop(null); }} />
       {/* Not a popover: a click on the board mustn't cut a recording short. */}
       {recorder && <AudioRecorder onClose={() => setRecorder(false)} onAdd={(note) => { editor.addAudio(note); setRecorder(false); }} />}

@@ -9,6 +9,7 @@ import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCount, withScale, type TableLine } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
+import { snapToGuides, type Guide } from '../canvas/guides';
 import { balance, canMoveTo, childPlace, descendants, insertBeside, makeRoom, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | 'mind' | PolyShape;
@@ -30,6 +31,10 @@ const DEFAULT_PENS: Pens = {
   marker: { presets: [{ color: 'yellow', size: 20 }, { color: 'green', size: 20 }, { color: 'pink', size: 20 }], active: 0 },
 };
 const PENS_KEY = 'planx-pens';
+/** Whether dragged items line up with others along guides, kept per browser. */
+const GUIDES_KEY = 'planx-guides';
+/** How near (in screen pixels) an edge or middle has to come to another's to line up with it. */
+const GUIDE_SNAP = 6;
 
 /** What the editor needs from the collaboration layer. Optional, so the editor also runs alone. */
 export interface Presence {
@@ -49,6 +54,8 @@ export interface UIState {
   moving: boolean;
   cam: Camera;
   pens: Pens;
+  /** Whether dragged items line up with others along guides. */
+  guides: boolean;
   /** Whether there's anything of this person's to undo, or to redo. */
   canUndo: boolean;
   canRedo: boolean;
@@ -57,7 +64,7 @@ export interface UIState {
 type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean }
+  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[] }
   | { type: 'resize'; id: string; start: Point; orig: Item }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point }
@@ -142,6 +149,7 @@ export class Editor {
   /** The table line under the pointer, and the lines picked with Shift to be dragged together. */
   private hotLine: TableLine | null = null;
   private pickedLines: TableLine[] = [];
+  private guides = readJSON<boolean>(GUIDES_KEY) ?? false;
 
   constructor(board: Board, opts: { presence?: Presence; storageKey?: string } = {}) {
     this.board = board;
@@ -170,7 +178,7 @@ export class Editor {
 
   private snapshot(): UIState {
     return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, editingCell: this.editingCell, moving: this.moving, cam: { ...this.cam }, pens: this.pens,
-      canUndo: this.board.undoManager.undoStack.length > 0, canRedo: this.board.undoManager.redoStack.length > 0 };
+      guides: this.guides, canUndo: this.board.undoManager.undoStack.length > 0, canRedo: this.board.undoManager.redoStack.length > 0 };
   }
 
   private setMoving(moving: boolean): void {
@@ -303,6 +311,7 @@ export class Editor {
       mindMove: g?.type === 'mindMove' ? { from: g.from, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null } : null,
       tableLines: this.hotLine ? [...this.pickedLines, this.hotLine] : this.pickedLines,
       editingCell: this.editingCell,
+      guides: g?.type === 'drag' ? g.guides ?? [] : [],
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker' } : null,
     });
   }
@@ -368,6 +377,13 @@ export class Editor {
   penStyle(tool: PenTool): InkStyle {
     const set = this.pens[tool];
     return set.presets[set.active] ?? DEFAULT_PENS[tool].presets[0];
+  }
+
+  /** Turns lining up along guides on or off. */
+  toggleGuides(): void {
+    this.guides = !this.guides;
+    writeJSON(GUIDES_KEY, this.guides);
+    this.emit();
   }
 
   /** Draws with one of the pen's presets from now on. */
@@ -1116,9 +1132,21 @@ export class Editor {
           this.board.beginGesture();
           if (e.altKey) g.orig = this.dragCopies(g.orig);
         }
+        // With guides on, what's dragged lines up with what's on screen around it when near.
+        let sx = 0, sy = 0;
+        g.guides = undefined;
+        if (this.guides) {
+          const moving = [...g.orig].map(([id, o]) => { const it = this.board.get(id); return it && { ...it, x: o.x + dx, y: o.y + dy }; }).filter((i): i is Item => !!i);
+          const bs = moving.map(boxOf), view = this.viewRect();
+          const x = Math.min(...bs.map((b) => b.x)), y = Math.min(...bs.map((b) => b.y));
+          const box = bs.length ? { x, y, w: Math.max(...bs.map((b) => b.x + b.w)) - x, h: Math.max(...bs.map((b) => b.y + b.h)) - y } : null;
+          const others = this.board.list().filter((i) => !g.orig.has(i.id) && i.type !== 'ink').map(boxOf).filter((r) => rectsIntersect(r, view));
+          if (box) ({ dx: sx, dy: sy, guides: g.guides } = snapToGuides(box, others, GUIDE_SNAP / this.cam.z));
+        }
         this.board.transact(() => {
-          for (const [id, o] of g.orig) this.board.update(id, { x: Math.round(o.x + dx), y: Math.round(o.y + dy) });
+          for (const [id, o] of g.orig) this.board.update(id, { x: Math.round(o.x + dx + sx), y: Math.round(o.y + dy + sy) });
         });
+        if (g.guides) this.requestRender();
         return;
       }
       case 'resize': {
