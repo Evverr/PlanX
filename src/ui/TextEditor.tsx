@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import type { Editor } from '../editor/editor';
 import { alignOf, TEXT_COLORS, textPad, type Item } from '../model/types';
 import { fontOf, FONTS, LINE_HEIGHT } from '../canvas/text';
@@ -19,7 +19,8 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
     editor.commitText(id, ref.current.value);
   };
 
-  useEffect(() => {
+  // Filled in before the overlay is sized below, so it opens as tall as its text.
+  useLayoutEffect(() => {
     const el = ref.current!;
     el.value = item.text ?? '';
     el.focus();
