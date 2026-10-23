@@ -1,5 +1,5 @@
 import type { Item, Link, Side } from '../model/types';
-import { alignOf, FILLS, textPad, ICON_COLORS, INK_COLORS, MARK_COLORS, TEXT_COLORS } from '../model/types';
+import { alignOf, FILLS, textPad, ICON_COLORS, INK_COLORS, MARK_COLORS, STROKE_COLORS, TEXT_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
@@ -56,7 +56,7 @@ export interface Scene {
   linkPreview: { from: Item; fromSide: Side | null; to: Point; target: Item | null } | null;
   peers: Peer[];
   showHandle: boolean;
-  /** The dot under the pointer, drawn larger and at full strength; the others are at half. */
+  /** The dot under the pointer, drawn larger and at full strength; the others are faint. */
   hotDot: Side | null;
   /** Table lines drawn blue: the one under the pointer and those picked to drag together. */
   tableLines: TableLine[];
@@ -79,6 +79,8 @@ export const HANDLE = 12;
 /** Link dots around a single selected item: radius and distance from its side, in screen pixels. */
 export const DOT_R = 4.2;
 export const DOT_GAP = 16;
+/** The dots' strength, and how much bigger the one under the pointer is (at full strength). */
+const DOT_FADE = 0.3, DOT_HOT = 1.5;
 /** Selection outlines and handles, the link dots and selected links. */
 const SELECT_COLOR = '#4DA3FF';
 
@@ -180,6 +182,15 @@ function shade(color: string, k: number): string {
   return out;
 }
 
+/** A shape's outline colour, or null for none: grey by default, the text colour when it has no fill. */
+function strokeOf(it: Item, theme: Theme): string | null {
+  const sc = it.sc;
+  if (sc === 'none') return null;
+  if (!sc || sc === 'gray') return it.color === 'none' ? theme.ink : theme.shapeStroke;
+  if (sc === 'ink') return theme.ink;
+  return shade(sc.startsWith('#') ? sc : STROKE_COLORS[sc] || theme.shapeStroke, theme.dim);
+}
+
 /** Gradient ends for stickers: the Figma sticker's yellow, other colours fade halfway to white. */
 const STICKY_GRADIENT: Record<string, [string, string]> = { yellow: ['#FFF8A8', '#FFFED3'] };
 
@@ -246,10 +257,13 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       else if (it.type === 'ellipse') ctx.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
       else outlinePolygon(ctx, it);
       if (!none) { ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : FILLS[it.color ?? 'blue'] ?? FILLS.blue, theme.dim); ctx.fill(); }
-      ctx.lineWidth = 2;
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = none ? theme.ink : theme.shapeStroke;
-      ctx.stroke();
+      const line = strokeOf(it, theme);
+      if (line) {
+        ctx.lineWidth = 2;
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = line;
+        ctx.stroke();
+      }
       if (!editing) drawText(ctx, it, textPad(it), none ? theme.ink : theme.stickyInk, true, s);
       break;
     }
@@ -308,9 +322,12 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(CORNER, it.w / 2, it.h / 2));
   if (!none) { ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : FILLS[it.color ?? 'blue'] ?? FILLS.blue, theme.dim); ctx.fill(); }
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = none ? theme.ink : theme.shapeStroke;
-  ctx.stroke();
+  const line = strokeOf(it, theme);
+  if (line) {
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = line;
+    ctx.stroke();
+  }
   // The box and its tick are drawn for a radius of 10 and scaled to the radius it has at this zoom.
   const c = taskBox(it, cam.z), k = c.r / 10;
   ctx.beginPath();
@@ -328,8 +345,8 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
     ctx.lineJoin = 'round';
     ctx.stroke();
   } else {
-    // The card's own outline colour.
-    ctx.strokeStyle = none ? theme.ink : theme.shapeStroke;
+    // The card's own outline colour (the usual one when the card has none).
+    ctx.strokeStyle = strokeOf(it, theme) ?? strokeOf({ ...it, sc: undefined }, theme)!;
     ctx.lineWidth = 1.6 * k;
     ctx.stroke();
   }
@@ -660,8 +677,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       for (const side of SIDES) {
         const p = sidePoint(it, side, DOT_GAP / cam.z);
         ctx.beginPath();
-        ctx.globalAlpha = side === s.hotDot ? 1 : 0.5;
-        ctx.arc(p.x, p.y, (side === s.hotDot ? DOT_R * 1.33 : DOT_R) / cam.z, 0, Math.PI * 2);
+        ctx.globalAlpha = side === s.hotDot ? 1 : DOT_FADE;
+        ctx.arc(p.x, p.y, (side === s.hotDot ? DOT_R * DOT_HOT : DOT_R) / cam.z, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
       }

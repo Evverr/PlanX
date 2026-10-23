@@ -1,6 +1,6 @@
 import type { Board } from '../model/board';
 import type { Item, ItemType, Link, PolyShape, Side } from '../model/types';
-import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, ROTATABLE, uid } from '../model/types';
+import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, ROTATABLE, STROKABLE, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
 import { angleOf, boundsOf, boxOf, center, hitItem, hitLink, nearestSide, nearInk, normRect, onAudioButton, onTaskBox, pointInRect, rectContains, rectsIntersect, resizedAt, sidePoint, SIDES, toLocal, turn } from '../canvas/geometry';
 import { clearTextCache, DOT_GAP, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
@@ -446,6 +446,13 @@ export class Editor {
       for (const it of this.selectedItems()) {
         if (COLORABLE.includes(it.type) && !(color === 'none' && it.type === 'sticky')) this.board.update(it.id, { color });
       }
+    });
+  }
+
+  /** Outline colour of the selected shapes and tasks; 'gray' is the usual outline. */
+  setStroke(color: string): void {
+    this.board.transact(() => {
+      for (const it of this.selectedItems()) if (STROKABLE.includes(it.type)) this.board.update(it.id, { sc: color === 'gray' ? undefined : color });
     });
   }
 

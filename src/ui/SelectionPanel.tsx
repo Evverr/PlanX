@@ -1,14 +1,14 @@
 import { useEffect, useLayoutEffect, useReducer, useState } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
-import { COLORABLE, FILLS, ICON_COLORS } from '../model/types';
+import { COLORABLE, FILLS, ICON_COLORS, STROKABLE, STROKE_COLORS } from '../model/types';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
 
 const same = (vals: Array<string | undefined>) => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] : null);
 
 /** Rearrangeable buttons; the bin isn't among them, it always comes last. */
-const ORDER = ['fills', 'sep', 'icons', 'sep2', 'rows', 'sep5', 'cols', 'sep4', 'front', 'back', 'duplicate'];
+const ORDER = ['paint', 'fills', 'sep', 'icons', 'sep2', 'rows', 'sep5', 'cols', 'sep4', 'front', 'back', 'duplicate'];
 
 export function SelectionPanel({ editor, items, linkCount, docked }: { editor: Editor; items: Item[]; linkCount: number; docked: boolean }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
@@ -16,6 +16,8 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
   // When it would run into the zoom panel beside it, the panel moves up above the bottom bars.
   const [raised, setRaised] = useState(false);
   const [, redraw] = useReducer((n: number) => n + 1, 0);
+  // Whether the colour circles set the fill or the outline of shapes.
+  const [paint, setPaint] = useState<'fill' | 'stroke'>('fill');
   useEffect(() => {
     window.addEventListener('resize', redraw);
     return () => window.removeEventListener('resize', redraw);
@@ -33,7 +35,20 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
   const fill = same(colorable.map((i) => i.color));
   const iconColor = same(icons.map((i) => i.color));
   const allowNone = colorable.length > 0 && colorable.every((i) => i.type !== 'sticky');
-  const custom = fill?.startsWith('#') ? fill : null;
+  const strokable = items.filter((i) => STROKABLE.includes(i.type));
+  const stroke = same(strokable.map((i) => i.sc ?? 'gray'));
+  // Outlines are set only while shapes or tasks are among the selected.
+  const target = strokable.length ? paint : 'fill';
+  const current = target === 'fill' ? fill : stroke;
+  const custom = current?.startsWith('#') ? current : null;
+  const setColor = (c: string) => (target === 'fill' ? editor.setColor(c) : editor.setStroke(c));
+  const swatches: Array<[string, string]> = target === 'fill'
+    ? Object.entries(FILLS).filter(([k]) => k !== 'none' || allowNone)
+    : [...Object.entries(STROKE_COLORS).map(([k, v]): [string, string] => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--shape-stroke)')]), ['none', '']];
+  // How a fill or an outline colour shows on the switch.
+  const fillLook = !fill ? 'var(--line)' : fill.startsWith('#') ? fill : fill === 'none' ? 'transparent' : FILLS[fill] ?? FILLS.blue;
+  const strokeLook = !stroke ? 'var(--line)' : stroke.startsWith('#') ? stroke : stroke === 'none' ? 'transparent'
+    : stroke === 'ink' ? 'var(--ink)' : STROKE_COLORS[stroke] || 'var(--shape-stroke)';
   const btn = (icon: PanelIconName, title: string, fn: () => void) => (
     <button className="ib" title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
   );
@@ -41,16 +56,28 @@ export function SelectionPanel({ editor, items, linkCount, docked }: { editor: E
     <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${docked ? 'docked' : ''} ${raised ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
       role="toolbar" aria-label="Выделенное" {...sort.container}>
       {sort.render({
+        // Fill and outline: which one the circles beside set, each showing its colour now.
+        paint: strokable.length > 0 ? (
+          <div className="sw-group paint-target">
+            <button className={`ib ${target === 'fill' ? 'on' : ''}`} title="Заливка" aria-label="Заливка" aria-pressed={target === 'fill'} onClick={() => setPaint('fill')}>
+              <span className={`paint-fill ${fill === 'none' ? 'none' : ''}`} style={{ background: fillLook }} />
+            </button>
+            <button className={`ib ${target === 'stroke' ? 'on' : ''}`} title="Обводка" aria-label="Обводка" aria-pressed={target === 'stroke'} onClick={() => setPaint('stroke')}>
+              <span className={`paint-stroke ${stroke === 'none' ? 'none' : ''}`} style={{ borderColor: strokeLook }} />
+            </button>
+          </div>
+        ) : undefined,
         fills: colorable.length > 0 ? (
           <div className="sw-group">
-            {Object.entries(FILLS).filter(([k]) => k !== 'none' || allowNone).map(([k, v]) => (
-              <button key={k} className={`sw ${k === 'none' ? 'none' : ''} ${fill === k ? 'on' : ''}`} style={{ background: v }}
-                title={k === 'none' ? 'Без заливки' : 'Цвет'} aria-label={k === 'none' ? 'Без заливки' : `Цвет ${k}`}
-                onClick={() => editor.setColor(k)} />
+            {swatches.map(([k, v]) => (
+              <button key={k} className={`sw ${k === 'none' ? 'none' : ''} ${current === k ? 'on' : ''}`} style={{ background: v }}
+                title={k === 'none' ? (target === 'fill' ? 'Без заливки' : 'Без обводки') : target === 'fill' ? 'Цвет' : 'Цвет обводки'}
+                aria-label={k === 'none' ? (target === 'fill' ? 'Без заливки' : 'Без обводки') : `${target === 'fill' ? 'Цвет' : 'Цвет обводки'} ${k}`}
+                onClick={() => setColor(k)} />
             ))}
             {/* Any colour: the browser's own picker (hue strip plus saturation/brightness square). */}
             <label className={`sw custom ${custom ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет">
-              <input type="color" aria-label="Свой цвет" value={custom ?? FILLS.yellow.toLowerCase()} onChange={(e) => editor.setColor(e.target.value)} />
+              <input type="color" aria-label="Свой цвет" value={custom ?? (target === 'fill' ? FILLS.yellow : STROKE_COLORS.blue).toLowerCase()} onChange={(e) => setColor(e.target.value)} />
             </label>
           </div>
         ) : undefined,

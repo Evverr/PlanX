@@ -23,7 +23,16 @@ export function readOrder(storageKey: string, defaults: string[], renames: Recor
   try {
     let saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
     if (Array.isArray(saved)) saved = saved.map((k) => renames[k] ?? k);
-    if (Array.isArray(saved)) return [...saved.filter((k) => defaults.includes(k)), ...defaults.filter((k) => !saved.includes(k))];
+    if (Array.isArray(saved)) {
+      // A button added since goes where it is by default: before the next one that was already there.
+      const order: string[] = saved.filter((k: string) => defaults.includes(k));
+      defaults.forEach((k, i) => {
+        if (order.includes(k)) return;
+        const next = defaults.slice(i + 1).find((d) => order.includes(d));
+        order.splice(next ? order.indexOf(next) : order.length, 0, k);
+      });
+      return order;
+    }
   } catch { /* storage can be unavailable */ }
   return defaults;
 }
