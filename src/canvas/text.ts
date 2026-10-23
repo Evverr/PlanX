@@ -35,7 +35,7 @@ export function wrapText(text: string, maxWidth: number, measure: Measure): stri
   for (const para of text.split('\n')) {
     let line = '';
     // Spaces are their own tokens; a hyphenated word may break after its hyphen.
-    const tokens = para.split(/(\s+)/).flatMap((t) => (/^\s+$/.test(t) ? [t] : t.split(/(?<=-)/))).filter(Boolean);
+    const tokens = para.split(/(\s+)/).flatMap((t) => (/^\s+$/.test(t) ? [t] : afterHyphens(t))).filter(Boolean);
     for (const tok of tokens) {
       if (measure((line + tok).trimEnd()) <= maxWidth) { line += tok; continue; }
       if (/^\s+$/.test(tok)) { lines.push(line.trimEnd()); line = ''; continue; }
@@ -53,6 +53,10 @@ export function wrapText(text: string, maxWidth: number, measure: Measure): stri
 
 export interface TextLayout { lines: string[]; size: number; lineHeight: number }
 
+/** A word split after each hyphen ("north-east" → "north-", "east"), so a line can break there.
+ *  (Not a lookbehind in a regex: Safari before 16.4 can't read one, and the whole script fails.) */
+const afterHyphens = (w: string): string[] => w.match(/[^-]*-|[^-]+$/g) ?? [w];
+
 /**
  * Lays text out in a box, shrinking the font until it fits (how stickers behave in Miro).
  * Pass maxHeight = Infinity to never shrink.
@@ -67,7 +71,7 @@ export function layoutText(
     const lh = s * LINE_HEIGHT;
     // In a fixed box, shrink rather than split a word across lines.
     const wordTooWide = maxHeight !== Infinity &&
-      text.split(/\s+|(?<=-)/).some((w) => ctx.measureText(w).width > maxWidth);
+      text.split(/\s+/).flatMap(afterHyphens).some((w) => ctx.measureText(w).width > maxWidth);
     if ((lines.length * lh <= maxHeight && !wordTooWide) || s <= 7) return { lines, size: s, lineHeight: lh };
     s = Math.max(7, Math.floor(s * 0.9));
   }
