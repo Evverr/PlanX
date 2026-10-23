@@ -14,6 +14,9 @@ const OUT_MARGIN = 16;
 export interface DropOut {
   preview: (key: string) => ReactNode;
   drop: (key: string, at: { x: number; y: number }) => void;
+  /** A button held still: true if that does something of its own (opens its variants), so it
+   *  doesn't lift, and letting go isn't a click. Moving it still drags it, out or along the panel. */
+  hold?: (key: string) => boolean;
 }
 
 /** Separators are items too, keyed 'sep…' (a line) or 'gap…' (a space). */
@@ -121,7 +124,11 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     const el = target.closest<HTMLElement>('[data-key]');
     if (!el || e.button !== 0 || target.closest('[data-nosort]') || !ref.current?.contains(el)) return;
     const p = { el, key: el.dataset.key!, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, timer: 0 };
-    p.timer = window.setTimeout(() => { press.current = null; lift(p); }, HOLD_MS);
+    p.timer = window.setTimeout(() => {
+      press.current = null;
+      if (dropOut?.hold?.(p.key)) swallowClick.current = true;
+      else lift(p);
+    }, HOLD_MS);
     press.current = p;
   };
   // Wandering off the button before it lifts cancels the hold, except in a panel whose buttons can
@@ -163,6 +170,8 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
   };
   const onPointerUp = () => {
     if (press.current) { clearTimeout(press.current.timer); press.current = null; }
+    // A hold that did something of its own: the click that comes with letting go goes nowhere.
+    if (swallowClick.current && !drag) setTimeout(() => { swallowClick.current = false; }, 0);
   };
   const dragEnd = () => {
     if (!drag) return;

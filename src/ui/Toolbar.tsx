@@ -56,6 +56,15 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
     try { localStorage.setItem(SHAPE_KEY, tool); } catch { /* storage can be unavailable */ }
   }
   const shapeIcon = SHAPES.find(([t]) => t === lastShape.current)?.[1] ?? 'landscape';
+  // The shapes beside the rail: opened by holding the shapes button, closed by picking one or by a
+  // press anywhere else.
+  const [shapesOpen, setShapesOpen] = useState(false);
+  useEffect(() => {
+    if (!shapesOpen) return;
+    const close = (e: PointerEvent) => { if (!(e.target as Element | null)?.closest?.('.shape-panel, [data-key="oval"]')) setShapesOpen(false); };
+    window.addEventListener('pointerdown', close, true);
+    return () => window.removeEventListener('pointerdown', close, true);
+  }, [shapesOpen]);
 
   const filePicker = useRef<HTMLInputElement>(null);
   /** Where pictures from the file dialog go: a drop point when the picture button was dragged onto the board. */
@@ -70,6 +79,8 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
       const t = toolOf(key), icon = TOOLS[key]?.[1] ?? ICONS[key];
       return (t && <ToolPreview tool={t} zoom={zoom} />) || (icon ? <span className="tp-icon"><PanelIcon name={icon} /></span> : null);
     },
+    // Held still, the shapes button opens the shapes beside the rail (a click just takes the last one).
+    hold: (key: string) => { if (key !== 'oval') return false; setShapesOpen(true); return true; },
     drop: (key: string, at: { x: number; y: number }) => {
       const t = toolOf(key);
       if (t === 'sticky') editor.addSticky('yellow', at);
@@ -128,7 +139,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   const railBottom = sort.ref.current?.getBoundingClientRect().bottom ?? innerHeight / 2;
   const moreRows = Math.max(1, Math.min(hidden.length, Math.floor((railBottom - RAIL_CLEAR - 42 + 18) / 48)));
   // The selection panel keeps clear of what opens beside the rail.
-  useEffect(() => { window.dispatchEvent(new Event('planx:side-panels')); }, [moreOpen, drawing, shaping]);
+  useEffect(() => { window.dispatchEvent(new Event('planx:side-panels')); }, [moreOpen, drawing, shapesOpen]);
 
   /** A rail button; in the "more" row (`inMenu`) it isn't rearrangeable and closes the row when used. */
   const railButton = (key: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}, inMenu = false): ReactNode => (
@@ -177,7 +188,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
       </div>
     )}
     {drawing && <DrawPanel editor={editor} tool={tool} pens={pens} />}
-    {shaping && <ShapePanel editor={editor} tool={tool} />}
+    {shapesOpen && <ShapePanel editor={editor} tool={tool} onPick={() => setShapesOpen(false)} />}
     <input ref={filePicker} type="file" accept="image/*" multiple hidden
       onChange={(e) => { const at = pictureAt.current; void readPictures(e.target.files ?? []).then((pics) => editor.addPictures(pics, at)); e.target.value = ''; }} />
     {sort.ghost}
