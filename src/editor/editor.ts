@@ -56,7 +56,7 @@ type Gesture =
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
   | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean }
   | { type: 'resize'; id: string; start: Point; orig: Item }
-  | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; corner: number }
+  | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' }
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
@@ -804,10 +804,16 @@ export class Editor {
       this.setMoving(true);
       return;
     }
-    if (single && this.rotateCorner(single, w) !== null) {
+    if (single && this.onRotate(single, w)) {
       this.board.beginGesture();
-      const c = center(single);
-      this.gesture = { type: 'rotate', id: single.id, c, a0: Math.atan2(w.y - c.y, w.x - c.x), rot0: single.rot ?? 0, corner: this.rotateCorner(single, w)! };
+      const c = center(single), items = this.board.list();
+      // A frame turns with everything it holds, which keeps a list from then on.
+      if (single.type === 'frame' && !single.members) this.board.update(single.id, { members: this.membersOf(single, items) });
+      const held = single.type === 'frame' ? [...this.carried([single], items).keys()].filter((id) => id !== single.id) : [];
+      this.gesture = {
+        type: 'rotate', id: single.id, c, a0: Math.atan2(w.y - c.y, w.x - c.x), rot0: single.rot ?? 0,
+        held: held.map((id) => this.board.get(id)!).map((i) => ({ id: i.id, c: center(i), rot0: i.rot ?? 0 })),
+      };
       this.setMoving(true);
       return;
     }
@@ -895,7 +901,7 @@ export class Editor {
    *  everything lying inside. */
   private membersOf(f: Item, items: Item[]): string[] {
     if (f.members) return f.members.filter((id) => this.board.get(id));
-    return items.filter((i) => i.type !== 'frame' && rectContains(f, boxOf(i))).map((i) => i.id);
+    return items.filter((i) => i.type !== 'frame' && rectContains(boxOf(f), boxOf(i))).map((i) => i.id);
   }
 
   /**
@@ -915,7 +921,7 @@ export class Editor {
       const c = center(it);
       const inside = it.type === 'frame' ? new Set(this.carried([it], items).keys()) : new Set([id]);
       const home = frames
-        .filter((f) => !inside.has(f.id) && pointInRect(c, f) && (it.type !== 'frame' || f.w * f.h > it.w * it.h))
+        .filter((f) => !inside.has(f.id) && pointInRect(toLocal(f, c), f) && (it.type !== 'frame' || f.w * f.h > it.w * it.h))
         .sort((a, b) => a.w * a.h - b.w * b.h)[0];
       for (const f of frames) {
         const list = held.get(f.id)!, has = list.includes(id);
@@ -947,15 +953,11 @@ export class Editor {
     return pointInRect(toLocal(it, w), { x: it.x + it.w + off - hs / 2, y: it.y + it.h + off - hs / 2, w: hs, h: hs });
   }
 
-  /** Which corner, other than the resize handle's, the point is just outside of, for turning the
-   *  item: 0 top left, 1 top right, 3 bottom left (2, bottom right, is the handle's). */
-  private rotateCorner(it: Item, w: Point): number | null {
-    if (!ROTATABLE.includes(it.type)) return null;
-    const p = toLocal(it, w), r = ROTATE_ZONE / this.cam.z;
-    if (pointInRect(p, it)) return null;
-    const corners = [{ x: it.x, y: it.y }, { x: it.x + it.w, y: it.y }, null, { x: it.x, y: it.y + it.h }];
-    const i = corners.findIndex((c) => c && Math.hypot(p.x - c.x, p.y - c.y) <= r);
-    return i < 0 ? null : i;
+  /** Whether the point is just outside the item's top right corner, where it is turned. */
+  private onRotate(it: Item, w: Point): boolean {
+    if (!ROTATABLE.includes(it.type)) return false;
+    const p = toLocal(it, w);
+    return !pointInRect(p, it) && Math.hypot(p.x - (it.x + it.w), p.y - it.y) <= ROTATE_ZONE / this.cam.z;
   }
 
   /** The link dot under the point, if any. */
@@ -1033,8 +1035,19 @@ export class Editor {
         if (e.shiftKey) deg = Math.round(deg / 15) * 15;
         else if (Math.abs(deg - Math.round(deg / 90) * 90) < ROTATE_SNAP) deg = Math.round(deg / 90) * 90;
         deg = Math.round((((deg % 360) + 540) % 360 - 180) * 10) / 10;
-        this.board.update(g.id, { rot: deg || undefined });
-        if (this.canvas) this.canvas.style.cursor = rotateCursor(deg + g.corner * 90);
+        // What a frame holds goes round its middle, turning as much (what can't turn just goes round).
+        const d = deg - g.rot0, a = (d * Math.PI) / 180;
+        this.board.transact(() => {
+          this.board.update(g.id, { rot: deg || undefined });
+          for (const h of g.held) {
+            const it = this.board.get(h.id);
+            if (!it) continue;
+            const c = turn(h.c, g.c, a), patch: Partial<Item> = { x: Math.round(c.x - it.w / 2), y: Math.round(c.y - it.h / 2) };
+            if (ROTATABLE.includes(it.type)) patch.rot = Math.round((((h.rot0 + d) % 360 + 540) % 360 - 180) * 10) / 10 || undefined;
+            this.board.update(h.id, patch);
+          }
+        });
+        if (this.canvas) this.canvas.style.cursor = rotateCursor(deg + 90);
         return;
       }
       case 'tableLine': {
@@ -1079,7 +1092,7 @@ export class Editor {
         g.rect = normRect(g.start, w);
         const next = new Set(g.base);
         for (const it of this.board.list()) {
-          const inside = it.type === 'frame' ? rectContains(g.rect, it) : rectsIntersect(g.rect, boxOf(it));
+          const inside = it.type === 'frame' ? rectContains(g.rect, boxOf(it)) : rectsIntersect(g.rect, boxOf(it));
           if (inside) next.add(it.id);
         }
         this.setSelection(next);
@@ -1216,7 +1229,7 @@ export class Editor {
     if (!same && (line || this.hotLine)) { this.hotLine = line; this.requestRender(); }
     if (dot) cursor = 'crosshair';
     else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
-    else if (single && this.rotateCorner(single, w) !== null) cursor = rotateCursor((single.rot ?? 0) + this.rotateCorner(single, w)! * 90);
+    else if (single && this.onRotate(single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);
     else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
     else if (hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
     else {

@@ -644,7 +644,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
 
   drawBranches(ctx, s);
   for (const it of s.items) {
-    const box = it.type === 'frame' ? { ...it, y: it.y - 40, h: it.h + 40 } : boxOf(it);
+    const b = boxOf(it), box = it.type === 'frame' ? { x: b.x - 40, y: b.y - 40, w: b.w + 80, h: b.h + 80 } : b;
     if (rectsIntersect(box, view)) turned(ctx, it, () => drawItem(ctx, it, s));
   }
 
