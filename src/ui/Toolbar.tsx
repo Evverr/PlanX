@@ -31,6 +31,9 @@ const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: '
 /** Room kept clear above the tool rail (the top bar) and as much below it. */
 const RAIL_CLEAR = 72;
 
+/** Rail buttons with variants, opened by holding the button still; a mark in its corner says so. */
+const VARIANTS = new Set(['oval', 'draw']);
+
 const SHAPE_KEY = 'planx-last-shape';
 function savedShape(): Tool {
   try {
@@ -56,15 +59,15 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
     try { localStorage.setItem(SHAPE_KEY, tool); } catch { /* storage can be unavailable */ }
   }
   const shapeIcon = SHAPES.find(([t]) => t === lastShape.current)?.[1] ?? 'landscape';
-  // The shapes beside the rail: opened by holding the shapes button, closed by picking one or by a
-  // press anywhere else.
-  const [shapesOpen, setShapesOpen] = useState(false);
+  // The variants beside the rail (the shapes, or the pens and their colours): opened by holding their
+  // button, closed by a press anywhere else (and the shapes by picking one).
+  const [variants, setVariants] = useState<string | null>(null);
   useEffect(() => {
-    if (!shapesOpen) return;
-    const close = (e: PointerEvent) => { if (!(e.target as Element | null)?.closest?.('.shape-panel, [data-key="oval"]')) setShapesOpen(false); };
+    if (!variants) return;
+    const close = (e: PointerEvent) => { if (!(e.target as Element | null)?.closest?.(`.draw-panel, [data-key="${variants}"]`)) setVariants(null); };
     window.addEventListener('pointerdown', close, true);
     return () => window.removeEventListener('pointerdown', close, true);
-  }, [shapesOpen]);
+  }, [variants]);
 
   const filePicker = useRef<HTMLInputElement>(null);
   /** Where pictures from the file dialog go: a drop point when the picture button was dragged onto the board. */
@@ -79,8 +82,9 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
       const t = toolOf(key), icon = TOOLS[key]?.[1] ?? ICONS[key];
       return (t && <ToolPreview tool={t} zoom={zoom} />) || (icon ? <span className="tp-icon"><PanelIcon name={icon} /></span> : null);
     },
-    // Held still, the shapes button opens the shapes beside the rail (a click just takes the last one).
-    hold: (key: string) => { if (key !== 'oval') return false; setShapesOpen(true); return true; },
+    // Held still, the shapes and drawing buttons open their variants beside the rail (a click just
+    // takes the last one).
+    hold: (key: string) => { if (!VARIANTS.has(key)) return false; setVariants(key); return true; },
     drop: (key: string, at: { x: number; y: number }) => {
       const t = toolOf(key);
       if (t === 'sticky') editor.addSticky('yellow', at);
@@ -139,7 +143,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   const railBottom = sort.ref.current?.getBoundingClientRect().bottom ?? innerHeight / 2;
   const moreRows = Math.max(1, Math.min(hidden.length, Math.floor((railBottom - RAIL_CLEAR - 42 + 18) / 48)));
   // The selection panel keeps clear of what opens beside the rail.
-  useEffect(() => { window.dispatchEvent(new Event('planx:side-panels')); }, [moreOpen, drawing, shapesOpen]);
+  useEffect(() => { window.dispatchEvent(new Event('planx:side-panels')); }, [moreOpen, variants]);
 
   /** A rail button; in the "more" row (`inMenu`) it isn't rearrangeable and closes the row when used. */
   const railButton = (key: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}, inMenu = false): ReactNode => (
@@ -147,6 +151,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
       title={label} aria-label={label.replace(/ \(.*\)$/, '')} {...extra}
       onClick={() => { onClick?.(); if (inMenu) setMoreOpen(false); }}>
       <PanelIcon name={icon} />
+      {VARIANTS.has(key) && <i className="variants-mark" />}
     </button>
   );
   const item = (key: string, inMenu = false): ReactNode => {
@@ -187,8 +192,8 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
         {hidden.map((k) => item(k, true))}
       </div>
     )}
-    {drawing && <DrawPanel editor={editor} tool={tool} pens={pens} />}
-    {shapesOpen && <ShapePanel editor={editor} tool={tool} onPick={() => setShapesOpen(false)} />}
+    {variants === 'draw' && <DrawPanel editor={editor} tool={tool} pens={pens} />}
+    {variants === 'oval' && <ShapePanel editor={editor} tool={tool} onPick={() => setVariants(null)} />}
     <input ref={filePicker} type="file" accept="image/*" multiple hidden
       onChange={(e) => { const at = pictureAt.current; void readPictures(e.target.files ?? []).then((pics) => editor.addPictures(pics, at)); e.target.value = ''; }} />
     {sort.ghost}
