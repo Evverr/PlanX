@@ -92,6 +92,8 @@ button { font: inherit; color: inherit; }
   gap: var(--gap);
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
 .tools.docked { left: 0; border-radius: 0 12px 12px 0; }
+/* With the rail stuck to the edge, what opens beside it moves in with it (keeping its 12px gap). */
+.tools.docked ~ .tools-more, .tools.docked ~ .draw-panel, .tools.docked ~ .recorder, .tools.docked ~ .icon-pick { left: calc(72px + env(safe-area-inset-left, 0px)); }
 /* The rail's buttons that didn't fit, upright beside it like the rail itself and level with its
    bottom, in as many columns as the screen's height needs (rows and place set in Toolbar.tsx). */
 .tools-more { position: fixed; z-index: 5; left: calc(84px + env(safe-area-inset-left, 0px));
