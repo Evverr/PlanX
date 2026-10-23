@@ -3,7 +3,7 @@ import { alignOf, FILLS, textPad, ICON_COLORS, INK_COLORS, MARK_COLORS, STROKE_C
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
-import { cellItem, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
+import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
 import { branchCurve, mindButtons, mindColor, mindDepth, type MindButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
@@ -69,6 +69,8 @@ export interface Scene {
   tableLines: TableLine[];
   /** The pen or highlighter line being drawn, in board units. */
   stroke: InkStroke | null;
+  /** Cells picked in a table, outlined in blue. */
+  pickedCells: { id: string; cells: number[] } | null;
   /** Alignment guides of what's being dragged, faint grey dashed lines. */
   guides: Guide[];
   /** The table cell being edited, its text left to the overlay. */
@@ -497,6 +499,14 @@ function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCel
   const { theme, cam } = s;
   ctx.fillStyle = theme.surface;
   ctx.fillRect(it.x, it.y, it.w, it.h);
+  // Cells filled with a colour of their own.
+  it.cellFmt?.forEach((f, i) => {
+    const bg = f?.bg;
+    if (typeof bg !== 'string') return;
+    const r = cellRect(it, i);
+    ctx.fillStyle = shade(bg.startsWith('#') ? bg : FILLS[bg] ?? FILLS.blue, theme.dim);
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+  });
   ctx.strokeStyle = theme.line;
   ctx.lineWidth = 1 / cam.z;
   ctx.beginPath();
@@ -517,6 +527,17 @@ function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCel
       else { const ly = it.y + upto(rows, l.index); ctx.moveTo(it.x, ly); ctx.lineTo(it.x + it.w, ly); }
     }
     ctx.stroke();
+  }
+  // Picked cells: a blue edge just inside each, and a light blue wash.
+  if (s.pickedCells?.id === it.id) {
+    ctx.strokeStyle = SELECT_COLOR;
+    ctx.lineWidth = 2 / cam.z;
+    for (const i of s.pickedCells.cells) {
+      const r = cellRect(it, i), inset = 1 / cam.z;
+      ctx.fillStyle = SELECT_COLOR + '1F';
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      ctx.strokeRect(r.x + inset, r.y + inset, r.w - inset * 2, r.h - inset * 2);
+    }
   }
   const n = colsOf(it).length * rowsOf(it).length;
   for (let i = 0; i < n; i++) {
