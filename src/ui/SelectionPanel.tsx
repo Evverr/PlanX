@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNod
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { COLORABLE, FILLS, ICON_COLORS, STROKABLE, STROKE_COLORS } from '../model/types';
-import { MIND_PALETTE } from '../model/mind';
+import { MIND_PALETTE, mindDepth } from '../model/mind';
 import { colsOf, rowsOf } from '../model/table';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
@@ -117,6 +117,9 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
   const [paint, pick] = usePaint();
   const colorable = items.filter((i) => COLORABLE.includes(i.type)), icons = items.filter((i) => i.type === 'icon');
   const strokable = items.filter((i) => STROKABLE.includes(i.type));
+  // Mind map nodes past the first level (all the selected) get a fill and an edge of their own.
+  const deepMind = colorable.length > 0 && colorable.every((i) => i.type === 'mind' && mindDepth(i, (id) => editor.board.get(id)) >= 2);
+  if (deepMind) return <MindColors editor={editor} nodes={colorable} />;
   const fill = same(colorable.map((i) => i.color)), stroke = same(strokable.map((i) => i.sc ?? 'gray'));
   // Outlines are set only while shapes or tasks are among the selected; with both picked, colour and
   // opacity go to both, the outline taking the fill's colour itself.
@@ -149,6 +152,31 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
         <button key={k} className={`sw ${iconColor === k ? 'on' : ''}`} style={{ background: v || 'var(--ink)' }}
           title="Цвет иконки" aria-label={`Цвет иконки ${k}`} onClick={() => editor.setIconColor(k)} />
       ))}
+    </Palette>
+  );
+}
+
+/** The colours of mind map nodes past the first level: their fill (pale, or white) and their edge
+ *  and branch (the strong ones), with opacity for either; Shift picks both. */
+function MindColors({ editor, nodes }: { editor: Editor; nodes: Item[] }) {
+  const [paint, pick] = usePaint();
+  const fill = same(nodes.map((i) => i.fc ?? 'none')), stroke = same(nodes.map((i) => i.color));
+  const target = paint.includes('fill') ? 'fill' : 'stroke';
+  const swatches: Array<[string, string]> = target === 'fill' ? Object.entries(FILLS) : MIND_PALETTE.map((c) => [c, c]);
+  const setColor = (c: string) => {
+    editor.beginChange();
+    if (paint.includes('fill')) editor.setMindFill(c);
+    // Together, the edge takes the fill's colour itself (as long as it's a colour).
+    if (paint.includes('stroke') && c !== 'none') editor.setColor(c.startsWith('#') ? c : FILLS[c] ?? c);
+    editor.endChange();
+  };
+  const opacity = Number(same(nodes.map((i) => String((target === 'fill' ? i.fo : i.so) ?? 1))) ?? 1);
+  return (
+    <Palette label="Цвет">
+      <PaintSwitch paint={paint} pick={pick} fill={fill} stroke={stroke ?? MIND_PALETTE[0]} fillLabel="Заливка" strokeLabel="Обводка" />
+      <Swatches swatches={swatches} current={target === 'fill' ? fill : stroke} onPick={setColor}
+        label={target === 'fill' ? 'Цвет' : 'Цвет обводки'} noneLabel="Без заливки" />
+      <OpacitySlider editor={editor} value={opacity} onChange={(v) => paint.forEach((t) => editor.setOpacity(t, v))} />
     </Palette>
   );
 }

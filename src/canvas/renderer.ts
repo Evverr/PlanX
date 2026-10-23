@@ -1,5 +1,5 @@
 import type { Item, Link, Side } from '../model/types';
-import { alignOf, FILLS, textPad, ICON_COLORS, INK_COLORS, MARK_COLORS, STROKE_COLORS, TEXT_COLORS } from '../model/types';
+import { alignOf, FILLS, textPad, textPadY, ICON_COLORS, INK_COLORS, MARK_COLORS, STROKE_COLORS, TEXT_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
@@ -135,26 +135,29 @@ function ensureFont(f: string) {
 
 /** An item's text with its font, colour, highlight, underline, strikethrough, alignment and list.
  *  `shrink` is for stickers and shapes: the text is centred vertically and shrinks to fit the box. */
-function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: string, shrink: boolean, s: Scene) {
+function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: string, shrink: boolean, s: Scene, padY = pad) {
   const text = withList(it.text ?? '', it.ls);
   if (!text) return;
   const size = it.fs ?? 16;
   if (size * s.cam.z < 2.5) return; // too small to read; skip the work
   const st = fontOf(it), align = alignOf(it);
-  const w = it.w - pad * 2, h = shrink ? it.h - pad * 2 : Infinity;
+  const w = it.w - pad * 2, h = shrink ? it.h - padY * 2 : Infinity;
   const l = cachedLayout(ctx, `${it.type}|${w}|${h}|${size}|${st.weight}|${st.family}|${st.italic}|${text}`, text, w, h, size, st);
   const f = font(l.size, st.weight, st.family, st.italic);
   ensureFont(f);
   ctx.font = f;
-  ctx.textBaseline = 'middle';
+  // Each line sits in its line box as the browser sets it, so text typed over it in the overlay
+  // lands on the same pixels: the font's ascent and descent centred in the line, on its baseline.
+  ctx.textBaseline = 'alphabetic';
   ctx.textAlign = align;
+  const fm = ctx.measureText('Hg'), ascent = fm.fontBoundingBoxAscent, descent = fm.fontBoundingBoxDescent;
   const tc = it.tc && (it.tc.startsWith('#') ? it.tc : TEXT_COLORS[it.tc]);
   const ink = tc ? shade(tc, s.theme.dim) : color;
   const mark = it.mk && (it.mk.startsWith('#') ? it.mk : MARK_COLORS[it.mk]);
   const rule = Math.max(1, l.size / 14);
   const total = l.lines.length * l.lineHeight;
   const x = align === 'center' ? it.x + it.w / 2 : align === 'right' ? it.x + it.w - pad : it.x + pad;
-  let y = shrink && it.va !== 'top' ? it.y + it.h / 2 - total / 2 : it.y + pad;
+  let y = shrink && it.va !== 'top' ? it.y + it.h / 2 - total / 2 : it.y + padY;
   for (const line of l.lines) {
     const mid = y + l.lineHeight / 2;
     if (line && (mark || it.fu || it.fx)) {
@@ -171,7 +174,7 @@ function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: s
       if (it.fx) ctx.fillRect(left, mid + l.size * 0.04 - rule / 2, tw, rule);
     }
     ctx.fillStyle = ink;
-    ctx.fillText(line, x, mid);
+    ctx.fillText(line, x, y + (l.lineHeight - ascent - descent) / 2 + ascent);
     y = mid + l.lineHeight / 2;
   }
 }
@@ -393,12 +396,15 @@ function outlinePolygon(ctx: CanvasRenderingContext2D, it: Item) {
  *  with an edge of it. */
 function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
   // Dimmed in the dark theme like the other fills.
-  const { theme } = s, depth = mindDepth(it, s.get), color = shade(mindColor(it, s.get), theme.dim);
+  const { theme } = s, depth = mindDepth(it, s.get), color = shade(mindColor(it), theme.dim);
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.h / 2, depth === 0 ? 14 : 10));
   ctx.globalAlpha = it.fo ?? 1;
+  // Past the first level a node can have a fill of its own (white otherwise).
+  const fill = depth >= 2 && it.fc ? shade(it.fc.startsWith('#') ? it.fc : FILLS[it.fc] ?? FILLS.blue, theme.dim) : null;
   ctx.fillStyle = depth === 0 ? color : theme.surface;
   ctx.fill();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
   if (depth === 1) { ctx.globalAlpha = (it.fo ?? 1) * 0.18; ctx.fillStyle = color; ctx.fill(); }
   ctx.globalAlpha = 1;
   // A node a branch is being dragged onto shows it with its edge dashed (the solid central topic,
@@ -408,7 +414,7 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   if (target) ctx.setLineDash([6 / s.cam.z, 6 / s.cam.z]);
   if (depth > 0) {
     // The edge is at 70% until the node is picked (or a branch is dropped on it).
-    ctx.globalAlpha = s.selection.has(it.id) || target ? 1 : 0.7;
+    ctx.globalAlpha = (s.selection.has(it.id) || target ? 1 : 0.7) * (it.so ?? 1);
     ctx.lineWidth = depth === 1 ? 2 : 1.5;
     ctx.strokeStyle = color;
     ctx.stroke();
@@ -421,7 +427,7 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
     ctx.stroke();
   }
   ctx.setLineDash([]);
-  if (!editing) drawText(ctx, it, textPad(it), depth === 0 ? '#fff' : theme.ink, true, s);
+  if (!editing) drawText(ctx, it, textPad(it), depth === 0 ? '#fff' : theme.ink, true, s, textPadY(it));
 }
 
 /** The branches of mind maps, under the nodes and half see-through (but for those to picked nodes):
@@ -435,7 +441,7 @@ function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
     const [a, c1, c2, b] = branchCurve(up, it);
     // The branch to a picked node comes up to full strength with its edge.
     ctx.globalAlpha = s.selection.has(it.id) ? 1 : 0.5;
-    ctx.strokeStyle = shade(mindColor(it, s.get), s.theme.dim);
+    ctx.strokeStyle = shade(mindColor(it), s.theme.dim);
     ctx.lineWidth = up.parent ? 0.75 : 1.5;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);

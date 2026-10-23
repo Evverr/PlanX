@@ -10,7 +10,7 @@ import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCellFormat, withCount, withScale, withTableFormat, type TableLine } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
 import { snapToGuides, type Guide } from '../canvas/guides';
-import { balance, canMoveTo, childPlace, descendants, insertBeside, makeRoom, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
+import { balance, canMoveTo, mindDepth, childPlace, descendants, insertBeside, makeRoom, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | 'mind' | PolyShape;
 export type PenTool = 'pen' | 'marker';
@@ -578,7 +578,16 @@ export class Editor {
     this.board.transact(() => {
       for (const it of this.selectedItems()) {
         if (of === 'fill' && COLORABLE.includes(it.type)) this.board.update(it.id, { fo: v });
-        if (of === 'stroke' && STROKABLE.includes(it.type)) this.board.update(it.id, { so: v });
+        if (of === 'stroke' && (STROKABLE.includes(it.type) || it.type === 'mind')) this.board.update(it.id, { so: v });
+      }
+    });
+  }
+
+  /** Fill of the selected mind map nodes past the first level ('none' back to white). */
+  setMindFill(color: string): void {
+    this.board.transact(() => {
+      for (const it of this.selectedItems()) {
+        if (it.type === 'mind' && mindDepth(it, (id) => this.board.get(id)) >= 2) this.board.update(it.id, { fc: color === 'none' ? undefined : color });
       }
     });
   }

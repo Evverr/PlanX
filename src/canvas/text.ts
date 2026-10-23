@@ -77,11 +77,16 @@ let measureCtx: CanvasRenderingContext2D | null = null;
 
 /** Height a text item needs at its width, used to keep its box in step with its content. */
 export function measureTextHeight(text: string, width: number, size: number, style: FontStyle = {}): number {
-  if (typeof document === 'undefined') return Math.ceil(size * LINE_HEIGHT);
+  return Math.ceil(textBlockHeight(text, width, size, style));
+}
+
+/** How tall the lines of a text are at a width, exactly (as the canvas lays them out). */
+export function textBlockHeight(text: string, width: number, size: number, style: FontStyle = {}): number {
+  if (typeof document === 'undefined') return size * LINE_HEIGHT;
   measureCtx ??= document.createElement('canvas').getContext('2d');
-  if (!measureCtx) return Math.ceil(size * LINE_HEIGHT);
+  if (!measureCtx) return size * LINE_HEIGHT;
   const { lines, lineHeight } = layoutText(measureCtx, text || ' ', width, Infinity, size, style);
-  return Math.ceil(lines.length * lineHeight);
+  return lines.length * lineHeight;
 }
 
 /** Height a text item needs with its own font, size and list, optionally with other text or width. */
@@ -97,15 +102,16 @@ const MIND_MAX_W = 260, MIND_MIN_W = 48;
 
 /** A mind map node's size: as wide as its longest line (up to MIND_MAX_W), as tall as its lines, plus padding. */
 export function mindSize(it: Item, text = it.text ?? ''): { w: number; h: number } {
-  // 15 above and below the text, 16 to each side.
-  const fs = it.fs ?? 16, st = fontOf(it), pad = 15, padX = 16;
-  if (typeof document === 'undefined') return { w: 160, h: Math.ceil(fs * LINE_HEIGHT) + pad * 2 };
+  // 15 above and below the text, 16 to each side; the central topic a third taller and with twice the
+  // room to each side.
+  const root = !it.parent, fs = it.fs ?? 16, st = fontOf(it), pad = 15, padX = root ? 32 : 16, tall = root ? 4 / 3 : 1;
+  if (typeof document === 'undefined') return { w: 160, h: (Math.ceil(fs * LINE_HEIGHT) + pad * 2) * tall };
   measureCtx ??= document.createElement('canvas').getContext('2d');
-  if (!measureCtx) return { w: 160, h: Math.ceil(fs * LINE_HEIGHT) + pad * 2 };
+  if (!measureCtx) return { w: 160, h: (Math.ceil(fs * LINE_HEIGHT) + pad * 2) * tall };
   measureCtx.font = font(fs, st.weight, st.family, st.italic);
   const widest = Math.max(...(text || ' ').split('\n').map((l) => measureCtx!.measureText(l).width));
   const inner = Math.ceil(Math.min(MIND_MAX_W, Math.max(MIND_MIN_W, widest + 2)));
-  return { w: inner + padX * 2, h: measureTextHeight(text || ' ', inner, fs, st) + pad * 2 };
+  return { w: inner + padX * 2, h: Math.round((measureTextHeight(text || ' ', inner, fs, st) + pad * 2) * tall) };
 }
 
 /** Height a text item or task needs for its text; other items have none to fit. */
