@@ -3,10 +3,9 @@ import type { Point } from '../canvas/geometry';
 
 /**
  * Mind maps, as in MindMeister: a central topic (a 'mind' item without a parent) and nodes that
- * branch from it, each pointing at its parent. Every branch off the centre gets its own colour,
- * kept on that first-level node; the nodes further out take it from there.
+ * branch from it, each pointing at its parent. Every branch is the one blue.
  */
-export const MIND_COLORS = ['#3E7BFA', '#E8892B', '#30A46C', '#8E4EC6', '#E5484D', '#0C8599', '#D6409F'];
+export const MIND_COLOR = '#3E7BFA';
 
 type Get = (id: string) => Item | undefined;
 
@@ -15,18 +14,6 @@ export function mindDepth(it: Item, get: Get): number {
   let d = 0, cur: Item | undefined = it;
   while (cur?.parent && d < 50) { cur = get(cur.parent); d++; }
   return d;
-}
-
-/** The node's branch colour: the colour of the first-level node it grows from. */
-export function branchColor(it: Item, get: Get): string {
-  let cur: Item | undefined = it;
-  for (let i = 0; cur && i < 50; i++) {
-    const up: Item | undefined = cur.parent ? get(cur.parent) : undefined;
-    if (!up) return MIND_COLORS[0];
-    if (!up.parent) return cur.color ?? MIND_COLORS[0];
-    cur = up;
-  }
-  return MIND_COLORS[0];
 }
 
 /** Every node branching from these, however far out (not the nodes themselves). */
@@ -68,17 +55,54 @@ export function childPlace(parent: Item, items: Item[], get: Get, w: number, h: 
   return { x, y };
 }
 
+/**
+ * New y positions (by id) after laying out the branches along the way from node `id` to the centre:
+ * at each node on the way, its branches on that side stack one under another, each with everything
+ * growing from it, centred on the node.
+ */
+export function balance(id: string, items: Item[]): Map<string, number> {
+  const all = items.map((i) => ({ ...i })), byId = new Map(all.map((i) => [i.id, i]));
+  let cur = byId.get(id);
+  for (let guard = 0; cur?.parent && guard < 50; guard++) {
+    const p: Item | undefined = byId.get(cur.parent);
+    if (!p) break;
+    const side = mindSide(cur, p), mid = (i: Item) => i.y + i.h / 2;
+    const kids = all.filter((i) => i.type === 'mind' && i.parent === p.id && mindSide(i, p) === side).sort((a, b) => mid(a) - mid(b));
+    const blocks = kids.map((k) => {
+      const sub = [k, ...descendants([k.id], all).map((d) => byId.get(d)!)];
+      return { sub, top: Math.min(...sub.map((n) => n.y)), bottom: Math.max(...sub.map((n) => n.y + n.h)) };
+    });
+    const total = blocks.reduce((t, b) => t + b.bottom - b.top, 0) + MIND_GAP_Y * (blocks.length - 1);
+    let y = mid(p) - total / 2;
+    for (const b of blocks) {
+      const dy = y - b.top;
+      b.sub.forEach((n) => { n.y += dy; });
+      y += b.bottom - b.top + MIND_GAP_Y;
+    }
+    cur = p;
+  }
+  const out = new Map<string, number>();
+  for (const i of items) {
+    const y = Math.round(byId.get(i.id)!.y);
+    if (y !== i.y) out.set(i.id, y);
+  }
+  return out;
+}
+
+/** How far the "+" buttons' centres sit from the node, in screen pixels: their radius and 2 more. */
+const PLUS_OFF = 11;
+
 /** The "+" beside a selected node that adds a child: on the side it grows towards, sized in screen
- *  pixels (radius 9, 18 from the node) whatever the zoom. */
+ *  pixels (radius 9, a couple of pixels clear of the node) whatever the zoom. */
 export function plusButton(it: Item, get: Get, zoom: number): Point & { r: number } {
   const up = it.parent ? get(it.parent) : undefined, side = up ? mindSide(it, up) : 1;
-  return { x: side > 0 ? it.x + it.w + 18 / zoom : it.x - 18 / zoom, y: it.y + it.h / 2, r: 9 / zoom };
+  return { x: side > 0 ? it.x + it.w + PLUS_OFF / zoom : it.x - PLUS_OFF / zoom, y: it.y + it.h / 2, r: 9 / zoom };
 }
 
 /** The "+" under a selected node that adds a node beside it, a parallel branch of the same parent;
  *  the central topic has none. */
 export function siblingButton(it: Item, zoom: number): (Point & { r: number }) | null {
-  return it.parent ? { x: it.x + it.w / 2, y: it.y + it.h + 18 / zoom, r: 9 / zoom } : null;
+  return it.parent ? { x: it.x + it.w / 2, y: it.y + it.h + PLUS_OFF / zoom, r: 9 / zoom } : null;
 }
 
 /** The connecting branch from a parent to a child: from the parent's facing side to the child's,
