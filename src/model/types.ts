@@ -173,8 +173,9 @@ export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse', 'polygon', 't
 /** What has an outline whose colour can be set apart from the fill. */
 export const STROKABLE: ItemType[] = ['rect', 'ellipse', 'polygon', 'task'];
 export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'task', 'table', 'polygon', 'mind'];
-/** What can be turned by its corners. Frames, tables, mind map nodes and audio notes stay square to the board. */
-export const ROTATABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'polygon', 'task', 'icon', 'emoji', 'image', 'ink'];
+/** What can be turned by its top right corner (a frame along with what it holds). Tables, mind map
+ *  nodes and audio notes stay square to the board. */
+export const ROTATABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'polygon', 'task', 'icon', 'emoji', 'image', 'ink', 'frame'];
 export const EDITABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'frame', 'task', 'table', 'polygon', 'mind'];
 
 export const uid = (): string =>

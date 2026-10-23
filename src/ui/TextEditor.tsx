@@ -47,9 +47,9 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   // turned item, about the item's centre.
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el || isFrame) return;
+    if (!el) return;
     let top = 0;
-    if (item.type !== 'text') {
+    if (item.type !== 'text' && !isFrame) {
       el.style.height = '0px';
       const content = Math.min(el.scrollHeight, item.h - pad * 2);
       el.style.height = `${content}px`;
