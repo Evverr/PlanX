@@ -213,7 +213,7 @@ button { font: inherit; color: inherit; }
 .fsep { flex: none; width: 5px; height: 24px; position: relative; }
 .fsep.line::after { content: ""; position: absolute; left: 50%; top: 2px; width: 1px; height: 20px; background: var(--fmt-line); }
 /* Text controls over the selected text or sticker; TextPanel in FormatPanel.tsx places it. */
-.tfmt { position: fixed; z-index: 5; display: flex; flex-wrap: nowrap; align-items: center; column-gap: 14px; padding: 12px 18px; width: max-content;
+.tfmt { position: fixed; z-index: 5; display: flex; flex-wrap: nowrap; align-items: center; column-gap: 14px; padding: 12px 18px 12px 22px; width: max-content;
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 16px; box-shadow: var(--fmt-shadow); color: var(--fmt-ink); }
 .tfmt .caret { margin: 0 -10px; }
 /* The text panel fades in when it shows up. */
