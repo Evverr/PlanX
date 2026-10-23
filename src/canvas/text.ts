@@ -97,8 +97,8 @@ const MIND_MAX_W = 260, MIND_MIN_W = 48;
 
 /** A mind map node's size: as wide as its longest line (up to MIND_MAX_W), as tall as its lines, plus padding. */
 export function mindSize(it: Item, text = it.text ?? ''): { w: number; h: number } {
-  // The central topic has more room round its text: 4 more each side, 3 more above and below.
-  const fs = it.fs ?? 16, st = fontOf(it), pad = it.parent ? 12 : 15, padX = it.parent ? 12 : 16;
+  // 15 above and below the text, 16 to each side.
+  const fs = it.fs ?? 16, st = fontOf(it), pad = 15, padX = 16;
   if (typeof document === 'undefined') return { w: 160, h: Math.ceil(fs * LINE_HEIGHT) + pad * 2 };
   measureCtx ??= document.createElement('canvas').getContext('2d');
   if (!measureCtx) return { w: 160, h: Math.ceil(fs * LINE_HEIGHT) + pad * 2 };

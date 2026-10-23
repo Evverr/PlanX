@@ -9,7 +9,7 @@ import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCount, withScale, type TableLine } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
-import { balance, canMoveTo, childPlace, descendants, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
+import { balance, canMoveTo, childPlace, descendants, insertBeside, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | 'mind' | PolyShape;
 export type PenTool = 'pen' | 'marker';
@@ -265,6 +265,7 @@ export class Editor {
 
   private render(): void {
     if (!this.ctx || !this.theme) return;
+    this.refitMind();
     const g = this.gesture;
     let linkPreview = null;
     if (g?.type === 'link') {
@@ -727,7 +728,7 @@ export class Editor {
 
   /** Adds a node to a mind map: a child of `from`, or another child of its parent right after it
    *  (`below`) or before it (`above`), and opens it for typing. */
-  addMindNode(fromId: string, kind: 'child' | 'above' | 'below'): void {
+  addMindNode(fromId: string, kind: 'child' | 'above' | 'below', later = false): void {
     const from = this.board.get(fromId);
     if (from?.type !== 'mind') return;
     const parent = kind !== 'child' && from.parent ? this.board.get(from.parent) : from;
@@ -735,23 +736,42 @@ export class Editor {
     const items = this.board.list(), get = (id: string) => this.board.get(id);
     const depth = (n: Item): number => (n.parent ? 1 + depth(this.board.get(n.parent) ?? n) : 0);
     const level = depth(parent) + 1;
-    const draft = { ...DEFAULTS.mind, type: 'mind', fs: level === 1 ? 16 : 14, text: '' } as Item;
+    // Sized as it will be once typed in: a branch, not a central topic (which has more padding).
+    const draft = { ...DEFAULTS.mind, type: 'mind', fs: level === 1 ? 14 : 12, text: '', parent: parent.id } as Item;
     const { w, h } = mindSize(draft, '');
     // A parallel branch grows on the same side of the centre as the node it's added beside.
     const at = childPlace(parent, items, get, w, h, parent !== from ? mindSide(from, parent) : undefined);
-    // A parallel branch goes right after (or before) the node it's added beside, lined up with it
-    // on the side towards the parent; then the branches re-centre.
-    if (parent !== from) {
-      at.y = from.y + from.h / 2 + (kind === 'above' ? -2 : 2) - h / 2;
-      at.x = mindSide(from, parent) > 0 ? from.x : from.x + from.w - w;
-    }
+    // A parallel branch goes right before or after the node it's added beside, lined up with it on
+    // the side towards the parent; that node stays put (so more can be added from the same spot)
+    // and the branches past it make room. A new branch of its own re-centres them instead.
+    if (parent !== from) at.x = mindSide(from, parent) > 0 ? from.x : from.x + from.w - w;
     const it = this.newItem('mind', at.x, at.y, { w, h, fs: draft.fs, parent: parent.id });
     this.board.beginGesture();
     this.board.add(it);
-    this.rebalance(it.id);
+    if (kind === 'child') this.rebalance(it.id);
+    else {
+      const moves = insertBeside(it.id, from.id, kind, this.board.list());
+      this.board.transact(() => moves.forEach((y, k) => this.board.update(k, { y })));
+    }
     this.board.endGesture();
     this.setSelection([it.id]);
-    this.startEditing(it.id);
+    if (later) setTimeout(() => this.startEditing(it.id), 0);
+    else this.startEditing(it.id);
+  }
+
+  /** Mind map nodes already checked against the padding they're sized with now. */
+  private fitted = new Set<string>();
+
+  /** Mind map nodes sized before their padding grew are made to fit their text again, once each. */
+  private refitMind(): void {
+    const stale: Array<[Item, Partial<Item>]> = [];
+    for (const it of this.board.list()) {
+      if (it.type !== 'mind' || this.fitted.has(it.id) || it.id === this.editingId) continue;
+      this.fitted.add(it.id);
+      const fit = this.mindFit(it, it.text ?? '');
+      if (fit.w !== it.w || fit.h !== it.h) stale.push([it, fit]);
+    }
+    if (stale.length) setTimeout(() => this.board.transact(() => stale.forEach(([it, fit]) => this.board.update(it.id, fit))), 0);
   }
 
   /** Lays the mind map's branches out again around the way from this node to the centre. */
@@ -846,7 +866,8 @@ export class Editor {
     const plus = single && this.plusAt(single, w);
     if (single && plus) {
       if (plus === 'move') this.gesture = { type: 'mindMove', id: single.id, from: w, to: w, target: null };
-      else this.addMindNode(single.id, plus);
+      // Opened for typing once the press is over, or the browser's focus moving on press closes it again.
+      else this.addMindNode(single.id, plus, true);
       return;
     }
     const dot = single && !this.editingId ? this.dotAt(single, w) : null;
