@@ -130,6 +130,43 @@ export function balance(id: string, items: Item[]): Map<string, number> {
 }
 
 /**
+ * New y positions (by id, the new node's among them) for a new branch `id` (already among the items):
+ * its parent's branches on that side re-centre on the parent, with what grows from them; the parent
+ * and every node further up the way to the centre stay put, and only the branches beside them that
+ * would now overlap move away, just as far as it takes.
+ */
+export function addChild(id: string, items: Item[]): Map<string, number> {
+  const all = items.map((i) => ({ ...i })), byId = new Map(all.map((i) => [i.id, i]));
+  const node = byId.get(id), p = node?.parent ? byId.get(node.parent) : undefined;
+  if (!node || !p) return new Map();
+  const block = (k: Item) => [k, ...descendants([k.id], all).map((d) => byId.get(d)!)], mid = (i: Item) => i.y + i.h / 2;
+  const top = (b: Item[]) => Math.min(...b.map((n) => n.y)), bottom = (b: Item[]) => Math.max(...b.map((n) => n.y + n.h));
+  const side = mindSide(node, p);
+  const kids = all.filter((i) => i.type === 'mind' && i.parent === p.id && mindSide(i, p) === side).sort((a, b) => mid(a) - mid(b));
+  const blocks = kids.map(block);
+  const total = blocks.reduce((t, b) => t + bottom(b) - top(b), 0) + MIND_GAP_Y * (blocks.length - 1);
+  let y = mid(p) - total / 2;
+  for (const b of blocks) {
+    const dy = y - top(b);
+    b.forEach((n) => { n.y += dy; });
+    y += bottom(b) - top(b) + MIND_GAP_Y;
+  }
+  for (let cur: Item = p, guard = 0; cur.parent && guard < 50; guard++) {
+    const up = byId.get(cur.parent);
+    if (!up) break;
+    const here = cur, mine = block(here), s = mindSide(here, up);
+    const others = all.filter((k) => k.type === 'mind' && k.parent === up.id && k !== here && mindSide(k, up) === s).map(block);
+    const below = others.filter((b) => mid(b[0]) > mid(here)), above = others.filter((b) => mid(b[0]) < mid(here));
+    const down = Math.max(0, ...below.map((b) => bottom(mine) + MIND_GAP_Y - top(b)));
+    const lift = Math.max(0, ...above.map((b) => bottom(b) + MIND_GAP_Y - top(mine)));
+    below.forEach((b) => b.forEach((n) => { n.y += down; }));
+    above.forEach((b) => b.forEach((n) => { n.y -= lift; }));
+    cur = up;
+  }
+  return movedY(items, byId);
+}
+
+/**
  * New y positions (by id, the new node's among them) for putting node `id` (already among the
  * items) right above or below node `from`, a branch of the same parent, without `from` moving:
  * the new node goes next to `from` and everything it grows, and the branches beyond it on that

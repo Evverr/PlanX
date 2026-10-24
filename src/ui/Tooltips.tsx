@@ -12,7 +12,7 @@ interface Tip { text: string; left: number; top: number; side: Side; px: number 
 
 /** The bubble's height, its distance from the screen's edges and its width for a text (the text in
  *  Inter Semi Bold 12 and 15.5px padding each side). */
-const H = 33, EDGE = 8;
+const H = 37, EDGE = 8;
 let measure: CanvasRenderingContext2D | null = null;
 function tipWidth(text: string): number {
   measure ??= document.createElement('canvas').getContext('2d');

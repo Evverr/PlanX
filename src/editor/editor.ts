@@ -10,7 +10,7 @@ import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCellFormat, withCount, withScale, withTableFormat, type TableLine } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
 import { snapToGuides, type Guide } from '../canvas/guides';
-import { balance, canMoveTo, mindDepth, childPlace, descendants, insertBeside, makeRoom, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
+import { addChild, balance, canMoveTo, mindDepth, childPlace, descendants, insertBeside, makeRoom, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | 'mind' | PolyShape;
 export type PenTool = 'pen' | 'marker';
@@ -868,7 +868,7 @@ export class Editor {
     const it = this.newItem('mind', at.x, at.y, { w, h, fs: draft.fs, parent: parent.id });
     this.board.beginGesture();
     this.board.add(it);
-    if (kind === 'child') this.rebalance(it.id);
+    if (kind === 'child') this.board.transact(() => addChild(it.id, this.board.list()).forEach((y, k) => this.board.update(k, { y })));
     else {
       const moves = insertBeside(it.id, from.id, kind, this.board.list());
       this.board.transact(() => moves.forEach((y, k) => this.board.update(k, { y })));
