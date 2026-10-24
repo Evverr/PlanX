@@ -71,6 +71,9 @@ export function Tooltips() {
       const target = e.target as Element | null;
       if (warm && leftAt !== null && performance.now() - leftAt > GRACE) { warm = null; leftAt = null; }
       if (warm) { if (target && warm.contains(target)) leftAt = null; else leftAt ??= performance.now(); }
+      // While something is held and dragged (a panel button, or anything on the board), no hints
+      // come and none is waited for.
+      if (e.buttons) { hide(); return; }
       const el = target?.closest?.<HTMLElement>('[title], [data-tip]') ?? null;
       if (el === current) return;
       hide();
