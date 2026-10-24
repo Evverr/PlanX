@@ -406,6 +406,11 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 .menu-line { width: 259px; height: 1px; margin: 7px 0; background: #6E6E6E; opacity: .1; }
 /* The switch: a 24×14 track, grey with the knob at its left, blue with it at its right when on. */
 .menu-switch { position: absolute; right: -2px; top: 50%; width: 24px; height: 24px; transform: translateY(-50%); }
+/* The panels' size: three dots at the row's end (a stand-in till they're drawn), the chosen one blue. */
+.size-dots { display: flex; gap: 8px; margin-left: auto; }
+.size-dot { width: 10px; height: 10px; border-radius: 50%; background: #D9D9D9; cursor: pointer; }
+.size-dot:hover { background: #BDBDBD; }
+.size-dot.on { background: #4DA3FF; }
 .menu-switch::before { content: ""; position: absolute; left: 0; top: 5px; width: 24px; height: 14px; border-radius: 220px; background: #D9D9D9; transition: background-color .15s ease-out; }
 .menu-switch.on::before { background: #007CFF; }
 .menu-switch i { position: absolute; top: 29.17%; bottom: 29.17%; left: 12.5%; right: 45.83%; border-radius: 220px; background: #fff;
@@ -481,10 +486,11 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 
 /* Smaller panels (the board menu's switch): everything about the panels scaled by --k, each size
    rounded to whole pixels (to even ones where an icon is centred in it), and what stands by them
-   moved in to match. --k is the one number to change for another size. */
+   moved in to match. --k is the one number to change for another size: medium and small below. */
 :root { --k: 1; }
+:root[data-size="m"] { --k: .9; }
+:root[data-size="s"] { --k: .8; }
 :root[data-compact] {
-  --k: .8;
   --c-btn: round(calc(40px * var(--k)), 2px); --c-icon: round(calc(30px * var(--k)), 2px); --c-pad: round(calc(6px * var(--k)), 1px); --c-r: round(calc(12px * var(--k)), 1px);
   --c-bar: calc(var(--c-pad) * 2 + var(--c-btn));
   --c-rail: calc(var(--c-icon) + round(calc(15px * var(--k)), 1px) * 2);

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Glyph } from './glyphs';
 import dropIcon from './menu/drop.svg';
-import { useCompact } from './grip';
+import { usePanelSize, type PanelSize } from './grip';
 
 /**
  * The board's menu, opened from the button after its name (Figma "Mol / Menu right"): first keeping
@@ -12,7 +12,7 @@ import { useCompact } from './grip';
  */
 export function BoardMenu({ level = 0, onSave, onReset }: { level?: number; onSave?: () => void; onReset?: () => void }) {
   const [on, setOn] = useState(false);
-  const [compact, setCompact] = useCompact();
+  const [panelSize, setPanelSize] = usePanelSize();
   // A row with an arrow opens the same menu again beside it while the pointer is on it (or its menu).
   const [sub, setSub] = useState(false);
   // Icons: every row on the first level, none on the second, just the first row on the third (to
@@ -47,7 +47,7 @@ export function BoardMenu({ level = 0, onSave, onReset }: { level?: number; onSa
       {level === 0 && <>
         {row('save-template', 'Сохранить панели', { onClick: onSave })}
         {row('refresh-l', 'Сбросить панели', { onClick: onReset })}
-        {row('collapse-l', 'Уменьшенные панели', { onClick: () => setCompact(!compact), end: <Switch on={compact} /> })}
+        {row('collapse-l', 'Размер панелей', { end: <SizeDots size={panelSize} onPick={setPanelSize} /> })}
         <div className="menu-line" />
         {row('user-profile', 'Профиль')}
         {row('settings-l', 'Настройки')}
@@ -62,6 +62,20 @@ export function BoardMenu({ level = 0, onSave, onReset }: { level?: number; onSa
       {row('statistics-arrow', 'Добавить концевую сноску')}
       {row('reply', 'Закладки')}
     </div>
+  );
+}
+
+/** The panels' size at the end of a row: three dots, large, medium and small, the chosen one blue
+ *  (a stand-in till they're drawn). Inside the row's button, so they're spans that act as buttons. */
+function SizeDots({ size, onPick }: { size: PanelSize; onPick: (s: PanelSize) => void }) {
+  const sizes: Array<[PanelSize, string]> = [['l', 'Большие'], ['m', 'Средние'], ['s', 'Маленькие']];
+  return (
+    <span className="size-dots" role="radiogroup" aria-label="Размер панелей">
+      {sizes.map(([s, label]) => (
+        <span key={s} className={`size-dot ${size === s ? 'on' : ''}`} role="radio" aria-checked={size === s} aria-label={label} title={label}
+          onClick={(e) => { e.stopPropagation(); onPick(s); }} />
+      ))}
+    </span>
   );
 }
 
