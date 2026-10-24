@@ -160,7 +160,7 @@ button { font: inherit; color: inherit; }
 .minimap svg { display: block; width: 240px; height: 160px; cursor: pointer; touch-action: none; }
 .minimap .mm-item { fill: rgba(75, 145, 255, .35); }
 .minimap .mm-frame { fill: rgba(75, 145, 255, .12); }
-.minimap .mm-view { fill: none; stroke: var(--ink); stroke-width: 1; stroke-opacity: .3; }
+.minimap .mm-view { fill: none; stroke: var(--ink); stroke-width: 2; stroke-opacity: .3; }
 .zpct { min-width: 52px; text-align: center; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; border: 0; background: transparent; cursor: pointer; padding: 8px 6px; border-radius: 6px; transition: background-color .12s ease-out; }
 .zpct:hover { background: var(--fmt-hover); }
 
