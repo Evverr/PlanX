@@ -33,7 +33,9 @@ const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: '
 const RAIL_CLEAR = 80;
 /** Where the rail's chosen length is kept, and how close to its top or bottom edge the pointer (or
  *  a finger) has to be to drag that edge. */
-const CAP_KEY = 'planx-tools-cap', TOP_KEY = 'planx-tools-top', SIDE_KEY = 'planx-tools-right';
+const CAP_KEY = 'planx-tools-cap', TOP_KEY = 'planx-tools-top', SIDE_KEY = 'planx-tools-right', LOW_KEY = 'planx-tools-low';
+/** Let go this close to the lowest it can go, the rail sticks to the bottom. */
+const SNAP = 40;
 /** How close to the screen's edges a rail put by hand may come (other panels it keeps clear of anyway). */
 const RAIL_EDGE = 14;
 
@@ -116,6 +118,8 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   // Where the rail's top is, once it's been moved (or made longer or shorter) by hand; till then
   // (null) it's centred on the screen.
   const [top, setTop] = useStoredNumber(TOP_KEY);
+  // Stuck to the bottom (let go near it): it stands 14px up from there, whatever its length.
+  const [low, setLow] = useStoredNumber(LOW_KEY);
   // Moved over past the middle of the screen, it stands at the right edge instead.
   const [right, setRight] = useStoredNumber(SIDE_KEY);
   useEffect(() => { document.documentElement.dataset.rail = right ? 'right' : ''; }, [right]);
@@ -136,13 +140,14 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
     return pad + ks.reduce((t, k) => t + (isSeparator(k) ? 7 : btn.offsetHeight), 0) + gap * (ks.length - 1);
   };
   // Centred: clear of the top bar above and as far from the bottom edge. Put by hand: from there down
-  // to near the bottom.
-  const room = (from = top) => (from === null ? innerHeight - RAIL_CLEAR * 2 : innerHeight - RAIL_EDGE - from);
+  // to near the bottom. Stuck to the bottom: up from there, clear of the top bar.
+  const room = (from?: number) => (from !== undefined ? innerHeight - RAIL_EDGE - from
+    : low ? innerHeight - RAIL_EDGE - RAIL_CLEAR : top === null ? innerHeight - RAIL_CLEAR * 2 : innerHeight - RAIL_EDGE - top);
   useLayoutEffect(() => {
     if (railHeight(all.length) === null) return;
     // On a screen grown shorter, a rail put low comes up to keep at least one button in sight.
     const lowest = Math.max(RAIL_EDGE, innerHeight - RAIL_EDGE - railHeight(1)!);
-    if (top !== null && top > lowest) { setTop(lowest); return; }
+    if (!low && top !== null && top > lowest) { setTop(lowest); return; }
     let n = Math.min(all.length, cap);
     while (n > 1 && railHeight(n)! > room()) n--;
     const next = n >= all.length ? Infinity : n;
@@ -157,6 +162,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
       cursor: 'move',
       start: () => {
         const r = sort.ref.current!.getBoundingClientRect();
+        let at = r.top;
         return {
           move: (dx, dy) => {
             const t = Math.min(Math.max(r.top + dy, RAIL_EDGE), Math.max(RAIL_EDGE, innerHeight - RAIL_EDGE - r.height));
@@ -164,10 +170,13 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
             // Not over another panel: it stays where it last could be.
             const margin = right ? innerWidth - r.right : r.left;
             if (overPanels({ left: f ? innerWidth - margin - r.width : margin, top: t, width: r.width, height: r.height }, sort.ref.current)) return;
+            at = t;
+            setLow(null);
             setTop(t);
             setRight(f ? 1 : null);
           },
-          done: () => {},
+          // Let go near the bottom, it sticks there.
+          done: () => { if (innerHeight - RAIL_EDGE - (at + r.height) <= SNAP) setLow(1); },
         };
       },
     },
@@ -181,6 +190,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
         sort.visible(undefined, fit);
         // A centred rail stays where it is from now on, its top held.
         setTop(r.top);
+        setLow(null);
         return {
           move: (_, dy) => {
             const want = r.height + dy;
@@ -255,7 +265,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
     <>
     <nav ref={sort.ref} className={`tools sortable ${docked ? 'docked' : ''} ${sort.sorting ? 'sorting' : ''}`} aria-label="Инструменты"
       {...sort.container}
-      style={top !== null ? { top, transform: 'none' } : undefined}
+      style={low ? { top: 'auto', bottom: `calc(${RAIL_EDGE}px + env(safe-area-inset-bottom, 0px))`, transform: 'none' } : top !== null ? { top, transform: 'none' } : undefined}
       onPointerDown={(e) => { if (!grip.onPointerDown(e)) sort.container.onPointerDown(e); }}
       onPointerMove={(e) => { if (!sort.sorting) grip.onPointerMove(e); sort.container.onPointerMove(e); }}
       onPointerLeave={grip.onPointerLeave}>
