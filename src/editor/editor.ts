@@ -311,10 +311,9 @@ export class Editor {
     }
     const plusFade = this.plusFade();
     if (plusFade > 0 && plusFade < 1) this.requestRender();
-    const shown = this.shown(), hidden = this.hidden();
     drawScene(this.ctx, {
-      items: shown,
-      links: hidden.size ? this.board.linkList().filter((l) => !hidden.has(l.from) && !hidden.has(l.to)) : this.board.linkList(),
+      items: this.shown(),
+      links: this.shownLinks(),
       get: (id) => this.board.get(id),
       cam: this.cam,
       theme: this.theme,
@@ -986,7 +985,7 @@ export class Editor {
     const items = this.board.list();
     // A frame takes clicks anywhere on its empty area, but links drawn across it come first.
     let hit = hitItem(this.shown(), w, this.cam.z);
-    const link = hit && hit.type !== 'frame' ? null : hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z);
+    const link = hit && hit.type !== 'frame' ? null : hitLink(this.shownLinks(), (id) => this.board.get(id), w, this.cam.z);
     if (link) hit = null;
 
     // A finger on the empty board moves the board, but not on the controls of what's selected (its
@@ -1187,6 +1186,28 @@ export class Editor {
   shown(): Item[] {
     const items = this.board.list(), hidden = this.hidden(items);
     return hidden.size ? items.filter((i) => !hidden.has(i.id)) : items;
+  }
+
+  /**
+   * The links as they're seen: one whose end is hidden in a folded frame goes to that frame's bar
+   * instead (the outermost one in sight, for frames in frames), and one with both ends in the same
+   * folded frame isn't seen at all.
+   */
+  private shownLinks(): Link[] {
+    const items = this.board.list(), hidden = this.hidden(items), links = this.board.linkList();
+    if (!hidden.size) return links;
+    const stand = new Map<string, string>();
+    for (const f of items) {
+      if (f.type !== 'frame' || !f.fold || hidden.has(f.id)) continue;
+      for (const id of this.carried([f], items).keys()) if (id !== f.id) stand.set(id, f.id);
+    }
+    // A curved link meets the bar on its side towards the other end.
+    const moved = (l: Link): Link => {
+      const from = stand.get(l.from) ?? l.from, to = stand.get(l.to) ?? l.to, a = this.board.get(from), b = this.board.get(to);
+      if (!l.fromSide || !l.toSide || !a || !b) return { ...l, from, to };
+      return { ...l, from, to, fromSide: from !== l.from ? nearestSide(a, center(b)) : l.fromSide, toSide: to !== l.to ? nearestSide(b, center(a)) : l.toSide };
+    };
+    return links.map((l) => (stand.has(l.from) || stand.has(l.to) ? moved(l) : l)).filter((l) => l.from !== l.to);
   }
 
   /** The frame button under the point, of the topmost frame in sight that has one there. */
@@ -1637,7 +1658,7 @@ export class Editor {
     else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
     else if (single && this.onRotate(single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);
     else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
-    else if (hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
+    else if (hitLink(this.shownLinks(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
     else {
       const hit = hitItem(this.shown(), w, this.cam.z);
       if ((hit?.type === 'task' && onTaskBox(hit, w, this.cam.z)) || (hit?.type === 'audio' && onAudioButton(hit, w))) cursor = 'pointer';
