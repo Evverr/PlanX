@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Glyph } from './glyphs';
 import dropIcon from './menu/drop.svg';
+import { useCompact } from './grip';
 
 /**
  * The board's menu, opened from the button after its name (Figma "Mol / Menu right"): first keeping
@@ -11,6 +12,7 @@ import dropIcon from './menu/drop.svg';
  */
 export function BoardMenu({ level = 0, onSave, onReset }: { level?: number; onSave?: () => void; onReset?: () => void }) {
   const [on, setOn] = useState(false);
+  const [compact, setCompact] = useCompact();
   // A row with an arrow opens the same menu again beside it while the pointer is on it (or its menu).
   const [sub, setSub] = useState(false);
   // Icons: every row on the first level, none on the second, just the first row on the third (to
@@ -45,6 +47,7 @@ export function BoardMenu({ level = 0, onSave, onReset }: { level?: number; onSa
       {level === 0 && <>
         {row('save-template', 'Сохранить панели', { onClick: onSave })}
         {row('refresh-l', 'Сбросить панели', { onClick: onReset })}
+        {row('collapse-l', 'Уменьшенные панели', { onClick: () => setCompact(!compact), end: <Switch on={compact} /> })}
         <div className="menu-line" />
         {row('user-profile', 'Профиль')}
         {row('settings-l', 'Настройки')}

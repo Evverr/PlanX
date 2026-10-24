@@ -48,7 +48,7 @@ export function Tooltips() {
       const group = el.closest('.more-pop, .bar, .tfmt, .tools, .draw-panel, .tools-more');
       const bar = (group ?? el).getBoundingClientRect();
       const reach = (it: Element) => {
-        const q = it.getBoundingClientRect(), hl = it.matches('.fb') ? 6 : 0;
+        const q = it.getBoundingClientRect(), hl = it.matches('.fb') ? (document.documentElement.hasAttribute('data-compact') ? 4 : 6) : 0;
         return { top: q.top - hl, bottom: q.bottom + hl, left: q.left - hl, right: q.right + hl };
       };
       const mates = group

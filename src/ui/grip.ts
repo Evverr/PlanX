@@ -149,3 +149,26 @@ export function overPanels(r: { left: number; top: number; width: number; height
     return r.left < o.right + PANEL_GAP && r.left + r.width > o.left - PANEL_GAP && r.top < o.bottom + PANEL_GAP && r.top + r.height > o.top - PANEL_GAP;
   });
 }
+
+/** Smaller panels (the board menu's switch): on or off for every panel at once, kept right away, as
+ *  a setting rather than a place. */
+const COMPACT_KEY = 'planx-compact';
+let compact = (() => { try { return localStorage.getItem(COMPACT_KEY) === '1'; } catch { return false; } })();
+const compactFns = new Set<(v: boolean) => void>();
+const showCompact = () => {
+  if (compact) document.documentElement.dataset.compact = ''; else delete document.documentElement.dataset.compact;
+};
+if (typeof document !== 'undefined') showCompact();
+
+export function useCompact(): [boolean, (v: boolean) => void] {
+  const [v, setV] = useState(compact);
+  useEffect(() => { compactFns.add(setV); return () => { compactFns.delete(setV); }; }, []);
+  const set = (n: boolean) => {
+    compact = n;
+    try { if (n) localStorage.setItem(COMPACT_KEY, '1'); else localStorage.removeItem(COMPACT_KEY); } catch { /* just won't be kept */ }
+    showCompact();
+    compactFns.forEach((f) => f(n));
+    window.dispatchEvent(new Event('planx:side-panels'));
+  };
+  return [v, set];
+}
