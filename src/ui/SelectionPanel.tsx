@@ -227,22 +227,21 @@ function TableColors({ editor, table, cells }: { editor: Editor; table: Item; ce
   );
 }
 
-/** Room between the panel and the zoom panel or the tool rail beside it. */
-const GAP = 16;
+/** Room between the panel and the screen's edges or the other panels, as between all panels. */
+const GAP = 12;
 
-/** How wide the panel may be: the screen less its margin and the tool rail. */
+/** How wide the panel may be: the screen less its margins and the tool rail. */
 function selectionRoom(): number {
   const rail = document.querySelector('.tools')?.getBoundingClientRect();
-  return innerWidth - 16 - (rail ? rail.right + GAP : 16);
+  return innerWidth - GAP * 2 - (rail ? rail.width + GAP : 0);
 }
 
 export function SelectionPanel({ editor, items, cells, linkCount, docked }: { editor: Editor; items: Item[]; cells: number[]; linkCount: number; docked: boolean }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
   const sort = useSortable('planx-order-selection', ORDER, 'x');
-  // When it would run into the zoom panel beside it, the panel first moves left as far as it can
-  // (up to the screen edge, or the tool rail when level with it), and only then up above the bottom
-  // bars, still clear of the rail.
-  const [place, setPlace] = useState<{ left: number | null; raised: boolean }>({ left: null, raised: false });
+  // Centred at the bottom, clear of the tool rail (on whichever side); where another panel stands
+  // there (wherever it's been moved), it goes up above it instead.
+  const [place, setPlace] = useState<{ left: number | null; bottom: number | null }>({ left: null, bottom: null });
   const [, redraw] = useReducer((n: number) => n + 1, 0);
   // It finds its place again when the window changes size or a panel opens or closes beside the rail.
   useEffect(() => {
@@ -254,27 +253,30 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
     };
   }, []);
   useLayoutEffect(() => {
-    const zoom = document.querySelector('.zoom')?.getBoundingClientRect(), el = sort.ref.current;
-    if (!zoom || !el) return;
+    const el = sort.ref.current;
+    if (!el) return;
     // Its width, from what's in it.
     const kids = [...el.children] as HTMLElement[];
     const outer = (k: HTMLElement) => { const cs = getComputedStyle(k); return k.offsetWidth + parseFloat(cs.marginLeft) + parseFloat(cs.marginRight); };
     const w = kids.reduce((t, k) => t + outer(k), 0) + 4 * (kids.length - 1) + 32, h = el.offsetHeight;
-    // How far left it may go with its top at `top`: to the screen edge, or clear of the tool rail and
-    // whatever panel is open beside it, where level with them.
-    const side = ['.tools', '.tools-more', '.draw-panel'].map((q) => document.querySelector(q)?.getBoundingClientRect()).filter((r): r is DOMRect => !!r);
-    const min = (top: number) => Math.max(16, ...side.filter((r) => r.bottom > top).map((r) => r.right + GAP));
-    const centred = (innerWidth - w) / 2;
-    let next = { left: null as number | null, raised: false };
-    if (centred + w + GAP > zoom.left) {
-      const left = zoom.left - GAP - w;
-      if (left >= min(zoom.bottom - h)) next = { left: Math.round(left), raised: false };
-      else {
-        const top = zoom.top - 8 - h;
-        next = { left: centred < min(top) ? Math.round(min(top)) : null, raised: true };
-      }
-    } else if (centred < min(zoom.bottom - h)) next = { left: Math.round(min(zoom.bottom - h)), raised: false };
-    if (next.left !== place.left || next.raised !== place.raised) setPlace(next);
+    const seen = (q: string) => [...document.querySelectorAll(q)].map((e) => e.getBoundingClientRect()).filter((r) => r.width && r.height);
+    // Across: centred, but clear of the tool rail and what opens beside it.
+    let lo = GAP, hi = innerWidth - GAP - w;
+    for (const r of seen('.tools, .tools-more, .draw-panel')) {
+      if (r.left < innerWidth / 2) lo = Math.max(lo, r.right + GAP); else hi = Math.min(hi, r.left - GAP - w);
+    }
+    const centred = (innerWidth - w) / 2, left = Math.max(lo, Math.min(hi, centred));
+    // Up: from the bottom, above every panel it would lie over.
+    const base = docked ? 0 : GAP, others = seen('.topbar, .bar.zoom');
+    let bottom = base;
+    for (let tries = 0; tries < 4; tries++) {
+      const top = innerHeight - bottom - h;
+      const hit = others.find((r) => left < r.right + GAP && left + w > r.left - GAP && top < r.bottom + GAP && top + h > r.top - GAP);
+      if (!hit) break;
+      bottom = innerHeight - hit.top + GAP;
+    }
+    const next = { left: Math.abs(left - centred) < 1 ? null : Math.round(left), bottom: bottom === base ? null : Math.round(bottom) };
+    if (next.left !== place.left || next.bottom !== place.bottom) setPlace(next);
   });
   if (!items.length && !linkCount) return null;
   const tables = items.filter((i) => i.type === 'table');
@@ -283,8 +285,8 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
     <button className="ib" title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
   );
   return (
-    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${docked ? 'docked' : ''} ${place.raised ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
-      style={place.left !== null ? { left: place.left, transform: 'none' } : undefined}
+    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${docked ? 'docked' : ''} ${place.bottom !== null ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
+      style={{ ...(place.left !== null && { left: place.left, transform: 'none' }), ...(place.bottom !== null && { bottom: place.bottom }) }}
       role="toolbar" aria-label="Выделенное" {...sort.container}>
       {sort.renderFit({
         // All the colours are under the palette: a table's own when it's selected alone.
