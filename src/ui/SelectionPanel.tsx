@@ -262,7 +262,8 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
     // Its width, from what's in it.
     const kids = [...el.children] as HTMLElement[];
     const outer = (k: HTMLElement) => { const cs = getComputedStyle(k); return k.offsetWidth + parseFloat(cs.marginLeft) + parseFloat(cs.marginRight); };
-    const w = kids.reduce((t, k) => t + outer(k), 0) + 4 * (kids.length - 1) + 32, h = el.offsetHeight;
+    const cs = getComputedStyle(el), gap = parseFloat(cs.columnGap) || 0, pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    const w = kids.reduce((t, k) => t + outer(k), 0) + gap * (kids.length - 1) + pad, h = el.offsetHeight;
     const seen = (q: string) => [...document.querySelectorAll(q)].map((e) => e.getBoundingClientRect()).filter((r) => r.width && r.height);
     // Across: centred, but clear of the tool rail and what opens beside it.
     let lo = GAP, hi = innerWidth - GAP - w;
