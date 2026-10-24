@@ -503,9 +503,19 @@ function drawAudio(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
   ctx.fillText(clock(played !== null ? played * (it.dur ?? 0) : it.dur ?? 0), it.x + it.w - 14 * k, b.y);
 }
 
-/** A grid on the panel colour with each cell's text; the cell being edited is left to the overlay. */
+/** How round a table's corners are, in board units. */
+const TABLE_RADIUS = 8;
+
+/** A grid on the panel colour with round corners and each cell's text; the cell being edited is
+ *  left to the overlay. */
 function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCell: number | null) {
   const { theme, cam } = s;
+  const r = Math.min(TABLE_RADIUS, it.w / 2, it.h / 2);
+  const outline = () => { ctx.beginPath(); ctx.roundRect(it.x, it.y, it.w, it.h, r); };
+  // Everything inside keeps within the round corners.
+  ctx.save();
+  outline();
+  ctx.clip();
   ctx.fillStyle = theme.surface;
   ctx.fillRect(it.x, it.y, it.w, it.h);
   // Cells filled with a colour of their own.
@@ -528,7 +538,6 @@ function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCel
     let x = it.x, y = it.y;
     for (const w of colsOf(it).slice(0, -1)) { x += w; ctx.moveTo(x, it.y); ctx.lineTo(x, it.y + it.h); }
     for (const h of rowsOf(it).slice(0, -1)) { y += h; ctx.moveTo(it.x, y); ctx.lineTo(it.x + it.w, y); }
-    ctx.rect(it.x, it.y, it.w, it.h);
     ctx.stroke();
     ctx.globalAlpha = 1;
   }
@@ -560,6 +569,16 @@ function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCel
   for (let i = 0; i < n; i++) {
     const text = cellText(it, i);
     if (text && i !== editingCell) drawText(ctx, cellItem(it, i), 8, theme.ink, true, s);
+  }
+  ctx.restore();
+  // The outer edge, whole, over the clip.
+  if (line) {
+    ctx.globalAlpha = it.so ?? 1;
+    ctx.strokeStyle = line;
+    ctx.lineWidth = 1 / cam.z;
+    outline();
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
 }
 
