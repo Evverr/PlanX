@@ -109,7 +109,8 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
   // waits faintly in its old slot while its preview follows the pointer instead.
   useLayoutEffect(() => {
     if (!drag) return;
-    const el = els.current.get(drag.key)!;
+    const el = els.current.get(drag.key);
+    if (!el) return;
     el.style.transform = drag.out ? '' : `${shift(drag.at - drag.grab - naturalStart(drag.key))} scale(1.12)`;
     el.style.opacity = drag.out ? '.3' : '';
   });
@@ -174,7 +175,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
   // Once it has lifted, the pointer is followed on the window, so it can leave the panel; nothing
   // is captured, so letting go in place still lands on the button as a click.
   const dragMove = (e: PointerEvent) => {
-    if (!drag) return;
+    if (!drag || !els.current.has(drag.key)) return;
     const at = pos(e);
     const moved = drag.moved || Math.abs(at - drag.at0) > HOLD_SLOP || Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > HOLD_SLOP * 3;
     const r = ref.current!.getBoundingClientRect();
@@ -260,6 +261,23 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     const r = zone.getBoundingClientRect();
     const out = !!dropOut && moved && (e.clientX < r.left - OUT_MARGIN || e.clientX > r.right + OUT_MARGIN || e.clientY < r.top - OUT_MARGIN || e.clientY > r.bottom + OUT_MARGIN);
     const next = { ...d, x: e.clientX, y: e.clientY, moved, out };
+    // Brought onto the panel itself, it takes its place there, among the buttons either side of the
+    // pointer, and is dragged on along the panel from then on.
+    const bar = ref.current?.getBoundingClientRect();
+    if (bar && moved && e.clientX >= bar.left && e.clientX <= bar.right && e.clientY >= bar.top && e.clientY <= bar.bottom) {
+      const at = pos(e), list = shown.current.filter((k) => k !== d.key && els.current.has(k));
+      const before = list.find((k) => naturalStart(k) + size(els.current.get(k)!) / 2 > at);
+      const rest = order.filter((k) => k !== d.key);
+      // Past the last one, it still goes before it: what's last on a full panel is what goes into "more".
+      const anchor = before ?? list[list.length - 1];
+      rest.splice(anchor ? rest.indexOf(anchor) : 0, 0, d.key);
+      const el = moreEls.current.get(d.key);
+      if (el) { el.style.transform = ''; el.style.opacity = ''; }
+      setOrder(rest);
+      setMoreDrag(null);
+      setDrag({ key: d.key, grab: axis === 'y' ? d.gy : d.gx, at, at0: axis === 'y' ? d.y0 : d.x0, moved: true, out: false, x: e.clientX, y: e.clientY, x0: d.x0, y0: d.y0, before: d.before });
+      return;
+    }
     if (out) {
       if (!d.out) setOrder(d.before);
       setMoreDrag(next);
