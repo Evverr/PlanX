@@ -85,18 +85,18 @@ button { font: inherit; color: inherit; }
 .tools-more .fb::after { content: ""; position: absolute; left: -9px; right: -9px; top: -9px; bottom: -9px; }
 
 /* Tool panel, 1:1 with the Figma component "Mol / Bar vertical"; buttons share the format panel's styles. */
-.tools { position: fixed; z-index: 5; left: calc(14px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
+.tools { position: fixed; z-index: 5; left: calc(12px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; align-items: center; width: 60px; padding: 21px 15px;
   /* 18px gaps as in the mockup, whatever the screen: what doesn't fit goes under the "more" button. */
   --gap: 18px;
   gap: var(--gap);
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
 .tools.docked { left: 0; border-radius: 0 12px 12px 0; }
-/* With the rail stuck to the edge, what opens beside it moves in with it (keeping its 14px gap). */
-.tools.docked ~ .tools-more, .tools.docked ~ .draw-panel, .tools.docked ~ .recorder, .tools.docked ~ .icon-pick { left: calc(74px + env(safe-area-inset-left, 0px)); }
+/* With the rail stuck to the edge, what opens beside it moves in with it (keeping its 12px gap). */
+.tools.docked ~ .tools-more, .tools.docked ~ .draw-panel, .tools.docked ~ .recorder, .tools.docked ~ .icon-pick { left: calc(72px + env(safe-area-inset-left, 0px)); }
 /* The rail's buttons that didn't fit, upright beside it like the rail itself and level with its
    bottom, in as many columns as the screen's height needs (rows and place set in Toolbar.tsx). */
-.tools-more { position: fixed; z-index: 5; left: calc(88px + env(safe-area-inset-left, 0px));
+.tools-more { position: fixed; z-index: 5; left: calc(84px + env(safe-area-inset-left, 0px));
   display: grid; grid-auto-flow: column; grid-auto-columns: 30px; gap: 18px; padding: 21px 15px;
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow);
   animation: fade-in .12s ease-out; }
@@ -108,7 +108,7 @@ button { font: inherit; color: inherit; }
 .sortable .lifted:not(.fb, .sep, .tsep, .fsep) { background: var(--surface); box-shadow: var(--fmt-shadow); border-radius: 6px; }
 .tsep { flex: none; width: 20px; height: 7px; position: relative; }
 /* Drawing tools, opened from the rail's drawing button: a second rail beside the first. */
-.draw-panel { position: fixed; z-index: 5; left: calc(88px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
+.draw-panel { position: fixed; z-index: 5; left: calc(84px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; align-items: center; gap: 18px; width: 62px; padding: 21px 16px;
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: 12px; box-shadow: var(--fmt-shadow); }
 .ink-preset, .ink-size { position: relative; flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--fmt-line); background: transparent;
@@ -125,7 +125,7 @@ button { font: inherit; color: inherit; }
 .tsep::after { content: ""; position: absolute; left: 0; top: 3px; width: 20px; height: 1px; background: var(--fmt-line); }
 
 
-.topbar { left: var(--top-x, calc(14px + env(safe-area-inset-left, 0px))); top: calc(14px + env(safe-area-inset-top, 0px)); padding: 6px 12px 6px 20px; gap: 8px; max-width: calc(100vw - 28px); }
+.topbar { left: var(--top-x, calc(12px + env(safe-area-inset-left, 0px))); top: calc(12px + env(safe-area-inset-top, 0px)); padding: 6px 12px 6px 20px; gap: 8px; max-width: calc(100vw - 24px); }
 /* 15px from the logo to its separator. */
 .topbar .logo + .sep { margin-left: 7px; }
 .logo { font-family: "Inter", var(--ui); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; white-space: nowrap; }
@@ -150,12 +150,12 @@ button { font: inherit; color: inherit; }
 .avatar.me { cursor: pointer; }
 .more { font-size: 12px; color: var(--muted); padding: 0 4px; }
 
-.zoom { right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; }
+.zoom { right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; }
 /* Panels stuck to their screen edge (the chevron button) lose the corners on that side. */
 .topbar.docked { top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
 .zoom.docked, .panel.docked { bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 /* Board map above the zoom panel: items as translucent blue blocks, the dark frame is the screen. */
-.minimap { right: var(--zoom-r, calc(14px + env(safe-area-inset-right, 0px))); bottom: calc(74px + env(safe-area-inset-bottom, 0px)); padding: 8px; }
+.minimap { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(72px + env(safe-area-inset-bottom, 0px)); padding: 8px; }
 .minimap.docked { bottom: 60px; }
 .minimap svg { display: block; width: 240px; height: 160px; cursor: pointer; touch-action: none; }
 .minimap .mm-item { fill: rgba(75, 145, 255, .35); }
@@ -164,9 +164,9 @@ button { font: inherit; color: inherit; }
 .zpct { min-width: 52px; text-align: center; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; border: 0; background: transparent; cursor: pointer; padding: 8px 6px; border-radius: 6px; transition: background-color .12s ease-out; }
 .zpct:hover { background: var(--fmt-hover); }
 
-.panel { left: 50%; transform: translateX(-50%); width: max-content; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; flex-wrap: nowrap; transition: bottom .2s ease; }
+.panel { left: 50%; transform: translateX(-50%); width: max-content; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; flex-wrap: nowrap; transition: bottom .2s ease; }
 /* Too wide to sit beside the zoom panel: one bar's height (52px) and a gap higher. */
-.panel.raised { bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
+.panel.raised { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
 .panel.docked.raised { bottom: 60px; border-radius: 12px; }
 .sw { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; margin: 0 3.5px; }
 .sw.on { box-shadow: 0 0 0 2px var(--accent); }
@@ -264,7 +264,7 @@ button { font: inherit; color: inherit; }
 .btn.primary:hover::before { filter: brightness(1.08); }
 
 /* Audio note recorder beside the tool rail. */
-.recorder { left: calc(88px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: 303px; max-width: calc(100vw - 100px); box-sizing: border-box;
+.recorder { left: calc(84px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: 303px; max-width: calc(100vw - 96px); box-sizing: border-box;
   display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center; padding: 16px 18px 19px; box-shadow: 0 6px 6px rgba(0, 0, 0, .15); }
 /* As in Figma: the title at the top left in Inter Bold 13, the grey cross 11px in from the top right
    corner, the microphone in its pale blue circle 7px under the title, the button 20px under it. */
@@ -289,13 +289,13 @@ button { font: inherit; color: inherit; }
 .rec-preview { width: 100%; height: 40px; }
 .recorder .row { align-self: stretch; justify-content: space-between; }
 .recorder .row .btn { flex: 1; white-space: nowrap; }
-.confirm { left: var(--top-x, calc(14px + env(safe-area-inset-left, 0px))); top: calc(72px + env(safe-area-inset-top, 0px)); width: 286px; box-sizing: border-box; }
+.confirm { left: var(--top-x, calc(12px + env(safe-area-inset-left, 0px))); top: calc(70px + env(safe-area-inset-top, 0px)); width: 286px; box-sizing: border-box; }
 .confirm p { max-width: 207px; }
-.namepop { right: var(--zoom-r, calc(14px + env(safe-area-inset-right, 0px))); bottom: calc(74px + env(safe-area-inset-bottom, 0px)); width: 240px; }
+.namepop { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(72px + env(safe-area-inset-bottom, 0px)); width: 240px; }
 .namepop input, .icon-pick input { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 8px 10px; font: inherit; margin-bottom: 10px; }
-.toast { left: 50%; transform: translateX(-50%); top: calc(72px + env(safe-area-inset-top, 0px)); padding: 10px 14px; }
+.toast { left: 50%; transform: translateX(-50%); top: calc(70px + env(safe-area-inset-top, 0px)); padding: 10px 14px; }
 
-.icon-pick { left: calc(88px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: 316px; max-width: calc(100vw - 88px); padding: 12px; }
+.icon-pick { left: calc(84px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: 316px; max-width: calc(100vw - 84px); padding: 12px; }
 .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 4px; max-height: min(340px, 55vh); overflow-y: auto; }
 .icon-grid button { aspect-ratio: 1; border: 0; background: transparent; border-radius: 6px; cursor: pointer; color: var(--ink); display: grid; place-items: center; padding: 0; transition: background-color .12s ease-out; }
 .icon-grid button:hover { background: var(--fmt-hover); }
@@ -334,7 +334,7 @@ button { font: inherit; color: inherit; }
 .pick-tabs button.on { background: var(--fmt-on); color: var(--ink); }
 .muted { color: var(--muted); }
 
-.help { right: var(--zoom-r, calc(14px + env(safe-area-inset-right, 0px))); bottom: calc(74px + env(safe-area-inset-bottom, 0px)); width: 380px; max-width: calc(100vw - 28px); box-sizing: border-box; }
+.help { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(72px + env(safe-area-inset-bottom, 0px)); width: 380px; max-width: calc(100vw - 24px); box-sizing: border-box; }
 .help h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
 .help dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
 .help dt { font-weight: 600; white-space: nowrap; }
@@ -351,7 +351,7 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 
 @media (max-width: 640px) {
   .title-fit { max-width: 120px; }
-  .tools { top: auto; bottom: calc(74px + env(safe-area-inset-bottom, 0px)); transform: none; }
+  .tools { top: auto; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); transform: none; }
 }
 
 /* Hints of the panels' buttons (Figma "Alt"): Inter Semi Bold 12 in white on a 90% blue bubble with
@@ -450,16 +450,16 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 
 /* Bars moved by hand to the other edge of the screen (see grip.ts): the top bar to the bottom, the
    zoom bar to the top, the tool rail to the right; what opens from them opens the other way. */
-:root[data-topbar="low"] .topbar { top: auto; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+:root[data-topbar="low"] .topbar { top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 :root[data-topbar="low"] .topbar.docked { bottom: 0; border-radius: 12px 12px 0 0; }
 :root[data-topbar="low"] .board-menu:not(.sub) { top: auto; bottom: calc(100% + 12px); }
 :root[data-topbar="low"] .board-menu.sub { top: auto; bottom: -13px; }
-:root[data-topbar="low"] .confirm { top: auto; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
-:root[data-zoom="high"] .zoom { bottom: auto; top: calc(14px + env(safe-area-inset-top, 0px)); }
+:root[data-topbar="low"] .confirm { top: auto; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+:root[data-zoom="high"] .zoom { bottom: auto; top: calc(12px + env(safe-area-inset-top, 0px)); }
 :root[data-zoom="high"] .zoom.docked { top: 0; border-radius: 0 0 12px 12px; }
-:root[data-zoom="high"] :is(.minimap, .help, .namepop) { bottom: auto; top: calc(74px + env(safe-area-inset-top, 0px)); }
+:root[data-zoom="high"] :is(.minimap, .help, .namepop) { bottom: auto; top: calc(72px + env(safe-area-inset-top, 0px)); }
 :root[data-zoom="high"] .minimap.docked { top: 60px; }
-:root[data-rail="right"] .tools { left: auto; right: calc(14px + env(safe-area-inset-right, 0px)); }
+:root[data-rail="right"] .tools { left: auto; right: calc(12px + env(safe-area-inset-right, 0px)); }
 :root[data-rail="right"] .tools.docked { right: 0; border-radius: 12px 0 0 12px; }
-:root[data-rail="right"] :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(88px + env(safe-area-inset-right, 0px)); }
-:root[data-rail="right"] .tools.docked ~ :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(74px + env(safe-area-inset-right, 0px)); }
+:root[data-rail="right"] :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(84px + env(safe-area-inset-right, 0px)); }
+:root[data-rail="right"] .tools.docked ~ :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(72px + env(safe-area-inset-right, 0px)); }

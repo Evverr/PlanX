@@ -136,7 +136,7 @@ export function resetPanels(): () => void {
 }
 
 /** The main panels, which mustn't be put over one another, and the least room kept between them. */
-const PANELS = '.topbar, .bar.zoom, .tools', PANEL_GAP = 14;
+const PANELS = '.topbar, .bar.zoom, .tools', PANEL_GAP = 12;
 
 /** Whether a panel at this place (screen pixels) would lie over another of the main panels. */
 export function overPanels(r: { left: number; top: number; width: number; height: number }, self: Element | null): boolean {
