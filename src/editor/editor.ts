@@ -89,6 +89,10 @@ const ROTATE_ZONE = 18, ROTATE_SNAP = 3;
 const FINGER = 40;
 /** The mind map "+" buttons' wait after a node is picked, and their fade in, in ms. */
 const PLUS_DELAY = 330, PLUS_FADE = 300;
+/** How long the mouse rests on a table line before it can be dragged, in ms. */
+const LINE_REST = 500;
+const sameLine = (a: TableLine | null, b: TableLine | null): boolean =>
+  a === b || (!!a && !!b && a.id === b.id && a.axis === b.axis && a.index === b.index);
 
 /** Cursors for turning: a curved double arrow around the top left corner, turned by deg. Kept by
  *  the degree. */
@@ -164,6 +168,9 @@ export class Editor {
   private plusTimer = 0;
   /** The table line under the pointer, and the lines picked with Shift to be dragged together. */
   private hotLine: TableLine | null = null;
+  /** The table line the mouse rests on: it can be taken hold of once it's been there half a second
+   *  (till then a press there takes the table), which is when it lights up. */
+  private lineRest: { line: TableLine; armed: boolean; timer: number } | null = null;
   private pickedLines: TableLine[] = [];
   private guides = readJSON<boolean>(GUIDES_KEY) ?? false;
   /** Cells picked in the selected table: a click on a cell of a table already selected picks it,
@@ -230,6 +237,7 @@ export class Editor {
     on(canvas, 'pointercancel', (e) => this.onPointerUp(e));
     on(canvas, 'pointerleave', () => {
       this.presence?.setCursor(null);
+      this.restOn(null);
       if (this.hotDot || this.hotLine) { this.hotDot = null; this.hotLine = null; this.requestRender(); }
     });
     on(canvas, 'wheel', (e) => this.wheel(e), { passive: false });
@@ -996,7 +1004,7 @@ export class Editor {
     const picked = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
     const onControl = !!picked && !this.editingId && (this.onHandle(picked, w) || !!this.dotAt(picked, w) || this.onRotate(picked, w) || !!this.plusAt(picked, w));
     const empty = this.tool === 'select' && e.button === 0 && !this.spaceDown && !e.shiftKey && !hit && !link && !onControl
-      && !this.tableLineAt(w, hit) && !this.editingId;
+      && !this.grabbableLine(w, hit, e.pointerType) && !this.editingId;
     // Pressed twice on the empty board: everything on it comes into view, as with the "show all" button.
     if (empty) {
       const now = performance.now(), last = this.lastEmpty;
@@ -1007,7 +1015,7 @@ export class Editor {
         return;
       }
     }
-    const touchPan = e.pointerType === 'touch' && this.tool === 'select' && !hit && !link && !onControl && !this.tableLineAt(w, hit);
+    const touchPan = e.pointerType === 'touch' && this.tool === 'select' && !hit && !link && !onControl && !this.grabbableLine(w, hit, e.pointerType);
     if (e.button === 1 || this.spaceDown || this.tool === 'hand' || touchPan) {
       // A finger on the empty board pans it; let go without moving, it's a tap that drops the selection.
       this.gesture = { type: 'pan', sx: sp.x, sy: sp.y, cx: this.cam.x, cy: this.cam.y, tap: touchPan };
@@ -1088,7 +1096,7 @@ export class Editor {
     }
     // A table's lines resize the column or row before them, the table selected or not. Shift-clicking
     // picks several lines (or drops one); dragging any picked line moves them all.
-    const tl = this.editingId ? null : this.tableLineAt(w, hit);
+    const tl = this.editingId ? null : this.grabbableLine(w, hit, e.pointerType);
     if (tl) {
       const same = (l: TableLine) => l.id === tl.id && l.axis === tl.axis && l.index === tl.index;
       const picked = this.pickedLines.filter((l) => l.id === tl.id), was = picked.some(same);
@@ -1651,9 +1659,10 @@ export class Editor {
     const dot = single && !this.editingId ? this.dotAt(single, w) : null;
     if (dot !== this.hotDot) { this.hotDot = dot; this.requestRender(); }
     let cursor = '';
-    const line = this.editingId || dot ? null : this.tableLineAt(w, hitItem(this.shown(), w, this.cam.z));
-    const same = line && this.hotLine && line.id === this.hotLine.id && line.axis === this.hotLine.axis && line.index === this.hotLine.index;
-    if (!same && (line || this.hotLine)) { this.hotLine = line; this.requestRender(); }
+    const near = this.editingId || dot ? null : this.tableLineAt(w, hitItem(this.shown(), w, this.cam.z));
+    this.restOn(near);
+    const line = this.lineRest?.armed ? this.lineRest.line : null;
+    if (!sameLine(line, this.hotLine)) { this.hotLine = line; this.requestRender(); }
     const plus = single ? this.plusAt(single, w) : null;
     if (plus !== this.hotPlus) { this.hotPlus = plus; this.requestRender(); }
     if (plus || this.frameButtonAt(w)) cursor = 'pointer';
@@ -1668,6 +1677,35 @@ export class Editor {
       else if (hit) cursor = alt ? 'copy' : 'move';
     }
     this.canvas.style.cursor = cursor;
+  }
+
+  /** Starts (or stops) waiting for the mouse to rest on a table line; a picked line is ready at once. */
+  private restOn(line: TableLine | null): void {
+    if (sameLine(line, this.lineRest?.line ?? null)) return;
+    clearTimeout(this.lineRest?.timer);
+    this.lineRest = null;
+    if (!line) return;
+    const rest = { line, armed: this.pickedLines.some((l) => sameLine(l, line)), timer: 0 };
+    if (!rest.armed) {
+      rest.timer = window.setTimeout(() => {
+        rest.armed = true;
+        if (this.lineRest !== rest || this.gesture) return;
+        this.hotLine = line;
+        if (this.canvas) this.canvas.style.cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
+        this.requestRender();
+      }, LINE_REST);
+    }
+    this.lineRest = rest;
+  }
+
+  /** The table line a press here takes hold of: one picked already; with the mouse, one it has rested
+   *  on; with a finger, one of the table that's selected. */
+  private grabbableLine(w: Point, hit: Item | null, pointer: string): TableLine | null {
+    const tl = this.tableLineAt(w, hit);
+    if (!tl) return null;
+    if (this.pickedLines.some((l) => sameLine(l, tl))) return tl;
+    if (pointer === 'touch') return this.selection.size === 1 && this.selection.has(tl.id) ? tl : null;
+    return this.lineRest?.armed && sameLine(this.lineRest.line, tl) ? tl : null;
   }
 
   /** The table line under the point: of the table there, or just past a table's right or bottom edge. */

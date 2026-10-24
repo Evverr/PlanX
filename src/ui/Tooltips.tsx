@@ -74,6 +74,8 @@ export function Tooltips() {
       // While something is held and dragged (a panel button, or anything on the board), no hints
       // come and none is waited for.
       if (e.buttons) { hide(); return; }
+      // Nor while a menu from the top bar is open: they'd get in its way.
+      if (document.querySelector('.board-menu, .topbar [aria-expanded="true"]')) { hide(); return; }
       const el = target?.closest?.<HTMLElement>('[title], [data-tip]') ?? null;
       if (el === current) return;
       hide();
