@@ -172,3 +172,9 @@ export function useCompact(): [boolean, (v: boolean) => void] {
   };
   return [v, set];
 }
+
+/** How the panels are scaled now (--k in the styles: 1, or less with smaller panels). */
+export function panelScale(): number {
+  const k = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--k'));
+  return k > 0 ? k : 1;
+}
