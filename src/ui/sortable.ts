@@ -85,6 +85,16 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
   const keys = useRef<string[]>([]);
   const moreRef = useRef<HTMLElement | null>(null);
   const [, redraw] = useState(0);
+  // The "more" popover's buttons can be rearranged too, among themselves, in a row or in columns:
+  // the lifted one follows the pointer both ways and takes the place of whichever it comes over.
+  const moreZone = useRef<HTMLElement | null>(null);
+  const moreEls = useRef(new Map<string, HTMLElement>());
+  const moreOffsets = useRef(new Map<string, { x: number; y: number }>());
+  const moreShown = useRef<string[]>([]);
+  const [moreDrag, setMoreDrag] = useState<{
+    key: string; gx: number; gy: number; x: number; y: number; x0: number; y0: number; moved: boolean; out: boolean; before: string[];
+  } | null>(null);
+  const morePress = useRef<{ el: HTMLElement; key: string; x0: number; y0: number; timer: number } | null>(null);
 
   const pos = (e: { clientX: number; clientY: number }) => (axis === 'y' ? e.clientY : e.clientX);
   const offset = (el: HTMLElement) => (axis === 'y' ? el.offsetTop : el.offsetLeft);
@@ -110,6 +120,13 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
       offsets.current.set(key, now);
       if (before !== undefined && before !== now && key !== drag?.key) {
         el.animate([{ transform: shift(before - now) }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
+      }
+    }
+    for (const [key, el] of moreEls.current) {
+      const before = moreOffsets.current.get(key), now = { x: el.offsetLeft, y: el.offsetTop };
+      moreOffsets.current.set(key, now);
+      if (before && (before.x !== now.x || before.y !== now.y) && key !== moreDrag?.key) {
+        el.animate([{ transform: `translate(${before.x - now.x}px, ${before.y - now.y}px)` }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
       }
     }
   }, [order]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -201,6 +218,87 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     setTimeout(() => { swallowClick.current = false; }, 0);
   };
 
+  // Where a popover button's slot is on screen.
+  const slot = (el: HTMLElement) => {
+    const r = moreZone.current!.getBoundingClientRect();
+    return { x: r.left + el.offsetLeft, y: r.top + el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
+  };
+  useLayoutEffect(() => {
+    if (!moreDrag || !moreZone.current) return;
+    const el = moreEls.current.get(moreDrag.key);
+    if (!el) return;
+    const at = slot(el);
+    el.style.transform = moreDrag.out ? '' : `translate(${moreDrag.x - moreDrag.gx - at.x}px, ${moreDrag.y - moreDrag.gy - at.y}px) scale(1.12)`;
+    el.style.opacity = moreDrag.out ? '.3' : '';
+  });
+  const liftMore = (p: { el: HTMLElement; key: string; x0: number; y0: number }, x: number, y: number) => {
+    const r = p.el.getBoundingClientRect();
+    setMoreDrag({ key: p.key, gx: p.x0 - r.left, gy: p.y0 - r.top, x, y, x0: p.x0, y0: p.y0, moved: false, out: false, before: order });
+  };
+  const moreDown = (e: ReactPointerEvent<HTMLElement>) => {
+    const target = e.target as Element, el = target.closest<HTMLElement>('[data-more-key]');
+    const nosort = target.closest('[data-nosort]');
+    if (!el || e.button !== 0 || !moreZone.current?.contains(el) || (nosort && el.contains(nosort))) return;
+    const p = { el, key: el.dataset.moreKey!, x0: e.clientX, y0: e.clientY, timer: 0 };
+    p.timer = window.setTimeout(() => { morePress.current = null; liftMore(p, p.x0, p.y0); }, HOLD_MS);
+    morePress.current = p;
+  };
+  const moreMovePress = (e: ReactPointerEvent<HTMLElement>) => {
+    const p = morePress.current;
+    if (!p || Math.hypot(e.clientX - p.x0, e.clientY - p.y0) <= HOLD_SLOP) return;
+    clearTimeout(p.timer);
+    morePress.current = null;
+    if (dropOut) liftMore(p, e.clientX, e.clientY);
+  };
+  const moreUpPress = () => {
+    if (morePress.current) { clearTimeout(morePress.current.timer); morePress.current = null; }
+  };
+  const moreMove = (e: PointerEvent) => {
+    const d = moreDrag, zone = moreZone.current;
+    if (!d || !zone) return;
+    const moved = d.moved || Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > HOLD_SLOP;
+    const r = zone.getBoundingClientRect();
+    const out = !!dropOut && moved && (e.clientX < r.left - OUT_MARGIN || e.clientX > r.right + OUT_MARGIN || e.clientY < r.top - OUT_MARGIN || e.clientY > r.bottom + OUT_MARGIN);
+    const next = { ...d, x: e.clientX, y: e.clientY, moved, out };
+    if (out) {
+      if (!d.out) setOrder(d.before);
+      setMoreDrag(next);
+      return;
+    }
+    // The lifted button's middle over another's slot: it goes there, the rest shifting along.
+    const el = moreEls.current.get(d.key)!;
+    const cx = e.clientX - d.gx + el.offsetWidth / 2, cy = e.clientY - d.gy + el.offsetHeight / 2;
+    const other = moreShown.current.find((k) => {
+      const o = k !== d.key && moreEls.current.get(k);
+      if (!o) return false;
+      const s = slot(o);
+      return cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h;
+    });
+    if (other) {
+      const after = order.indexOf(other) > order.indexOf(d.key), list = order.filter((k) => k !== d.key);
+      list.splice(list.indexOf(other) + (after ? 1 : 0), 0, d.key);
+      setOrder(list);
+    }
+    setMoreDrag(next);
+  };
+  const moreEnd = () => {
+    const d = moreDrag;
+    if (!d) return;
+    const el = moreEls.current.get(d.key);
+    if (el) {
+      const from = el.style.transform;
+      el.style.transform = '';
+      el.style.opacity = '';
+      if (!d.out) el.animate([{ transform: from }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
+    }
+    setMoreDrag(null);
+    if (!d.moved) return;
+    if (d.out) dropOut!.drop(d.key, { x: d.x, y: d.y });
+    else try { localStorage.setItem(storageKey, JSON.stringify(order)); } catch { /* just won't be remembered */ }
+    swallowClick.current = true;
+    setTimeout(() => { swallowClick.current = false; }, 0);
+  };
+
   // With a room set (see renderFit), what doesn't fit goes under a "more" button at the end.
   useLayoutEffect(() => {
     const el = ref.current;
@@ -238,8 +336,8 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
   }, [moreOpen]);
 
   const handlers = useRef({ move: dragMove, end: dragEnd });
-  handlers.current = { move: dragMove, end: dragEnd };
-  const lifted = !!drag;
+  handlers.current = moreDrag ? { move: moreMove, end: moreEnd } : { move: dragMove, end: dragEnd };
+  const lifted = !!drag || !!moreDrag;
   useEffect(() => {
     if (!lifted) return;
     const move = (e: PointerEvent) => handlers.current.move(e), end = () => handlers.current.end();
@@ -255,7 +353,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
 
   return {
     ref,
-    sorting: !!drag,
+    sorting: !!drag || !!moreDrag,
     container: {
       onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp,
       onClickCapture: (e: MouseEvent) => { if (swallowClick.current) { e.stopPropagation(); e.preventDefault(); } },
@@ -266,10 +364,25 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
       'data-key': key,
       ref: (el: HTMLElement | null) => { if (el) els.current.set(key, el); else els.current.delete(key); },
     }),
-    lifted: (key: string) => drag?.key === key,
+    lifted: (key: string) => drag?.key === key || moreDrag?.key === key,
+    /** Props for the "more" popover holding the buttons `keys` (in order), whose buttons can be
+     *  rearranged among themselves (and dragged out onto the board, with dropOut). */
+    moreZone: (keys: string[]) => {
+      moreShown.current = keys.filter((k) => !isSeparator(k));
+      return {
+        ref: (el: HTMLElement | null) => { moreZone.current = el; },
+        onPointerDown: moreDown, onPointerMove: moreMovePress, onPointerUp: moreUpPress, onPointerCancel: moreUpPress,
+        onClickCapture: (e: MouseEvent) => { if (swallowClick.current) { e.stopPropagation(); e.preventDefault(); } },
+      };
+    },
+    /** Props for one button in the "more" popover. */
+    moreItem: (key: string) => ({
+      'data-more-key': key,
+      ref: (el: HTMLElement | null) => { if (el) moreEls.current.set(key, el); else { moreEls.current.delete(key); moreOffsets.current.delete(key); } },
+    }),
     /** The preview under the pointer while a button is dragged out of the panel. */
-    ghost: drag?.out && dropOut
-      ? createPortal(createElement('div', { className: 'pick-ghost preview', style: { left: drag.x, top: drag.y } }, dropOut.preview(drag.key)), document.body)
+    ghost: (drag?.out || moreDrag?.out) && dropOut
+      ? createPortal(createElement('div', { className: 'pick-ghost preview', style: { left: (drag ?? moreDrag)!.x, top: (drag ?? moreDrag)!.y } }, dropOut.preview((drag ?? moreDrag)!.key)), document.body)
       : null,
     /** One element of the panel with its key, ref and 'lifted' class. A component can't take the ref,
      *  so it goes in a wrapper that does: everything on a panel can be moved, components too. */
@@ -277,6 +390,13 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
       const lifted = drag?.key === k && 'lifted';
       if (typeof el.type !== 'string') return createElement('span', { key: k, ...this.item(k), className: ['sort-wrap', lifted].filter(Boolean).join(' ') }, el);
       return cloneElement(el, { key: k, ...this.item(k), className: [el.props.className, lifted].filter(Boolean).join(' ') });
+    },
+    /** Like place, for a button in the "more" popover. */
+    placeMore(k: string, el: ReactElement): ReactElement {
+      const lifted = moreDrag?.key === k && 'lifted';
+      if (isSeparator(k)) return cloneElement(el, { key: k });
+      if (typeof el.type !== 'string') return createElement('span', { key: k, ...this.moreItem(k), className: ['sort-wrap', lifted].filter(Boolean).join(' ') }, el);
+      return cloneElement(el, { key: k, ...this.moreItem(k), className: [el.props.className, lifted].filter(Boolean).join(' ') });
     },
     /** Draws the panel's elements (by key) in order, each with its key, ref and 'lifted' class;
      *  elements left out of `items` are skipped. */
@@ -297,8 +417,11 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
       out.push(createElement('div', { key: '__more', className: 'more-wrap', 'data-nosort': true, ref: (e: HTMLElement | null): void => { moreRef.current = e; } },
         createElement('button', { className: `ib ${moreOpen ? 'on' : ''}`, title: 'Ещё', 'aria-label': 'Ещё', 'aria-expanded': moreOpen, onClick: () => setMoreOpen(!moreOpen) },
           createElement(PanelIcon, { name: 'more' })),
-        moreOpen && createElement('div', { className: `more-pop ${place}`, role: 'toolbar', 'aria-label': 'Ещё' },
-          ...trimSeparators(keys.current.filter((k) => !shownKeys.includes(k))).map((k) => cloneElement(items[k]!, { key: k })))));
+        moreOpen && (() => {
+          const inPop = trimSeparators(keys.current.filter((k) => !shownKeys.includes(k)));
+          return createElement('div', { className: `more-pop ${place}`, role: 'toolbar', 'aria-label': 'Ещё', ...this.moreZone(inPop) },
+            ...inPop.map((k) => this.placeMore(k, items[k]!)));
+        })()));
       return out;
     },
     /** Keys to draw, in order: those `present` keeps, without separators left at an end or doubled up;

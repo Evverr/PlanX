@@ -103,7 +103,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   const all = sort.visible();
   const [fit, setFit] = useState(Infinity);
   const [moreOpen, setMoreOpen] = useState(false);
-  const moreRef = useRef<HTMLButtonElement>(null), menuRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLButtonElement>(null), menuRef = useRef<HTMLDivElement | null>(null);
   const [, redraw] = useReducer((n: number) => n + 1, 0);
   useEffect(() => {
     window.addEventListener('resize', redraw);
@@ -147,9 +147,10 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   // Held and then pulled away, the button is dragged, and its variants close.
   if (variants && sort.sorting) setVariants(null);
 
-  /** A rail button; in the "more" row (`inMenu`) it isn't rearrangeable and closes the row when used. */
+  const moreZone = sort.moreZone(hidden);
+  /** A rail button; in the "more" row (`inMenu`) it closes the row when used. */
   const railButton = (key: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}, inMenu = false): ReactNode => (
-    <button key={key} {...(inMenu ? {} : sort.item(key))} className={`fb ${on ? 'on' : ''} ${!inMenu && sort.lifted(key) ? 'lifted' : ''}`}
+    <button key={key} {...(inMenu ? sort.moreItem(key) : sort.item(key))} className={`fb ${on ? 'on' : ''} ${sort.lifted(key) ? 'lifted' : ''}`}
       title={label} aria-label={label.replace(/ \(.*\)$/, '')} {...extra}
       onClick={() => { onClick?.(); if (inMenu) setMoreOpen(false); }}>
       <PanelIcon name={icon} />
@@ -188,7 +189,8 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
       )}
     </nav>
     {moreOpen && hidden.length > 0 && (
-      <div ref={menuRef} className="tools-more" role="toolbar" aria-label="Ещё инструменты" aria-orientation="vertical"
+      <div {...moreZone} ref={(el) => { menuRef.current = el; moreZone.ref(el); }} className={`tools-more sortable ${sort.sorting ? 'sorting' : ''}`}
+        role="toolbar" aria-label="Ещё инструменты" aria-orientation="vertical"
         style={{ bottom: innerHeight - railBottom, gridTemplateRows: `repeat(${moreRows}, 30px)` }}>
         {hidden.map((k) => item(k, true))}
       </div>
