@@ -177,7 +177,7 @@ export function insertBeside(id: string, from: string, where: 'above' | 'below',
   const node = byId.get(id)!, start = byId.get(from)!, dir = where === 'below' ? 1 : -1;
   const own = [start, ...descendants([start.id], all).map((d) => byId.get(d)!)];
   node.y = dir > 0 ? Math.max(...own.map((n) => n.y + n.h)) + MIND_GAP_Y : Math.min(...own.map((n) => n.y)) - MIND_GAP_Y - node.h;
-  pushPast(start, node, (node.h + MIND_GAP_Y) * dir, dir, all, byId);
+  pushPast(start, node, (node.h + MIND_GAP_Y) * dir, dir, all, byId, 1);
   return movedY(items, byId);
 }
 
