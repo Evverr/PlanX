@@ -86,7 +86,7 @@ button { font: inherit; color: inherit; }
 
 /* Tool panel, 1:1 with the Figma component "Mol / Bar vertical"; buttons share the format panel's styles. */
 .tools { position: fixed; z-index: 5; left: calc(12px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
-  display: flex; flex-direction: column; align-items: center; width: 60px; padding: 21px 15px;
+  display: flex; flex-direction: column; align-items: center; width: 60px; padding: 19px 15px;
   /* 18px gaps as in the mockup, whatever the screen: what doesn't fit goes under the "more" button. */
   --gap: 18px;
   gap: var(--gap);
