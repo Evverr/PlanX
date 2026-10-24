@@ -42,15 +42,29 @@ export function Tooltips() {
       leftAt = null;
       if (!text) return;
       // On whichever side, its pointer (5.89 long) reaches 2px over the button's highlight (6px round
-      // the icon of a panel button).
-      const w = tipWidth(text), r = el.getBoundingClientRect(), hl = el.matches('.fb') ? 6 : 0;
-      const bar = (el.closest('.bar, .tfmt, .tools, .draw-panel, .tools-more') ?? el).getBoundingClientRect();
+      // the icon of a panel button). The hints of one row of a panel all stand level, as off the
+      // biggest thing in that row (and those of one column beside it, off the widest there).
+      const w = tipWidth(text), r = el.getBoundingClientRect();
+      const group = el.closest('.more-pop, .bar, .tfmt, .tools, .draw-panel, .tools-more');
+      const bar = (group ?? el).getBoundingClientRect();
+      const reach = (it: Element) => {
+        const q = it.getBoundingClientRect(), hl = it.matches('.fb') ? 6 : 0;
+        return { top: q.top - hl, bottom: q.bottom + hl, left: q.left - hl, right: q.right + hl };
+      };
+      const mates = group
+        ? [...group.querySelectorAll('[data-tip], [title], button')].filter((it) => it.closest('.more-pop, .bar, .tfmt, .tools, .draw-panel, .tools-more') === group && it.getBoundingClientRect().width)
+        : [];
+      const own = reach(el);
+      const row = mates.map((it) => ({ it, q: it.getBoundingClientRect() })).filter(({ q }) => q.bottom > r.top && q.top < r.bottom).map(({ it }) => reach(it));
+      const col = mates.map((it) => ({ it, q: it.getBoundingClientRect() })).filter(({ q }) => q.right > r.left && q.left < r.right).map(({ it }) => reach(it));
+      const top = Math.min(own.top, ...row.map((e) => e.top)), bottom = Math.max(own.bottom, ...row.map((e) => e.bottom));
+      const left = Math.min(own.left, ...col.map((e) => e.left)), right = Math.max(own.right, ...col.map((e) => e.right));
       const midY = r.top + r.height / 2 - H / 2, midX = Math.min(Math.max(r.left + r.width / 2 - w / 2, EDGE), innerWidth - EDGE - w);
       const places: Record<Side, { left: number; top: number }> = {
-        right: { left: r.right + hl - 2 + 5.89, top: midY },
-        left: { left: r.left - hl + 2 - 5.89 - w, top: midY },
-        above: { left: midX, top: r.top - hl + 2 - 5.89 - H },
-        below: { left: midX, top: r.bottom + hl - 2 + 5.89 },
+        right: { left: right - 2 + 5.89, top: midY },
+        left: { left: left + 2 - 5.89 - w, top: midY },
+        above: { left: midX, top: top + 2 - 5.89 - H },
+        below: { left: midX, top: bottom - 2 + 5.89 },
       };
       // Where it goes first: beside an upright panel, over or under a flat bar (whichever is towards
       // the middle of the screen); then wherever it fits.
