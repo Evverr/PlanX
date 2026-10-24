@@ -32,7 +32,7 @@ const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: '
 const RAIL_CLEAR = 72;
 /** Where the rail's chosen length is kept, and how close to its top or bottom edge the pointer (or
  *  a finger) has to be to drag that edge. */
-const CAP_KEY = 'planx-tools-cap', EDGE = 8, EDGE_FINGER = 14;
+const CAP_KEY = 'planx-tools-cap', TOP_KEY = 'planx-tools-top', EDGE = 8, EDGE_FINGER = 14;
 
 /** Rail buttons with variants, opened by holding the button still. */
 const VARIANTS = new Set(['oval', 'draw']);
@@ -110,6 +110,14 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   const [cap, setCap] = useState(() => {
     try { const n = Number(localStorage.getItem(CAP_KEY)); return n > 0 ? n : Infinity; } catch { return Infinity; }
   });
+  // Where the rail's top is, once it's been moved (or made longer or shorter) by hand; till then
+  // (null) it's centred on the screen.
+  const [top, setTop] = useState<number | null>(() => {
+    try { const v = localStorage.getItem(TOP_KEY); return v === null ? null : Number(v) || null; } catch { return null; }
+  });
+  const remember = (key: string, v: number | null) => {
+    try { if (v === null || v === Infinity) localStorage.removeItem(key); else localStorage.setItem(key, String(Math.round(v))); } catch { /* just won't be remembered */ }
+  };
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLButtonElement>(null), menuRef = useRef<HTMLDivElement | null>(null);
   const [, redraw] = useReducer((n: number) => n + 1, 0);
@@ -126,10 +134,13 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
     const ks = n >= all.length ? all : [...sort.visible(undefined, n), 'more'];
     return pad + ks.reduce((t, k) => t + (isSeparator(k) ? 7 : btn.offsetHeight), 0) + gap * (ks.length - 1);
   };
-  // Centred on the screen, clear of the top bar above and as far from the bottom edge.
-  const room = () => innerHeight - RAIL_CLEAR * 2;
+  // Clear of the top bar above and as far from the bottom edge: centred, or down from where it was put.
+  const room = (from = top) => innerHeight - RAIL_CLEAR - (from ?? RAIL_CLEAR);
   useLayoutEffect(() => {
     if (railHeight(all.length) === null) return;
+    // On a screen grown shorter, a rail put low comes up to keep at least one button in sight.
+    const lowest = Math.max(RAIL_CLEAR, innerHeight - RAIL_CLEAR - railHeight(1)!);
+    if (top !== null && top > lowest) { setTop(lowest); return; }
     let n = Math.min(all.length, cap);
     while (n > 1 && railHeight(n)! > room()) n--;
     const next = n >= all.length ? Infinity : n;
@@ -143,42 +154,59 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
     if (!r || e.clientX < r.left || e.clientX > r.right) return null;
     return e.clientY >= r.top && e.clientY - r.top <= zone ? 'top' : e.clientY <= r.bottom && r.bottom - e.clientY <= zone ? 'bottom' : null;
   };
-  /**
-   * Dragging the rail's top or bottom edge makes it longer or shorter a button at a time, down to a
-   * single one: what no longer fits goes under "more". The rail stays centred, so it grows at both
-   * ends, and the edge being dragged keeps up with the pointer.
-   */
-  const startResize = (e: React.PointerEvent, edge: 'top' | 'bottom') => {
+  /** Follows a drag from a press on the rail's edge till it's let go, with that cursor meanwhile. */
+  const follow = (cursor: string, move: (dy: number) => void, done: () => void, y0: number) => {
+    document.body.style.cursor = cursor;
+    const onMove = (ev: PointerEvent) => move(ev.clientY - y0);
+    const up = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      document.body.style.cursor = '';
+      done();
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  };
+  /** Dragging the rail by its top edge moves it up or down the screen, clear of the top bar and the bottom. */
+  const startMove = (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const y0 = e.clientY, h0 = sort.ref.current!.getBoundingClientRect().height;
+    const r = sort.ref.current!.getBoundingClientRect();
+    let at = r.top;
+    follow('move', (dy) => {
+      at = Math.min(Math.max(r.top + dy, RAIL_CLEAR), Math.max(RAIL_CLEAR, innerHeight - RAIL_CLEAR - r.height));
+      setTop(at);
+    }, () => remember(TOP_KEY, at), e.clientY);
+  };
+  /**
+   * Dragging the rail's bottom edge makes it longer or shorter a button at a time, down to a single
+   * one: what no longer fits goes under "more". Its top stays where it is, and the bottom edge keeps
+   * up with the pointer.
+   */
+  const startResize = (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const r = sort.ref.current!.getBoundingClientRect(), y0 = e.clientY;
     const heights = all.map((_, i) => railHeight(i + 1)!);
     sort.visible(undefined, fit);
-    document.body.style.cursor = 'ns-resize';
-    const move = (ev: PointerEvent) => {
-      const want = h0 + (edge === 'bottom' ? 1 : -1) * (ev.clientY - y0) * 2;
+    // A centred rail stays where it is from now on, its top held.
+    setTop(r.top);
+    remember(TOP_KEY, r.top);
+    let chosen = cap;
+    follow('ns-resize', (dy) => {
+      const want = r.height + dy;
       let best = 0, most = 0;
       heights.forEach((h, i) => {
-        if (h > room()) return;
+        if (h > room(r.top)) return;
         most = i;
         if (Math.abs(h - want) < Math.abs(heights[best] - want)) best = i;
       });
       // As long as the screen allows is all of it: on a taller screen it's longer again.
-      setCap(best >= most ? Infinity : best + 1);
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', up);
-      document.body.style.cursor = '';
-      setCap((c) => {
-        try { if (c === Infinity) localStorage.removeItem(CAP_KEY); else localStorage.setItem(CAP_KEY, String(c)); } catch { /* just won't be remembered */ }
-        return c;
-      });
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
+      chosen = best >= most ? Infinity : best + 1;
+      setCap(chosen);
+    }, () => remember(CAP_KEY, chosen), y0);
   };
   const main = sort.visible(undefined, fit);
   const hidden = all.filter((k) => !main.includes(k) && !isSeparator(k));
@@ -235,8 +263,16 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
     <>
     <nav ref={sort.ref} className={`tools sortable ${docked ? 'docked' : ''} ${sort.sorting ? 'sorting' : ''}`} aria-label="Инструменты"
       {...sort.container}
-      onPointerDown={(e) => { const edge = edgeAt(e); if (edge && e.button === 0) startResize(e, edge); else sort.container.onPointerDown(e); }}
-      onPointerMove={(e) => { e.currentTarget.style.cursor = !sort.sorting && edgeAt(e) ? 'ns-resize' : ''; sort.container.onPointerMove(e); }}>
+      style={top !== null ? { top, transform: 'none' } : undefined}
+      onPointerDown={(e) => {
+        const edge = e.button === 0 ? edgeAt(e) : null;
+        if (edge === 'top') startMove(e); else if (edge === 'bottom') startResize(e); else sort.container.onPointerDown(e);
+      }}
+      onPointerMove={(e) => {
+        const edge = sort.sorting ? null : edgeAt(e);
+        e.currentTarget.style.cursor = edge === 'top' ? 'move' : edge === 'bottom' ? 'ns-resize' : '';
+        sort.container.onPointerMove(e);
+      }}>
       {main.map((k) => item(k))}
       {hidden.length > 0 && (
         <button ref={moreRef} className={`fb ${moreOpen ? 'on' : ''}`} title="Ещё" aria-label="Ещё" aria-expanded={moreOpen} data-nosort
