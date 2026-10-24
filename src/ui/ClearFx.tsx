@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import picture from './clear/plan.webp';
 
 /** How long the picture comes in, stays and flies off, in ms (matched by the keyframes in the styles). */
-const COME = 1000, STAY = 600, GO = 1000;
+const COME = 600, STAY = 300, GO = 1000;
 
 /**
  * The picture over the board once it's been cleared: it comes in growing from small, stays a
