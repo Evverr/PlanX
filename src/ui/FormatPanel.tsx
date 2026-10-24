@@ -1,6 +1,6 @@
 /** Text formatting panel over the selected text or sticker, built from the controls of the
  *  Figma mockup (Mol / Bar). Each setting applies to the item's whole text. */
-import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useReducer, useState, type ReactNode } from 'react';
 
 import type { Editor } from '../editor/editor';
 import { alignOf, baseWeight, DEFAULTS, MARK_COLORS, TEXT_COLORS, type Item, type ListKind, type TextAlign } from '../model/types';
@@ -85,6 +85,13 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
     box.style.left = `${Math.max(minX, Math.min(top.x - w / 2, innerWidth - w - MARGIN))}px`;
     box.style.top = `${y}px`;
   });
+  // Its bottom stays that far over the item whatever size it turns (the panels' size, fonts coming in).
+  const [, redraw] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    const ro = new ResizeObserver(() => redraw());
+    ro.observe(el.current!);
+    return () => ro.disconnect();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   // A menu closes on a click anywhere else, and when another item gets selected.
   useEffect(() => {
     const close = (e: PointerEvent) => { if (!el.current?.contains(e.target as Node)) setMenu(null); };
