@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { balance, canMoveTo, childPlace, descendants, insertBeside, makeRoom, mindDepth, moveBranch } from '../src/model/mind';
+import { addChild, balance, canMoveTo, childPlace, descendants, insertBeside, makeRoom, mindDepth, moveBranch } from '../src/model/mind';
 import type { Item } from '../src/model/types';
 
 const node = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item =>
@@ -70,5 +70,37 @@ describe('mind map', () => {
     expect(childPlace(a, items, get, 100, 40)).toEqual({ x: 320, y: -4 });
     expect(childPlace(b, items, get, 100, 40)).toEqual({ x: -420, y: 0 });
     expect(childPlace(root, items, get, 100, 40)).toEqual({ x: 160, y: -4 });
+  });
+});
+
+describe('mind map: adding keeps the levels further in still', () => {
+  const n = (id: string, x: number, y: number, parent?: string): Item => node(id, x, y, parent ? { parent } : {});
+  // A central topic with three branches, each with branches of its own.
+  const base = () => [n('r', 0, 28), n('A', 200, 0, 'r'), n('B', 200, 56, 'r'), n('C', 200, -56, 'r'),
+    n('a1', 400, 0, 'A'), n('b1', 400, 56, 'B'), n('b2', 400, 112, 'B'), n('c1', 400, -56, 'C')];
+  const still = (moves: Map<string, number>) => ['r', 'A', 'B', 'C'].forEach((id) => expect(moves.has(id)).toBe(false));
+
+  it('a new branch re-centres its own level, pushing the same level of other parents away', () => {
+    const moves = addChild('a2', [...base(), n('a2', 400, 56, 'A')]);
+    still(moves);
+    expect(moves.get('a1')).toBe(-28);
+    expect(moves.get('a2')).toBe(28);
+    // B's and C's branches make way, as far as it takes.
+    expect(moves.get('b1')).toBe(84);
+    expect(moves.get('c1')).toBe(-84);
+  });
+
+  it('a branch put beside another moves only that level', () => {
+    const moves = insertBeside('a2', 'a1', 'below', [...base(), n('a2', 400, 56, 'A')]);
+    still(moves);
+    // The new one right under a1 (where it was put), B's branches out of its way.
+    expect(moves.get('a2') ?? 56).toBe(56);
+    expect(moves.get('b1')).toBe(112);
+  });
+
+  it('a node growing as it is typed in pushes its level only', () => {
+    const moves = makeRoom('a1', 30, base().map((i) => (i.id === 'a1' ? { ...i, h: 70 } : i)));
+    still(moves);
+    expect(moves.get('b1')).toBe(86);
   });
 });
