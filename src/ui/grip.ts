@@ -5,6 +5,10 @@ export type Edge = 'top' | 'bottom' | 'left' | 'right';
 /** How close to a panel's edge the pointer (or a finger) has to be to take hold of it, and how long
  *  the mouse has to rest there before the cursor shows it can. */
 const ZONE = 8, ZONE_FINGER = 14, WAIT = 500;
+/** Once an edge's cursor has been waited for, every panel's edges show theirs at once, until the
+ *  pointer has been off them this long (as with the hints). */
+const GRACE = 1200;
+let warmTill = 0;
 
 /** A drag from a panel's edge: told how far the pointer has gone, and when it's let go. */
 export interface GripDrag { move: (dx: number, dy: number) => void; done: () => void }
@@ -12,8 +16,8 @@ export type Grips = Partial<Record<Edge, { cursor: string; start: () => GripDrag
 
 /**
  * Edges of a panel that can be dragged (to move it, or to make it longer or shorter): resting the
- * mouse on one for half a second shows its cursor, and only then does a press there take hold (a
- * finger takes hold at once). Put the handlers on the panel, before its own, and let it handle
+ * mouse on one for half a second shows its cursor (then at once on any panel's edges, till it has
+ * been off them a while), and only then does a press there take hold (a finger takes hold at once). Put the handlers on the panel, before its own, and let it handle
  * the press when onPointerDown says it didn't.
  */
 export function useGrip(ref: RefObject<HTMLElement | null>, grips: Grips) {
@@ -31,7 +35,14 @@ export function useGrip(ref: RefObject<HTMLElement | null>, grips: Grips) {
     };
     return (Object.keys(grips) as Edge[]).find((k) => at[k]) ?? null;
   };
-  const drop = () => { clearTimeout(timer.current); pending.current = null; armed.current = null; cursor(''); };
+  const drop = () => {
+    if (armed.current) warmTill = performance.now() + GRACE;
+    clearTimeout(timer.current);
+    pending.current = null;
+    armed.current = null;
+    cursor('');
+  };
+  const arm = (edge: Edge) => { armed.current = edge; warmTill = Infinity; cursor(grips[edge]!.cursor); };
   return {
     onPointerMove(e: ReactPointerEvent) {
       if (held.current) return;
@@ -39,7 +50,9 @@ export function useGrip(ref: RefObject<HTMLElement | null>, grips: Grips) {
       if (edge === pending.current) return;
       drop();
       pending.current = edge;
-      if (edge) timer.current = window.setTimeout(() => { armed.current = edge; cursor(grips[edge]!.cursor); }, WAIT);
+      if (!edge) return;
+      if (performance.now() < warmTill) arm(edge);
+      else timer.current = window.setTimeout(() => arm(edge), WAIT);
     },
     onPointerLeave() { if (!held.current) drop(); },
     /** Whether the press took hold of an edge (and the panel shouldn't handle it). */
