@@ -250,11 +250,11 @@ export function App({ boardId }: { boardId: string }) {
         onPointerMove={(e) => { if (!topSort.sorting) topGrip.onPointerMove(e); topSort.container.onPointerMove(e); }}
         onPointerLeave={topGrip.onPointerLeave}>
         {topSort.renderFit({
-          logo: <div className="logo">Plan</div>,
+          logo: <div className="logo" title="Plan — место, где строятся планы">Plan</div>,
           sep: <div className="sep" />,
           // The field is as wide as its text (the copy in data-text sizes it), up to 30 characters.
           title: (
-            <div className="title-fit" data-text={(title || 'Без названия').slice(0, 30)}>
+            <div className="title-fit" title="Название доски, можно изменить" data-text={(title || 'Без названия').slice(0, 30)}>
               <input className="title-input" id="board-title" aria-label="Название доски" spellCheck={false} placeholder="Без названия" data-nosort
                 size={1} maxLength={30} value={title} onChange={(e) => setTitle(e.target.value)}
                 onBlur={() => { if (title.trim() !== board.title) board.setTitle(title.trim()); }}
