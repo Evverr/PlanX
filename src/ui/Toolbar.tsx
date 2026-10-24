@@ -30,12 +30,12 @@ const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task'
 const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape', paint: 'node-pool' };
 
 /** Room kept clear above the tool rail (the top bar) and as much below it. */
-const RAIL_CLEAR = 72;
+const RAIL_CLEAR = 80;
 /** Where the rail's chosen length is kept, and how close to its top or bottom edge the pointer (or
  *  a finger) has to be to drag that edge. */
 const CAP_KEY = 'planx-tools-cap', TOP_KEY = 'planx-tools-top', SIDE_KEY = 'planx-tools-right';
-/** How close to the screen's bottom a rail put by hand may come. */
-const RAIL_BOTTOM = 12;
+/** How close to the screen's edges a rail put by hand may come (other panels it keeps clear of anyway). */
+const RAIL_EDGE = 14;
 
 /** Rail buttons with variants, opened by holding the button still. */
 const VARIANTS = new Set(['oval', 'draw']);
@@ -142,11 +142,11 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   };
   // Centred: clear of the top bar above and as far from the bottom edge. Put by hand: from there down
   // to near the bottom.
-  const room = (from = top) => (from === null ? innerHeight - RAIL_CLEAR * 2 : innerHeight - RAIL_BOTTOM - from);
+  const room = (from = top) => (from === null ? innerHeight - RAIL_CLEAR * 2 : innerHeight - RAIL_EDGE - from);
   useLayoutEffect(() => {
     if (railHeight(all.length) === null) return;
     // On a screen grown shorter, a rail put low comes up to keep at least one button in sight.
-    const lowest = Math.max(RAIL_CLEAR, innerHeight - RAIL_BOTTOM - railHeight(1)!);
+    const lowest = Math.max(RAIL_EDGE, innerHeight - RAIL_EDGE - railHeight(1)!);
     if (top !== null && top > lowest) { setTop(lowest); return; }
     let n = Math.min(all.length, cap);
     while (n > 1 && railHeight(n)! > room()) n--;
@@ -165,7 +165,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
         let at = r.top, far = !!right;
         return {
           move: (dx, dy) => {
-            const t = Math.min(Math.max(r.top + dy, RAIL_CLEAR), Math.max(RAIL_CLEAR, innerHeight - RAIL_BOTTOM - r.height));
+            const t = Math.min(Math.max(r.top + dy, RAIL_EDGE), Math.max(RAIL_EDGE, innerHeight - RAIL_EDGE - r.height));
             const f = r.left + r.width / 2 + dx > innerWidth / 2;
             // Not over another panel: it stays where it last could be.
             const margin = right ? innerWidth - r.right : r.left;
