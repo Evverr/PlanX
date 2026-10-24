@@ -28,6 +28,46 @@ async function carry(p, from, path) {
 }
 
 export const checks = {
+  async 'rail buttons rearrange along the rail'(p) {
+    const k0 = await mainKeys(p, '.tools');
+    const from = k0.find((k) => k[0] === 'sticky'), to = k0.find((k) => k[0] === 'task');
+    await carry(p, from.slice(1), [to.slice(1)]);
+    const k1 = (await mainKeys(p, '.tools')).map((k) => k[0]);
+    // Brought to the task's middle, it passes the two before it (text and shapes), not the task.
+    expect(k1.indexOf('sticky') - k0.findIndex((k) => k[0] === 'sticky'), 'sticky moved down two places').toBe(2);
+    expect((await settled(p)).moved, 'nothing left shifted').toBe(0);
+    await p.reload();
+    expect((await mainKeys(p, '.tools')).map((k) => k[0]).join(), 'kept after reload').toBe(k1.join());
+  },
+
+  async 'top bar buttons rearrange along the bar'(p) {
+    const k0 = await mainKeys(p, '.topbar');
+    const from = k0.find((k) => k[0] === 'undo'), to = k0.find((k) => k[0] === 'new');
+    await carry(p, from.slice(1), [to.slice(1)]);
+    const k1 = (await mainKeys(p, '.topbar')).map((k) => k[0]);
+    expect(k1.indexOf('undo') < k0.findIndex((k) => k[0] === 'undo'), 'undo moved left').toBeTruthy();
+  },
+
+  async 'a rail button dragged onto the board makes its item there'(p) {
+    const from = await p.at('.tools [data-key="sticky"]');
+    await carry(p, from, [[500, 300], [600, 400]]);
+    expect(await p.ev(`planx.board.list().filter((i) => i.type === 'sticky').length`), 'a sticky made').toBe(1);
+    expect((await mainKeys(p, '.tools')).some((k) => k[0] === 'sticky'), 'the button back on the rail').toBeTruthy();
+    expect((await settled(p)).ghost, 'no preview left').toBe(0);
+  },
+
+  async 'holding the shapes button opens its variants, a click picks the tool'(p) {
+    const oval = await p.at('.tools [data-key="oval"]');
+    await p.mouse('mouseMoved', ...oval);
+    await p.mouse('mousePressed', ...oval);
+    await sleep(400);
+    await p.mouse('mouseReleased', ...oval);
+    await sleep(200);
+    expect(!!(await p.rect('.shape-panel')), 'shapes open').toBeTruthy();
+    await p.click(await p.at('.tools [data-key="text"]'));
+    expect(await p.ev(`planx.editor.getUI().tool`), 'a click picks the text tool').toBe('text');
+  },
+
   async 'buttons in the rail\'s "more" column rearrange'(p) {
     await p.open(700, 420);
     await p.click(await p.at('.tools > button[aria-label="Ещё"]'));
