@@ -360,7 +360,9 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
    button; over or under a flat bar, the same bubble without the pointer. */
 .tip { position: fixed; z-index: 60; pointer-events: none; box-sizing: border-box; height: 37px; display: flex; align-items: center;
   white-space: nowrap; font: 600 12px/1 "Inter", var(--ui); color: #fff; animation: fade-in .6s ease-out;
-  background: rgba(0, 95, 228, .9); border-radius: 9px; padding: 0 15.5px; }
+  background: rgba(0, 95, 228, .9); border-radius: 9px; padding: 0 15.5px;
+  /* A faint shadow under the bubble and its pointer alike. */
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, .1)); }
 .tip::before { content: ""; position: absolute; width: 5.89px; height: 15px;
   background: url(./ui/tip-bubble.svg) 0 -7px / 80.89px 29px no-repeat; }
 .tip.right::before { top: 50%; left: -5.89px; transform: translateY(-50%); }
