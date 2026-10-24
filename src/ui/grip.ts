@@ -84,16 +84,44 @@ export function useGrip(ref: RefObject<HTMLElement | null>, grips: Grips) {
   };
 }
 
-/** A number kept per browser under `key` (null when not set), and a way to set it, remembered or not. */
-export function useStoredNumber(key: string): [number | null, (v: number | null, keep?: boolean) => void] {
-  const [v, setV] = useState<number | null>(() => {
-    try { const s = localStorage.getItem(key); return s === null ? null : Number(s); } catch { return null; }
-  });
-  const set = (n: number | null, keep = false) => {
-    setV(n);
-    if (keep) try { if (n === null) localStorage.removeItem(key); else localStorage.setItem(key, String(Math.round(n))); } catch { /* just won't be remembered */ }
-  };
+/**
+ * The panels' places and lengths, each a number under its key (null: as by default). Moving a panel
+ * changes it for now; "Сохранить панели" keeps them all for next time, "Сбросить панели" puts every
+ * panel back as by default and forgets what was kept.
+ */
+const live = new Map<string, number | null>();
+const resets = new Map<string, Set<() => void>>();
+const saved = (key: string): number | null => {
+  try { const s = localStorage.getItem(key); return s === null ? null : Number(s); } catch { return null; }
+};
+
+/** One of the panels' numbers, as it is now (what was saved, till it's changed), and a way to change it. */
+export function useStoredNumber(key: string): [number | null, (v: number | null) => void] {
+  const [v, setV] = useState<number | null>(() => (live.has(key) ? live.get(key)! : saved(key)));
+  useEffect(() => {
+    const reset = () => setV(null);
+    if (!resets.has(key)) resets.set(key, new Set());
+    resets.get(key)!.add(reset);
+    return () => { resets.get(key)?.delete(reset); };
+  }, [key]);
+  const set = (n: number | null) => { live.set(key, n); setV(n); };
   return [v, set];
+}
+
+/** Keeps the panels as they are now for next time. */
+export function savePanels(): void {
+  for (const [key, v] of live) {
+    try { if (v === null) localStorage.removeItem(key); else localStorage.setItem(key, String(Math.round(v))); } catch { /* just won't be kept */ }
+  }
+}
+
+/** Puts every panel back as by default, and forgets what was kept. */
+export function resetPanels(): void {
+  for (const [key, fns] of resets) {
+    live.set(key, null);
+    try { localStorage.removeItem(key); } catch { /* nothing kept to forget */ }
+    fns.forEach((f) => f());
+  }
 }
 
 /** The main panels, which mustn't be put over one another, and the least room kept between them. */
