@@ -1,14 +1,14 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Glyph } from './glyphs';
+import picture from './clear/plan.webp';
 
 /** How long the picture comes in, stays and flies off, in ms (matched by the keyframes in the styles). */
-const COME = 500, STAY = 1000, GO = 500;
+const COME = 1000, STAY = 1000, GO = 1000;
 
 /**
- * The picture over the board once it's been cleared: it comes in over half a second, stays a second,
- * then fades away as it grows, as if flying at you. It lets clicks through the whole time.
- * (A broom from the icon set for now, till the picture is drawn.)
+ * The picture over the board once it's been cleared: it comes in growing from small, stays a
+ * second, then fades away growing faster and faster, as if flying at you. It lets clicks through
+ * the whole time. Fetched only when first shown.
  */
 export function ClearFx({ onDone }: { onDone: () => void }) {
   useEffect(() => {
@@ -17,7 +17,7 @@ export function ClearFx({ onDone }: { onDone: () => void }) {
   }, [onDone]);
   return createPortal(
     <div className="clear-fx" aria-hidden="true" style={{ '--come': `${COME}ms`, '--stay': `${STAY}ms`, '--go': `${GO}ms` } as React.CSSProperties}>
-      <Glyph id="broom" className="clear-fx-pic" />
+      <img className="clear-fx-pic" src={picture} alt="" draggable={false} />
     </div>,
     document.body,
   );
