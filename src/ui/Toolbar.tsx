@@ -3,7 +3,7 @@ import { SHAPE_TOOLS, type Editor, type Pens, type Tool } from '../editor/editor
 import { readPictures } from '../canvas/pictures';
 import { DrawPanel, isDrawTool } from './DrawPanel';
 import { ShapePanel, SHAPES } from './ShapePanel';
-import { overPanels, panelScale, useCompact, useGrip, useStoredNumber } from './grip';
+import { overPanels, panelScale, useGrip, usePanelSize, useStoredNumber } from './grip';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { isSeparator, useSortable } from './sortable';
 import { ToolPreview } from './ToolPreview';
@@ -122,7 +122,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   const [right, setRight] = useStoredNumber(SIDE_KEY);
   // Room kept clear above the rail (the top bar, 12px off the edge and 12px from the rail) and as
   // much below it, whatever size the panels are.
-  const [compact] = useCompact();
+  const [panelSize] = usePanelSize();
   const railClear = 24 + (document.querySelector<HTMLElement>('.topbar')?.offsetHeight || 52);
   useEffect(() => { document.documentElement.dataset.rail = right ? 'right' : ''; window.dispatchEvent(new Event('planx:side-panels')); }, [right, top]);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -227,7 +227,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   // The "more" panel stands level with the rail's bottom edge, as tall as fits under the top bar;
   // further buttons go into more columns.
   const railBottom = sort.ref.current?.getBoundingClientRect().bottom ?? innerHeight / 2;
-  const col = moreCol(compact ? panelScale() : 1);
+  const col = moreCol(panelSize === 'l' ? 1 : panelScale());
   const moreRows = Math.max(1, Math.min(hidden.length, Math.floor((railBottom - railClear - col.pad + col.gap) / (col.size + col.gap))));
   // The selection panel keeps clear of what opens beside the rail.
   useEffect(() => { window.dispatchEvent(new Event('planx:side-panels')); }, [moreOpen, variants]);

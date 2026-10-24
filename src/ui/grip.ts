@@ -150,24 +150,33 @@ export function overPanels(r: { left: number; top: number; width: number; height
   });
 }
 
-/** Smaller panels (the board menu's switch): on or off for every panel at once, kept right away, as
- *  a setting rather than a place. */
-const COMPACT_KEY = 'planx-compact';
-let compact = (() => { try { return localStorage.getItem(COMPACT_KEY) === '1'; } catch { return false; } })();
-const compactFns = new Set<(v: boolean) => void>();
-const showCompact = () => {
-  if (compact) document.documentElement.dataset.compact = ''; else delete document.documentElement.dataset.compact;
+/** The panels' size (the board menu's three dots): large as by default, medium or small, for every
+ *  panel at once, kept right away, as a setting rather than a place. */
+export type PanelSize = 'l' | 'm' | 's';
+const SIZE_KEY = 'planx-panel-size';
+let size: PanelSize = (() => {
+  try {
+    const v = localStorage.getItem(SIZE_KEY);
+    if (v === 'm' || v === 's') return v;
+    return localStorage.getItem('planx-compact') === '1' ? 's' : 'l';
+  } catch { return 'l'; }
+})();
+const sizeFns = new Set<(v: PanelSize) => void>();
+// The styles scale the panels by the size (--k) under data-compact; data-size picks how much.
+const showSize = () => {
+  const root = document.documentElement;
+  if (size === 'l') { delete root.dataset.compact; delete root.dataset.size; } else { root.dataset.compact = ''; root.dataset.size = size; }
 };
-if (typeof document !== 'undefined') showCompact();
+if (typeof document !== 'undefined') showSize();
 
-export function useCompact(): [boolean, (v: boolean) => void] {
-  const [v, setV] = useState(compact);
-  useEffect(() => { compactFns.add(setV); return () => { compactFns.delete(setV); }; }, []);
-  const set = (n: boolean) => {
-    compact = n;
-    try { if (n) localStorage.setItem(COMPACT_KEY, '1'); else localStorage.removeItem(COMPACT_KEY); } catch { /* just won't be kept */ }
-    showCompact();
-    compactFns.forEach((f) => f(n));
+export function usePanelSize(): [PanelSize, (v: PanelSize) => void] {
+  const [v, setV] = useState(size);
+  useEffect(() => { sizeFns.add(setV); return () => { sizeFns.delete(setV); }; }, []);
+  const set = (n: PanelSize) => {
+    size = n;
+    try { if (n === 'l') localStorage.removeItem(SIZE_KEY); else localStorage.setItem(SIZE_KEY, n); localStorage.removeItem('planx-compact'); } catch { /* just won't be kept */ }
+    showSize();
+    sizeFns.forEach((f) => f(n));
     window.dispatchEvent(new Event('planx:side-panels'));
   };
   return [v, set];
