@@ -90,7 +90,7 @@ export function useGrip(ref: RefObject<HTMLElement | null>, grips: Grips) {
  * panel back as by default and forgets what was kept.
  */
 const live = new Map<string, number | null>();
-const resets = new Map<string, Set<() => void>>();
+const setters = new Map<string, Set<(v: number | null) => void>>();
 const saved = (key: string): number | null => {
   try { const s = localStorage.getItem(key); return s === null ? null : Number(s); } catch { return null; }
 };
@@ -99,10 +99,9 @@ const saved = (key: string): number | null => {
 export function useStoredNumber(key: string): [number | null, (v: number | null) => void] {
   const [v, setV] = useState<number | null>(() => (live.has(key) ? live.get(key)! : saved(key)));
   useEffect(() => {
-    const reset = () => setV(null);
-    if (!resets.has(key)) resets.set(key, new Set());
-    resets.get(key)!.add(reset);
-    return () => { resets.get(key)?.delete(reset); };
+    if (!setters.has(key)) setters.set(key, new Set());
+    setters.get(key)!.add(setV);
+    return () => { setters.get(key)?.delete(setV); };
   }, [key]);
   const set = (n: number | null) => { live.set(key, n); setV(n); };
   return [v, set];
@@ -115,13 +114,25 @@ export function savePanels(): void {
   }
 }
 
-/** Puts every panel back as by default, and forgets what was kept. */
-export function resetPanels(): void {
-  for (const [key, fns] of resets) {
-    live.set(key, null);
+/** Puts every panel back as by default, and forgets what was kept; gives back what puts it all as
+ *  it was again (for undo). */
+export function resetPanels(): () => void {
+  const was = [...setters.keys()].map((key) => {
+    let kept: string | null = null;
+    try { kept = localStorage.getItem(key); } catch { /* nothing kept */ }
+    return { key, now: live.has(key) ? live.get(key)! : saved(key), kept };
+  });
+  const put = (key: string, v: number | null) => { live.set(key, v); setters.get(key)?.forEach((f) => f(v)); };
+  for (const { key } of was) {
+    put(key, null);
     try { localStorage.removeItem(key); } catch { /* nothing kept to forget */ }
-    fns.forEach((f) => f());
   }
+  return () => {
+    for (const { key, now, kept } of was) {
+      put(key, now);
+      try { if (kept !== null) localStorage.setItem(key, kept); } catch { /* just won't be kept */ }
+    }
+  };
 }
 
 /** The main panels, which mustn't be put over one another, and the least room kept between them. */

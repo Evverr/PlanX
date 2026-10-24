@@ -18,7 +18,7 @@ import { useSortable } from './ui/sortable';
 import { Tooltips } from './ui/Tooltips';
 import { FramePeek } from './ui/FramePeek';
 import { BoardMenu } from './ui/BoardMenu';
-import { overPanels, useGrip, useStoredNumber, type Grips } from './ui/grip';
+import { overPanels, resetPanels, savePanels, useGrip, useStoredNumber, type Grips } from './ui/grip';
 import type { Item, Link } from './model/types';
 
 /** Where a board copied into a new tab waits for it, followed by the new board's id. */
@@ -260,7 +260,9 @@ export function App({ boardId }: { boardId: string }) {
               <button className={`ib ${menuOpen ? 'on' : ''}`} title="Меню" aria-label="Меню" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
                 <PanelIcon name="burger" />
               </button>
-              {menuOpen && <BoardMenu onDone={(note) => { setMenuOpen(false); setToast(note); }} />}
+              {menuOpen && <BoardMenu
+                onSave={() => { savePanels(); setMenuOpen(false); setToast('Панели сохранены'); }}
+                onReset={() => { editor.addOutsideStep(resetPanels()); setMenuOpen(false); setToast('Панели сброшены. Вернуть: Ctrl+Z'); }} />}
             </div>
           ),
           sep3: <div className="sep" />,

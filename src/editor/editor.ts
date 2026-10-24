@@ -206,7 +206,7 @@ export class Editor {
 
   private snapshot(): UIState {
     return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, editingCell: this.editingCell, moving: this.moving, cam: { ...this.cam }, pens: this.pens,
-      guides: this.guides, cells: this.cells, canUndo: this.board.undoManager.undoStack.length > 0, canRedo: this.board.undoManager.redoStack.length > 0 };
+      guides: this.guides, cells: this.cells, canUndo: this.board.undoManager.undoStack.length > 0 || this.outside.length > 0, canRedo: this.board.undoManager.redoStack.length > 0 };
   }
 
   private setMoving(moving: boolean): void {
@@ -798,8 +798,25 @@ export class Editor {
     this.zoomCenter(1 / this.cam.z);
   }
 
+  /** Steps undone along with the board's though they aren't on it (the panels put back as by
+   *  default), each at the place in the board's history it was taken. */
+  private outside: Array<{ undo: () => void; depth: number }> = [];
+
+  /** Adds such a step: Ctrl+Z (or the undo button) undoes it once the board's later changes are undone. */
+  addOutsideStep(undo: () => void): void {
+    this.outside.push({ undo, depth: this.board.undoManager.undoStack.length });
+    this.emit();
+  }
+
   undo(): void {
     if (this.editingId) this.stopEditing();
+    const last = this.outside[this.outside.length - 1];
+    if (last && this.board.undoManager.undoStack.length <= last.depth) {
+      this.outside.pop();
+      last.undo();
+      this.emit();
+      return;
+    }
     this.board.undo();
   }
 
