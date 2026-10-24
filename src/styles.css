@@ -450,7 +450,7 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 
 /* Bars moved by hand to the other edge of the screen (see grip.ts): the top bar to the bottom, the
    zoom bar to the top, the tool rail to the right; what opens from them opens the other way. */
-:root[data-topbar="low"] .topbar { top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+:root[data-topbar="low"] .topbar { top: auto; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
 :root[data-topbar="low"] .topbar.docked { bottom: 0; border-radius: 12px 12px 0 0; }
 :root[data-topbar="low"] .board-menu:not(.sub) { top: auto; bottom: calc(100% + 12px); }
 :root[data-topbar="low"] .board-menu.sub { top: auto; bottom: -13px; }

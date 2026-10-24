@@ -124,9 +124,9 @@ export function App({ boardId }: { boardId: string }) {
             const p = Math.min(Math.max((from === 'left' ? r.left + dx : innerWidth - r.right - dx), EDGE_GAP), Math.max(EDGE_GAP, innerWidth - EDGE_GAP - r.width));
             // Past the middle of the screen, over to the other edge.
             const below = r.top + r.height / 2 + dy > innerHeight / 2, f = at.high ? below : !below;
-            // Where that puts it (the top bar stands 12px from its edge, the zoom bar 16 from the
-            // bottom): not over another panel; it stays where it last could be.
-            const onTop = at.high !== f, gap = docked ? 0 : onTop || from === 'left' ? 12 : 16;
+            // Where that puts it (12px from the top, 16 from the bottom, the same for both bars so
+            // they line up): not over another panel; it stays where it last could be.
+            const onTop = at.high !== f, gap = docked ? 0 : onTop ? 12 : 16;
             const place = { left: from === 'left' ? p : innerWidth - p - r.width, top: onTop ? gap : innerHeight - gap - r.height, width: r.width, height: r.height };
             if (overPanels(place, ref.current)) return;
             pos = p;
