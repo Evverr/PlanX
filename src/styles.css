@@ -654,3 +654,11 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 :root[data-compact] .panel.docked.raised { border-radius: var(--c-r); }
 :root[data-compact][data-topbar="low"] .topbar.docked { border-radius: var(--c-r) var(--c-r) 0 0; }
 :root[data-compact][data-zoom="high"] .zoom.docked { border-radius: 0 0 var(--c-r) var(--c-r); }
+
+/* The picture after clearing the board (ui/ClearFx.tsx): in, a second's stay, then off growing as it
+   fades, as if flying at you; clicks pass through. */
+.clear-fx { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; pointer-events: none; }
+.clear-fx-pic { width: 200px; height: 200px; color: var(--ink); opacity: 0;
+  animation: clear-in var(--come) ease-out forwards, clear-go var(--go) ease-in calc(var(--come) + var(--stay)) forwards; }
+@keyframes clear-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes clear-go { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.8); } }
