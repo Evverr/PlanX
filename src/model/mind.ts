@@ -132,8 +132,8 @@ export function balance(id: string, items: Item[]): Map<string, number> {
 /**
  * New y positions (by id, the new node's among them) for a new branch `id` (already among the items):
  * its parent's branches on that side re-centre on the parent, with what grows from them; the parent
- * and every node further up the way to the centre stay put, and only the branches beside them that
- * would now overlap move away, just as far as it takes.
+ * and every node further up the way to the centre stay put, and where that leaves too little room,
+ * the branches of the same level from other parents move away (see clearCousins).
  */
 export function addChild(id: string, items: Item[]): Map<string, number> {
   const all = items.map((i) => ({ ...i })), byId = new Map(all.map((i) => [i.id, i]));
@@ -151,18 +151,7 @@ export function addChild(id: string, items: Item[]): Map<string, number> {
     b.forEach((n) => { n.y += dy; });
     y += bottom(b) - top(b) + MIND_GAP_Y;
   }
-  for (let cur: Item = p, guard = 0; cur.parent && guard < 50; guard++) {
-    const up = byId.get(cur.parent);
-    if (!up) break;
-    const here = cur, mine = block(here), s = mindSide(here, up);
-    const others = all.filter((k) => k.type === 'mind' && k.parent === up.id && k !== here && mindSide(k, up) === s).map(block);
-    const below = others.filter((b) => mid(b[0]) > mid(here)), above = others.filter((b) => mid(b[0]) < mid(here));
-    const down = Math.max(0, ...below.map((b) => bottom(mine) + MIND_GAP_Y - top(b)));
-    const lift = Math.max(0, ...above.map((b) => bottom(b) + MIND_GAP_Y - top(mine)));
-    below.forEach((b) => b.forEach((n) => { n.y += down; }));
-    above.forEach((b) => b.forEach((n) => { n.y -= lift; }));
-    cur = up;
-  }
+  clearCousins(p, side, all, byId);
   return movedY(items, byId);
 }
 
@@ -178,6 +167,8 @@ export function insertBeside(id: string, from: string, where: 'above' | 'below',
   const own = [start, ...descendants([start.id], all).map((d) => byId.get(d)!)];
   node.y = dir > 0 ? Math.max(...own.map((n) => n.y + n.h)) + MIND_GAP_Y : Math.min(...own.map((n) => n.y)) - MIND_GAP_Y - node.h;
   pushPast(start, node, (node.h + MIND_GAP_Y) * dir, dir, all, byId, 1);
+  const p = start.parent ? byId.get(start.parent) : undefined;
+  if (p) clearCousins(p, mindSide(start, p), all, byId);
   return movedY(items, byId);
 }
 
@@ -187,7 +178,11 @@ export function insertBeside(id: string, from: string, where: 'above' | 'below',
 export function makeRoom(id: string, dh: number, items: Item[]): Map<string, number> {
   const all = items.map((i) => ({ ...i })), byId = new Map(all.map((i) => [i.id, i]));
   const node = byId.get(id);
-  if (node) pushPast(node, null, dh, 1, all, byId, 1);
+  const p = node?.parent ? byId.get(node.parent) : undefined;
+  if (node && p) {
+    pushPast(node, null, dh, 1, all, byId, 1);
+    clearCousins(p, mindSide(node, p), all, byId);
+  }
   return movedY(items, byId);
 }
 
@@ -203,6 +198,40 @@ function pushPast(start: Item, skip: Item | null, shift: number, dir: 1 | -1, al
       if ((mid(k) - mid(here)) * dir > 0) block(k).forEach((n) => { n.y += shift; });
     }
     cur = p;
+  }
+}
+
+/**
+ * Keeps the branches of `p` on that side, with all that grows from them, clear of the branches of the
+ * same level from other parents on the same side of the centre: those that now overlap them move
+ * away, up or down, just as far as it takes, and the ones beyond them in turn; the levels further in
+ * stay put.
+ */
+function clearCousins(p: Item, side: 1 | -1, all: Item[], byId: Map<string, Item>): void {
+  const get = (k: string) => byId.get(k), mid = (i: Item) => i.y + i.h / 2;
+  const block = (k: Item) => [k, ...descendants([k.id], all).map((d) => byId.get(d)!)];
+  const top = (b: Item[]) => Math.min(...b.map((n) => n.y)), bottom = (b: Item[]) => Math.max(...b.map((n) => n.y + n.h));
+  // The central topic and which side of it this is.
+  const way = (n: Item): Item[] => { const out = [n]; for (let c = n; c.parent && out.length < 50;) { const u = get(c.parent); if (!u) break; out.push(u); c = u; } return out; };
+  const toRoot = way(p), root = toRoot[toRoot.length - 1];
+  if (root === p) return;
+  const half = (n: Item) => { const w = way(n); return w.length > 1 && w[w.length - 1] === root ? mindSide(w[w.length - 2], root) : 0; };
+  const level = toRoot.length, rootSide = half(p);
+  const kids = all.filter((i) => i.type === 'mind' && i.parent === p.id && mindSide(i, p) === side);
+  if (!kids.length) return;
+  const mine = kids.flatMap(block);
+  const others = all.filter((i) => i.type === 'mind' && i.parent && i.parent !== p.id && way(i).length === level + 1 && half(i) === rootSide).map(block);
+  let edge = bottom(mine);
+  for (const b of others.filter((b) => mid(get(b[0].parent!)!) >= mid(p)).sort((a, c) => top(a) - top(c))) {
+    const need = edge + MIND_GAP_Y - top(b);
+    if (need > 0) b.forEach((n) => { n.y += need; });
+    edge = Math.max(edge, bottom(b));
+  }
+  edge = top(mine);
+  for (const b of others.filter((b) => mid(get(b[0].parent!)!) < mid(p)).sort((a, c) => bottom(c) - bottom(a))) {
+    const need = bottom(b) + MIND_GAP_Y - edge;
+    if (need > 0) b.forEach((n) => { n.y -= need; });
+    edge = Math.min(edge, top(b));
   }
 }
 
