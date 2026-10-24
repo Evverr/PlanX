@@ -66,14 +66,14 @@ export function useGrip(ref: RefObject<HTMLElement | null>, grips: Grips) {
       held.current = true;
       const x0 = e.clientX, y0 = e.clientY, c = grips[edge]!.cursor;
       document.body.style.cursor = c;
-      document.body.classList.add('gripping');
+      ref.current?.classList.add('gripped');
       const move = (ev: PointerEvent) => drag.move(ev.clientX - x0, ev.clientY - y0);
       const up = () => {
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
         window.removeEventListener('pointercancel', up);
         document.body.style.cursor = '';
-        document.body.classList.remove('gripping');
+        ref.current?.classList.remove('gripped');
         held.current = false;
         drop();
         drag.done();

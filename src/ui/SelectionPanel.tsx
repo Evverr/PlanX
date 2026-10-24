@@ -241,15 +241,19 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
   const sort = useSortable('planx-order-selection', ORDER, 'x');
   // Centred at the bottom, clear of the tool rail (on whichever side); where another panel stands
   // there (wherever it's been moved), it goes up above it instead.
-  const [place, setPlace] = useState<{ left: number | null; bottom: number | null }>({ left: null, bottom: null });
+  const [place, setPlace] = useState<{ left: number; bottom: number | null }>({ left: 0, bottom: null });
   const [, redraw] = useReducer((n: number) => n + 1, 0);
-  // It finds its place again when the window changes size or a panel opens or closes beside the rail.
+  // It finds its place again when the window changes size, a panel opens or closes beside the rail,
+  // another panel is moved, or one has slid to a new place.
   useEffect(() => {
+    const slid = (e: TransitionEvent) => { if ((e.target as Element).matches?.('.bar:not(.panel), .tools')) redraw(); };
     window.addEventListener('resize', redraw);
     window.addEventListener('planx:side-panels', redraw);
+    window.addEventListener('transitionend', slid);
     return () => {
       window.removeEventListener('resize', redraw);
       window.removeEventListener('planx:side-panels', redraw);
+      window.removeEventListener('transitionend', slid);
     };
   }, []);
   useLayoutEffect(() => {
@@ -275,7 +279,8 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
       if (!hit) break;
       bottom = innerHeight - hit.top + GAP;
     }
-    const next = { left: Math.abs(left - centred) < 1 ? null : Math.round(left), bottom: bottom === base ? null : Math.round(bottom) };
+    // How far off the middle it stands (moved by a shift, so it slides there and back).
+    const next = { left: Math.round(left - centred), bottom: bottom === base ? null : Math.round(bottom) };
     if (next.left !== place.left || next.bottom !== place.bottom) setPlace(next);
   });
   if (!items.length && !linkCount) return null;
@@ -286,7 +291,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
   );
   return (
     <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${docked ? 'docked' : ''} ${place.bottom !== null ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
-      style={{ ...(place.left !== null && { left: place.left, transform: 'none' }), ...(place.bottom !== null && { bottom: place.bottom }) }}
+      style={{ transform: `translateX(calc(-50% + ${place.left}px))`, ...(place.bottom !== null && { bottom: place.bottom }) }}
       role="toolbar" aria-label="Выделенное" {...sort.container}>
       {sort.renderFit({
         // All the colours are under the palette: a table's own when it's selected alone.

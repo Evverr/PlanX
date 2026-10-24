@@ -118,7 +118,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   const [top, setTop] = useStoredNumber(TOP_KEY);
   // Moved over past the middle of the screen, it stands at the right edge instead.
   const [right, setRight] = useStoredNumber(SIDE_KEY);
-  useEffect(() => { document.documentElement.dataset.rail = right ? 'right' : ''; }, [right]);
+  useEffect(() => { document.documentElement.dataset.rail = right ? 'right' : ''; window.dispatchEvent(new Event('planx:side-panels')); }, [right, top]);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLButtonElement>(null), menuRef = useRef<HTMLDivElement | null>(null);
   const [, redraw] = useReducer((n: number) => n + 1, 0);

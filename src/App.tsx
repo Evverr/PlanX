@@ -94,6 +94,8 @@ export function App({ boardId }: { boardId: string }) {
   // moves it along its edge, or over to the other edge of the screen once past the middle; dragging
   // its right end makes it shorter or longer, what doesn't fit going under "more". Once moved (or
   // resized), a bar stands from its left end; the zoom bar till then from the screen's right.
+  /** How far every panel stands from the screen's edges. */
+  const EDGE_GAP = 12;
   const [topX, setTopX] = useStoredNumber('planx-topbar-x');
   const [topW, setTopW] = useStoredNumber('planx-topbar-w');
   const [topLow, setTopLow] = useStoredNumber('planx-topbar-low');
@@ -106,14 +108,20 @@ export function App({ boardId }: { boardId: string }) {
     root.dataset.topbar = topLow ? 'low' : '';
     root.dataset.zoom = zoomHigh ? 'high' : '';
     if (topX === null) root.style.removeProperty('--top-x'); else root.style.setProperty('--top-x', `${topX}px`);
-  }, [topX, topLow, zoomHigh]);
-  // The map and the hints line up with the zoom bar's right end, wherever it is.
+    window.dispatchEvent(new Event('planx:side-panels'));
+  }, [topX, topLow, zoomHigh, zoomX]);
+  // The map and the hints line up with the zoom bar's right end, wherever it is. Till it's been
+  // moved, the bar stands 12px from the screen's right, counted from the left all the same (by its
+  // width), so it slides back there when put back as by default.
+  const [zoomWidth, setZoomWidth] = useState(0);
   useLayoutEffect(() => {
-    const r = zoomSort.ref.current?.getBoundingClientRect(), root = document.documentElement;
+    const el = zoomSort.ref.current, root = document.documentElement;
+    if (el && el.offsetWidth !== zoomWidth) setZoomWidth(el.offsetWidth);
+    const r = el?.getBoundingClientRect();
     if (zoomX === null || !r) root.style.removeProperty('--zoom-r');
     else root.style.setProperty('--zoom-r', `${Math.round(innerWidth - r.right)}px`);
   });
-  const EDGE_GAP = 12;
+  const zoomLeft = zoomX ?? (zoomWidth ? innerWidth - EDGE_GAP - zoomWidth : null);
   /** A bar's grips: its left end moves it, its right end resizes it. */
   const barGrips = (ref: React.RefObject<HTMLElement | null>, at: {
     setPos: (v: number | null) => void; setW: (v: number | null) => void; setFar: (v: number | null) => void; high: boolean;
@@ -293,7 +301,7 @@ export function App({ boardId }: { boardId: string }) {
       }} />}
 
       <div ref={zoomSort.ref as React.RefObject<HTMLDivElement>} className={`bar zoom sortable ${docked ? 'docked' : ''} ${zoomSort.sorting ? 'sorting' : ''}`} {...zoomSort.container}
-        style={zoomX !== null ? { left: zoomX, right: 'auto' } : undefined}
+        style={zoomLeft !== null ? { left: zoomLeft, right: 'auto' } : undefined}
         onPointerDown={(e) => { if (!zoomGrip.onPointerDown(e)) zoomSort.container.onPointerDown(e); }}
         onPointerMove={(e) => { if (!zoomSort.sorting) zoomGrip.onPointerMove(e); zoomSort.container.onPointerMove(e); }}
         onPointerLeave={zoomGrip.onPointerLeave}>

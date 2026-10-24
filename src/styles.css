@@ -150,10 +150,12 @@ button { font: inherit; color: inherit; }
 .avatar.me { cursor: pointer; }
 .more { font-size: 12px; color: var(--muted); padding: 0 4px; }
 
-.zoom { right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; }
+/* Down from the top (not up from the bottom), so it can slide to the top and back. */
+.zoom { right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(100% - 12px - var(--bar-h) - env(safe-area-inset-bottom, 0px)); padding: 6px 16px; }
 /* Panels stuck to their screen edge (the chevron button) lose the corners on that side. */
 .topbar.docked { top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
 .zoom.docked, .panel.docked { bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.zoom.docked { top: calc(100% - var(--bar-h)); }
 /* Board map above the zoom panel: items as translucent blue blocks, the dark frame is the screen. */
 .minimap { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(72px + env(safe-area-inset-bottom, 0px)); padding: 8px; }
 .minimap.docked { bottom: 60px; }
@@ -454,21 +456,23 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
    slides to a new place alike: stuck to the edges or back, raised over another, put back as by
    default. While one is dragged by an edge (see grip.ts), they all follow at once. */
 :is(.bar, .tools, .tools-more, .draw-panel) { transition: top .2s ease, bottom .2s ease, left .2s ease, right .2s ease, border-radius .2s ease; }
-.tools { transition-property: top, bottom, left, right, border-radius, transform; }
-body.gripping :is(.bar, .tools, .tools-more, .draw-panel) { transition: none; }
+:is(.tools, .panel) { transition-property: top, bottom, left, right, border-radius, transform; }
+/* The one being dragged follows the pointer at once; the others make way smoothly. */
+.gripped { transition: none !important; }
 
 /* Bars moved by hand to the other edge of the screen (see grip.ts): the top bar to the bottom, the
    zoom bar to the top, the tool rail to the right; what opens from them opens the other way. */
-:root[data-topbar="low"] .topbar { top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
-:root[data-topbar="low"] .topbar.docked { bottom: 0; border-radius: 12px 12px 0 0; }
+:root[data-topbar="low"] .topbar { top: calc(100% - 12px - var(--bar-h) - env(safe-area-inset-bottom, 0px)); }
+:root[data-topbar="low"] .topbar.docked { top: calc(100% - var(--bar-h)); border-radius: 12px 12px 0 0; }
 :root[data-topbar="low"] .board-menu:not(.sub) { top: auto; bottom: calc(100% + 12px); }
 :root[data-topbar="low"] .board-menu.sub { top: auto; bottom: -13px; }
 :root[data-topbar="low"] .confirm { top: auto; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
-:root[data-zoom="high"] .zoom { bottom: auto; top: calc(12px + env(safe-area-inset-top, 0px)); }
+:root[data-zoom="high"] .zoom { top: calc(12px + env(safe-area-inset-top, 0px)); }
 :root[data-zoom="high"] .zoom.docked { top: 0; border-radius: 0 0 12px 12px; }
 :root[data-zoom="high"] :is(.minimap, .help, .namepop) { bottom: auto; top: calc(72px + env(safe-area-inset-top, 0px)); }
 :root[data-zoom="high"] .minimap.docked { top: 60px; }
-:root[data-rail="right"] .tools { left: auto; right: calc(12px + env(safe-area-inset-right, 0px)); }
-:root[data-rail="right"] .tools.docked { right: 0; border-radius: 12px 0 0 12px; }
+/* From the left still (so it can slide across): as far as leaves 12px at the right. */
+:root[data-rail="right"] .tools { left: calc(100% - 72px - env(safe-area-inset-right, 0px)); }
+:root[data-rail="right"] .tools.docked { left: calc(100% - 60px); border-radius: 12px 0 0 12px; }
 :root[data-rail="right"] :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(84px + env(safe-area-inset-right, 0px)); }
 :root[data-rail="right"] .tools.docked ~ :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(72px + env(safe-area-inset-right, 0px)); }
