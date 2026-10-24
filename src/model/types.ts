@@ -66,6 +66,8 @@ export interface Item {
   /** Frames: what was put in them and moves with them. Frames from before this have none and hold
    *  whatever lies inside. */
   members?: string[];
+  /** A folded frame's unfolded size (see model/frame.ts). */
+  fold?: { w: number; h: number };
   sw?: number;
   hl?: boolean;
 }

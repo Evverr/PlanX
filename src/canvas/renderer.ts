@@ -9,6 +9,7 @@ import { audioProgress, clock } from './audio';
 import { branchCurve, mindButtons, mindDepth, nodeColors, siblingTints, type MindButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
+import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
 import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
@@ -78,6 +79,8 @@ export interface Scene {
   guides: Guide[];
   /** The table cell being edited, its text left to the overlay. */
   editingCell: number | null;
+  /** Only a picture, as in the look into a folded frame: no buttons on frames. */
+  still?: boolean;
 }
 
 export interface InkStroke { pts: Point[]; color: string; width: number; hl: boolean }
@@ -296,6 +299,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       if (!editing) drawText(ctx, it, 0, theme.ink, false, s);
       break;
     case 'frame': {
+      if (it.fold) { drawFolded(ctx, it, s, editing); break; }
       ctx.fillStyle = theme.frame;
       ctx.strokeStyle = theme.line;
       ctx.lineWidth = 1 / cam.z;
@@ -310,6 +314,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
         ctx.textBaseline = 'bottom';
         ctx.fillText(it.text, it.x + 2, it.y - 8, it.w);
       }
+      if (!s.still) for (const b of frameButtons(it, cam.z)) drawIcon(ctx, b.icon, b.x, b.y, b.s, theme.muted);
       break;
     }
     case 'icon':
@@ -505,6 +510,32 @@ function drawAudio(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
 
 /** How round a table's corners are, in board units. */
 const TABLE_RADIUS = 8;
+
+/** A folded frame: a bar like a mind map's central topic, its title inside and its buttons at the end. */
+function drawFolded(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
+  const { theme, cam } = s;
+  ctx.fillStyle = theme.frame;
+  ctx.strokeStyle = theme.line;
+  ctx.lineWidth = 1 / cam.z;
+  ctx.beginPath();
+  ctx.roundRect(it.x, it.y, it.w, it.h, 16);
+  ctx.fill();
+  ctx.stroke();
+  if (!editing && it.text) {
+    ctx.font = font(FOLD_FS, 600);
+    ctx.fillStyle = theme.ink;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    // Too long a title ends in an ellipsis.
+    let title = it.text;
+    if (ctx.measureText(title).width > FOLD_TITLE_MAX) {
+      while (title.length > 1 && ctx.measureText(`${title}…`).width > FOLD_TITLE_MAX) title = title.slice(0, -1);
+      title = `${title.trimEnd()}…`;
+    }
+    ctx.fillText(title, it.x + FOLD_PAD, it.y + it.h / 2);
+  }
+  for (const b of frameButtons(it, cam.z)) drawIcon(ctx, b.icon, b.x, b.y, b.s, theme.muted);
+}
 
 /** A grid on the panel colour with round corners and each cell's text; the cell being edited is
  *  left to the overlay. */
