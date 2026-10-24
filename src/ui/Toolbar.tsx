@@ -30,6 +30,9 @@ const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: '
 
 /** Room kept clear above the tool rail (the top bar) and as much below it. */
 const RAIL_CLEAR = 72;
+/** Where the rail's chosen length is kept, and how close to its top or bottom edge the pointer (or
+ *  a finger) has to be to drag that edge. */
+const CAP_KEY = 'planx-tools-cap', EDGE = 8, EDGE_FINGER = 14;
 
 /** Rail buttons with variants, opened by holding the button still. */
 const VARIANTS = new Set(['oval', 'draw']);
@@ -102,6 +105,11 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   // at its end, which opens them in a row beside it.
   const all = sort.visible();
   const [fit, setFit] = useState(Infinity);
+  // How many of its elements the rail keeps, as chosen by dragging its top or bottom edge (the rest
+  // go under "more"); Infinity for all of them.
+  const [cap, setCap] = useState(() => {
+    try { const n = Number(localStorage.getItem(CAP_KEY)); return n > 0 ? n : Infinity; } catch { return Infinity; }
+  });
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLButtonElement>(null), menuRef = useRef<HTMLDivElement | null>(null);
   const [, redraw] = useReducer((n: number) => n + 1, 0);
@@ -109,22 +117,69 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
     window.addEventListener('resize', redraw);
     return () => window.removeEventListener('resize', redraw);
   }, []);
-  useLayoutEffect(() => {
+  /** The rail's height with its first n elements (and the "more" button when that's not all of them). */
+  const railHeight = (n: number): number | null => {
     const el = sort.ref.current, btn = el?.querySelector<HTMLElement>('.fb');
-    if (!el || !btn) return;
+    if (!el || !btn) return null;
     const cs = getComputedStyle(el), gap = parseFloat(cs.rowGap) || 0;
     const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-    const tall = (ks: string[]) => pad + ks.reduce((t, k) => t + (isSeparator(k) ? 7 : btn.offsetHeight), 0) + gap * (ks.length - 1);
-    // Centred on the screen, clear of the top bar above and as far from the bottom edge.
-    const room = innerHeight - RAIL_CLEAR * 2;
-    let n = all.length;
-    if (tall(all) > room) {
-      n = all.length - 1;
-      while (n > 1 && tall([...sort.visible(undefined, n), 'more']) > room) n--;
-    }
+    const ks = n >= all.length ? all : [...sort.visible(undefined, n), 'more'];
+    return pad + ks.reduce((t, k) => t + (isSeparator(k) ? 7 : btn.offsetHeight), 0) + gap * (ks.length - 1);
+  };
+  // Centred on the screen, clear of the top bar above and as far from the bottom edge.
+  const room = () => innerHeight - RAIL_CLEAR * 2;
+  useLayoutEffect(() => {
+    if (railHeight(all.length) === null) return;
+    let n = Math.min(all.length, cap);
+    while (n > 1 && railHeight(n)! > room()) n--;
     const next = n >= all.length ? Infinity : n;
     if (next !== fit) setFit(next);
+    // Measuring went through other lengths: the rail's list is the one on screen again.
+    else sort.visible(undefined, fit);
   });
+  /** The rail's top or bottom edge under the pointer, if it's on one. */
+  const edgeAt = (e: React.PointerEvent): 'top' | 'bottom' | null => {
+    const r = sort.ref.current?.getBoundingClientRect(), zone = e.pointerType === 'touch' ? EDGE_FINGER : EDGE;
+    if (!r || e.clientX < r.left || e.clientX > r.right) return null;
+    return e.clientY >= r.top && e.clientY - r.top <= zone ? 'top' : e.clientY <= r.bottom && r.bottom - e.clientY <= zone ? 'bottom' : null;
+  };
+  /**
+   * Dragging the rail's top or bottom edge makes it longer or shorter a button at a time, down to a
+   * single one: what no longer fits goes under "more". The rail stays centred, so it grows at both
+   * ends, and the edge being dragged keeps up with the pointer.
+   */
+  const startResize = (e: React.PointerEvent, edge: 'top' | 'bottom') => {
+    e.preventDefault();
+    e.stopPropagation();
+    const y0 = e.clientY, h0 = sort.ref.current!.getBoundingClientRect().height;
+    const heights = all.map((_, i) => railHeight(i + 1)!);
+    sort.visible(undefined, fit);
+    document.body.style.cursor = 'ns-resize';
+    const move = (ev: PointerEvent) => {
+      const want = h0 + (edge === 'bottom' ? 1 : -1) * (ev.clientY - y0) * 2;
+      let best = 0, most = 0;
+      heights.forEach((h, i) => {
+        if (h > room()) return;
+        most = i;
+        if (Math.abs(h - want) < Math.abs(heights[best] - want)) best = i;
+      });
+      // As long as the screen allows is all of it: on a taller screen it's longer again.
+      setCap(best >= most ? Infinity : best + 1);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      document.body.style.cursor = '';
+      setCap((c) => {
+        try { if (c === Infinity) localStorage.removeItem(CAP_KEY); else localStorage.setItem(CAP_KEY, String(c)); } catch { /* just won't be remembered */ }
+        return c;
+      });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  };
   const main = sort.visible(undefined, fit);
   const hidden = all.filter((k) => !main.includes(k) && !isSeparator(k));
   // A press anywhere but the row and its button closes it.
@@ -179,7 +234,9 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   return (
     <>
     <nav ref={sort.ref} className={`tools sortable ${docked ? 'docked' : ''} ${sort.sorting ? 'sorting' : ''}`} aria-label="Инструменты"
-      {...sort.container}>
+      {...sort.container}
+      onPointerDown={(e) => { const edge = edgeAt(e); if (edge && e.button === 0) startResize(e, edge); else sort.container.onPointerDown(e); }}
+      onPointerMove={(e) => { e.currentTarget.style.cursor = !sort.sorting && edgeAt(e) ? 'ns-resize' : ''; sort.container.onPointerMove(e); }}>
       {main.map((k) => item(k))}
       {hidden.length > 0 && (
         <button ref={moreRef} className={`fb ${moreOpen ? 'on' : ''}`} title="Ещё" aria-label="Ещё" aria-expanded={moreOpen} data-nosort
