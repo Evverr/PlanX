@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Board } from './model/board';
 import { Editor } from './editor/editor';
 import { Connection, newBoardId } from './collab/connection';
@@ -90,14 +90,14 @@ export function App({ boardId }: { boardId: string }) {
   const topSort = useSortable('planx-order-top2', ['logo', 'sep', 'title', 'menu', 'new', 'clear', 'sep3', 'undo', 'redo'], 'x');
   const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'share', 'help', 'theme', 'fit', 'dock', 'people'], 'x');
 
-  // The top bar and the zoom bar can be moved and made shorter by hand. Each is held by the end it
-  // stands from (the top bar's left, the zoom bar's right): dragging that end moves the bar along
-  // its edge, or over to the other edge of the screen once past the middle; dragging the other end
-  // makes it shorter or longer, what doesn't fit going under "more".
+  // The top bar and the zoom bar can be moved and made shorter by hand: dragging a bar's left end
+  // moves it along its edge, or over to the other edge of the screen once past the middle; dragging
+  // its right end makes it shorter or longer, what doesn't fit going under "more". Once moved (or
+  // resized), a bar stands from its left end; the zoom bar till then from the screen's right.
   const [topX, setTopX] = useStoredNumber('planx-topbar-x');
   const [topW, setTopW] = useStoredNumber('planx-topbar-w');
   const [topLow, setTopLow] = useStoredNumber('planx-topbar-low');
-  const [zoomR, setZoomR] = useStoredNumber('planx-zoom-right');
+  const [zoomX, setZoomX] = useStoredNumber('planx-zoom-x');
   const [zoomW, setZoomW] = useStoredNumber('planx-zoom-w');
   const [zoomHigh, setZoomHigh] = useStoredNumber('planx-zoom-high');
   // What sits by them (the board menu, the map, the hints) goes where they are, through these.
@@ -106,26 +106,31 @@ export function App({ boardId }: { boardId: string }) {
     root.dataset.topbar = topLow ? 'low' : '';
     root.dataset.zoom = zoomHigh ? 'high' : '';
     if (topX === null) root.style.removeProperty('--top-x'); else root.style.setProperty('--top-x', `${topX}px`);
-    if (zoomR === null) root.style.removeProperty('--zoom-r'); else root.style.setProperty('--zoom-r', `${zoomR}px`);
-  }, [topX, topLow, zoomR, zoomHigh]);
+  }, [topX, topLow, zoomHigh]);
+  // The map and the hints line up with the zoom bar's right end, wherever it is.
+  useLayoutEffect(() => {
+    const r = zoomSort.ref.current?.getBoundingClientRect(), root = document.documentElement;
+    if (zoomX === null || !r) root.style.removeProperty('--zoom-r');
+    else root.style.setProperty('--zoom-r', `${Math.round(innerWidth - r.right)}px`);
+  });
   const EDGE_GAP = 14;
-  /** A bar's grips: `from` is the end it stands from, whose drag moves it; the other end resizes it. */
-  const barGrips = (ref: React.RefObject<HTMLElement | null>, from: 'left' | 'right', at: {
+  /** A bar's grips: its left end moves it, its right end resizes it. */
+  const barGrips = (ref: React.RefObject<HTMLElement | null>, at: {
     setPos: (v: number | null) => void; setW: (v: number | null) => void; setFar: (v: number | null) => void; high: boolean;
   }): Grips => ({
-    [from]: {
+    left: {
       cursor: 'move',
       start: () => {
         const r = ref.current!.getBoundingClientRect();
         return {
           move: (dx: number, dy: number) => {
-            const p = Math.min(Math.max((from === 'left' ? r.left + dx : innerWidth - r.right - dx), EDGE_GAP), Math.max(EDGE_GAP, innerWidth - EDGE_GAP - r.width));
+            const p = Math.min(Math.max(r.left + dx, EDGE_GAP), Math.max(EDGE_GAP, innerWidth - EDGE_GAP - r.width));
             // Past the middle of the screen, over to the other edge.
             const below = r.top + r.height / 2 + dy > innerHeight / 2, f = at.high ? below : !below;
             // Where that puts it (14px from the edge, as every panel): not over another panel; it
             // stays where it last could be.
             const onTop = at.high !== f, gap = docked ? 0 : EDGE_GAP;
-            const place = { left: from === 'left' ? p : innerWidth - p - r.width, top: onTop ? gap : innerHeight - gap - r.height, width: r.width, height: r.height };
+            const place = { left: p, top: onTop ? gap : innerHeight - gap - r.height, width: r.width, height: r.height };
             if (overPanels(place, ref.current)) return;
             at.setPos(p);
             at.setFar(f ? 1 : null);
@@ -134,15 +139,17 @@ export function App({ boardId }: { boardId: string }) {
         };
       },
     },
-    [from === 'left' ? 'right' : 'left']: {
+    right: {
       cursor: 'ew-resize',
       start: () => {
         const r = ref.current!.getBoundingClientRect();
+        // Its left end holds still while the right one follows the pointer.
+        at.setPos(r.left);
         return {
           move: (dx: number) => {
             // Not over another panel: it stops short of it.
-            let w = Math.max(0, r.width + (from === 'left' ? dx : -dx));
-            const over = (v: number) => overPanels({ left: from === 'left' ? r.left : r.right - v, top: r.top, width: v, height: r.height }, ref.current);
+            let w = Math.max(0, r.width + dx);
+            const over = (v: number) => overPanels({ left: r.left, top: r.top, width: v, height: r.height }, ref.current);
             while (w > 0 && w > r.width && over(w)) w -= 4;
             at.setW(w);
           },
@@ -155,10 +162,10 @@ export function App({ boardId }: { boardId: string }) {
       },
     },
   });
-  const topGrip = useGrip(topSort.ref, barGrips(topSort.ref, 'left', { setPos: setTopX, setW: setTopW, setFar: setTopLow, high: true }));
-  const zoomGrip = useGrip(zoomSort.ref, barGrips(zoomSort.ref, 'right', { setPos: setZoomR, setW: setZoomW, setFar: setZoomHigh, high: false }));
+  const topGrip = useGrip(topSort.ref, barGrips(topSort.ref, { setPos: setTopX, setW: setTopW, setFar: setTopLow, high: true }));
+  const zoomGrip = useGrip(zoomSort.ref, barGrips(zoomSort.ref, { setPos: setZoomX, setW: setZoomW, setFar: setZoomHigh, high: false }));
   const topSpace = Math.min(innerWidth - (topX ?? EDGE_GAP) - EDGE_GAP, topW ?? Infinity);
-  const zoomSpace = Math.min(innerWidth - (zoomR ?? EDGE_GAP) - EDGE_GAP, zoomW ?? Infinity);
+  const zoomSpace = Math.min(innerWidth - (zoomX ?? EDGE_GAP) - EDGE_GAP, zoomW ?? Infinity);
   const closeMinimap = useCallback(() => setMinimap(false), []);
 
   // A copy of this board opens in a new tab, named after it with a number added ("План" → "План 2"
@@ -286,6 +293,7 @@ export function App({ boardId }: { boardId: string }) {
       }} />}
 
       <div ref={zoomSort.ref as React.RefObject<HTMLDivElement>} className={`bar zoom sortable ${docked ? 'docked' : ''} ${zoomSort.sorting ? 'sorting' : ''}`} {...zoomSort.container}
+        style={zoomX !== null ? { left: zoomX, right: 'auto' } : undefined}
         onPointerDown={(e) => { if (!zoomGrip.onPointerDown(e)) zoomSort.container.onPointerDown(e); }}
         onPointerMove={(e) => { if (!zoomSort.sorting) zoomGrip.onPointerMove(e); zoomSort.container.onPointerMove(e); }}
         onPointerLeave={zoomGrip.onPointerLeave}>
