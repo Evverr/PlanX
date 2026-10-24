@@ -17,6 +17,7 @@ import { cellItem } from './model/table';
 import { useSortable } from './ui/sortable';
 import { Tooltips } from './ui/Tooltips';
 import { FramePeek } from './ui/FramePeek';
+import { ClearFx } from './ui/ClearFx';
 import { BoardMenu } from './ui/BoardMenu';
 import { overPanels, resetPanels, savePanels, useGrip, useStoredNumber, type Grips } from './ui/grip';
 import type { Item, Link } from './model/types';
@@ -44,6 +45,9 @@ export function App({ boardId }: { boardId: string }) {
 
   const [pop, setPop] = useState<Pop>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // The picture after the board's been cleared, while it plays (keyed by when, to play again).
+  const [cleared, setCleared] = useState<number | null>(null);
+  const endCleared = useCallback(() => setCleared(null), []);
   const toggle = (p: Pop) => setPop((cur) => (cur === p ? null : p));
 
   useEffect(() => {
@@ -334,6 +338,7 @@ export function App({ boardId }: { boardId: string }) {
 
       {minimap && <Minimap editor={editor} items={editor.shown()} docked={docked} onClose={closeMinimap} />}
       <FramePeek editor={editor} board={board} />
+      {cleared && <ClearFx key={cleared} onDone={endCleared} />}
       <Tooltips />
 
       {/* Typing in a table cell, the panel shows and sets that cell's own formatting. */}
@@ -352,7 +357,7 @@ export function App({ boardId }: { boardId: string }) {
           <p>Удалить всё с доски у всех участников? Отменить можно через <b>Ctrl+Z</b></p>
           <div className="row">
             <button className="btn" onClick={() => setPop(null)}>Отмена</button>
-            <button className="btn primary" onClick={() => { editor.clearBoard(); setPop(null); }}>Очистить</button>
+            <button className="btn primary" onClick={() => { editor.clearBoard(); setPop(null); setCleared(Date.now()); }}>Очистить</button>
           </div>
         </div>
       )}
