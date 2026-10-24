@@ -1,14 +1,14 @@
-import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useReducer, useRef, useState, type ReactNode } from 'react';
 import { SHAPE_TOOLS, type Editor, type Pens, type Tool } from '../editor/editor';
 import { readPictures } from '../canvas/pictures';
 import { DrawPanel, isDrawTool } from './DrawPanel';
 import { ShapePanel, SHAPES } from './ShapePanel';
-import { overPanels, panelScale, useGrip, usePanelSize, useStoredNumber } from './grip';
+import { panelScale, usePanelSize } from './panels/size';
+import { useRail } from './panels/rail';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { isSeparator, useSortable } from './sortable';
 import { ToolPreview } from './ToolPreview';
 import { readText, writeText } from '../storage';
-import { EDGE } from '../layout';
 
 /** Tool panel from the Figma mockup (Mol / Bar vertical). */
 const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
@@ -35,9 +35,6 @@ const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: '
  *  (scaled as the panels are, the way the styles round them). */
 const MORE_COL = { pad: 21, size: 30, gap: 18 };
 const moreCol = (k: number) => ({ pad: Math.round(MORE_COL.pad * k) * 2, size: Math.round((MORE_COL.size * k) / 2) * 2, gap: Math.round(MORE_COL.gap * k) });
-/** Where the rail's chosen length is kept, and how close to its top or bottom edge the pointer (or
- *  a finger) has to be to drag that edge. */
-const CAP_KEY = 'planx-tools-cap', TOP_KEY = 'planx-tools-top', SIDE_KEY = 'planx-tools-right';
 
 /** Rail buttons with variants, opened by holding the button still. */
 const VARIANTS = new Set(['oval', 'draw']);
@@ -107,22 +104,9 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   // On a screen too short for the whole rail, the buttons that don't fit go under a "more" button
   // at its end, which opens them in a row beside it.
   const all = sort.visible();
-  const [fit, setFit] = useState(Infinity);
-  // How many of its elements the rail keeps, as chosen by dragging its top or bottom edge (the rest
-  // go under "more"); Infinity for all of them.
-  const [capKept, setCapKept] = useStoredNumber(CAP_KEY);
-  const cap = capKept && capKept > 0 ? capKept : Infinity;
-  const setCap = (n: number) => setCapKept(n === Infinity ? null : n);
-  // Where the rail's top is, once it's been moved (or made longer or shorter) by hand; till then
-  // (null) it's centred on the screen.
-  const [top, setTop] = useStoredNumber(TOP_KEY);
-  // Moved over past the middle of the screen, it stands at the right edge instead.
-  const [right, setRight] = useStoredNumber(SIDE_KEY);
-  // Room kept clear above the rail (the top bar, 12px off the edge and 12px from the rail) and as
-  // much below it, whatever size the panels are.
+  const rail = useRail(sort, all);
+  const fit = rail.fit;
   const [panelSize] = usePanelSize();
-  const railClear = 24 + (document.querySelector<HTMLElement>('.topbar')?.offsetHeight || 52);
-  useEffect(() => { document.documentElement.dataset.rail = right ? 'right' : ''; window.dispatchEvent(new Event('planx:side-panels')); }, [right, top]);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLButtonElement>(null), menuRef = useRef<HTMLDivElement | null>(null);
   const [, redraw] = useReducer((n: number) => n + 1, 0);
@@ -130,85 +114,6 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
     window.addEventListener('resize', redraw);
     return () => window.removeEventListener('resize', redraw);
   }, []);
-  /** The rail's height with its first n elements (and the "more" button when that's not all of them). */
-  const railHeight = (n: number): number | null => {
-    const el = sort.ref.current, btn = el?.querySelector<HTMLElement>('.fb');
-    if (!el || !btn) return null;
-    const cs = getComputedStyle(el), gap = parseFloat(cs.rowGap) || 0;
-    const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-    const ks = n >= all.length ? all : [...sort.visible(undefined, n), 'more'];
-    const sepH = el.querySelector<HTMLElement>('.tsep')?.offsetHeight ?? 7;
-    return pad + ks.reduce((t, k) => t + (isSeparator(k) ? sepH : btn.offsetHeight), 0) + gap * (ks.length - 1);
-  };
-  // Centred: clear of the top bar above and as far from the bottom edge. Put by hand: from there down
-  // to near the bottom.
-  const room = (from = top) => (from === null ? innerHeight - railClear * 2 : innerHeight - EDGE - from);
-  useLayoutEffect(() => {
-    if (railHeight(all.length) === null) return;
-    // On a screen grown shorter, a rail put low comes up to keep at least one button in sight.
-    const lowest = Math.max(EDGE, innerHeight - EDGE - railHeight(1)!);
-    if (top !== null && top > lowest) { setTop(lowest); return; }
-    let n = Math.min(all.length, cap);
-    while (n > 1 && railHeight(n)! > room()) n--;
-    const next = n >= all.length ? Infinity : n;
-    if (next !== fit) setFit(next);
-    // Measuring went through other lengths: the rail's list is the one on screen again.
-    else sort.visible(undefined, fit);
-  });
-  const grip = useGrip(sort.ref, {
-    // By its top edge the rail moves up or down the screen, from under the top bar to the bottom,
-    // and over to the right edge (or back) once past the middle.
-    top: {
-      cursor: 'move',
-      start: () => {
-        const r = sort.ref.current!.getBoundingClientRect();
-        // Moving it keeps its length: as many buttons as it shows now, whatever room it finds
-        // (only dragging its bottom edge changes that).
-        if (fit !== Infinity && fit < cap) setCap(fit);
-        return {
-          move: (dx, dy) => {
-            const t = Math.min(Math.max(r.top + dy, EDGE), Math.max(EDGE, innerHeight - EDGE - r.height));
-            const f = r.left + r.width / 2 + dx > innerWidth / 2;
-            // Not over another panel: it stays where it last could be.
-            const margin = right ? innerWidth - r.right : r.left;
-            if (overPanels({ left: f ? innerWidth - margin - r.width : margin, top: t, width: r.width, height: r.height }, sort.ref.current)) return;
-            setTop(t);
-            setRight(f ? 1 : null);
-          },
-          done: () => {},
-        };
-      },
-    },
-    // By its bottom edge it gets longer or shorter a button at a time, down to a single one: what no
-    // longer fits goes under "more". Its top stays where it is, and the edge keeps up with the pointer.
-    bottom: {
-      cursor: 'ns-resize',
-      start: () => {
-        const r = sort.ref.current!.getBoundingClientRect();
-        const heights = all.map((_, i) => railHeight(i + 1)!);
-        sort.visible(undefined, fit);
-        // A centred rail stays where it is from now on, its top held.
-        setTop(r.top);
-        return {
-          move: (_, dy) => {
-            const want = r.height + dy;
-            let best = 0, most = 0;
-            heights.forEach((h, i) => {
-              if (h > room(r.top)) return;
-              most = i;
-              // Not over another panel.
-              if (h > r.height && overPanels({ left: r.left, top: r.top, width: r.width, height: h }, sort.ref.current)) return;
-              // Of lengths alike (the last button in place of "more"), the one with more buttons.
-              if (Math.abs(h - want) <= Math.abs(heights[best] - want)) best = i;
-            });
-            // As long as the screen allows is all of it: on a taller screen it's longer again.
-            setCap(best >= most ? Infinity : best + 1);
-          },
-          done: () => {},
-        };
-      },
-    },
-  });
   const main = sort.visible(undefined, fit);
   const hidden = all.filter((k) => !main.includes(k) && !isSeparator(k));
   // A press anywhere but the row and its button closes it.
@@ -226,7 +131,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   // further buttons go into more columns.
   const railBottom = sort.ref.current?.getBoundingClientRect().bottom ?? innerHeight / 2;
   const col = moreCol(panelSize === 'l' ? 1 : panelScale());
-  const moreRows = Math.max(1, Math.min(hidden.length, Math.floor((railBottom - railClear - col.pad + col.gap) / (col.size + col.gap))));
+  const moreRows = Math.max(1, Math.min(hidden.length, Math.floor((railBottom - rail.clear - col.pad + col.gap) / (col.size + col.gap))));
   // The selection panel keeps clear of what opens beside the rail.
   useEffect(() => { window.dispatchEvent(new Event('planx:side-panels')); }, [moreOpen, variants]);
   // Held and then pulled away, the button is dragged, and its variants close.
@@ -265,10 +170,10 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
     <>
     <nav ref={sort.ref} className={`tools sortable ${docked ? 'docked' : ''} ${sort.sorting ? 'sorting' : ''}`} aria-label="Инструменты"
       {...sort.container}
-      style={top !== null ? { top, transform: 'none' } : undefined}
-      onPointerDown={(e) => { if (!grip.onPointerDown(e)) sort.container.onPointerDown(e); }}
-      onPointerMove={(e) => { if (!sort.sorting) grip.onPointerMove(e); sort.container.onPointerMove(e); }}
-      onPointerLeave={grip.onPointerLeave}>
+      style={rail.style}
+      onPointerDown={(e) => { if (!rail.grip.onPointerDown(e)) sort.container.onPointerDown(e); }}
+      onPointerMove={(e) => { if (!sort.sorting) rail.grip.onPointerMove(e); sort.container.onPointerMove(e); }}
+      onPointerLeave={rail.grip.onPointerLeave}>
       {main.map((k) => item(k))}
       {hidden.length > 0 && (
         <button ref={moreRef} className={`fb ${moreOpen ? 'on' : ''}`} title="Ещё" aria-label="Ещё" aria-expanded={moreOpen} data-nosort

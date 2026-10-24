@@ -1,18 +1,24 @@
-import { useState } from 'react';
-import { PanelIcon } from './PanelIcon';
-import { readText, writeText } from '../storage';
+import { useEffect, useRef, useState } from 'react';
+import { PanelIcon } from '../PanelIcon';
+import { readText, writeText } from '../../storage';
+import { onPanelsReset } from './store';
 
 export type Edge = 'left' | 'top' | 'right' | 'bottom';
 
-/** Whether a panel is stuck to its screen edge, remembered per panel in this browser. */
+/** Whether a panel is stuck to its screen edge, remembered per panel in this browser right away;
+ *  "Сбросить панели" unsticks it (and its undo sticks it back). */
 export function useDock(name: string): [boolean, () => void] {
   const key = `planx-dock-${name}`;
   const [docked, setDocked] = useState(() => readText(key) === '1');
-  const toggle = () => {
-    setDocked(!docked);
-    writeText(key, docked ? '0' : '1');
-  };
-  return [docked, toggle];
+  const set = (v: boolean) => { setDocked(v); writeText(key, v ? '1' : '0'); };
+  const now = useRef(docked);
+  now.current = docked;
+  useEffect(() => onPanelsReset(() => {
+    const was = now.current;
+    if (was) set(false);
+    return () => { if (was) set(true); };
+  }), []); // eslint-disable-line react-hooks/exhaustive-deps
+  return [docked, () => set(!docked)];
 }
 
 /** The chevron points at the edge the panel can stick to, and turns around once it has. */

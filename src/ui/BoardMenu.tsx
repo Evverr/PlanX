@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Glyph } from './glyphs';
 import dropIcon from './menu/drop.svg';
-import { usePanelSize, type PanelSize } from './grip';
+import { usePanelSize, type PanelSize } from './panels/size';
 
 /**
  * The board's menu, opened from the button after its name (Figma "Mol / Menu right"): first keeping
