@@ -241,7 +241,7 @@ export function hitItem(items: Item[], p: Point, zoom: number): Item | null {
     // A turned item is tested in its own frame, where it lies square.
     p = it.rot ? toLocal(it, at) : at;
     if (it.type === 'frame') {
-      const onLabel = p.x >= it.x && p.x <= it.x + it.w && p.y >= it.y - FRAME_LABEL && p.y < it.y;
+      const onLabel = !it.fold && p.x >= it.x && p.x <= it.x + it.w && p.y >= it.y - FRAME_LABEL && p.y < it.y;
       if (onLabel || pointInRect(p, it)) return it;
       continue;
     }

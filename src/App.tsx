@@ -16,6 +16,7 @@ import { readPictures } from './canvas/pictures';
 import { cellItem } from './model/table';
 import { useSortable } from './ui/sortable';
 import { Tooltips } from './ui/Tooltips';
+import { FramePeek } from './ui/FramePeek';
 import { BoardMenu } from './ui/BoardMenu';
 import type { Item, Link } from './model/types';
 
@@ -236,7 +237,8 @@ export function App({ boardId }: { boardId: string }) {
         }, innerWidth - 24, 'above')}
       </div>
 
-      {minimap && <Minimap editor={editor} items={board.list()} docked={docked} onClose={closeMinimap} />}
+      {minimap && <Minimap editor={editor} items={editor.shown()} docked={docked} onClose={closeMinimap} />}
+      <FramePeek editor={editor} board={board} />
       <Tooltips />
 
       {/* Typing in a table cell, the panel shows and sets that cell's own formatting. */}

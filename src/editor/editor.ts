@@ -4,7 +4,8 @@ import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, ROTATABLE, STROKABLE, uid } fr
 import type { Point, Rect } from '../canvas/geometry';
 import { angleOf, boundsOf, boxOf, center, hitItem, hitLink, nearestSide, nearInk, normRect, onAudioButton, onTaskBox, pointInRect, rectContains, rectsIntersect, resizedAt, sidePoint, SIDES, toLocal, turn } from '../canvas/geometry';
 import { clearTextCache, DOT_GAP, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
-import { fitHeight, font, itemTextHeight, mindSize } from '../canvas/text';
+import { fitHeight, foldedSize, font, itemTextHeight, mindSize } from '../canvas/text';
+import { frameButtons, type FrameButton } from '../model/frame';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCellFormat, withCount, withScale, withTableFormat, type TableLine } from '../model/table';
@@ -137,6 +138,8 @@ export class Editor {
   private spaceDown = false;
   private clipboard: string | null = null;
   private lastTap = { id: '', t: 0 };
+  /** The last press on the empty board, for a double one there to show everything. */
+  private lastEmpty = { t: 0, x: 0, y: 0 };
   private raf = 0;
   private ui: UIState;
   private uiListeners = new Set<() => void>();
@@ -308,9 +311,10 @@ export class Editor {
     }
     const plusFade = this.plusFade();
     if (plusFade > 0 && plusFade < 1) this.requestRender();
+    const shown = this.shown(), hidden = this.hidden();
     drawScene(this.ctx, {
-      items: this.board.list(),
-      links: this.board.linkList(),
+      items: shown,
+      links: hidden.size ? this.board.linkList().filter((l) => !hidden.has(l.from) && !hidden.has(l.to)) : this.board.linkList(),
       get: (id) => this.board.get(id),
       cam: this.cam,
       theme: this.theme,
@@ -359,14 +363,31 @@ export class Editor {
     this.zoomAt(this.width / 2, this.height / 2, factor);
   }
 
+  /** Brings everything on the board into view, in the part of the screen the panels leave free,
+   *  with 5% of it left empty at each side. */
   fit(): void {
-    const b = boundsOf(this.board.list());
+    const b = boundsOf(this.shown());
     const W = this.width, H = this.height;
     if (!b) { this.cam = { x: W / 2, y: H / 2, z: 1 }; this.camChanged(); return; }
-    const padX = W < 600 ? 70 : 110, padY = 100;
-    const z = clamp(Math.min((W - padX * 2) / b.w, (H - padY * 2) / b.h), MIN_Z, 1.4);
-    this.cam = { z, x: W / 2 - (b.x + b.w / 2) * z, y: H / 2 + 10 - (b.y + b.h / 2) * z };
+    const f = this.freeArea(), padX = f.w * 0.05, padY = f.h * 0.05;
+    const z = clamp(Math.min((f.w - padX * 2) / b.w, (f.h - padY * 2) / b.h), MIN_Z, 1.4);
+    this.cam = { z, x: f.x + f.w / 2 - (b.x + b.w / 2) * z, y: f.y + f.h / 2 - (b.y + b.h / 2) * z };
     this.camChanged();
+  }
+
+  /** The part of the screen clear of the panels: right of the tool rail, under the top bar and over
+   *  the bars at the bottom (the whole screen where that would leave too little). */
+  private freeArea(): Rect {
+    const W = this.width, H = this.height, at = this.canvas?.getBoundingClientRect() ?? { left: 0, top: 0 };
+    let left = 0, top = 0, bottom = H;
+    const seen = (q: string) => [...document.querySelectorAll(q)].map((el) => el.getBoundingClientRect()).filter((r) => r.width && r.height);
+    for (const r of seen('.tools')) if (r.left - at.left < W / 2) left = Math.max(left, r.right - at.left);
+    for (const r of seen('.bar')) {
+      if (r.top - at.top < H / 2) top = Math.max(top, r.bottom - at.top);
+      else bottom = Math.min(bottom, r.top - at.top);
+    }
+    const free = { x: left, y: top, w: W - left, h: bottom - top };
+    return free.w < W * 0.5 || free.h < H * 0.5 ? { x: 0, y: 0, w: W, h: H } : free;
   }
 
   /** The part of the board that's on screen, in board coordinates. */
@@ -561,8 +582,10 @@ export class Editor {
 
   deleteSelection(): void {
     if (!this.selection.size) return;
-    // A mind map node goes with everything branching from it.
-    this.board.remove([...this.selection, ...descendants(this.selection, this.board.list())]);
+    // A mind map node goes with everything branching from it, a folded frame with all it holds.
+    const items = this.board.list(), folded = items.filter((i) => i.fold && this.selection.has(i.id));
+    const held = folded.length ? [...this.carried(folded, items).keys()] : [];
+    this.board.remove([...this.selection, ...held, ...descendants(this.selection, items)]);
     this.setSelection([]);
   }
 
@@ -809,7 +832,7 @@ export class Editor {
         this.board.remove([id]);
         this.selection.delete(id);
       } else if (value !== (it.text ?? '')) {
-        const patch: Partial<Item> = { text: value, ...this.mindFit(it, value) };
+        const patch: Partial<Item> = { text: value, ...this.mindFit(it, value), ...(it.fold && { w: foldedSize(value).w }) };
         const h = fitHeight(it, value);
         if (h) Object.assign(patch, { h }, it.rot && resizedAt(it, it.w, h));
         this.board.update(id, patch);
@@ -962,7 +985,7 @@ export class Editor {
     const w = this.toWorld(sp.x, sp.y);
     const items = this.board.list();
     // A frame takes clicks anywhere on its empty area, but links drawn across it come first.
-    let hit = hitItem(items, w, this.cam.z);
+    let hit = hitItem(this.shown(), w, this.cam.z);
     const link = hit && hit.type !== 'frame' ? null : hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z);
     if (link) hit = null;
 
@@ -970,6 +993,18 @@ export class Editor {
     // resize handle, link dots, turning corner, mind map buttons) or on a table's line.
     const picked = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
     const onControl = !!picked && !this.editingId && (this.onHandle(picked, w) || !!this.dotAt(picked, w) || this.onRotate(picked, w) || !!this.plusAt(picked, w));
+    const empty = this.tool === 'select' && e.button === 0 && !this.spaceDown && !e.shiftKey && !hit && !link && !onControl
+      && !this.tableLineAt(w, hit) && !this.editingId;
+    // Pressed twice on the empty board: everything on it comes into view, as with the "show all" button.
+    if (empty) {
+      const now = performance.now(), last = this.lastEmpty;
+      this.lastEmpty = { t: now, x: sp.x, y: sp.y };
+      if (now - last.t < 380 && Math.hypot(sp.x - last.x, sp.y - last.y) < 12) {
+        this.lastEmpty = { t: 0, x: 0, y: 0 };
+        this.fit();
+        return;
+      }
+    }
     const touchPan = e.pointerType === 'touch' && this.tool === 'select' && !hit && !link && !onControl && !this.tableLineAt(w, hit);
     if (e.button === 1 || this.spaceDown || this.tool === 'hand' || touchPan) {
       // A finger on the empty board pans it; let go without moving, it's a tap that drops the selection.
@@ -1068,6 +1103,13 @@ export class Editor {
       return;
     }
     if (this.pickedLines.length) { this.pickedLines = []; this.requestRender(); }
+    // A frame's buttons: fold it, unfold it, look at what it holds.
+    const fb = e.shiftKey || (hit && hit.type !== 'frame') ? null : this.frameButtonAt(w);
+    if (fb) {
+      if (fb.kind === 'peek') window.dispatchEvent(new CustomEvent('planx:peek', { detail: fb.id }));
+      else this.setFolded(fb.id, fb.kind === 'fold');
+      return;
+    }
     // A task's checkbox ticks it off (or back on) instead of picking the task up.
     if (hit?.type === 'task' && !e.shiftKey && onTaskBox(hit, w, this.cam.z)) {
       this.board.update(hit.id, { done: hit.done ? undefined : true });
@@ -1133,6 +1175,74 @@ export class Editor {
     return orig;
   }
 
+  /** Everything folded frames hold, out of sight (frames in them, and all those hold, too). */
+  private hidden(items = this.board.list()): Set<string> {
+    const out = new Set<string>();
+    const folded = items.filter((i) => i.type === 'frame' && i.fold);
+    for (const f of folded) for (const id of this.carried([f], items).keys()) if (id !== f.id) out.add(id);
+    return out;
+  }
+
+  /** The items in sight: all but what folded frames hold. */
+  shown(): Item[] {
+    const items = this.board.list(), hidden = this.hidden(items);
+    return hidden.size ? items.filter((i) => !hidden.has(i.id)) : items;
+  }
+
+  /** The frame button under the point, of the topmost frame in sight that has one there. */
+  private frameButtonAt(w: Point): { id: string; kind: FrameButton } | null {
+    const items = this.shown(), pad = this.reach(4);
+    for (let i = items.length - 1; i >= 0; i--) {
+      const it = items[i];
+      if (it.type !== 'frame') continue;
+      const p = toLocal(it, w);
+      const b = frameButtons(it, this.cam.z).find((b) => pointInRect(p, { x: b.x - pad, y: b.y - pad, w: b.s + pad * 2, h: b.s + pad * 2 }));
+      if (b) return { id: it.id, kind: b.kind };
+    }
+    return null;
+  }
+
+  /** Folds a frame into a bar with its title, what it holds hidden away, or unfolds it again. */
+  setFolded(id: string, fold: boolean): void {
+    const f = this.board.get(id);
+    if (f?.type !== 'frame' || !!f.fold === fold) return;
+    if (fold) {
+      // It keeps a list of what it holds from then on, so nothing new slips in under the bar.
+      const members = this.membersOf(f, this.board.list());
+      this.board.update(id, { fold: { w: f.w, h: f.h }, ...foldedSize(f.text ?? ''), members });
+      const hidden = this.hidden();
+      this.setSelection([...this.selection].filter((s) => !hidden.has(s)));
+    } else {
+      this.board.update(id, { w: f.fold!.w, h: f.fold!.h, fold: undefined });
+    }
+    this.requestRender();
+  }
+
+  /**
+   * What the look into a folded frame shows: the frame as it is unfolded, with what it holds, fitted
+   * into a w × h view with `pad` round it.
+   */
+  peekScene(id: string, w: number, h: number, dpr: number, pad = 24): Parameters<typeof drawScene>[1] | null {
+    const f = this.board.get(id);
+    if (f?.type !== 'frame' || !this.theme) return null;
+    const items = this.board.list(), held = this.carried([f], items);
+    const open: Item = { ...f, ...(f.fold ?? {}), fold: undefined, text: '' };
+    // Frames inside it, folded or not, are shown as they are; what they hold stays hidden if folded.
+    const inner = this.hidden(items.filter((i) => held.has(i.id) && i.id !== f.id));
+    const shown = [open, ...items.filter((i) => held.has(i.id) && i.id !== f.id && !inner.has(i.id))];
+    const ids = new Set(shown.map((i) => i.id));
+    const z = Math.min((w - pad * 2) / open.w, (h - pad * 2) / open.h);
+    return {
+      items: shown,
+      links: this.board.linkList().filter((l) => ids.has(l.from) && ids.has(l.to)),
+      get: (k) => (k === id ? open : this.board.get(k)),
+      cam: { x: (w - open.w * z) / 2 - open.x * z, y: (h - open.h * z) / 2 - open.y * z, z },
+      theme: this.theme, width: w, height: h, dpr,
+      still: true, selection: new Set(), editingId: null, marquee: null, linkPreview: null, peers: [], showHandle: false, byFinger: false,
+      hotDot: null, hotPlus: null, plusFade: 0, mindMove: null, tableLines: [], editingCell: null, guides: [], pickedCells: null, stroke: null,
+    };
+  }
+
   /** What a frame holds: what was put in it, or, in a frame from before frames kept a list,
    *  everything lying inside. */
   private membersOf(f: Item, items: Item[]): string[] {
@@ -1157,7 +1267,7 @@ export class Editor {
       const c = center(it);
       const inside = it.type === 'frame' ? new Set(this.carried([it], items).keys()) : new Set([id]);
       const home = frames
-        .filter((f) => !inside.has(f.id) && pointInRect(toLocal(f, c), f) && (it.type !== 'frame' || f.w * f.h > it.w * it.h))
+        .filter((f) => !f.fold && !inside.has(f.id) && pointInRect(toLocal(f, c), f) && (it.type !== 'frame' || f.w * f.h > it.w * it.h))
         .sort((a, b) => a.w * a.h - b.w * b.h)[0];
       for (const f of frames) {
         const list = held.get(f.id)!, has = list.includes(id);
@@ -1179,12 +1289,12 @@ export class Editor {
     const it = this.board.get(id);
     if (!it) return;
     if (it.type !== 'frame') { this.settle([id]); return; }
-    const items = this.board.list();
-    this.settle([...items.filter((i) => i.id !== id && pointInRect(center(i), it)).map((i) => i.id), id], id);
+    const hidden = this.hidden();
+    this.settle([...this.board.list().filter((i) => i.id !== id && !hidden.has(i.id) && pointInRect(center(i), it)).map((i) => i.id), id], id);
   }
 
   private onHandle(it: Item, w: Point): boolean {
-    if (it.type === 'mind') return false;
+    if (it.type === 'mind' || it.fold) return false;
     const hs = this.reach((HANDLE + 6) / 2) * 2, off = 3 / this.cam.z;
     return pointInRect(toLocal(it, w), { x: it.x + it.w + off - hs / 2, y: it.y + it.h + off - hs / 2, w: hs, h: hs });
   }
@@ -1203,7 +1313,7 @@ export class Editor {
 
   /** Whether the point is just outside the item's top right corner, where it is turned. */
   private onRotate(it: Item, w: Point): boolean {
-    if (!ROTATABLE.includes(it.type)) return false;
+    if (!ROTATABLE.includes(it.type) || it.fold) return false;
     const p = toLocal(it, w);
     return !pointInRect(p, it) && Math.hypot(p.x - (it.x + it.w), p.y - it.y) <= this.reach(ROTATE_ZONE);
   }
@@ -1261,7 +1371,7 @@ export class Editor {
           const bs = moving.map(boxOf), view = this.viewRect();
           const x = Math.min(...bs.map((b) => b.x)), y = Math.min(...bs.map((b) => b.y));
           const box = bs.length ? { x, y, w: Math.max(...bs.map((b) => b.x + b.w)) - x, h: Math.max(...bs.map((b) => b.y + b.h)) - y } : null;
-          const others = this.board.list().filter((i) => !g.orig.has(i.id) && i.type !== 'ink').map(boxOf).filter((r) => rectsIntersect(r, view));
+          const others = this.shown().filter((i) => !g.orig.has(i.id) && i.type !== 'ink').map(boxOf).filter((r) => rectsIntersect(r, view));
           if (box) ({ dx: sx, dy: sy, guides: g.guides } = snapToGuides(box, others, GUIDE_SNAP / this.cam.z));
         }
         this.board.transact(() => {
@@ -1331,14 +1441,14 @@ export class Editor {
         return;
       }
       case 'mindMove': {
-        const t = hitItem(this.board.list(), w, this.cam.z);
+        const t = hitItem(this.shown(), w, this.cam.z);
         g.to = w;
         g.target = t && canMoveTo(g.id, t.id, this.board.list()) ? t.id : null;
         this.requestRender();
         return;
       }
       case 'link': {
-        const t = hitItem(this.board.list(), w, this.cam.z);
+        const t = hitItem(this.shown(), w, this.cam.z);
         g.to = w;
         g.target = t && t.id !== g.from ? t.id : null;
         this.requestRender();
@@ -1360,7 +1470,7 @@ export class Editor {
       case 'marquee': {
         g.rect = normRect(g.start, w);
         const next = new Set(g.base);
-        for (const it of this.board.list()) {
+        for (const it of this.shown()) {
           const inside = it.type === 'frame' ? rectContains(g.rect, boxOf(it)) : rectsIntersect(g.rect, boxOf(it));
           if (inside) next.add(it.id);
         }
@@ -1517,19 +1627,19 @@ export class Editor {
     const dot = single && !this.editingId ? this.dotAt(single, w) : null;
     if (dot !== this.hotDot) { this.hotDot = dot; this.requestRender(); }
     let cursor = '';
-    const line = this.editingId || dot ? null : this.tableLineAt(w, hitItem(this.board.list(), w, this.cam.z));
+    const line = this.editingId || dot ? null : this.tableLineAt(w, hitItem(this.shown(), w, this.cam.z));
     const same = line && this.hotLine && line.id === this.hotLine.id && line.axis === this.hotLine.axis && line.index === this.hotLine.index;
     if (!same && (line || this.hotLine)) { this.hotLine = line; this.requestRender(); }
     const plus = single ? this.plusAt(single, w) : null;
     if (plus !== this.hotPlus) { this.hotPlus = plus; this.requestRender(); }
-    if (plus) cursor = 'pointer';
+    if (plus || this.frameButtonAt(w)) cursor = 'pointer';
     else if (dot) cursor = 'crosshair';
     else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
     else if (single && this.onRotate(single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);
     else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
     else if (hitLink(this.board.linkList(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
     else {
-      const hit = hitItem(this.board.list(), w, this.cam.z);
+      const hit = hitItem(this.shown(), w, this.cam.z);
       if ((hit?.type === 'task' && onTaskBox(hit, w, this.cam.z)) || (hit?.type === 'audio' && onAudioButton(hit, w))) cursor = 'pointer';
       else if (hit) cursor = alt ? 'copy' : 'move';
     }
@@ -1540,7 +1650,7 @@ export class Editor {
   private tableLineAt(w: Point, hit: Item | null): TableLine | null {
     if (hit && hit.type !== 'table' && hit.type !== 'frame') return null;
     // A finger gets a wider band, but not so wide a small cell is all lines.
-    const tol = (this.byFinger ? 10 : 5) / this.cam.z, items = this.board.list();
+    const tol = (this.byFinger ? 10 : 5) / this.cam.z, items = this.shown();
     for (let i = items.length - 1; i >= 0; i--) {
       const it = items[i];
       if (it.type !== 'table') continue;
@@ -1591,7 +1701,7 @@ export class Editor {
         case 'KeyX': if (this.copy()) this.deleteSelection(); return;
         case 'KeyV': e.preventDefault(); this.paste(); return;
         case 'KeyD': e.preventDefault(); this.duplicate(); return;
-        case 'KeyA': e.preventDefault(); this.setSelection(this.board.list().map((i) => i.id)); return;
+        case 'KeyA': e.preventDefault(); this.setSelection(this.shown().map((i) => i.id)); return;
         case 'KeyG': e.preventDefault(); this.frameSelection(); return;
       }
       return;

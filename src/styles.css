@@ -346,6 +346,7 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 .text-edit.text, .text-edit.table { color: var(--ink); }
 .text-edit.mind { text-align: center; color: var(--ink); }
 .text-edit.frame { color: var(--muted); font-weight: 600; background: var(--surface); border-radius: 4px; }
+.text-edit.frame.folded { color: var(--ink); background: transparent; }
 .text-edit.nofill { color: var(--ink); }
 
 @media (max-width: 640px) {
@@ -435,3 +436,14 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 .cp-code input { flex: 1; min-width: 0; height: 28px; box-sizing: border-box; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px;
   background: var(--bg); color: var(--ink); font: 500 12px/1 "Inter", var(--ui); text-transform: uppercase; }
 
+
+/* A look into a folded frame: a popup over the dimmed board, its title and buttons over the frame's
+   picture (see ui/FramePeek.tsx). */
+.peek-overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(12, 16, 24, .42);
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); animation: fade-in .16s ease-out; }
+.peek { display: flex; flex-direction: column; background: var(--surface); border-radius: 16px; overflow: hidden;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .28); animation: peek-in .18s ease-out; }
+.peek-head { display: flex; align-items: center; gap: 8px; height: 56px; box-sizing: border-box; padding: 0 8px 0 20px; }
+.peek-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 15px/1 "Inter", var(--ui); color: var(--ink); }
+.peek canvas { display: block; }
+@keyframes peek-in { from { transform: scale(.96); opacity: 0; } }

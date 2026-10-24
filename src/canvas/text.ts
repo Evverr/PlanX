@@ -1,5 +1,6 @@
 import { baseWeight, DEFAULTS, type Item, type ListKind } from '../model/types';
 import { TASK_INSET } from './geometry';
+import { FOLD_GAP, FOLD_FS, FOLD_H, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP, FOLD_TITLE_MAX } from '../model/frame';
 
 export const FONT_FAMILY = 'Onest, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 export const LINE_HEIGHT = 1.28;
@@ -116,6 +117,14 @@ export function mindSize(it: Item, text = it.text ?? ''): { w: number; h: number
   const widest = Math.max(...(text || ' ').split('\n').map((l) => measureCtx!.measureText(l).width));
   const inner = Math.ceil(Math.min(MIND_MAX_W, Math.max(MIND_MIN_W, widest + 2)));
   return { w: inner + padX * 2, h: Math.round((measureTextHeight(text || ' ', inner, fs, st) + pad * 2) * tall) };
+}
+
+/** A folded frame's size for its title: the title, then its two buttons. */
+export function foldedSize(title: string): { w: number; h: number } {
+  measureCtx ??= typeof document === 'undefined' ? null : document.createElement('canvas').getContext('2d');
+  let tw = title.length * 10;
+  if (measureCtx) { measureCtx.font = font(FOLD_FS, 600); tw = measureCtx.measureText(title).width; }
+  return { w: Math.ceil(FOLD_PAD + Math.min(FOLD_TITLE_MAX, tw) + FOLD_TITLE_GAP + FOLD_ICON * 2 + FOLD_GAP + FOLD_RIGHT), h: FOLD_H };
 }
 
 /** Height a text item or task needs for its text; other items have none to fit. */
