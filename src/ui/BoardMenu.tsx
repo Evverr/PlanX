@@ -1,14 +1,16 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Glyph } from './glyphs';
 import dropIcon from './menu/drop.svg';
+import { resetPanels, savePanels } from './grip';
 
 /**
- * The board's menu, opened from the button after its name (Figma "Mol / Menu right"), for now with
- * the mockup's items as they are: a row can end in a switch (two states, flipped by a click) or an
+ * The board's menu, opened from the button after its name (Figma "Mol / Menu right"): first keeping
+ * the panels as they've been put (or putting them back as by default), then for now the mockup's
+ * items as they are: a row can end in a switch (two states, flipped by a click) or an
  * arrow for a further level, and a line splits the groups. Icons come from the set (picked at
  * random for now). The first rows' text is a shade lighter, as in the mockup.
  */
-export function BoardMenu({ level = 0 }: { level?: number }) {
+export function BoardMenu({ level = 0, onDone }: { level?: number; onDone?: (note: string) => void }) {
   const [on, setOn] = useState(false);
   // A row with an arrow opens the same menu again beside it while the pointer is on it (or its menu).
   const [sub, setSub] = useState(false);
@@ -41,6 +43,11 @@ export function BoardMenu({ level = 0 }: { level?: number }) {
   };
   return (
     <div ref={ref} className={`board-menu ${level ? 'sub' : ''} ${leftward ? 'leftward' : ''} ${anyIcon ? '' : 'plain'}`} role="menu" data-nosort>
+      {level === 0 && <>
+        {row('save-template', 'Сохранить панели', { onClick: () => { savePanels(); onDone?.('Панели сохранены'); } })}
+        {row('refresh-l', 'Сбросить панели', { onClick: () => { resetPanels(); onDone?.('Панели сброшены'); } })}
+        <div className="menu-line" />
+      </>}
       {row('link-settings', 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
       {row('change-order', 'Оглавление', { light: true, more: true, end: <img className="menu-more" src={dropIcon} alt="" width={24} height={24} /> })}
       {row('broom', 'Преобразовать текст в таблицу')}

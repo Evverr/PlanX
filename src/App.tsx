@@ -111,14 +111,12 @@ export function App({ boardId }: { boardId: string }) {
   const EDGE_GAP = 14;
   /** A bar's grips: `from` is the end it stands from, whose drag moves it; the other end resizes it. */
   const barGrips = (ref: React.RefObject<HTMLElement | null>, from: 'left' | 'right', at: {
-    setPos: (v: number | null, keep?: boolean) => void; setW: (v: number | null, keep?: boolean) => void;
-    setFar: (v: number | null, keep?: boolean) => void; far: boolean; high: boolean;
+    setPos: (v: number | null) => void; setW: (v: number | null) => void; setFar: (v: number | null) => void; high: boolean;
   }): Grips => ({
     [from]: {
       cursor: 'move',
       start: () => {
         const r = ref.current!.getBoundingClientRect();
-        let pos = from === 'left' ? r.left : innerWidth - r.right, far = at.far;
         return {
           move: (dx: number, dy: number) => {
             const p = Math.min(Math.max((from === 'left' ? r.left + dx : innerWidth - r.right - dx), EDGE_GAP), Math.max(EDGE_GAP, innerWidth - EDGE_GAP - r.width));
@@ -129,12 +127,10 @@ export function App({ boardId }: { boardId: string }) {
             const onTop = at.high !== f, gap = docked ? 0 : EDGE_GAP;
             const place = { left: from === 'left' ? p : innerWidth - p - r.width, top: onTop ? gap : innerHeight - gap - r.height, width: r.width, height: r.height };
             if (overPanels(place, ref.current)) return;
-            pos = p;
-            far = f;
-            at.setPos(pos);
-            at.setFar(far ? 1 : null);
+            at.setPos(p);
+            at.setFar(f ? 1 : null);
           },
-          done: () => { at.setPos(pos, true); at.setFar(far ? 1 : null, true); },
+          done: () => {},
         };
       },
     },
@@ -153,14 +149,14 @@ export function App({ boardId }: { boardId: string }) {
           // Settles at the length it shows; with nothing left over, it's as long as it needs.
           done: () => {
             const el = ref.current;
-            at.setW(el?.querySelector(':scope > .more-wrap') ? el.getBoundingClientRect().width : null, true);
+            at.setW(el?.querySelector(':scope > .more-wrap') ? el.getBoundingClientRect().width : null);
           },
         };
       },
     },
   });
-  const topGrip = useGrip(topSort.ref, barGrips(topSort.ref, 'left', { setPos: setTopX, setW: setTopW, setFar: setTopLow, far: !!topLow, high: true }));
-  const zoomGrip = useGrip(zoomSort.ref, barGrips(zoomSort.ref, 'right', { setPos: setZoomR, setW: setZoomW, setFar: setZoomHigh, far: !!zoomHigh, high: false }));
+  const topGrip = useGrip(topSort.ref, barGrips(topSort.ref, 'left', { setPos: setTopX, setW: setTopW, setFar: setTopLow, high: true }));
+  const zoomGrip = useGrip(zoomSort.ref, barGrips(zoomSort.ref, 'right', { setPos: setZoomR, setW: setZoomW, setFar: setZoomHigh, high: false }));
   const topSpace = Math.min(innerWidth - (topX ?? EDGE_GAP) - EDGE_GAP, topW ?? Infinity);
   const zoomSpace = Math.min(innerWidth - (zoomR ?? EDGE_GAP) - EDGE_GAP, zoomW ?? Infinity);
   const closeMinimap = useCallback(() => setMinimap(false), []);
@@ -264,7 +260,7 @@ export function App({ boardId }: { boardId: string }) {
               <button className={`ib ${menuOpen ? 'on' : ''}`} title="Меню" aria-label="Меню" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
                 <PanelIcon name="burger" />
               </button>
-              {menuOpen && <BoardMenu />}
+              {menuOpen && <BoardMenu onDone={(note) => { setMenuOpen(false); setToast(note); }} />}
             </div>
           ),
           sep3: <div className="sep" />,

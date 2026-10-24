@@ -110,20 +110,15 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   const [fit, setFit] = useState(Infinity);
   // How many of its elements the rail keeps, as chosen by dragging its top or bottom edge (the rest
   // go under "more"); Infinity for all of them.
-  const [cap, setCap] = useState(() => {
-    try { const n = Number(localStorage.getItem(CAP_KEY)); return n > 0 ? n : Infinity; } catch { return Infinity; }
-  });
+  const [capKept, setCapKept] = useStoredNumber(CAP_KEY);
+  const cap = capKept && capKept > 0 ? capKept : Infinity;
+  const setCap = (n: number) => setCapKept(n === Infinity ? null : n);
   // Where the rail's top is, once it's been moved (or made longer or shorter) by hand; till then
   // (null) it's centred on the screen.
-  const [top, setTop] = useState<number | null>(() => {
-    try { const v = localStorage.getItem(TOP_KEY); return v === null ? null : Number(v) || null; } catch { return null; }
-  });
+  const [top, setTop] = useStoredNumber(TOP_KEY);
   // Moved over past the middle of the screen, it stands at the right edge instead.
   const [right, setRight] = useStoredNumber(SIDE_KEY);
   useEffect(() => { document.documentElement.dataset.rail = right ? 'right' : ''; }, [right]);
-  const remember = (key: string, v: number | null) => {
-    try { if (v === null || v === Infinity) localStorage.removeItem(key); else localStorage.setItem(key, String(Math.round(v))); } catch { /* just won't be remembered */ }
-  };
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLButtonElement>(null), menuRef = useRef<HTMLDivElement | null>(null);
   const [, redraw] = useReducer((n: number) => n + 1, 0);
@@ -162,7 +157,6 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
       cursor: 'move',
       start: () => {
         const r = sort.ref.current!.getBoundingClientRect();
-        let at = r.top, far = !!right;
         return {
           move: (dx, dy) => {
             const t = Math.min(Math.max(r.top + dy, RAIL_EDGE), Math.max(RAIL_EDGE, innerHeight - RAIL_EDGE - r.height));
@@ -170,12 +164,10 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
             // Not over another panel: it stays where it last could be.
             const margin = right ? innerWidth - r.right : r.left;
             if (overPanels({ left: f ? innerWidth - margin - r.width : margin, top: t, width: r.width, height: r.height }, sort.ref.current)) return;
-            at = t;
-            far = f;
-            setTop(at);
-            setRight(far ? 1 : null);
+            setTop(t);
+            setRight(f ? 1 : null);
           },
-          done: () => { remember(TOP_KEY, at); setRight(far ? 1 : null, true); },
+          done: () => {},
         };
       },
     },
@@ -189,8 +181,6 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
         sort.visible(undefined, fit);
         // A centred rail stays where it is from now on, its top held.
         setTop(r.top);
-        remember(TOP_KEY, r.top);
-        let chosen = cap;
         return {
           move: (_, dy) => {
             const want = r.height + dy;
@@ -203,10 +193,9 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
               if (Math.abs(h - want) < Math.abs(heights[best] - want)) best = i;
             });
             // As long as the screen allows is all of it: on a taller screen it's longer again.
-            chosen = best >= most ? Infinity : best + 1;
-            setCap(chosen);
+            setCap(best >= most ? Infinity : best + 1);
           },
-          done: () => remember(CAP_KEY, chosen),
+          done: () => {},
         };
       },
     },
