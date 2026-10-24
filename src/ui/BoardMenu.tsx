@@ -4,8 +4,8 @@ import dropIcon from './menu/drop.svg';
 
 /**
  * The board's menu, opened from the button after its name (Figma "Mol / Menu right"): first keeping
- * the panels as they've been put (or putting them back as by default), then for now the mockup's
- * items as they are: a row can end in a switch (two states, flipped by a click) or an
+ * the panels as they've been put (or putting them back as by default), then the profile and the
+ * settings (not there yet), then for now the mockup's items as they are: a row can end in a switch (two states, flipped by a click) or an
  * arrow for a further level, and a line splits the groups. Icons come from the set (picked at
  * random for now). The first rows' text is a shade lighter, as in the mockup.
  */
@@ -45,6 +45,9 @@ export function BoardMenu({ level = 0, onSave, onReset }: { level?: number; onSa
       {level === 0 && <>
         {row('save-template', 'Сохранить панели', { onClick: onSave })}
         {row('refresh-l', 'Сбросить панели', { onClick: onReset })}
+        <div className="menu-line" />
+        {row('user-profile', 'Профиль')}
+        {row('settings-l', 'Настройки')}
         <div className="menu-line" />
       </>}
       {row('link-settings', 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
