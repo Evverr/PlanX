@@ -175,9 +175,18 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
   // Once it has lifted, the pointer is followed on the window, so it can leave the panel; nothing
   // is captured, so letting go in place still lands on the button as a click.
   const dragMove = (e: PointerEvent) => {
-    if (!drag || !els.current.has(drag.key)) return;
+    if (!drag) return;
     const at = pos(e);
     const moved = drag.moved || Math.abs(at - drag.at0) > HOLD_SLOP || Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > HOLD_SLOP * 3;
+    // Over the open "more" popover, it goes in there.
+    if (moved && overMore(e)) { intoMore(drag.key, e, drag.before); return; }
+    // Gone from the panel (into "more", or back where it was when it went out over the board):
+    // over the panel again, it takes a place there.
+    if (!els.current.has(drag.key)) {
+      if (overBar(e)) ontoBar(drag.key, e, drag.before, drag.grab, drag.x0, drag.y0);
+      else setDrag({ ...drag, moved, x: e.clientX, y: e.clientY });
+      return;
+    }
     const r = ref.current!.getBoundingClientRect();
     const out = !!dropOut && moved && (e.clientX < r.left - OUT_MARGIN || e.clientX > r.right + OUT_MARGIN || e.clientY < r.top - OUT_MARGIN || e.clientY > r.bottom + OUT_MARGIN);
     if (out) {
@@ -206,17 +215,54 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
   const dragEnd = () => {
     if (!drag) return;
     // Settle into the slot from wherever it was let go, and don't count the release as a click.
-    const el = els.current.get(drag.key)!;
-    const from = el.style.transform;
-    el.style.transform = '';
-    el.style.opacity = '';
-    if (!drag.out) el.animate([{ transform: from }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
+    const el = els.current.get(drag.key);
+    if (el) {
+      const from = el.style.transform;
+      el.style.transform = '';
+      el.style.opacity = '';
+      if (!drag.out) el.animate([{ transform: from }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
+    }
     setDrag(null);
     if (!drag.moved) return;
     if (drag.out) dropOut!.drop(drag.key, { x: drag.x, y: drag.y });
     else try { localStorage.setItem(storageKey, JSON.stringify(order)); } catch { /* just won't be remembered */ }
     swallowClick.current = true;
     setTimeout(() => { swallowClick.current = false; }, 0);
+  };
+
+  const inside = (r: DOMRect | undefined, e: { clientX: number; clientY: number }) =>
+    !!r && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  const overBar = (e: { clientX: number; clientY: number }) => inside(ref.current?.getBoundingClientRect(), e);
+  const overMore = (e: { clientX: number; clientY: number }) => inside(moreZone.current?.getBoundingClientRect(), e);
+  /** Lets go of whatever transform a button was dragged with. */
+  const unlift = (el: HTMLElement | undefined) => { if (el) { el.style.transform = ''; el.style.opacity = ''; } };
+  /** Puts the dragged button on the panel, among the buttons either side of the pointer (never last:
+   *  what's last on a full panel is what goes into "more"), and drags it on along the panel. */
+  const ontoBar = (key: string, e: { clientX: number; clientY: number }, before: string[], grab: number, x0: number, y0: number) => {
+    const at = pos(e), list = shown.current.filter((k) => k !== key && els.current.has(k));
+    const next = list.find((k) => naturalStart(k) + size(els.current.get(k)!) / 2 > at) ?? list[list.length - 1];
+    const rest = order.filter((k) => k !== key);
+    rest.splice(next ? rest.indexOf(next) : 0, 0, key);
+    unlift(moreEls.current.get(key));
+    setOrder(rest);
+    setMoreDrag(null);
+    setDrag({ key, grab, at, at0: axis === 'y' ? y0 : x0, moved: true, out: false, x: e.clientX, y: e.clientY, x0, y0, before });
+  };
+  /** Puts the dragged button in the "more" popover, before the one under the pointer (never first:
+   *  a place freed on the panel goes to what's first there), and drags it on in there. */
+  const intoMore = (key: string, e: { clientX: number; clientY: number }, before: string[]) => {
+    const el = els.current.get(key), r = el?.getBoundingClientRect();
+    const list = moreShown.current.filter((k) => k !== key && moreEls.current.has(k));
+    const hit = list.findIndex((k) => { const sl = slot(moreEls.current.get(k)!); return e.clientX >= sl.x && e.clientX <= sl.x + sl.w && e.clientY >= sl.y && e.clientY <= sl.y + sl.h; });
+    const rest = order.filter((k) => k !== key);
+    if (list.length) {
+      const i = hit > 0 ? rest.indexOf(list[hit]) : rest.indexOf(list[hit === 0 ? 0 : list.length - 1]) + 1;
+      rest.splice(i, 0, key);
+    } else rest.push(key);
+    unlift(el);
+    setOrder(rest);
+    setDrag(null);
+    setMoreDrag({ key, gx: r ? r.width / 2 : 15, gy: r ? r.height / 2 : 15, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: true, out: false, before });
   };
 
   // Where a popover button's slot is on screen.
@@ -261,30 +307,16 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     const r = zone.getBoundingClientRect();
     const out = !!dropOut && moved && (e.clientX < r.left - OUT_MARGIN || e.clientX > r.right + OUT_MARGIN || e.clientY < r.top - OUT_MARGIN || e.clientY > r.bottom + OUT_MARGIN);
     const next = { ...d, x: e.clientX, y: e.clientY, moved, out };
-    // Brought onto the panel itself, it takes its place there, among the buttons either side of the
-    // pointer, and is dragged on along the panel from then on.
-    const bar = ref.current?.getBoundingClientRect();
-    if (bar && moved && e.clientX >= bar.left && e.clientX <= bar.right && e.clientY >= bar.top && e.clientY <= bar.bottom) {
-      const at = pos(e), list = shown.current.filter((k) => k !== d.key && els.current.has(k));
-      const before = list.find((k) => naturalStart(k) + size(els.current.get(k)!) / 2 > at);
-      const rest = order.filter((k) => k !== d.key);
-      // Past the last one, it still goes before it: what's last on a full panel is what goes into "more".
-      const anchor = before ?? list[list.length - 1];
-      rest.splice(anchor ? rest.indexOf(anchor) : 0, 0, d.key);
-      const el = moreEls.current.get(d.key);
-      if (el) { el.style.transform = ''; el.style.opacity = ''; }
-      setOrder(rest);
-      setMoreDrag(null);
-      setDrag({ key: d.key, grab: axis === 'y' ? d.gy : d.gx, at, at0: axis === 'y' ? d.y0 : d.x0, moved: true, out: false, x: e.clientX, y: e.clientY, x0: d.x0, y0: d.y0, before: d.before });
-      return;
-    }
+    // Brought onto the panel itself, it takes its place there and is dragged on along the panel.
+    if (moved && overBar(e)) { ontoBar(d.key, e, d.before, axis === 'y' ? d.gy : d.gx, d.x0, d.y0); return; }
     if (out) {
       if (!d.out) setOrder(d.before);
       setMoreDrag(next);
       return;
     }
     // The lifted button's middle over another's slot: it goes there, the rest shifting along.
-    const el = moreEls.current.get(d.key)!;
+    const el = moreEls.current.get(d.key);
+    if (!el) { setMoreDrag(next); return; }
     const cx = e.clientX - d.gx + el.offsetWidth / 2, cy = e.clientY - d.gy + el.offsetHeight / 2;
     const other = moreShown.current.find((k) => {
       const o = k !== d.key && moreEls.current.get(k);
