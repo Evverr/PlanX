@@ -648,3 +648,9 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 :root[data-compact][data-rail="right"] .tools.docked { left: calc(100% - var(--c-rail)); border-radius: var(--c-r) 0 0 var(--c-r); }
 :root[data-compact][data-rail="right"] :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(24px + var(--c-rail) + env(safe-area-inset-right, 0px)); }
 :root[data-compact][data-rail="right"] .tools.docked ~ :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(12px + var(--c-rail) + env(safe-area-inset-right, 0px)); }
+/* Stuck to the screen's edges, the panels lose the corners on that side at every size. */
+:root[data-compact] .topbar.docked { border-radius: 0 0 var(--c-r) var(--c-r); }
+:root[data-compact] :is(.zoom, .panel).docked { border-radius: var(--c-r) var(--c-r) 0 0; }
+:root[data-compact] .panel.docked.raised { border-radius: var(--c-r); }
+:root[data-compact][data-topbar="low"] .topbar.docked { border-radius: var(--c-r) var(--c-r) 0 0; }
+:root[data-compact][data-zoom="high"] .zoom.docked { border-radius: 0 0 var(--c-r) var(--c-r); }
