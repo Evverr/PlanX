@@ -479,45 +479,53 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 :root[data-rail="right"] :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(84px + env(safe-area-inset-right, 0px)); }
 :root[data-rail="right"] .tools.docked ~ :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(72px + env(safe-area-inset-right, 0px)); }
 
-/* Smaller panels (the board menu's switch): everything about the panels a third smaller, in whole
-   pixels (buttons 26 for 40, so icons of 20 stay centred), and what stands by them moved in to match. */
-:root[data-compact] .bar { --gap: 3px; --bar-h: 34px; gap: 3px; padding: 4px; border-radius: 8px; }
-:root[data-compact] .topbar { --gap: 5px; gap: 5px; padding: 4px 8px 4px 13px; }
-:root[data-compact] .zoom, :root[data-compact] .panel { padding: 4px 11px; }
-:root[data-compact] .ib { width: 26px; height: 26px; border-radius: 4px; }
-:root[data-compact] .pi { width: 20px; height: 20px; }
-:root[data-compact] .pi.caret { width: 16px; height: 16px; }
-:root[data-compact] .sep { height: 13px; margin: 0 1px; }
-:root[data-compact] .logo { font-size: 12px; line-height: 16px; }
-:root[data-compact] .topbar .logo + .sep { margin-left: 5px; }
-:root[data-compact] .title-fit { font-size: 10px; }
-:root[data-compact] .title-fit::after, :root[data-compact] .title-input { padding: 4px 5px; }
-:root[data-compact] .title-input { border-radius: 4px; }
-:root[data-compact] .zpct { min-width: 35px; font-size: 9px; line-height: 12px; padding: 5px 4px; border-radius: 4px; }
-:root[data-compact] .avatars { padding: 0 3px; }
-:root[data-compact] .avatar { width: 20px; height: 20px; border-width: 1px; }
-:root[data-compact] .avatar img { width: 14px; height: 14px; }
-:root[data-compact] .more { font-size: 8px; padding: 0 3px; }
-:root[data-compact] .more-pop { gap: 3px; padding: 4px; right: -4px; border-radius: 8px; }
-:root[data-compact] .more-pop.above { bottom: calc(100% + 9px); }
-:root[data-compact] .more-pop.below { top: calc(100% + 9px); }
-:root[data-compact] .tools { --gap: 12px; width: 40px; padding: 13px 10px; border-radius: 8px; }
-:root[data-compact] .tools.docked { border-radius: 0 8px 8px 0; }
-:root[data-compact] :is(.tools, .tools-more) .fb { min-width: 20px; height: 20px; }
-:root[data-compact] :is(.tools, .tools-more) .fb::before { inset: -4px; border-radius: 4px; }
-:root[data-compact] .tools .fb::after { width: 40px; }
-:root[data-compact] .tools-more .fb::after { left: -6px; right: -6px; top: -6px; bottom: -6px; }
-:root[data-compact] .tsep { width: 13px; height: 5px; }
-:root[data-compact] .tsep::after { top: 2px; width: 13px; }
-:root[data-compact] .tools-more { grid-auto-columns: 20px; gap: 12px; padding: 14px 10px; border-radius: 8px; }
-:root[data-compact] :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: calc(64px + env(safe-area-inset-left, 0px)); }
-:root[data-compact] .tools.docked ~ :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: calc(52px + env(safe-area-inset-left, 0px)); }
-:root[data-compact] :is(.minimap, .help, .namepop) { bottom: calc(54px + env(safe-area-inset-bottom, 0px)); }
-:root[data-compact] .minimap.docked { bottom: 42px; }
-:root[data-compact] :is(.confirm, .toast) { top: calc(52px + env(safe-area-inset-top, 0px)); }
-:root[data-compact][data-topbar="low"] .confirm { top: auto; bottom: calc(52px + env(safe-area-inset-bottom, 0px)); }
-:root[data-compact][data-zoom="high"] :is(.minimap, .help, .namepop) { bottom: auto; top: calc(54px + env(safe-area-inset-top, 0px)); }
-:root[data-compact][data-rail="right"] .tools { left: calc(100% - 52px - env(safe-area-inset-right, 0px)); }
-:root[data-compact][data-rail="right"] .tools.docked { left: calc(100% - 40px); border-radius: 8px 0 0 8px; }
-:root[data-compact][data-rail="right"] :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(64px + env(safe-area-inset-right, 0px)); }
-:root[data-compact][data-rail="right"] .tools.docked ~ :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(52px + env(safe-area-inset-right, 0px)); }
+/* Smaller panels (the board menu's switch): everything about the panels scaled by --k, each size
+   rounded to whole pixels (to even ones where an icon is centred in it), and what stands by them
+   moved in to match. --k is the one number to change for another size. */
+:root { --k: 1; }
+:root[data-compact] {
+  --k: .8;
+  --c-btn: round(calc(40px * var(--k)), 2px); --c-icon: round(calc(30px * var(--k)), 2px); --c-pad: round(calc(6px * var(--k)), 1px); --c-r: round(calc(12px * var(--k)), 1px);
+  --c-bar: calc(var(--c-pad) * 2 + var(--c-btn));
+  --c-rail: calc(var(--c-icon) + round(calc(15px * var(--k)), 1px) * 2);
+}
+:root[data-compact] .bar { --gap: round(calc(4px * var(--k)), 1px); --bar-h: var(--c-bar); gap: round(calc(4px * var(--k)), 1px); padding: var(--c-pad); border-radius: var(--c-r); }
+:root[data-compact] .topbar { --gap: round(calc(8px * var(--k)), 1px); gap: round(calc(8px * var(--k)), 1px); padding: var(--c-pad) round(calc(12px * var(--k)), 1px) var(--c-pad) round(calc(20px * var(--k)), 1px); }
+:root[data-compact] .zoom, :root[data-compact] .panel { padding: var(--c-pad) round(calc(16px * var(--k)), 1px); }
+:root[data-compact] .ib { width: var(--c-btn); height: var(--c-btn); border-radius: round(calc(6px * var(--k)), 1px); }
+:root[data-compact] .pi { width: var(--c-icon); height: var(--c-icon); }
+:root[data-compact] .pi.caret { width: round(calc(24px * var(--k)), 2px); height: round(calc(24px * var(--k)), 2px); }
+:root[data-compact] .sep { height: round(calc(20px * var(--k)), 1px); margin: 0 round(calc(2px * var(--k)), 1px); }
+:root[data-compact] .logo { font-size: round(calc(18px * var(--k)), 1px); line-height: round(calc(24px * var(--k)), 1px); }
+:root[data-compact] .topbar .logo + .sep { margin-left: round(calc(7px * var(--k)), 1px); }
+:root[data-compact] .title-fit { font-size: round(calc(15px * var(--k)), 1px); line-height: round(calc(21px * var(--k)), 1px); }
+:root[data-compact] .title-fit::after, :root[data-compact] .title-input { padding: round(calc(6px * var(--k)), 1px) round(calc(8px * var(--k)), 1px); }
+:root[data-compact] .title-input { border-radius: round(calc(6px * var(--k)), 1px); }
+:root[data-compact] .zpct { min-width: round(calc(52px * var(--k)), 1px); font-size: round(calc(13px * var(--k)), 1px); line-height: round(calc(18px * var(--k)), 1px); padding: round(calc(8px * var(--k)), 1px) round(calc(6px * var(--k)), 1px); border-radius: round(calc(6px * var(--k)), 1px); }
+:root[data-compact] .avatars { padding: 0 round(calc(4px * var(--k)), 1px); }
+:root[data-compact] .avatar { width: round(calc(30px * var(--k)), 2px); height: round(calc(30px * var(--k)), 2px); border-width: round(calc(2px * var(--k)), 1px); }
+:root[data-compact] .avatar img { width: round(calc(22px * var(--k)), 2px); height: round(calc(22px * var(--k)), 2px); }
+:root[data-compact] .more { font-size: round(calc(12px * var(--k)), 1px); padding: 0 round(calc(4px * var(--k)), 1px); }
+:root[data-compact] .more-pop { gap: round(calc(4px * var(--k)), 1px); padding: var(--c-pad); right: calc(var(--c-pad) * -1); border-radius: var(--c-r); }
+:root[data-compact] .more-pop.above { bottom: calc(100% + round(calc(14px * var(--k)), 1px)); }
+:root[data-compact] .more-pop.below { top: calc(100% + round(calc(14px * var(--k)), 1px)); }
+:root[data-compact] .tools { --gap: round(calc(18px * var(--k)), 1px); width: var(--c-rail); padding: round(calc(19px * var(--k)), 1px) round(calc(15px * var(--k)), 1px); border-radius: var(--c-r); }
+:root[data-compact] .tools.docked { border-radius: 0 var(--c-r) var(--c-r) 0; }
+:root[data-compact] :is(.tools, .tools-more) .fb { min-width: var(--c-icon); height: var(--c-icon); }
+:root[data-compact] :is(.tools, .tools-more) .fb::before { inset: calc(round(calc(6px * var(--k)), 1px) * -1); border-radius: round(calc(6px * var(--k)), 1px); }
+:root[data-compact] .tools .fb::after { width: var(--c-rail); }
+:root[data-compact] .tools-more .fb::after { inset: calc(round(calc(9px * var(--k)), 1px) * -1); }
+:root[data-compact] .tsep { width: round(calc(20px * var(--k)), 1px); height: round(calc(7px * var(--k)), 1px); }
+:root[data-compact] .tsep::after { top: round(calc(3px * var(--k)), 1px); width: round(calc(20px * var(--k)), 1px); }
+:root[data-compact] .tools-more { grid-auto-columns: var(--c-icon); gap: round(calc(18px * var(--k)), 1px); padding: round(calc(21px * var(--k)), 1px) round(calc(15px * var(--k)), 1px); border-radius: var(--c-r); }
+:root[data-compact] :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: calc(24px + var(--c-rail) + env(safe-area-inset-left, 0px)); }
+:root[data-compact] .tools.docked ~ :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: calc(12px + var(--c-rail) + env(safe-area-inset-left, 0px)); }
+:root[data-compact] :is(.minimap, .help, .namepop) { bottom: calc(20px + var(--c-bar) + env(safe-area-inset-bottom, 0px)); }
+:root[data-compact] .minimap.docked { bottom: calc(8px + var(--c-bar)); }
+:root[data-compact] :is(.confirm, .toast) { top: calc(18px + var(--c-bar) + env(safe-area-inset-top, 0px)); }
+:root[data-compact][data-topbar="low"] .confirm { top: auto; bottom: calc(18px + var(--c-bar) + env(safe-area-inset-bottom, 0px)); }
+:root[data-compact][data-zoom="high"] :is(.minimap, .help, .namepop) { bottom: auto; top: calc(20px + var(--c-bar) + env(safe-area-inset-top, 0px)); }
+:root[data-compact][data-rail="right"] .tools { left: calc(100% - 12px - var(--c-rail) - env(safe-area-inset-right, 0px)); }
+:root[data-compact][data-rail="right"] .tools.docked { left: calc(100% - var(--c-rail)); border-radius: var(--c-r) 0 0 var(--c-r); }
+:root[data-compact][data-rail="right"] :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(24px + var(--c-rail) + env(safe-area-inset-right, 0px)); }
+:root[data-compact][data-rail="right"] .tools.docked ~ :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(12px + var(--c-rail) + env(safe-area-inset-right, 0px)); }

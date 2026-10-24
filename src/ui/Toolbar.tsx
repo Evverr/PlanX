@@ -3,7 +3,7 @@ import { SHAPE_TOOLS, type Editor, type Pens, type Tool } from '../editor/editor
 import { readPictures } from '../canvas/pictures';
 import { DrawPanel, isDrawTool } from './DrawPanel';
 import { ShapePanel, SHAPES } from './ShapePanel';
-import { overPanels, useCompact, useGrip, useStoredNumber } from './grip';
+import { overPanels, panelScale, useCompact, useGrip, useStoredNumber } from './grip';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { isSeparator, useSortable } from './sortable';
 import { ToolPreview } from './ToolPreview';
@@ -29,11 +29,10 @@ const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task'
 /** Rail buttons that make something on the board when dragged off the rail, and their icons. */
 const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape', paint: 'node-pool' };
 
-/** Room kept clear above the tool rail (the top bar, 12px off the edge and 12px from the rail) and
- *  as much below it, with the panels as they are and smaller. */
-const RAIL_CLEAR = 76, RAIL_CLEAR_SMALL = 58;
-/** The "more" column: its padding top and bottom, its buttons and the gap between them. */
-const MORE_COL = { pad: 42, size: 30, gap: 18 }, MORE_COL_SMALL = { pad: 28, size: 20, gap: 12 };
+/** The "more" column at full size: its padding top and bottom, its buttons and the gap between them
+ *  (scaled as the panels are, the way the styles round them). */
+const MORE_COL = { pad: 21, size: 30, gap: 18 };
+const moreCol = (k: number) => ({ pad: Math.round(MORE_COL.pad * k) * 2, size: Math.round((MORE_COL.size * k) / 2) * 2, gap: Math.round(MORE_COL.gap * k) });
 /** Where the rail's chosen length is kept, and how close to its top or bottom edge the pointer (or
  *  a finger) has to be to drag that edge. */
 const CAP_KEY = 'planx-tools-cap', TOP_KEY = 'planx-tools-top', SIDE_KEY = 'planx-tools-right';
@@ -121,8 +120,10 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   const [top, setTop] = useStoredNumber(TOP_KEY);
   // Moved over past the middle of the screen, it stands at the right edge instead.
   const [right, setRight] = useStoredNumber(SIDE_KEY);
+  // Room kept clear above the rail (the top bar, 12px off the edge and 12px from the rail) and as
+  // much below it, whatever size the panels are.
   const [compact] = useCompact();
-  const railClear = compact ? RAIL_CLEAR_SMALL : RAIL_CLEAR;
+  const railClear = 24 + (document.querySelector<HTMLElement>('.topbar')?.offsetHeight || 52);
   useEffect(() => { document.documentElement.dataset.rail = right ? 'right' : ''; window.dispatchEvent(new Event('planx:side-panels')); }, [right, top]);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreRef = useRef<HTMLButtonElement>(null), menuRef = useRef<HTMLDivElement | null>(null);
@@ -226,7 +227,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   // The "more" panel stands level with the rail's bottom edge, as tall as fits under the top bar;
   // further buttons go into more columns.
   const railBottom = sort.ref.current?.getBoundingClientRect().bottom ?? innerHeight / 2;
-  const col = compact ? MORE_COL_SMALL : MORE_COL;
+  const col = moreCol(compact ? panelScale() : 1);
   const moreRows = Math.max(1, Math.min(hidden.length, Math.floor((railBottom - railClear - col.pad + col.gap) / (col.size + col.gap))));
   // The selection panel keeps clear of what opens beside the rail.
   useEffect(() => { window.dispatchEvent(new Event('planx:side-panels')); }, [moreOpen, variants]);

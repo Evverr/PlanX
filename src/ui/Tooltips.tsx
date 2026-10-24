@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { panelScale } from './grip';
 
 /** How long the pointer has to stay on a button before its hint shows, in ms (moving about on the
  *  button doesn't start it over); and how long hints keep coming at once after the pointer leaves
@@ -48,7 +49,7 @@ export function Tooltips() {
       const group = el.closest('.more-pop, .bar, .tfmt, .tools, .draw-panel, .tools-more');
       const bar = (group ?? el).getBoundingClientRect();
       const reach = (it: Element) => {
-        const q = it.getBoundingClientRect(), hl = it.matches('.fb') ? (document.documentElement.hasAttribute('data-compact') ? 4 : 6) : 0;
+        const q = it.getBoundingClientRect(), hl = it.matches('.fb') ? Math.round(6 * panelScale()) : 0;
         return { top: q.top - hl, bottom: q.bottom + hl, left: q.left - hl, right: q.right + hl };
       };
       const mates = group
