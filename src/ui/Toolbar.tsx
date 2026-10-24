@@ -30,12 +30,12 @@ const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task'
 const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape', paint: 'node-pool' };
 
 /** Room kept clear above the tool rail (the top bar) and as much below it. */
-const RAIL_CLEAR = 80;
+const RAIL_CLEAR = 76;
 /** Where the rail's chosen length is kept, and how close to its top or bottom edge the pointer (or
  *  a finger) has to be to drag that edge. */
 const CAP_KEY = 'planx-tools-cap', TOP_KEY = 'planx-tools-top', SIDE_KEY = 'planx-tools-right';
 /** How close to the screen's edges a rail put by hand may come (other panels it keeps clear of anyway). */
-const RAIL_EDGE = 14;
+const RAIL_EDGE = 12;
 
 /** Rail buttons with variants, opened by holding the button still. */
 const VARIANTS = new Set(['oval', 'draw']);
@@ -193,7 +193,8 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
               most = i;
               // Not over another panel.
               if (h > r.height && overPanels({ left: r.left, top: r.top, width: r.width, height: h }, sort.ref.current)) return;
-              if (Math.abs(h - want) < Math.abs(heights[best] - want)) best = i;
+              // Of lengths alike (the last button in place of "more"), the one with more buttons.
+              if (Math.abs(h - want) <= Math.abs(heights[best] - want)) best = i;
             });
             // As long as the screen allows is all of it: on a taller screen it's longer again.
             setCap(best >= most ? Infinity : best + 1);

@@ -113,7 +113,7 @@ export function App({ boardId }: { boardId: string }) {
     if (zoomX === null || !r) root.style.removeProperty('--zoom-r');
     else root.style.setProperty('--zoom-r', `${Math.round(innerWidth - r.right)}px`);
   });
-  const EDGE_GAP = 14;
+  const EDGE_GAP = 12;
   /** A bar's grips: its left end moves it, its right end resizes it. */
   const barGrips = (ref: React.RefObject<HTMLElement | null>, at: {
     setPos: (v: number | null) => void; setW: (v: number | null) => void; setFar: (v: number | null) => void; high: boolean;
@@ -127,7 +127,7 @@ export function App({ boardId }: { boardId: string }) {
             const p = Math.min(Math.max(r.left + dx, EDGE_GAP), Math.max(EDGE_GAP, innerWidth - EDGE_GAP - r.width));
             // Past the middle of the screen, over to the other edge.
             const below = r.top + r.height / 2 + dy > innerHeight / 2, f = at.high ? below : !below;
-            // Where that puts it (14px from the edge, as every panel): not over another panel; it
+            // Where that puts it (12px from the edge, as every panel): not over another panel; it
             // stays where it last could be.
             const onTop = at.high !== f, gap = docked ? 0 : EDGE_GAP;
             const place = { left: p, top: onTop ? gap : innerHeight - gap - r.height, width: r.width, height: r.height };
