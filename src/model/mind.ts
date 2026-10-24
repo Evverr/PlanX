@@ -13,7 +13,6 @@ export const MIND_COLOR = '#3E7BFA';
 export const MIND_PALETTE = ['#3E7BFA', '#0C8599', '#30A46C', '#E8892B', '#E5484D', '#D6409F', '#8E4EC6', '#5B6170'];
 
 /** A node's colour: its own, or the blue. */
-export const mindColor = (it: Item): string => (it.color?.startsWith('#') ? it.color : MIND_COLOR);
 
 /** A '#rrggbb' colour halfway to white. */
 export function lighter(hex: string): string {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
+import { crowds, shownRects, type Box } from '../layout';
 
 export type Edge = 'top' | 'bottom' | 'left' | 'right';
 
@@ -138,16 +139,11 @@ export function resetPanels(): () => void {
 }
 
 /** The main panels, which mustn't be put over one another, and the least room kept between them. */
-const PANELS = '.topbar, .bar.zoom, .tools', PANEL_GAP = 12;
+const PANELS = '.topbar, .bar.zoom, .tools';
 
 /** Whether a panel at this place (screen pixels) would lie over another of the main panels. */
-export function overPanels(r: { left: number; top: number; width: number; height: number }, self: Element | null): boolean {
-  return [...document.querySelectorAll(PANELS)].some((el) => {
-    if (el === self) return false;
-    const o = el.getBoundingClientRect();
-    if (!o.width || !o.height) return false;
-    return r.left < o.right + PANEL_GAP && r.left + r.width > o.left - PANEL_GAP && r.top < o.bottom + PANEL_GAP && r.top + r.height > o.top - PANEL_GAP;
-  });
+export function overPanels(r: Box, self: Element | null): boolean {
+  return shownRects(PANELS, self).some((o) => crowds(r, o));
 }
 
 /** The panels' size (the board menu's three dots): large as by default, medium or small, for every

@@ -1,17 +1,16 @@
 import { useState } from 'react';
 import { PanelIcon } from './PanelIcon';
+import { readText, writeText } from '../storage';
 
 export type Edge = 'left' | 'top' | 'right' | 'bottom';
 
 /** Whether a panel is stuck to its screen edge, remembered per panel in this browser. */
 export function useDock(name: string): [boolean, () => void] {
   const key = `planx-dock-${name}`;
-  const [docked, setDocked] = useState(() => {
-    try { return localStorage.getItem(key) === '1'; } catch { return false; }
-  });
+  const [docked, setDocked] = useState(() => readText(key) === '1');
   const toggle = () => {
     setDocked(!docked);
-    try { localStorage.setItem(key, docked ? '0' : '1'); } catch { /* just won't be remembered */ }
+    writeText(key, docked ? '0' : '1');
   };
   return [docked, toggle];
 }

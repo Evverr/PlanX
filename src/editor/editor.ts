@@ -11,7 +11,9 @@ import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCellFormat, withCount, withScale, withTableFormat, type TableLine } from '../model/table';
 import { toggleAudio, type AudioNote } from '../canvas/audio';
 import { snapToGuides, type Guide } from '../canvas/guides';
-import { addChild, balance, canMoveTo, mindDepth, childPlace, descendants, insertBeside, makeRoom, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
+import { addChild, canMoveTo, mindDepth, childPlace, descendants, insertBeside, makeRoom, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
+import { readJSON, writeJSON } from '../storage';
+import { shownRects } from '../layout';
 
 export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | 'mind' | PolyShape;
 export type PenTool = 'pen' | 'marker';
@@ -387,12 +389,11 @@ export class Editor {
   private freeArea(): Rect {
     const W = this.width, H = this.height, at = this.canvas?.getBoundingClientRect() ?? { left: 0, top: 0 };
     let left = 0, right = W, top = 0, bottom = H;
-    const seen = (q: string) => [...document.querySelectorAll(q)].map((el) => el.getBoundingClientRect()).filter((r) => r.width && r.height);
-    for (const r of seen('.tools')) {
+    for (const r of shownRects('.tools')) {
       if (r.left - at.left < W / 2) left = Math.max(left, r.right - at.left);
       else right = Math.min(right, r.left - at.left);
     }
-    for (const r of seen('.bar')) {
+    for (const r of shownRects('.bar')) {
       if (r.top - at.top < H / 2) top = Math.max(top, r.bottom - at.top);
       else bottom = Math.min(bottom, r.top - at.top);
     }
@@ -863,8 +864,12 @@ export class Editor {
         const h = fitHeight(it, value);
         if (h) Object.assign(patch, { h }, it.rot && resizedAt(it, it.w, h));
         this.board.update(id, patch);
-        // A mind map node that grew taller makes room among its neighbours.
-        if (it.type === 'mind' && it.parent && patch.h !== it.h) this.rebalance(id);
+        // A mind map node that grew taller makes room among its neighbours, as while it was typed in
+        // (those of its level only).
+        if (it.type === 'mind' && it.parent && patch.h !== undefined && patch.h !== it.h) {
+          const moves = makeRoom(id, patch.h - it.h, this.board.list());
+          this.board.transact(() => moves.forEach((y, k) => this.board.update(k, { y })));
+        }
       }
     }
     this.emit();
@@ -957,12 +962,6 @@ export class Editor {
       if (fit.w !== it.w || fit.h !== it.h) stale.push([it, fit]);
     }
     if (stale.length) setTimeout(() => this.board.transact(() => stale.forEach(([it, fit]) => this.board.update(it.id, fit))), 0);
-  }
-
-  /** Lays the mind map's branches out again around the way from this node to the centre. */
-  private rebalance(id: string): void {
-    const moves = balance(id, this.board.list());
-    this.board.transact(() => moves.forEach((y, k) => this.board.update(k, { y })));
   }
 
   private stopEditing(): void {
@@ -1824,21 +1823,4 @@ export class Editor {
 function readPens(): Pens {
   const saved = readJSON<Pens>(PENS_KEY);
   return saved?.pen?.presets?.length && saved.marker?.presets?.length ? saved : DEFAULT_PENS;
-}
-
-function readJSON<T>(key: string): T | null {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? (JSON.parse(v) as T) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeJSON(key: string, value: unknown): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* storage can be unavailable; the camera just won't be remembered */
-  }
 }

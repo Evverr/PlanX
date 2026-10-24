@@ -4,6 +4,7 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import type { Point } from '../canvas/geometry';
 import type { Peer } from '../canvas/renderer';
 import type { Presence } from '../editor/editor';
+import { readJSON, writeJSON } from '../storage';
 
 export type Status = 'connecting' | 'online' | 'offline';
 
@@ -23,15 +24,13 @@ export function newBoardId(): string {
 }
 
 function loadMe(): Me {
-  try {
-    const saved = JSON.parse(localStorage.getItem('planx-me') ?? 'null') as Me | null;
-    if (saved?.name && saved.color) return saved;
-  } catch { /* fall through */ }
+  const saved = readJSON<Me>('planx-me');
+  if (saved?.name && saved.color) return saved;
   const me = {
     name: ANIMALS[Math.floor(Math.random() * ANIMALS.length)],
     color: PEER_COLORS[Math.floor(Math.random() * PEER_COLORS.length)],
   };
-  try { localStorage.setItem('planx-me', JSON.stringify(me)); } catch { /* not remembered */ }
+  writeJSON('planx-me', me);
   return me;
 }
 
@@ -92,7 +91,7 @@ export class Connection implements Presence {
 
   rename(name: string): void {
     this.me = { ...this.me, name: name.trim().slice(0, 24) || this.me.name };
-    try { localStorage.setItem('planx-me', JSON.stringify(this.me)); } catch { /* not remembered */ }
+    writeJSON('planx-me', this.me);
     this.provider.awareness.setLocalStateField('user', this.me);
     this.notify();
   }
