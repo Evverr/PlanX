@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { panelScale } from './grip';
+import { panelScale } from './panels/size';
 
 /** How long the pointer has to stay on a button before its hint shows, in ms (moving about on the
  *  button doesn't start it over); and how long hints keep coming at once after the pointer leaves

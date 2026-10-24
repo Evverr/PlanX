@@ -103,6 +103,18 @@ export const checks = {
     expect((await p.rect('.tools')).t, 'undone with Ctrl+Z').toBe(moved);
   },
 
+  async '"reset" also unsticks the panels from the edges, and its undo sticks them back'(p) {
+    await p.ev(`document.querySelector('.dock-chevron').closest('button').click()`);
+    await sleep(400);
+    expect((await p.rect('.topbar')).t, 'stuck to the top').toBe(0);
+    await p.menu('Сбросить панели');
+    await sleep(400);
+    expect((await p.rect('.topbar')).t, 'unstuck').toBe(12);
+    await p.key('z', 'KeyZ', 90, 2);
+    await sleep(400);
+    expect((await p.rect('.topbar')).t, 'stuck again').toBe(0);
+  },
+
   async 'unsaved moves are gone after a reload'(p) {
     const t0 = (await p.rect('.tools')).t;
     await p.dragEdge('.tools', 'top', 0, 80);
