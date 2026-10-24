@@ -12,6 +12,7 @@
     "start": "NODE_ENV=production tsx server/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "e2e": "node tests/e2e/run.mjs",
     "icons": "python3 scripts/gen_icons.py"
   },
   "dependencies": {
