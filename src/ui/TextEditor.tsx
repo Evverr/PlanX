@@ -84,7 +84,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           fontStyle: item.fi ? 'italic' : undefined,
           textAlign: alignOf(item),
           textDecoration: [item.fu && 'underline', item.fx && 'line-through'].filter(Boolean).join(' ') || undefined,
-          color: item.tc && (item.tc.startsWith('#') ? item.tc : TEXT_COLORS[item.tc]) || (item.type === 'mind' && !item.parent ? '#fff' : undefined),
+          color: item.tc && (item.tc.startsWith('#') ? item.tc : TEXT_COLORS[item.tc]) || undefined,
         }),
         padding: isFrame ? '0 4px' : 0,
       }}

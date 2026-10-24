@@ -408,10 +408,20 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.h / 2, depth === 0 ? 14 : 10));
   ctx.globalAlpha = it.fo ?? 1;
-  // A node but the central topic can have a fill of its own (instead of the tint or white).
-  const fill = depth >= 1 && own.fill ? shade(own.fill, theme.dim) : null;
-  ctx.fillStyle = depth === 0 ? color : theme.surface;
+  // A node can have a fill of its own (instead of the tint or white); the central topic is white,
+  // on a faint shadow (black at 7%, 2 blurred, 1 down, growing with the zoom like the node).
+  const fill = own.fill ? shade(own.fill, theme.dim) : null;
+  if (depth === 0) {
+    const k = s.cam.z * s.dpr;
+    ctx.shadowColor = 'rgba(0, 0, 0, .07)';
+    ctx.shadowBlur = 2 * k;
+    ctx.shadowOffsetY = 1 * k;
+  }
+  ctx.fillStyle = theme.surface;
   ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
   if (fill) { ctx.fillStyle = fill; ctx.fill(); }
   else if (depth === 1) { ctx.globalAlpha = (it.fo ?? 1) * 0.18; ctx.fillStyle = color; ctx.fill(); }
   ctx.globalAlpha = 1;
@@ -420,22 +430,17 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   const target = s.mindMove?.target?.id === it.id;
   // The same dashes as the dragged arrow's, 6px on and off on screen.
   if (target) ctx.setLineDash([6 / s.cam.z, 6 / s.cam.z]);
-  if (depth > 0) {
-    // The edge is at 70% until the node is picked (or a branch is dropped on it).
+  if (depth > 0 || target) {
+    // The edge is at 70% until the node is picked (or a branch is dropped on it); the central topic
+    // has none but the dashed one while a branch is dropped on it.
     ctx.globalAlpha = (s.selection.has(it.id) || target ? 1 : 0.7) * (it.so ?? 1);
-    ctx.lineWidth = depth === 1 ? 2 : 1.5;
+    ctx.lineWidth = depth <= 1 ? 2 : 1.5;
     ctx.strokeStyle = color;
     ctx.stroke();
     ctx.globalAlpha = 1;
-  } else if (target) {
-    ctx.beginPath();
-    ctx.roundRect(it.x + 3, it.y + 3, it.w - 6, it.h - 6, Math.min(it.h / 2 - 3, 11));
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = '#fff';
-    ctx.stroke();
   }
   ctx.setLineDash([]);
-  if (!editing) drawText(ctx, it, textPad(it), depth === 0 ? '#fff' : theme.ink, true, s, textPadY(it));
+  if (!editing) drawText(ctx, it, textPad(it), theme.ink, true, s, textPadY(it));
 }
 
 /** The branches of mind maps, under the nodes and half see-through (but for those to picked nodes):
