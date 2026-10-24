@@ -18,7 +18,7 @@ import { useSortable } from './ui/sortable';
 import { Tooltips } from './ui/Tooltips';
 import { FramePeek } from './ui/FramePeek';
 import { BoardMenu } from './ui/BoardMenu';
-import { useGrip, useStoredNumber, type Grips } from './ui/grip';
+import { overPanels, useGrip, useStoredNumber, type Grips } from './ui/grip';
 import type { Item, Link } from './model/types';
 
 /** Where a board copied into a new tab waits for it, followed by the new board's id. */
@@ -121,10 +121,16 @@ export function App({ boardId }: { boardId: string }) {
         let pos = from === 'left' ? r.left : innerWidth - r.right, far = at.far;
         return {
           move: (dx: number, dy: number) => {
-            pos = Math.min(Math.max((from === 'left' ? r.left + dx : innerWidth - r.right - dx), EDGE_GAP), Math.max(EDGE_GAP, innerWidth - EDGE_GAP - r.width));
+            const p = Math.min(Math.max((from === 'left' ? r.left + dx : innerWidth - r.right - dx), EDGE_GAP), Math.max(EDGE_GAP, innerWidth - EDGE_GAP - r.width));
             // Past the middle of the screen, over to the other edge.
-            const below = r.top + r.height / 2 + dy > innerHeight / 2;
-            far = at.high ? below : !below;
+            const below = r.top + r.height / 2 + dy > innerHeight / 2, f = at.high ? below : !below;
+            // Where that puts it (the top bar stands 12px from its edge, the zoom bar 16 from the
+            // bottom): not over another panel; it stays where it last could be.
+            const onTop = at.high !== f, gap = docked ? 0 : onTop || from === 'left' ? 12 : 16;
+            const place = { left: from === 'left' ? p : innerWidth - p - r.width, top: onTop ? gap : innerHeight - gap - r.height, width: r.width, height: r.height };
+            if (overPanels(place, ref.current)) return;
+            pos = p;
+            far = f;
             at.setPos(pos);
             at.setFar(far ? 1 : null);
           },
@@ -137,7 +143,13 @@ export function App({ boardId }: { boardId: string }) {
       start: () => {
         const r = ref.current!.getBoundingClientRect();
         return {
-          move: (dx: number) => at.setW(Math.max(0, r.width + (from === 'left' ? dx : -dx))),
+          move: (dx: number) => {
+            // Not over another panel: it stops short of it.
+            let w = Math.max(0, r.width + (from === 'left' ? dx : -dx));
+            const over = (v: number) => overPanels({ left: from === 'left' ? r.left : r.right - v, top: r.top, width: v, height: r.height }, ref.current);
+            while (w > 0 && w > r.width && over(w)) w -= 4;
+            at.setW(w);
+          },
           // Settles at the length it shows; with nothing left over, it's as long as it needs.
           done: () => {
             const el = ref.current;

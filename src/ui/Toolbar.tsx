@@ -3,7 +3,7 @@ import { SHAPE_TOOLS, type Editor, type Pens, type Tool } from '../editor/editor
 import { readPictures } from '../canvas/pictures';
 import { DrawPanel, isDrawTool } from './DrawPanel';
 import { ShapePanel, SHAPES } from './ShapePanel';
-import { useGrip, useStoredNumber } from './grip';
+import { overPanels, useGrip, useStoredNumber } from './grip';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { isSeparator, useSortable } from './sortable';
 import { ToolPreview } from './ToolPreview';
@@ -165,8 +165,13 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
         let at = r.top, far = !!right;
         return {
           move: (dx, dy) => {
-            at = Math.min(Math.max(r.top + dy, RAIL_CLEAR), Math.max(RAIL_CLEAR, innerHeight - RAIL_BOTTOM - r.height));
-            far = r.left + r.width / 2 + dx > innerWidth / 2;
+            const t = Math.min(Math.max(r.top + dy, RAIL_CLEAR), Math.max(RAIL_CLEAR, innerHeight - RAIL_BOTTOM - r.height));
+            const f = r.left + r.width / 2 + dx > innerWidth / 2;
+            // Not over another panel: it stays where it last could be.
+            const margin = right ? innerWidth - r.right : r.left;
+            if (overPanels({ left: f ? innerWidth - margin - r.width : margin, top: t, width: r.width, height: r.height }, sort.ref.current)) return;
+            at = t;
+            far = f;
             setTop(at);
             setRight(far ? 1 : null);
           },
@@ -193,6 +198,8 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
             heights.forEach((h, i) => {
               if (h > room(r.top)) return;
               most = i;
+              // Not over another panel.
+              if (h > r.height && overPanels({ left: r.left, top: r.top, width: r.width, height: h }, sort.ref.current)) return;
               if (Math.abs(h - want) < Math.abs(heights[best] - want)) best = i;
             });
             // As long as the screen allows is all of it: on a taller screen it's longer again.

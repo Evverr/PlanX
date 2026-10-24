@@ -82,3 +82,16 @@ export function useStoredNumber(key: string): [number | null, (v: number | null,
   };
   return [v, set];
 }
+
+/** The main panels, which mustn't be put over one another, and the least room kept between them. */
+const PANELS = '.topbar, .bar.zoom, .tools', PANEL_GAP = 8;
+
+/** Whether a panel at this place (screen pixels) would lie over another of the main panels. */
+export function overPanels(r: { left: number; top: number; width: number; height: number }, self: Element | null): boolean {
+  return [...document.querySelectorAll(PANELS)].some((el) => {
+    if (el === self) return false;
+    const o = el.getBoundingClientRect();
+    if (!o.width || !o.height) return false;
+    return r.left < o.right + PANEL_GAP && r.left + r.width > o.left - PANEL_GAP && r.top < o.bottom + PANEL_GAP && r.top + r.height > o.top - PANEL_GAP;
+  });
+}
