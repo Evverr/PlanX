@@ -1201,27 +1201,42 @@ export class Editor {
     return orig;
   }
 
-  /** Everything folded frames hold, out of sight (frames in them, and all those hold, too). */
-  private hidden(items = this.board.list()): Set<string> {
+  /** Of these items, everything folded frames hold (frames in them, and all those hold, too). */
+  private hiddenIn(items: Item[]): Set<string> {
     const out = new Set<string>();
     const folded = items.filter((i) => i.type === 'frame' && i.fold);
     for (const f of folded) for (const id of this.carried([f], items).keys()) if (id !== f.id) out.add(id);
     return out;
   }
 
-  /** The items in sight: all but what folded frames hold. */
-  shown(): Item[] {
-    const items = this.board.list(), hidden = this.hidden(items);
-    return hidden.size ? items.filter((i) => !hidden.has(i.id)) : items;
+  /** What's in sight, worked out once for each change of the board (it's asked for on every move
+   *  of the pointer and every frame drawn). */
+  private sight: { version: number; hidden: Set<string>; shown: Item[]; links: Link[] } | null = null;
+  private inSight() {
+    const version = this.board.getVersion();
+    if (this.sight?.version !== version) {
+      const items = this.board.list(), hidden = this.hiddenIn(items);
+      this.sight = { version, hidden, shown: hidden.size ? items.filter((i) => !hidden.has(i.id)) : items, links: this.linksIn(items, hidden) };
+    }
+    return this.sight;
   }
+
+  /** Everything folded frames hold, out of sight. */
+  private hidden(): Set<string> { return this.inSight().hidden; }
+
+  /** The items in sight: all but what folded frames hold. */
+  shown(): Item[] { return this.inSight().shown; }
+
+  /** The links as they're seen (see linksIn). */
+  private shownLinks(): Link[] { return this.inSight().links; }
 
   /**
    * The links as they're seen: one whose end is hidden in a folded frame goes to that frame's bar
    * instead (the outermost one in sight, for frames in frames), and one with both ends in the same
    * folded frame isn't seen at all.
    */
-  private shownLinks(): Link[] {
-    const items = this.board.list(), hidden = this.hidden(items), links = this.board.linkList();
+  private linksIn(items: Item[], hidden: Set<string>): Link[] {
+    const links = this.board.linkList();
     if (!hidden.size) return links;
     const stand = new Map<string, string>();
     for (const f of items) {
@@ -1276,7 +1291,7 @@ export class Editor {
     const items = this.board.list(), held = this.carried([f], items);
     const open: Item = { ...f, ...(f.fold ?? {}), fold: undefined, text: '' };
     // Frames inside it, folded or not, are shown as they are; what they hold stays hidden if folded.
-    const inner = this.hidden(items.filter((i) => held.has(i.id) && i.id !== f.id));
+    const inner = this.hiddenIn(items.filter((i) => held.has(i.id) && i.id !== f.id));
     const shown = [open, ...items.filter((i) => held.has(i.id) && i.id !== f.id && !inner.has(i.id))];
     const ids = new Set(shown.map((i) => i.id));
     const z = Math.min((w - pad * 2) / open.w, (h - pad * 2) / open.h);
