@@ -374,18 +374,21 @@ export class Editor {
     this.camChanged();
   }
 
-  /** The part of the screen clear of the panels: right of the tool rail, under the top bar and over
-   *  the bars at the bottom (the whole screen where that would leave too little). */
+  /** The part of the screen clear of the panels: beside the tool rail, under the bars at the top and
+   *  over those at the bottom (the whole screen where that would leave too little). */
   private freeArea(): Rect {
     const W = this.width, H = this.height, at = this.canvas?.getBoundingClientRect() ?? { left: 0, top: 0 };
-    let left = 0, top = 0, bottom = H;
+    let left = 0, right = W, top = 0, bottom = H;
     const seen = (q: string) => [...document.querySelectorAll(q)].map((el) => el.getBoundingClientRect()).filter((r) => r.width && r.height);
-    for (const r of seen('.tools')) if (r.left - at.left < W / 2) left = Math.max(left, r.right - at.left);
+    for (const r of seen('.tools')) {
+      if (r.left - at.left < W / 2) left = Math.max(left, r.right - at.left);
+      else right = Math.min(right, r.left - at.left);
+    }
     for (const r of seen('.bar')) {
       if (r.top - at.top < H / 2) top = Math.max(top, r.bottom - at.top);
       else bottom = Math.min(bottom, r.top - at.top);
     }
-    const free = { x: left, y: top, w: W - left, h: bottom - top };
+    const free = { x: left, y: top, w: right - left, h: bottom - top };
     return free.w < W * 0.5 || free.h < H * 0.5 ? { x: 0, y: 0, w: W, h: H } : free;
   }
 

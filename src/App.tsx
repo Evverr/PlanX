@@ -18,6 +18,7 @@ import { useSortable } from './ui/sortable';
 import { Tooltips } from './ui/Tooltips';
 import { FramePeek } from './ui/FramePeek';
 import { BoardMenu } from './ui/BoardMenu';
+import { useGrip, useStoredNumber, type Grips } from './ui/grip';
 import type { Item, Link } from './model/types';
 
 /** Where a board copied into a new tab waits for it, followed by the new board's id. */
@@ -88,6 +89,68 @@ export function App({ boardId }: { boardId: string }) {
   // Buttons in the top bar and the zoom panel can be rearranged by holding them.
   const topSort = useSortable('planx-order-top2', ['logo', 'sep', 'title', 'menu', 'new', 'clear', 'sep3', 'undo', 'redo'], 'x');
   const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'share', 'help', 'theme', 'fit', 'dock', 'people'], 'x');
+
+  // The top bar and the zoom bar can be moved and made shorter by hand. Each is held by the end it
+  // stands from (the top bar's left, the zoom bar's right): dragging that end moves the bar along
+  // its edge, or over to the other edge of the screen once past the middle; dragging the other end
+  // makes it shorter or longer, what doesn't fit going under "more".
+  const [topX, setTopX] = useStoredNumber('planx-topbar-x');
+  const [topW, setTopW] = useStoredNumber('planx-topbar-w');
+  const [topLow, setTopLow] = useStoredNumber('planx-topbar-low');
+  const [zoomR, setZoomR] = useStoredNumber('planx-zoom-right');
+  const [zoomW, setZoomW] = useStoredNumber('planx-zoom-w');
+  const [zoomHigh, setZoomHigh] = useStoredNumber('planx-zoom-high');
+  // What sits by them (the board menu, the map, the hints) goes where they are, through these.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.topbar = topLow ? 'low' : '';
+    root.dataset.zoom = zoomHigh ? 'high' : '';
+    if (topX === null) root.style.removeProperty('--top-x'); else root.style.setProperty('--top-x', `${topX}px`);
+    if (zoomR === null) root.style.removeProperty('--zoom-r'); else root.style.setProperty('--zoom-r', `${zoomR}px`);
+  }, [topX, topLow, zoomR, zoomHigh]);
+  const EDGE_GAP = 12;
+  /** A bar's grips: `from` is the end it stands from, whose drag moves it; the other end resizes it. */
+  const barGrips = (ref: React.RefObject<HTMLElement | null>, from: 'left' | 'right', at: {
+    setPos: (v: number | null, keep?: boolean) => void; setW: (v: number | null, keep?: boolean) => void;
+    setFar: (v: number | null, keep?: boolean) => void; far: boolean; high: boolean;
+  }): Grips => ({
+    [from]: {
+      cursor: 'move',
+      start: () => {
+        const r = ref.current!.getBoundingClientRect();
+        let pos = from === 'left' ? r.left : innerWidth - r.right, far = at.far;
+        return {
+          move: (dx: number, dy: number) => {
+            pos = Math.min(Math.max((from === 'left' ? r.left + dx : innerWidth - r.right - dx), EDGE_GAP), Math.max(EDGE_GAP, innerWidth - EDGE_GAP - r.width));
+            // Past the middle of the screen, over to the other edge.
+            const below = r.top + r.height / 2 + dy > innerHeight / 2;
+            far = at.high ? below : !below;
+            at.setPos(pos);
+            at.setFar(far ? 1 : null);
+          },
+          done: () => { at.setPos(pos, true); at.setFar(far ? 1 : null, true); },
+        };
+      },
+    },
+    [from === 'left' ? 'right' : 'left']: {
+      cursor: 'ew-resize',
+      start: () => {
+        const r = ref.current!.getBoundingClientRect();
+        return {
+          move: (dx: number) => at.setW(Math.max(0, r.width + (from === 'left' ? dx : -dx))),
+          // Settles at the length it shows; with nothing left over, it's as long as it needs.
+          done: () => {
+            const el = ref.current;
+            at.setW(el?.querySelector(':scope > .more-wrap') ? el.getBoundingClientRect().width : null, true);
+          },
+        };
+      },
+    },
+  });
+  const topGrip = useGrip(topSort.ref, barGrips(topSort.ref, 'left', { setPos: setTopX, setW: setTopW, setFar: setTopLow, far: !!topLow, high: true }));
+  const zoomGrip = useGrip(zoomSort.ref, barGrips(zoomSort.ref, 'right', { setPos: setZoomR, setW: setZoomW, setFar: setZoomHigh, far: !!zoomHigh, high: false }));
+  const topSpace = Math.min(innerWidth - (topX ?? EDGE_GAP) - EDGE_GAP, topW ?? Infinity);
+  const zoomSpace = Math.min(innerWidth - (zoomR ?? EDGE_GAP) - EDGE_GAP, zoomW ?? Infinity);
   const closeMinimap = useCallback(() => setMinimap(false), []);
 
   // A copy of this board opens in a new tab, named after it with a number added ("План" → "План 2"
@@ -167,7 +230,10 @@ export function App({ boardId }: { boardId: string }) {
           void readPictures(e.dataTransfer.files).then((pics) => editor.addPictures(pics, at));
         }} />
 
-      <header ref={topSort.ref} className={`bar topbar sortable ${docked ? 'docked' : ''} ${topSort.sorting ? 'sorting' : ''}`} {...topSort.container}>
+      <header ref={topSort.ref} className={`bar topbar sortable ${docked ? 'docked' : ''} ${topSort.sorting ? 'sorting' : ''}`} {...topSort.container}
+        onPointerDown={(e) => { if (!topGrip.onPointerDown(e)) topSort.container.onPointerDown(e); }}
+        onPointerMove={(e) => { if (!topSort.sorting) topGrip.onPointerMove(e); topSort.container.onPointerMove(e); }}
+        onPointerLeave={topGrip.onPointerLeave}>
         {topSort.renderFit({
           logo: <div className="logo">Plan</div>,
           sep: <div className="sep" />,
@@ -195,7 +261,7 @@ export function App({ boardId }: { boardId: string }) {
           redo: <button className="ib" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" disabled={!ui.canRedo} onClick={() => editor.redo()}><PanelIcon name="redo-on" /></button>,
           new: <button className="ib" title="Копия доски в новой вкладке" aria-label="Копия доски" onClick={openNewBoard}><PanelIcon name="plus" /></button>,
           clear: <button className={`ib ${pop === 'clear' ? 'on' : ''}`} title="Очистить доску" aria-label="Очистить доску" onClick={() => toggle('clear')}><PanelIcon name="cross" /></button>,
-        }, innerWidth - 24, 'below')}
+        }, topSpace, topLow ? 'above' : 'below')}
       </header>
 
       <Toolbar editor={editor} tool={ui.tool} pens={ui.pens} zoom={ui.cam.z} guides={ui.guides} docked={docked} iconsOpen={pop === 'icons'} onToggleIcons={() => { toggle('icons'); setRecorder(false); }}
@@ -209,7 +275,10 @@ export function App({ boardId }: { boardId: string }) {
         else editor.addIcon(id, at);
       }} />}
 
-      <div ref={zoomSort.ref as React.RefObject<HTMLDivElement>} className={`bar zoom sortable ${docked ? 'docked' : ''} ${zoomSort.sorting ? 'sorting' : ''}`} {...zoomSort.container}>
+      <div ref={zoomSort.ref as React.RefObject<HTMLDivElement>} className={`bar zoom sortable ${docked ? 'docked' : ''} ${zoomSort.sorting ? 'sorting' : ''}`} {...zoomSort.container}
+        onPointerDown={(e) => { if (!zoomGrip.onPointerDown(e)) zoomSort.container.onPointerDown(e); }}
+        onPointerMove={(e) => { if (!zoomSort.sorting) zoomGrip.onPointerMove(e); zoomSort.container.onPointerMove(e); }}
+        onPointerLeave={zoomGrip.onPointerLeave}>
         {zoomSort.renderFit({
         people: <div className="avatars">
           <button className="avatar me" title={`${conn.me.name} (вы). Нажмите, чтобы убрать все панели`}
@@ -234,7 +303,7 @@ export function App({ boardId }: { boardId: string }) {
         help: <button className={`ib ${pop === 'help' ? 'on' : ''}`} title="Подсказки" aria-label="Подсказки" onClick={() => { toggle('help'); setMinimap(false); }}><PanelIcon name="question" /></button>,
         // A component can't take the ref, so the dock button sits in a wrapper.
         dock: <span className="sort-wrap"><DockButton edge="bottom" docked={docked} onToggle={toggleDock} /></span>,
-        }, innerWidth - 24, 'above')}
+        }, zoomSpace, zoomHigh ? 'below' : 'above')}
       </div>
 
       {minimap && <Minimap editor={editor} items={editor.shown()} docked={docked} onClose={closeMinimap} />}
