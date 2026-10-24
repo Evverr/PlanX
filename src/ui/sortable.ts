@@ -373,7 +373,8 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     let n = all.length;
     if (long(all, false) > room.current) {
       n = all.length - 1;
-      while (n > 0 && long(trimSeparators(all.slice(0, n)), true) > room.current) n--;
+      // At least the first one stays, however short the panel is made.
+      while (n > 1 && long(trimSeparators(all.slice(0, n)), true) > room.current) n--;
     }
     const next = n >= all.length ? Infinity : n;
     if (next !== fit) setFit(next);

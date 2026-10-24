@@ -125,7 +125,7 @@ button { font: inherit; color: inherit; }
 .tsep::after { content: ""; position: absolute; left: 0; top: 3px; width: 20px; height: 1px; background: var(--fmt-line); }
 
 
-.topbar { left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); padding: 6px 12px 6px 20px; gap: 8px; max-width: calc(100vw - 24px); }
+.topbar { left: var(--top-x, calc(12px + env(safe-area-inset-left, 0px))); top: calc(12px + env(safe-area-inset-top, 0px)); padding: 6px 12px 6px 20px; gap: 8px; max-width: calc(100vw - 24px); }
 /* 15px from the logo to its separator. */
 .topbar .logo + .sep { margin-left: 7px; }
 .logo { font-family: "Inter", var(--ui); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; white-space: nowrap; }
@@ -150,12 +150,12 @@ button { font: inherit; color: inherit; }
 .avatar.me { cursor: pointer; }
 .more { font-size: 12px; color: var(--muted); padding: 0 4px; }
 
-.zoom { right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; }
+.zoom { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; }
 /* Panels stuck to their screen edge (the chevron button) lose the corners on that side. */
 .topbar.docked { top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
 .zoom.docked, .panel.docked { bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 /* Board map above the zoom panel: items as translucent blue blocks, the dark frame is the screen. */
-.minimap { right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); padding: 8px; }
+.minimap { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); padding: 8px; }
 .minimap.docked { bottom: 60px; }
 .minimap svg { display: block; width: 240px; height: 160px; cursor: pointer; touch-action: none; }
 .minimap .mm-item { fill: rgba(75, 145, 255, .35); }
@@ -289,9 +289,9 @@ button { font: inherit; color: inherit; }
 .rec-preview { width: 100%; height: 40px; }
 .recorder .row { align-self: stretch; justify-content: space-between; }
 .recorder .row .btn { flex: 1; white-space: nowrap; }
-.confirm { left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(70px + env(safe-area-inset-top, 0px)); width: 286px; box-sizing: border-box; }
+.confirm { left: var(--top-x, calc(12px + env(safe-area-inset-left, 0px))); top: calc(70px + env(safe-area-inset-top, 0px)); width: 286px; box-sizing: border-box; }
 .confirm p { max-width: 207px; }
-.namepop { right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(72px + env(safe-area-inset-bottom, 0px)); width: 240px; }
+.namepop { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(72px + env(safe-area-inset-bottom, 0px)); width: 240px; }
 .namepop input, .icon-pick input { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 8px 10px; font: inherit; margin-bottom: 10px; }
 .toast { left: 50%; transform: translateX(-50%); top: calc(70px + env(safe-area-inset-top, 0px)); padding: 10px 14px; }
 
@@ -334,7 +334,7 @@ button { font: inherit; color: inherit; }
 .pick-tabs button.on { background: var(--fmt-on); color: var(--ink); }
 .muted { color: var(--muted); }
 
-.help { right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); width: 380px; max-width: calc(100vw - 24px); box-sizing: border-box; }
+.help { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(76px + env(safe-area-inset-bottom, 0px)); width: 380px; max-width: calc(100vw - 24px); box-sizing: border-box; }
 .help h3 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
 .help dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
 .help dt { font-weight: 600; white-space: nowrap; }
@@ -447,3 +447,19 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 .peek-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 15px/1 "Inter", var(--ui); color: var(--ink); }
 .peek canvas { display: block; }
 @keyframes peek-in { from { transform: scale(.96); opacity: 0; } }
+
+/* Bars moved by hand to the other edge of the screen (see grip.ts): the top bar to the bottom, the
+   zoom bar to the top, the tool rail to the right; what opens from them opens the other way. */
+:root[data-topbar="low"] .topbar { top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+:root[data-topbar="low"] .topbar.docked { bottom: 0; border-radius: 12px 12px 0 0; }
+:root[data-topbar="low"] .board-menu:not(.sub) { top: auto; bottom: calc(100% + 12px); }
+:root[data-topbar="low"] .board-menu.sub { top: auto; bottom: -13px; }
+:root[data-topbar="low"] .confirm { top: auto; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+:root[data-zoom="high"] .zoom { bottom: auto; top: calc(12px + env(safe-area-inset-top, 0px)); }
+:root[data-zoom="high"] .zoom.docked { top: 0; border-radius: 0 0 12px 12px; }
+:root[data-zoom="high"] :is(.minimap, .help, .namepop) { bottom: auto; top: calc(76px + env(safe-area-inset-top, 0px)); }
+:root[data-zoom="high"] .minimap.docked { top: 60px; }
+:root[data-rail="right"] .tools { left: auto; right: calc(12px + env(safe-area-inset-right, 0px)); }
+:root[data-rail="right"] .tools.docked { right: 0; border-radius: 12px 0 0 12px; }
+:root[data-rail="right"] :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(84px + env(safe-area-inset-right, 0px)); }
+:root[data-rail="right"] .tools.docked ~ :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(72px + env(safe-area-inset-right, 0px)); }
