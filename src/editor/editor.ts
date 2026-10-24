@@ -1,43 +1,36 @@
 import type { Board } from '../model/board';
-import type { Item, ItemType, Link, PolyShape, Side } from '../model/types';
-import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, ROTATABLE, STROKABLE, uid } from '../model/types';
+import type { Item, ItemType, Link, Side } from '../model/types';
+import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, STROKABLE, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
-import { angleOf, boundsOf, boxOf, center, hitItem, hitLink, nearestSide, nearInk, normRect, onAudioButton, onTaskBox, pointInRect, rectContains, rectsIntersect, resizedAt, sidePoint, SIDES, toLocal, turn } from '../canvas/geometry';
-import { clearTextCache, DOT_GAP, drawScene, HANDLE, readTheme, type Camera, type Peer, type Theme } from '../canvas/renderer';
+import { boundsOf, center, pointInRect, resizedAt } from '../canvas/geometry';
+import { clearTextCache, drawScene, readTheme, type Camera, type Peer, type Scene, type Theme } from '../canvas/renderer';
 import { fitHeight, foldedSize, font, itemTextHeight, mindSize } from '../canvas/text';
-import { frameButtons, type FrameButton } from '../model/frame';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
-import { cellAt, colsOf, lineAt, MIN_COL, MIN_ROW, movedLines, newTable, rowsOf, withCellFormat, withCount, withScale, withTableFormat, type TableLine } from '../model/table';
-import { toggleAudio, type AudioNote } from '../canvas/audio';
-import { snapToGuides, type Guide } from '../canvas/guides';
-import { addChild, canMoveTo, mindDepth, childPlace, descendants, insertBeside, makeRoom, mindButtons, mindSide, moveBranch, type MindButton } from '../model/mind';
+import { newTable, withCellFormat, withCount, withTableFormat, type TableLine } from '../model/table';
+import type { AudioNote } from '../canvas/audio';
+import { descendants, makeRoom, mindDepth, type MindButton } from '../model/mind';
 import { readJSON, writeJSON } from '../storage';
-import { shownRects } from '../layout';
+import { clamp, fittedTo, freeArea, wheelMove, zoomedAt } from './camera';
+import { copiesOf } from './copies';
+import { carried, hiddenIn, linksIn, membersOf, peekView, settled } from './frames';
+import { endGesture, moveGesture, type Gesture } from './gestures';
+import { updateCursor } from './hover';
+import { onKeyDown } from './keys';
+import { addMindNode, mindFit, refitMind, removeMindNode } from './mindOps';
+import { press } from './press';
+import { formatCells, pickCell, restOn, setTableLines } from './tables';
+import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, type Pens, type PenTool, type Tool } from './tools';
 
-export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'task' | 'table' | 'mind' | PolyShape;
-export type PenTool = 'pen' | 'marker';
-export const DRAW_TOOLS: Tool[] = ['pen', 'marker', 'eraser'];
-/** Tools that draw a figure by dragging out its box; the polygons are one item type with a `shape`. */
-export const SHAPE_TOOLS: Tool[] = ['rect', 'ellipse', 'triangle', 'rhombus', 'pentagon', 'star'];
-const isPoly = (t: Tool): t is PolyShape => t === 'triangle' || t === 'rhombus' || t === 'pentagon' || t === 'star';
+export { DRAW_TOOLS, INK_SIZES, SHAPE_TOOLS } from './tools';
+export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
 
-/** A pen's colour (a key of INK_COLORS or '#rrggbb') and line width in screen pixels at the zoom it's drawn at. */
-export interface InkStyle { color: string; size: number }
-/** Each pen has three presets, as in Miro; `active` is the one it draws with. */
-export interface PenSet { presets: InkStyle[]; active: number }
-export type Pens = Record<PenTool, PenSet>;
-
-export const INK_SIZES: Record<PenTool, number[]> = { pen: [2, 4, 8, 14], marker: [12, 20, 32, 48] };
-const DEFAULT_PENS: Pens = {
-  pen: { presets: [{ color: 'ink', size: 2 }, { color: 'red', size: 4 }, { color: 'blue', size: 8 }], active: 0 },
-  marker: { presets: [{ color: 'yellow', size: 20 }, { color: 'green', size: 20 }, { color: 'pink', size: 20 }], active: 0 },
-};
-const PENS_KEY = 'planx-pens';
 /** Whether dragged items line up with others along guides, kept per browser. */
 const GUIDES_KEY = 'planx-guides';
-/** How near (in screen pixels) an edge or middle has to come to another's to line up with it. */
-const GUIDE_SNAP = 6;
+/** How big a finger's target is, in screen pixels. */
+const FINGER = 40;
+/** The mind map "+" buttons' wait after a node is picked, and their fade in, in ms. */
+const PLUS_DELAY = 330, PLUS_FADE = 300;
 
 /** What the editor needs from the collaboration layer. Optional, so the editor also runs alone. */
 export interface Presence {
@@ -66,61 +59,12 @@ export interface UIState {
   canRedo: boolean;
 }
 
-type Gesture =
-  | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
-  | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean }
-  | { type: 'resize'; id: string; start: Point; orig: Item }
-  | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
-  | { type: 'create'; id: string; origin: Point }
-  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' }
-  | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
-  | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
-  | { type: 'mindMove'; id: string; from: Point; to: Point; target: string | null }
-  | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
-  | { type: 'draw'; tool: PenTool; pts: Point[] }
-  | { type: 'erase'; last: Point };
-
-/** What a new mind map's central topic says until it's typed over. */
-const MIND_TOPIC = 'Центральная тема';
-
-/** How far outside a corner (in screen pixels) the pointer turns the item, and how close to a square
- *  angle (in degrees) the turn sticks to it. */
-const ROTATE_ZONE = 18, ROTATE_SNAP = 3;
-/** How big a finger's target is, in screen pixels. */
-const FINGER = 40;
-/** The mind map "+" buttons' wait after a node is picked, and their fade in, in ms. */
-const PLUS_DELAY = 330, PLUS_FADE = 300;
-/** How long the mouse rests on a table line before it can be dragged, in ms. */
-const LINE_REST = 500;
-const sameLine = (a: TableLine | null, b: TableLine | null): boolean =>
-  a === b || (!!a && !!b && a.id === b.id && a.axis === b.axis && a.index === b.index);
-
-/** Cursors for turning: a curved double arrow around the top left corner, turned by deg. Kept by
- *  the degree. */
-const rotateCursors = new Map<number, string>();
-function rotateCursor(deg: number): string {
-  const d = Math.round(deg);
-  let c = rotateCursors.get(d);
-  if (!c) {
-    // Drawn twice, white and wide under dark, so it shows on any background.
-    const arrow = (ink: string, width: number) => `<path fill="none" stroke="${ink}" stroke-width="${width}" d="M6.5 17.5A11 11 0 0 1 17.5 6.5"/>`
-      + `<path fill="${ink}" stroke="${ink}" stroke-width="${width - 1.6}" stroke-linejoin="round" d="M3.5 16.5 6.5 21 9.5 16.5Z M16.5 3.5 21 6.5 16.5 9.5Z"/>`;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g transform="rotate(${d} 12 12)">${arrow('#fff', 4.4)}${arrow('#1A1A1A', 1.8)}</g></svg>`;
-    c = `url("data:image/svg+xml,${encodeURIComponent(svg)}") 12 12, crosshair`;
-    rotateCursors.set(d, c);
-  }
-  return c;
-}
-
-const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
-const MIN_Z = 0.08, MAX_Z = 4;
-/** Zoom change per mouse wheel notch: three percentage points. */
-const WHEEL_STEP = 0.03;
-
 /**
- * Owns the canvas: turns pointer and keyboard input into board changes and
- * redraws when anything changes. React only draws the chrome around it.
+ * Owns the canvas: turns pointer and keyboard input into board changes and redraws when anything
+ * changes. React only draws the chrome around it.
+ *
+ * The work is spread over the modules next to this one (press, gestures, hover, frames, tables,
+ * mindOps, keys, camera, copies); the fields and methods marked "shared" are for them, not the UI.
  */
 export class Editor {
   readonly board: Board;
@@ -132,54 +76,59 @@ export class Editor {
   editingCell: number | null = null;
   moving = false;
   pens: Pens = readPens();
+  /** Whether the text overlay opens with all the text picked (to type over it) or the caret at its end. */
+  editCaret: 'all' | 'end' = 'all';
 
-  private canvas: HTMLCanvasElement | null = null;
+  // Shared with the editor's modules.
+  canvas: HTMLCanvasElement | null = null;
+  gesture: Gesture | null = null;
+  pointers = new Map<number, Point>();
+  spaceDown = false;
+  lastTap = { id: '', t: 0 };
+  /** The last press on the empty board, for a double one there to show everything. */
+  lastEmpty = { t: 0, x: 0, y: 0 };
+  needsFit: boolean;
+  hotDot: Side | null = null;
+  /** The mind map node button under the pointer. */
+  hotPlus: MindButton | null = null;
+  /** Whether the last press was a finger's: small things to grab (the resize handle, the link dots,
+   *  the turning corner, a mind map node's buttons) then reach FINGER px across, not their own size. */
+  byFinger = false;
+  /** The table line under the pointer, and the lines picked with Shift to be dragged together. */
+  hotLine: TableLine | null = null;
+  pickedLines: TableLine[] = [];
+  /** The table line the mouse rests on: it can be taken hold of once it's been there half a second
+   *  (till then a press there takes the table), which is when it lights up. */
+  lineRest: { line: TableLine; armed: boolean; timer: number } | null = null;
+  guides = readJSON<boolean>(GUIDES_KEY) ?? false;
+  /** Cells picked in the selected table: a click on a cell of a table already selected picks it,
+   *  Shift-click picks the box from there to another, Cmd-click adds or drops one. */
+  cells: number[] = [];
+  /** The cell a Shift-click range is counted from: the one last clicked on its own. */
+  cellAnchor: number | null = null;
+
   private ctx: CanvasRenderingContext2D | null = null;
   private theme: Theme | null = null;
   private width = 0;
   private height = 0;
   private dpr = 1;
-  private gesture: Gesture | null = null;
-  private pointers = new Map<number, Point>();
-  private spaceDown = false;
   private clipboard: string | null = null;
-  private lastTap = { id: '', t: 0 };
-  /** The last press on the empty board, for a double one there to show everything. */
-  private lastEmpty = { t: 0, x: 0, y: 0 };
   private raf = 0;
   private ui: UIState;
   private uiListeners = new Set<() => void>();
   private camKey: string;
-  private needsFit: boolean;
   private lastCursorSent = 0;
-  private hotDot: Side | null = null;
-  /** The mind map node button under the pointer; and when the buttons of the node picked now start
-   *  to fade in (they come a moment after it's picked or let go). */
-  private hotPlus: MindButton | null = null;
-  /** Whether the last press was a finger's: small things to grab (the resize handle, the link dots,
-   *  the turning corner, a mind map node's buttons) then reach FINGER px across, not their own size. */
-  private byFinger = false;
-
-  /** How far (in board units) a small thing of radius `px` on screen reaches for the pointer: for a
-   *  finger, at least half of FINGER. */
-  private reach(px: number): number {
-    return (this.byFinger ? Math.max(px, FINGER / 2) : px) / this.cam.z;
-  }
+  /** When the buttons of the mind map node picked now start to fade in (a moment after it's picked
+   *  or let go), and what was picked then. */
   private plusKey = '';
   private plusFrom = 0;
   private plusTimer = 0;
-  /** The table line under the pointer, and the lines picked with Shift to be dragged together. */
-  private hotLine: TableLine | null = null;
-  /** The table line the mouse rests on: it can be taken hold of once it's been there half a second
-   *  (till then a press there takes the table), which is when it lights up. */
-  private lineRest: { line: TableLine; armed: boolean; timer: number } | null = null;
-  private pickedLines: TableLine[] = [];
-  private guides = readJSON<boolean>(GUIDES_KEY) ?? false;
-  /** Cells picked in the selected table: a click on a cell of a table already selected picks it,
-   *  Shift-click picks the box from there to another, Cmd-click adds or drops one. */
-  private cells: number[] = [];
-  /** The cell a Shift-click range is counted from: the one last clicked on its own. */
-  private cellAnchor: number | null = null;
+  /** What's in sight, worked out once for each change of the board (it's asked for on every move
+   *  of the pointer and every frame drawn). */
+  private sight: { version: number; hidden: Set<string>; shown: Item[]; links: Link[] } | null = null;
+  /** Steps undone along with the board's though they aren't on it (the panels put back as by
+   *  default), each at the place in the board's history it was taken. */
+  private outside: Array<{ undo: () => void; depth: number }> = [];
 
   constructor(board: Board, opts: { presence?: Presence; storageKey?: string } = {}) {
     this.board = board;
@@ -211,13 +160,15 @@ export class Editor {
       guides: this.guides, cells: this.cells, canUndo: this.board.undoManager.undoStack.length > 0 || this.outside.length > 0, canRedo: this.board.undoManager.redoStack.length > 0 };
   }
 
-  private setMoving(moving: boolean): void {
+  /** Shared: items are being moved or resized by hand, or no longer. */
+  setMoving(moving: boolean): void {
     if (this.moving === moving) return;
     this.moving = moving;
     this.emit();
   }
 
-  private emit(): void {
+  /** Shared: tells the UI what's changed. */
+  emit(): void {
     this.ui = this.snapshot();
     this.uiListeners.forEach((fn) => fn());
   }
@@ -233,17 +184,17 @@ export class Editor {
       el.addEventListener(ev, fn as EventListener, opts);
       offs.push(() => el.removeEventListener(ev, fn as EventListener, opts));
     };
-    on(canvas, 'pointerdown', (e) => this.onPointerDown(e));
+    on(canvas, 'pointerdown', (e) => press(this, e));
     on(canvas, 'pointermove', (e) => this.onPointerMove(e));
     on(canvas, 'pointerup', (e) => this.onPointerUp(e));
     on(canvas, 'pointercancel', (e) => this.onPointerUp(e));
     on(canvas, 'pointerleave', () => {
       this.presence?.setCursor(null);
-      this.restOn(null);
+      restOn(this, null);
       if (this.hotDot || this.hotLine) { this.hotDot = null; this.hotLine = null; this.requestRender(); }
     });
     on(canvas, 'wheel', (e) => this.wheel(e), { passive: false });
-    on(window, 'keydown', (e) => this.onKeyDown(e));
+    on(window, 'keydown', (e) => onKeyDown(this, e));
     on(window, 'keyup', (e) => { if (e.code === 'Space') this.setSpace(false); });
     on(window, 'blur', () => this.setSpace(false));
     on(window, 'resize', () => this.resize());
@@ -304,7 +255,7 @@ export class Editor {
 
   private render(): void {
     if (!this.ctx || !this.theme) return;
-    this.refitMind();
+    refitMind(this);
     const g = this.gesture;
     let linkPreview = null;
     if (g?.type === 'link') {
@@ -349,22 +300,38 @@ export class Editor {
     });
   }
 
+  /** Shared: how far the selected mind map node's "+" buttons have faded in, 0…1. */
+  plusFade(): number {
+    const typing = this.editingId && this.board.get(this.editingId)?.type !== 'mind';
+    return this.moving || typing ? 0 : clamp((performance.now() - this.plusFrom) / PLUS_FADE, 0, 1);
+  }
+
+  /** Shared: how far (in board units) a small thing of radius `px` on screen reaches for the pointer:
+   *  for a finger, at least half of FINGER. */
+  reach(px: number): number {
+    return (this.byFinger ? Math.max(px, FINGER / 2) : px) / this.cam.z;
+  }
+
   /* ---------- camera ---------- */
 
   toWorld(sx: number, sy: number): Point {
     return { x: (sx - this.cam.x) / this.cam.z, y: (sy - this.cam.y) / this.cam.z };
   }
 
-  private camChanged(): void {
+  /** Screen position of a board point, for overlays such as the text editor. */
+  toScreen(p: Point): Point {
+    return { x: p.x * this.cam.z + this.cam.x, y: p.y * this.cam.z + this.cam.y };
+  }
+
+  /** Shared: the camera's been moved; it's kept, drawn and told to the UI. */
+  camChanged(): void {
     writeJSON(this.camKey, this.cam);
     this.requestRender();
     this.emit();
   }
 
   zoomAt(sx: number, sy: number, factor: number): void {
-    const z = clamp(this.cam.z * factor, MIN_Z, MAX_Z);
-    const w = this.toWorld(sx, sy);
-    this.cam = { z, x: sx - w.x * z, y: sy - w.y * z };
+    this.cam = zoomedAt(this.cam, sx, sy, factor);
     this.camChanged();
   }
 
@@ -376,29 +343,9 @@ export class Editor {
    *  with 5% of it left empty at each side. */
   fit(): void {
     const b = boundsOf(this.shown());
-    const W = this.width, H = this.height;
-    if (!b) { this.cam = { x: W / 2, y: H / 2, z: 1 }; this.camChanged(); return; }
-    const f = this.freeArea(), padX = f.w * 0.05, padY = f.h * 0.05;
-    const z = clamp(Math.min((f.w - padX * 2) / b.w, (f.h - padY * 2) / b.h), MIN_Z, 1.4);
-    this.cam = { z, x: f.x + f.w / 2 - (b.x + b.w / 2) * z, y: f.y + f.h / 2 - (b.y + b.h / 2) * z };
+    this.cam = b ? fittedTo(b, freeArea(this.width, this.height, this.canvas?.getBoundingClientRect() ?? { left: 0, top: 0 }))
+      : { x: this.width / 2, y: this.height / 2, z: 1 };
     this.camChanged();
-  }
-
-  /** The part of the screen clear of the panels: beside the tool rail, under the bars at the top and
-   *  over those at the bottom (the whole screen where that would leave too little). */
-  private freeArea(): Rect {
-    const W = this.width, H = this.height, at = this.canvas?.getBoundingClientRect() ?? { left: 0, top: 0 };
-    let left = 0, right = W, top = 0, bottom = H;
-    for (const r of shownRects('.tools')) {
-      if (r.left - at.left < W / 2) left = Math.max(left, r.right - at.left);
-      else right = Math.min(right, r.left - at.left);
-    }
-    for (const r of shownRects('.bar')) {
-      if (r.top - at.top < H / 2) top = Math.max(top, r.bottom - at.top);
-      else bottom = Math.min(bottom, r.top - at.top);
-    }
-    const free = { x: left, y: top, w: right - left, h: bottom - top };
-    return free.w < W * 0.5 || free.h < H * 0.5 ? { x: 0, y: 0, w: W, h: H } : free;
   }
 
   /** The part of the board that's on screen, in board coordinates. */
@@ -413,9 +360,16 @@ export class Editor {
     this.camChanged();
   }
 
-  /** Screen position of a board point, for overlays such as the text editor. */
-  toScreen(p: Point): Point {
-    return { x: p.x * this.cam.z + this.cam.x, y: p.y * this.cam.z + this.cam.y };
+  /** Wheel and trackpad: zoom or scroll the board. `sp` is the screen point zooming keeps still,
+   *  the pointer by default; the board map passes the middle of the screen. */
+  wheel(e: WheelEvent, sp: Point = this.local(e)): void {
+    e.preventDefault();
+    const m = wheelMove(e, this.cam);
+    if ('zoom' in m) this.zoomAt(sp.x, sp.y, m.zoom);
+    else {
+      this.cam = { ...this.cam, x: this.cam.x - m.pan[0], y: this.cam.y - m.pan[1] };
+      this.camChanged();
+    }
   }
 
   /* ---------- tools & selection ---------- */
@@ -431,57 +385,21 @@ export class Editor {
     return set.presets[set.active] ?? DEFAULT_PENS[tool].presets[0];
   }
 
-  /** Picks a cell of the selected table, or with `add` adds it to the picked ones (or drops it). */
-  /** Picks a cell of the selected table: on its own (and as where a range starts), with `range` every
-   *  cell in the box from there to it (a row, a column, a corner), with `toggle` adding or dropping it. */
-  pickCell(i: number, how: 'one' | 'range' | 'toggle'): void {
-    const it = this.selectedItems()[0];
-    if (how === 'range' && it?.type === 'table' && this.cellAnchor !== null) {
-      const n = colsOf(it).length, a = this.cellAnchor;
-      const [r1, r2] = [Math.floor(a / n), Math.floor(i / n)].sort((x, y) => x - y), [c1, c2] = [a % n, i % n].sort((x, y) => x - y);
-      const box: number[] = [];
-      for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) box.push(r * n + c);
-      this.cells = box;
-    } else if (how === 'toggle') {
-      this.cells = this.cells.includes(i) ? this.cells.filter((c) => c !== i) : [...this.cells, i];
-      this.cellAnchor = i;
-    } else {
-      this.cells = [i];
-      this.cellAnchor = i;
-    }
-    this.emit();
-    this.requestRender();
-  }
+  /** Picks a cell of the selected table (see tables.ts). */
+  pickCell(i: number, how: 'one' | 'range' | 'toggle'): void { pickCell(this, i, how); }
 
   /** Fills the picked cells of the selected table with a colour ('none' takes it away). */
   setCellFill(color: string): void {
-    this.formatCells({ bg: color === 'none' ? undefined : color });
+    formatCells(this, { bg: color === 'none' ? undefined : color });
   }
 
   /** Opacity (0…1) of the picked cells' fill, or every cell's when none is picked. */
   setCellOpacity(value: number): void {
-    this.formatCells({ bgo: value >= 1 ? undefined : Math.round(value * 100) / 100 });
+    formatCells(this, { bgo: value >= 1 ? undefined : Math.round(value * 100) / 100 });
   }
 
   /** The selected table's lines: their colour ('gray' the usual, 'none' none) and opacity. */
-  setTableLines(patch: { sc?: string; so?: number }): void {
-    const it = this.selectedItems()[0];
-    if (it?.type !== 'table') return;
-    const next: Partial<Item> = {};
-    if ('sc' in patch) next.sc = patch.sc === 'gray' ? undefined : patch.sc;
-    if ('so' in patch) next.so = patch.so! >= 1 ? undefined : Math.round(patch.so! * 100) / 100;
-    this.board.update(it.id, next);
-  }
-
-  /** Sets a cell field on the picked cells of the selected table, or on every cell when none is. */
-  private formatCells(fields: Record<string, unknown>): void {
-    const it = this.selectedItems()[0];
-    if (it?.type !== 'table') return;
-    const all = Array.from({ length: colsOf(it).length * rowsOf(it).length }, (_, i) => i);
-    let patch: Partial<Item> = {};
-    for (const i of this.cells.length ? this.cells : all) patch = withCellFormat({ ...it, ...patch }, i, fields as Partial<Item>);
-    this.board.update(it.id, patch);
-  }
+  setTableLines(patch: { sc?: string; so?: number }): void { setTableLines(this, patch); }
 
   /** Turns lining up along guides on or off. */
   toggleGuides(): void {
@@ -517,7 +435,8 @@ export class Editor {
     return [...this.selection].map((id) => this.board.get(id)).filter((i): i is Item => !!i);
   }
 
-  private setSpace(down: boolean): void {
+  /** Shared: the space bar held (the board pans while it's down) or let go. */
+  setSpace(down: boolean): void {
     this.spaceDown = down;
     if (this.canvas) this.canvas.classList.toggle('space', down);
   }
@@ -595,7 +514,7 @@ export class Editor {
     if (!this.selection.size) return;
     // A mind map node goes with everything branching from it, a folded frame with all it holds.
     const items = this.board.list(), folded = items.filter((i) => i.fold && this.selection.has(i.id));
-    const held = folded.length ? [...this.carried(folded, items).keys()] : [];
+    const held = folded.length ? [...this.carried(folded).keys()] : [];
     this.board.remove([...this.selection, ...held, ...descendants(this.selection, items)]);
     this.setSelection([]);
   }
@@ -754,31 +673,18 @@ export class Editor {
     this.setSelection(items.map((i) => i.id));
   }
 
-  /** Adds copies of items, and of the links among them, with fresh ids. Copies keep their order and go on top. */
-  private insertCopies(src: Item[], srcLinks: Link[], offset: number): { items: Item[]; links: Link[]; map: Map<string, string> } {
-    const map = new Map<string, string>();
-    let z = this.board.maxZ();
-    const items = [...src].sort((a, b) => a.z - b.z).map((it) => {
-      const id = uid();
-      map.set(it.id, id);
-      return { ...it, id, x: it.x + offset, y: it.y + offset, z: it.type === 'frame' ? it.z : ++z };
-    }).map((it) => {
-      // Copied mind map nodes hang from the copies of their parents (or still from the original ones).
-      if (it.parent && map.has(it.parent)) it.parent = map.get(it.parent);
-      // A copied frame holds the copies of what it held.
-      if (it.members) it.members = it.members.map((m) => map.get(m)).filter((m): m is string => !!m);
-      return it;
-    });
-    const links = srcLinks.map((l) => ({ ...l, id: uid(), from: map.get(l.from)!, to: map.get(l.to)! }));
+  /** Puts copies of items, and of the links among them, on the board (see copiesOf). */
+  private insertCopies(src: Item[], srcLinks: Link[], offset: number) {
+    const made = copiesOf(src, srcLinks, offset, this.board.maxZ());
     this.board.transact(() => {
-      items.forEach((it) => this.board.add(it));
-      links.forEach((l) => this.board.addLink(l));
+      made.items.forEach((it) => this.board.add(it));
+      made.links.forEach((l) => this.board.addLink(l));
     });
-    return { items, links, map };
+    return made;
   }
 
-  /** Alt-drag: leave the dragged items where they are and drag copies of them instead. */
-  private dragCopies(orig: Map<string, Point>): Map<string, Point> {
+  /** Shared: Alt-drag leaves the dragged items where they are and drags copies of them instead. */
+  dragCopies(orig: Map<string, Point>): Map<string, Point> {
     const items = [...orig.keys()].map((id) => this.board.get(id)).filter((i): i is Item => !!i);
     const links = this.board.linkList().filter((l) => orig.has(l.from) && orig.has(l.to));
     const { items: copies, map } = this.insertCopies(items, links, 0);
@@ -799,11 +705,8 @@ export class Editor {
     this.zoomCenter(1 / this.cam.z);
   }
 
-  /** Steps undone along with the board's though they aren't on it (the panels put back as by
-   *  default), each at the place in the board's history it was taken. */
-  private outside: Array<{ undo: () => void; depth: number }> = [];
-
-  /** Adds such a step: Ctrl+Z (or the undo button) undoes it once the board's later changes are undone. */
+  /** Adds a step outside the board: Ctrl+Z (or the undo button) undoes it once the board's later
+   *  changes are undone. */
   addOutsideStep(undo: () => void): void {
     this.outside.push({ undo, depth: this.board.undoManager.undoStack.length });
     this.emit();
@@ -828,9 +731,6 @@ export class Editor {
   /* ---------- text editing ---------- */
 
   /** Opens an item's text for typing; for a table, one cell's (the first unless given). */
-  /** Whether the text overlay opens with all the text picked (to type over it) or the caret at its end. */
-  editCaret: 'all' | 'end' = 'all';
-
   startEditing(id: string, cell?: number | null, caret: 'all' | 'end' = 'all'): void {
     const it = this.board.get(id);
     if (!it || !EDITABLE.includes(it.type)) return;
@@ -860,7 +760,7 @@ export class Editor {
         this.board.remove([id]);
         this.selection.delete(id);
       } else if (value !== (it.text ?? '')) {
-        const patch: Partial<Item> = { text: value, ...this.mindFit(it, value), ...(it.fold && { w: foldedSize(value).w }) };
+        const patch: Partial<Item> = { text: value, ...mindFit(this, it, value), ...(it.fold && { w: foldedSize(value).w }) };
         const h = fitHeight(it, value);
         if (h) Object.assign(patch, { h }, it.rot && resizedAt(it, it.w, h));
         this.board.update(id, patch);
@@ -883,7 +783,7 @@ export class Editor {
     if (it && h && h !== it.h) this.board.update(id, { h, ...(it.rot && resizedAt(it, it.w, h)) });
     if (it?.type === 'mind') {
       // A node getting a line taller (or shorter) moves what's below it along, so nothing overlaps.
-      const fit = this.mindFit(it, text), dh = (fit.h ?? it.h) - it.h;
+      const fit = mindFit(this, it, text), dh = (fit.h ?? it.h) - it.h;
       const moves = dh ? makeRoom(id, dh, this.board.list()) : new Map<string, number>();
       this.board.transact(() => {
         this.board.update(id, fit);
@@ -892,81 +792,88 @@ export class Editor {
     }
   }
 
-  /** A mind map node's size for its text; one growing leftwards keeps its right edge where it is. */
-  private mindFit(it: Item, text: string): Partial<Item> {
-    if (it.type !== 'mind') return {};
-    const { w, h } = mindSize(it, text), up = it.parent ? this.board.get(it.parent) : undefined;
-    const left = up && mindSide(it, up) < 0;
-    // New lines grow it downwards.
-    return { w, h, x: left ? it.x + it.w - w : it.x };
-  }
+  /** Adds a node to a mind map (see mindOps.ts). */
+  addMindNode(fromId: string, kind: 'child' | 'above' | 'below', byPlus = false): void { addMindNode(this, fromId, kind, byPlus); }
 
-  /** Adds a node to a mind map: a child of `from`, or another child of its parent right after it
-   *  (`below`) or before it (`above`), and opens it for typing. */
-  addMindNode(fromId: string, kind: 'child' | 'above' | 'below', byPlus = false): void {
-    const from = this.board.get(fromId);
-    if (from?.type !== 'mind') return;
-    const parent = kind !== 'child' && from.parent ? this.board.get(from.parent) : from;
-    if (!parent) return;
-    const items = this.board.list(), get = (id: string) => this.board.get(id);
-    const depth = (n: Item): number => (n.parent ? 1 + depth(this.board.get(n.parent) ?? n) : 0);
-    const level = depth(parent) + 1;
-    // Sized as it will be once typed in: a branch, not a central topic (which has more padding).
-    const draft = { ...DEFAULTS.mind, type: 'mind', fs: level === 1 ? 14 : 12, text: '', parent: parent.id } as Item;
-    const { w, h } = mindSize(draft, '');
-    // A parallel branch grows on the same side of the centre as the node it's added beside.
-    const at = childPlace(parent, items, get, w, h, parent !== from ? mindSide(from, parent) : undefined);
-    // A parallel branch goes right before or after the node it's added beside, lined up with it on
-    // the side towards the parent; that node stays put (so more can be added from the same spot)
-    // and the branches past it make room. A new branch of its own re-centres them instead.
-    if (parent !== from) at.x = mindSide(from, parent) > 0 ? from.x : from.x + from.w - w;
-    const it = this.newItem('mind', at.x, at.y, { w, h, fs: draft.fs, parent: parent.id });
-    this.board.beginGesture();
-    this.board.add(it);
-    if (kind === 'child') this.board.transact(() => addChild(it.id, this.board.list()).forEach((y, k) => this.board.update(k, { y })));
-    else {
-      const moves = insertBeside(it.id, from.id, kind, this.board.list());
-      this.board.transact(() => moves.forEach((y, k) => this.board.update(k, { y })));
-    }
-    this.board.endGesture();
-    // From the "+" above or below, the node stays picked with its buttons under the pointer, so more
-    // can be added one click after another; they're typed in later.
-    if (byPlus && kind !== 'child') return;
-    this.setSelection([it.id]);
-    // From a "+", it opens for typing once the press is over, or the browser's focus moving on press
-    // closes it again.
-    if (byPlus) setTimeout(() => this.startEditing(it.id), 0);
-    else this.startEditing(it.id);
-  }
+  /** Takes away an emptied mind map node (see mindOps.ts). */
+  removeMindNode(id: string): void { removeMindNode(this, id); }
 
-  /** Takes away a mind map node being typed in once it's emptied and Delete or Backspace is pressed
-   *  again, with whatever grows from it; its parent is picked instead. */
-  removeMindNode(id: string): void {
-    const it = this.board.get(id);
-    if (it?.type !== 'mind' || !it.parent) return;
-    this.editingId = null;
-    this.board.remove([id, ...descendants([id], this.board.list())]);
-    this.setSelection(this.board.get(it.parent) ? [it.parent] : []);
-  }
-
-  /** Mind map nodes already checked against the padding they're sized with now. */
-  private fitted = new Set<string>();
-
-  /** Mind map nodes sized before their padding grew are made to fit their text again, once each. */
-  private refitMind(): void {
-    const stale: Array<[Item, Partial<Item>]> = [];
-    for (const it of this.board.list()) {
-      if (it.type !== 'mind' || this.fitted.has(it.id) || it.id === this.editingId) continue;
-      this.fitted.add(it.id);
-      const fit = this.mindFit(it, it.text ?? '');
-      if (fit.w !== it.w || fit.h !== it.h) stale.push([it, fit]);
-    }
-    if (stale.length) setTimeout(() => this.board.transact(() => stale.forEach(([it, fit]) => this.board.update(it.id, fit))), 0);
-  }
-
-  private stopEditing(): void {
-    // The overlay listens for this and commits its value.
+  /** Shared: typing stops (the overlay listens for this and commits its value). */
+  stopEditing(): void {
     if (this.editingId) window.dispatchEvent(new CustomEvent('planx:commit-edit'));
+  }
+
+  /* ---------- frames and what's in sight ---------- */
+
+  private inSight() {
+    const version = this.board.getVersion();
+    if (this.sight?.version !== version) {
+      const items = this.board.list(), hidden = hiddenIn(this.board, items);
+      this.sight = { version, hidden, shown: hidden.size ? items.filter((i) => !hidden.has(i.id)) : items, links: linksIn(this.board, items, hidden) };
+    }
+    return this.sight;
+  }
+
+  /** Shared: everything folded frames hold, out of sight. */
+  hidden(): Set<string> { return this.inSight().hidden; }
+
+  /** The items in sight: all but what folded frames hold. */
+  shown(): Item[] { return this.inSight().shown; }
+
+  /** Shared: the links as they're seen, those into folded frames led to their bars. */
+  shownLinks(): Link[] { return this.inSight().links; }
+
+  /** Shared: what a frame holds. */
+  membersOf(f: Item): string[] { return membersOf(this.board, f, this.board.list()); }
+
+  /** Shared: these items with what the frames among them hold and the mind map branches, each with
+   *  where it is now. */
+  carried(sel: Item[]): Map<string, Point> { return carried(this.board, sel, this.board.list()); }
+
+  /** Shared: the selected items plus what the selected frames hold. */
+  dragSet(items: Item[]): Map<string, Point> {
+    return carried(this.board, items.filter((i) => this.selection.has(i.id)), items);
+  }
+
+  /** Shared: puts each of these items in the frame it lies in, or out of frames (see settled). */
+  settle(ids: Iterable<string>, fresh?: string): void {
+    const lists = settled(this.board, ids, fresh);
+    this.board.transact(() => lists.forEach((members, f) => this.board.update(f, { members })));
+  }
+
+  /** Shared: adds a newly made item: into the frame it's made in; a new frame takes in what lies inside it. */
+  addItem(it: Item): void {
+    this.board.add(it);
+    this.settleNew(it.id);
+  }
+
+  /** Shared: a new item goes into the frame it's in; a new frame takes in what lies inside it. */
+  settleNew(id: string): void {
+    const it = this.board.get(id);
+    if (!it) return;
+    if (it.type !== 'frame') { this.settle([id]); return; }
+    const hidden = this.hidden();
+    this.settle([...this.board.list().filter((i) => i.id !== id && !hidden.has(i.id) && pointInRect(center(i), it)).map((i) => i.id), id], id);
+  }
+
+  /** Folds a frame into a bar with its title, what it holds hidden away, or unfolds it again. */
+  setFolded(id: string, fold: boolean): void {
+    const f = this.board.get(id);
+    if (f?.type !== 'frame' || !!f.fold === fold) return;
+    if (fold) {
+      // It keeps a list of what it holds from then on, so nothing new slips in under the bar.
+      this.board.update(id, { fold: { w: f.w, h: f.h }, ...foldedSize(f.text ?? ''), members: this.membersOf(f) });
+      const hidden = this.hidden();
+      this.setSelection([...this.selection].filter((s) => !hidden.has(s)));
+    } else {
+      this.board.update(id, { w: f.fold!.w, h: f.fold!.h, fold: undefined });
+    }
+    this.requestRender();
+  }
+
+  /** What the look into a folded frame shows, in a w × h view (see peekView). */
+  peekScene(id: string, w: number, h: number, dpr: number, pad = 24): Scene | null {
+    return this.theme ? peekView(this.board, id, this.theme, w, h, dpr, pad) : null;
   }
 
   /* ---------- pointer input ---------- */
@@ -986,410 +893,10 @@ export class Editor {
     this.onPointerMove(e);
   }
 
-  private local(e: PointerEvent | WheelEvent): Point {
+  /** Shared: where an event is on the canvas, in screen pixels. */
+  local(e: PointerEvent | WheelEvent): Point {
     const r = this.canvas!.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
-  }
-
-  private onPointerDown(e: PointerEvent): void {
-    this.byFinger = e.pointerType === 'touch';
-    this.stopEditing();
-    // Same as in newItem: once someone works on the board, leave the camera to them.
-    this.needsFit = false;
-    const sp = this.local(e);
-    this.canvas!.setPointerCapture(e.pointerId);
-    this.pointers.set(e.pointerId, sp);
-
-    if (this.pointers.size === 2) {
-      this.cancelGesture();
-      const [p, q] = [...this.pointers.values()];
-      this.gesture = { type: 'pinch', d0: Math.hypot(p.x - q.x, p.y - q.y) || 1, z0: this.cam.z, anchor: this.toWorld((p.x + q.x) / 2, (p.y + q.y) / 2) };
-      return;
-    }
-    if (this.pointers.size > 2) return;
-
-    const w = this.toWorld(sp.x, sp.y);
-    const items = this.board.list();
-    // A frame takes clicks anywhere on its empty area, but links drawn across it come first.
-    let hit = hitItem(this.shown(), w, this.cam.z);
-    const link = hit && hit.type !== 'frame' ? null : hitLink(this.shownLinks(), (id) => this.board.get(id), w, this.cam.z);
-    if (link) hit = null;
-
-    // A finger on the empty board moves the board, but not on the controls of what's selected (its
-    // resize handle, link dots, turning corner, mind map buttons) or on a table's line.
-    const picked = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
-    const onControl = !!picked && !this.editingId && (this.onHandle(picked, w) || !!this.dotAt(picked, w) || this.onRotate(picked, w) || !!this.plusAt(picked, w));
-    const empty = this.tool === 'select' && e.button === 0 && !this.spaceDown && !e.shiftKey && !hit && !link && !onControl
-      && !this.grabbableLine(w, hit, e.pointerType) && !this.editingId;
-    // Pressed twice on the empty board: everything on it comes into view, as with the "show all" button.
-    if (empty) {
-      const now = performance.now(), last = this.lastEmpty;
-      this.lastEmpty = { t: now, x: sp.x, y: sp.y };
-      if (now - last.t < 380 && Math.hypot(sp.x - last.x, sp.y - last.y) < 12) {
-        this.lastEmpty = { t: 0, x: 0, y: 0 };
-        this.fit();
-        return;
-      }
-    }
-    const touchPan = e.pointerType === 'touch' && this.tool === 'select' && !hit && !link && !onControl && !this.grabbableLine(w, hit, e.pointerType);
-    if (e.button === 1 || this.spaceDown || this.tool === 'hand' || touchPan) {
-      // A finger on the empty board pans it; let go without moving, it's a tap that drops the selection.
-      this.gesture = { type: 'pan', sx: sp.x, sy: sp.y, cx: this.cam.x, cy: this.cam.y, tap: touchPan };
-      this.canvas!.classList.add('panning');
-      return;
-    }
-    if (e.button !== 0) return;
-
-    switch (this.tool) {
-      case 'sticky':
-      case 'text':
-      case 'task':
-      case 'table':
-      case 'mind':
-        this.gesture = { type: 'place', at: w, tool: this.tool };
-        return;
-      case 'rect':
-      case 'ellipse':
-      case 'triangle':
-      case 'rhombus':
-      case 'pentagon':
-      case 'star':
-      case 'frame': {
-        this.board.beginGesture();
-        const t = this.tool;
-        const it = isPoly(t) ? this.newItem('polygon', w.x, w.y, { w: 1, h: 1, shape: t }) : this.newItem(t, w.x, w.y, { w: 1, h: 1 });
-        this.board.add(it);
-        this.gesture = { type: 'create', id: it.id, origin: w };
-        return;
-      }
-      case 'link':
-        if (hit) this.gesture = { type: 'link', from: hit.id, fromSide: null, to: w, target: null };
-        return;
-      case 'pen':
-      case 'marker':
-        if (this.selection.size) this.setSelection([]);
-        this.gesture = { type: 'draw', tool: this.tool, pts: [w] };
-        this.requestRender();
-        return;
-      case 'eraser':
-        this.board.beginGesture();
-        this.gesture = { type: 'erase', last: w };
-        this.eraseAlong(w, w);
-        return;
-    }
-
-    // Select tool.
-    const single = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
-    const plus = single && this.plusAt(single, w);
-    if (single && plus) {
-      if (plus === 'move') this.gesture = { type: 'mindMove', id: single.id, from: w, to: w, target: null };
-      else this.addMindNode(single.id, plus, true);
-      return;
-    }
-    const dot = single && !this.editingId ? this.dotAt(single, w) : null;
-    if (single && dot) {
-      this.gesture = { type: 'link', from: single.id, fromSide: dot, to: w, target: null };
-      return;
-    }
-    if (single && this.onHandle(single, w)) {
-      this.board.beginGesture();
-      this.gesture = { type: 'resize', id: single.id, start: w, orig: { ...single } };
-      this.setMoving(true);
-      return;
-    }
-    if (single && this.onRotate(single, w)) {
-      this.board.beginGesture();
-      const c = center(single), items = this.board.list();
-      // A frame turns with everything it holds, which keeps a list from then on.
-      if (single.type === 'frame' && !single.members) this.board.update(single.id, { members: this.membersOf(single, items) });
-      const held = single.type === 'frame' ? [...this.carried([single], items).keys()].filter((id) => id !== single.id) : [];
-      this.gesture = {
-        type: 'rotate', id: single.id, c, a0: Math.atan2(w.y - c.y, w.x - c.x), rot0: single.rot ?? 0,
-        held: held.map((id) => this.board.get(id)!).map((i) => ({ id: i.id, c: center(i), rot0: i.rot ?? 0 })),
-      };
-      this.setMoving(true);
-      return;
-    }
-    // A table's lines resize the column or row before them, the table selected or not. Shift-clicking
-    // picks several lines (or drops one); dragging any picked line moves them all.
-    const tl = this.editingId ? null : this.grabbableLine(w, hit, e.pointerType);
-    if (tl) {
-      const same = (l: TableLine) => l.id === tl.id && l.axis === tl.axis && l.index === tl.index;
-      const picked = this.pickedLines.filter((l) => l.id === tl.id), was = picked.some(same);
-      // A click picks the line (it stays blue), Shift-click adds one or drops it; pressing a picked
-      // line keeps the others picked, to drag them all.
-      this.pickedLines = e.shiftKey ? (was ? picked.filter((l) => !same(l)) : [...picked, tl]) : was ? picked : [tl];
-      const table = this.board.get(tl.id)!;
-      const lines = e.shiftKey || was ? this.pickedLines : [tl];
-      this.board.beginGesture();
-      this.hotLine = tl;
-      this.gesture = { type: 'tableLine', id: tl.id, start: w, lines, cols0: colsOf(table), rows0: rowsOf(table) };
-      this.setMoving(true);
-      this.requestRender();
-      return;
-    }
-    if (this.pickedLines.length) { this.pickedLines = []; this.requestRender(); }
-    // A frame's buttons: fold it, unfold it, look at what it holds.
-    const fb = e.shiftKey || (hit && hit.type !== 'frame') ? null : this.frameButtonAt(w);
-    if (fb) {
-      if (fb.kind === 'peek') window.dispatchEvent(new CustomEvent('planx:peek', { detail: fb.id }));
-      else this.setFolded(fb.id, fb.kind === 'fold');
-      return;
-    }
-    // A task's checkbox ticks it off (or back on) instead of picking the task up.
-    if (hit?.type === 'task' && !e.shiftKey && onTaskBox(hit, w, this.cam.z)) {
-      this.board.update(hit.id, { done: hit.done ? undefined : true });
-      return;
-    }
-    // An audio note's button plays it (or stops it) instead of picking it up.
-    if (hit?.type === 'audio' && !e.shiftKey && onAudioButton(hit, w)) {
-      toggleAudio(hit, () => this.requestRender());
-      return;
-    }
-    if (hit) {
-      const now = performance.now();
-      const dbl = this.lastTap.id === hit.id && now - this.lastTap.t < 380 && !e.shiftKey;
-      this.lastTap = { id: hit.id, t: now };
-      // A click on a cell of the table already selected picks that cell (on letting go, if not dragged).
-      const cell = hit.type === 'table' && this.selection.size === 1 && this.selection.has(hit.id);
-      if (cell) { /* keeps the table selected */ }
-      else if (e.shiftKey) {
-        const next = new Set(this.selection);
-        if (next.has(hit.id)) next.delete(hit.id); else next.add(hit.id);
-        this.setSelection(next);
-      } else if (!this.selection.has(hit.id)) this.setSelection([hit.id]);
-      this.gesture = { type: 'drag', start: w, orig: this.dragSet(items), moved: false, id: hit.id, dbl, cell };
-      return;
-    }
-    this.lastTap = { id: '', t: 0 };
-    if (link) {
-      if (e.shiftKey) {
-        const next = new Set(this.selection);
-        if (next.has(link.id)) next.delete(link.id); else next.add(link.id);
-        this.setSelection(next);
-      } else this.setSelection([link.id]);
-      return;
-    }
-    if (!e.shiftKey) this.setSelection([]);
-    this.gesture = { type: 'marquee', start: w, base: new Set(this.selection), rect: null };
-  }
-
-  /** Selected items plus what the selected frames hold. */
-  private dragSet(items: Item[]): Map<string, Point> {
-    return this.carried(items.filter((i) => this.selection.has(i.id)), items);
-  }
-
-  /** These items, what the frames among them hold (frames in frames too) and the branches of mind
-   *  map nodes, each with where it is now. */
-  private carried(sel: Item[], items: Item[]): Map<string, Point> {
-    const orig = new Map<string, Point>();
-    sel.forEach((i) => orig.set(i.id, { x: i.x, y: i.y }));
-    const frames = sel.filter((i) => i.type === 'frame');
-    while (frames.length) {
-      for (const id of this.membersOf(frames.pop()!, items)) {
-        const i = this.board.get(id);
-        if (!i || orig.has(id)) continue;
-        orig.set(id, { x: i.x, y: i.y });
-        if (i.type === 'frame') frames.push(i);
-      }
-    }
-    // A mind map node brings its branches along.
-    for (const id of descendants(orig.keys(), items)) {
-      const i = this.board.get(id);
-      if (i) orig.set(id, { x: i.x, y: i.y });
-    }
-    return orig;
-  }
-
-  /** Of these items, everything folded frames hold (frames in them, and all those hold, too). */
-  private hiddenIn(items: Item[]): Set<string> {
-    const out = new Set<string>();
-    const folded = items.filter((i) => i.type === 'frame' && i.fold);
-    for (const f of folded) for (const id of this.carried([f], items).keys()) if (id !== f.id) out.add(id);
-    return out;
-  }
-
-  /** What's in sight, worked out once for each change of the board (it's asked for on every move
-   *  of the pointer and every frame drawn). */
-  private sight: { version: number; hidden: Set<string>; shown: Item[]; links: Link[] } | null = null;
-  private inSight() {
-    const version = this.board.getVersion();
-    if (this.sight?.version !== version) {
-      const items = this.board.list(), hidden = this.hiddenIn(items);
-      this.sight = { version, hidden, shown: hidden.size ? items.filter((i) => !hidden.has(i.id)) : items, links: this.linksIn(items, hidden) };
-    }
-    return this.sight;
-  }
-
-  /** Everything folded frames hold, out of sight. */
-  private hidden(): Set<string> { return this.inSight().hidden; }
-
-  /** The items in sight: all but what folded frames hold. */
-  shown(): Item[] { return this.inSight().shown; }
-
-  /** The links as they're seen (see linksIn). */
-  private shownLinks(): Link[] { return this.inSight().links; }
-
-  /**
-   * The links as they're seen: one whose end is hidden in a folded frame goes to that frame's bar
-   * instead (the outermost one in sight, for frames in frames), and one with both ends in the same
-   * folded frame isn't seen at all.
-   */
-  private linksIn(items: Item[], hidden: Set<string>): Link[] {
-    const links = this.board.linkList();
-    if (!hidden.size) return links;
-    const stand = new Map<string, string>();
-    for (const f of items) {
-      if (f.type !== 'frame' || !f.fold || hidden.has(f.id)) continue;
-      for (const id of this.carried([f], items).keys()) if (id !== f.id) stand.set(id, f.id);
-    }
-    // A curved link meets the bar on its side towards the other end.
-    const moved = (l: Link): Link => {
-      const from = stand.get(l.from) ?? l.from, to = stand.get(l.to) ?? l.to, a = this.board.get(from), b = this.board.get(to);
-      if (!l.fromSide || !l.toSide || !a || !b) return { ...l, from, to };
-      return { ...l, from, to, fromSide: from !== l.from ? nearestSide(a, center(b)) : l.fromSide, toSide: to !== l.to ? nearestSide(b, center(a)) : l.toSide };
-    };
-    return links.map((l) => (stand.has(l.from) || stand.has(l.to) ? moved(l) : l)).filter((l) => l.from !== l.to);
-  }
-
-  /** The frame button under the point, of the topmost frame in sight that has one there. */
-  private frameButtonAt(w: Point): { id: string; kind: FrameButton } | null {
-    const items = this.shown(), pad = this.reach(4);
-    for (let i = items.length - 1; i >= 0; i--) {
-      const it = items[i];
-      if (it.type !== 'frame') continue;
-      const p = toLocal(it, w);
-      const b = frameButtons(it, this.cam.z).find((b) => pointInRect(p, { x: b.x - pad, y: b.y - pad, w: b.s + pad * 2, h: b.s + pad * 2 }));
-      if (b) return { id: it.id, kind: b.kind };
-    }
-    return null;
-  }
-
-  /** Folds a frame into a bar with its title, what it holds hidden away, or unfolds it again. */
-  setFolded(id: string, fold: boolean): void {
-    const f = this.board.get(id);
-    if (f?.type !== 'frame' || !!f.fold === fold) return;
-    if (fold) {
-      // It keeps a list of what it holds from then on, so nothing new slips in under the bar.
-      const members = this.membersOf(f, this.board.list());
-      this.board.update(id, { fold: { w: f.w, h: f.h }, ...foldedSize(f.text ?? ''), members });
-      const hidden = this.hidden();
-      this.setSelection([...this.selection].filter((s) => !hidden.has(s)));
-    } else {
-      this.board.update(id, { w: f.fold!.w, h: f.fold!.h, fold: undefined });
-    }
-    this.requestRender();
-  }
-
-  /**
-   * What the look into a folded frame shows: the frame as it is unfolded, with what it holds, fitted
-   * into a w × h view with `pad` round it.
-   */
-  peekScene(id: string, w: number, h: number, dpr: number, pad = 24): Parameters<typeof drawScene>[1] | null {
-    const f = this.board.get(id);
-    if (f?.type !== 'frame' || !this.theme) return null;
-    const items = this.board.list(), held = this.carried([f], items);
-    const open: Item = { ...f, ...(f.fold ?? {}), fold: undefined, text: '' };
-    // Frames inside it, folded or not, are shown as they are; what they hold stays hidden if folded.
-    const inner = this.hiddenIn(items.filter((i) => held.has(i.id) && i.id !== f.id));
-    const shown = [open, ...items.filter((i) => held.has(i.id) && i.id !== f.id && !inner.has(i.id))];
-    const ids = new Set(shown.map((i) => i.id));
-    const z = Math.min((w - pad * 2) / open.w, (h - pad * 2) / open.h);
-    return {
-      items: shown,
-      links: this.board.linkList().filter((l) => ids.has(l.from) && ids.has(l.to)),
-      get: (k) => (k === id ? open : this.board.get(k)),
-      cam: { x: (w - open.w * z) / 2 - open.x * z, y: (h - open.h * z) / 2 - open.y * z, z },
-      theme: this.theme, width: w, height: h, dpr,
-      still: true, selection: new Set(), editingId: null, marquee: null, linkPreview: null, peers: [], showHandle: false, byFinger: false,
-      hotDot: null, hotPlus: null, plusFade: 0, mindMove: null, tableLines: [], editingCell: null, guides: [], pickedCells: null, stroke: null,
-    };
-  }
-
-  /** What a frame holds: what was put in it, or, in a frame from before frames kept a list,
-   *  everything lying inside. */
-  private membersOf(f: Item, items: Item[]): string[] {
-    if (f.members) return f.members.filter((id) => this.board.get(id));
-    return items.filter((i) => i.type !== 'frame' && rectContains(boxOf(f), boxOf(i))).map((i) => i.id);
-  }
-
-  /**
-   * Puts each of these items in the innermost frame its middle lies in, or takes it out of frames
-   * when it lies in none. Only this puts things in frames: an item that merely ends up under a frame
-   * (a frame put around others, or dragged over it) stays out until it's moved or made there.
-   */
-  private settle(ids: Iterable<string>, fresh?: string): void {
-    // Worked out on one look at the board (it reads back stale within a change), then written at once.
-    const items = this.board.list(), frames = items.filter((f) => f.type === 'frame');
-    const held = new Map(frames.map((f) => [f.id, f.id === fresh ? [] : this.membersOf(f, items)]));
-    const changed = new Set<string>();
-    for (const id of ids) {
-      const it = this.board.get(id);
-      // Mind map branches go wherever their node goes.
-      if (!it || (it.type === 'mind' && it.parent)) continue;
-      const c = center(it);
-      const inside = it.type === 'frame' ? new Set(this.carried([it], items).keys()) : new Set([id]);
-      const home = frames
-        .filter((f) => !f.fold && !inside.has(f.id) && pointInRect(toLocal(f, c), f) && (it.type !== 'frame' || f.w * f.h > it.w * it.h))
-        .sort((a, b) => a.w * a.h - b.w * b.h)[0];
-      for (const f of frames) {
-        const list = held.get(f.id)!, has = list.includes(id);
-        if (f === home && (!has || !f.members)) { held.set(f.id, has ? list : [...list, id]); changed.add(f.id); }
-        else if (f !== home && has) { held.set(f.id, list.filter((m) => m !== id)); changed.add(f.id); }
-      }
-    }
-    if (fresh) changed.add(fresh);
-    this.board.transact(() => changed.forEach((f) => this.board.update(f, { members: held.get(f) })));
-  }
-
-  /** Adds a newly made item: into the frame it's made in; a new frame takes in what lies inside it. */
-  private addItem(it: Item): void {
-    this.board.add(it);
-    this.settleNew(it.id);
-  }
-
-  private settleNew(id: string): void {
-    const it = this.board.get(id);
-    if (!it) return;
-    if (it.type !== 'frame') { this.settle([id]); return; }
-    const hidden = this.hidden();
-    this.settle([...this.board.list().filter((i) => i.id !== id && !hidden.has(i.id) && pointInRect(center(i), it)).map((i) => i.id), id], id);
-  }
-
-  private onHandle(it: Item, w: Point): boolean {
-    if (it.type === 'mind' || it.fold) return false;
-    const hs = this.reach((HANDLE + 6) / 2) * 2, off = 3 / this.cam.z;
-    return pointInRect(toLocal(it, w), { x: it.x + it.w + off - hs / 2, y: it.y + it.h + off - hs / 2, w: hs, h: hs });
-  }
-
-  /** How far the selected mind map node's "+" buttons have faded in, 0…1. */
-  private plusFade(): number {
-    const typing = this.editingId && this.board.get(this.editingId)?.type !== 'mind';
-    return this.moving || typing ? 0 : clamp((performance.now() - this.plusFrom) / PLUS_FADE, 0, 1);
-  }
-
-  /** Which of a mind map node's buttons is under the point, once they're showing. */
-  private plusAt(it: Item, w: Point): MindButton | null {
-    if (it.type !== 'mind' || this.plusFade() === 0) return null;
-    return mindButtons(it, (id) => this.board.get(id), this.cam.z).find((b) => Math.hypot(w.x - b.x, w.y - b.y) <= Math.max(b.r * 1.5, this.reach(0)))?.kind ?? null;
-  }
-
-  /** Whether the point is just outside the item's top right corner, where it is turned. */
-  private onRotate(it: Item, w: Point): boolean {
-    if (!ROTATABLE.includes(it.type) || it.fold) return false;
-    const p = toLocal(it, w);
-    return !pointInRect(p, it) && Math.hypot(p.x - (it.x + it.w), p.y - it.y) <= this.reach(ROTATE_ZONE);
-  }
-
-  /** The link dot under the point, if any. */
-  private dotAt(it: Item, w: Point): Side | null {
-    if (it.type === 'mind') return null;
-    const r = this.reach(16.5);  // well beyond the dot itself, so it is easy to catch
-    for (const side of SIDES) {
-      const p = sidePoint(it, side, DOT_GAP / this.cam.z);
-      if (Math.hypot(w.x - p.x, w.y - p.y) <= r) return side;
-    }
-    return null;
   }
 
   private onPointerMove(e: PointerEvent): void {
@@ -1397,150 +904,10 @@ export class Editor {
     const sp = this.local(e);
     const w = this.toWorld(sp.x, sp.y);
     this.sendCursor(w);
-    this.updateCursor(w, e.altKey);
+    updateCursor(this, w, e.altKey);
     if (!this.pointers.has(e.pointerId) || !this.gesture) return;
     this.pointers.set(e.pointerId, sp);
-    const g = this.gesture;
-
-    switch (g.type) {
-      case 'pinch': {
-        const [p, q] = [...this.pointers.values()];
-        if (!q) return;
-        const z = clamp(g.z0 * Math.hypot(p.x - q.x, p.y - q.y) / g.d0, MIN_Z, MAX_Z);
-        const cx = (p.x + q.x) / 2, cy = (p.y + q.y) / 2;
-        this.cam = { z, x: cx - g.anchor.x * z, y: cy - g.anchor.y * z };
-        this.camChanged();
-        return;
-      }
-      case 'pan':
-        if (Math.hypot(sp.x - g.sx, sp.y - g.sy) > 4) g.moved = true;
-        this.cam = { ...this.cam, x: g.cx + sp.x - g.sx, y: g.cy + sp.y - g.sy };
-        this.camChanged();
-        return;
-      case 'drag': {
-        const dx = w.x - g.start.x, dy = w.y - g.start.y;
-        if (!g.moved) {
-          if (Math.hypot(dx, dy) * this.cam.z < 3) return;
-          g.moved = true;
-          this.setMoving(true);
-          this.board.beginGesture();
-          if (e.altKey) g.orig = this.dragCopies(g.orig);
-        }
-        // With guides on, what's dragged lines up with what's on screen around it when near.
-        let sx = 0, sy = 0;
-        g.guides = undefined;
-        if (this.guides) {
-          const moving = [...g.orig].map(([id, o]) => { const it = this.board.get(id); return it && { ...it, x: o.x + dx, y: o.y + dy }; }).filter((i): i is Item => !!i);
-          const bs = moving.map(boxOf), view = this.viewRect();
-          const x = Math.min(...bs.map((b) => b.x)), y = Math.min(...bs.map((b) => b.y));
-          const box = bs.length ? { x, y, w: Math.max(...bs.map((b) => b.x + b.w)) - x, h: Math.max(...bs.map((b) => b.y + b.h)) - y } : null;
-          const others = this.shown().filter((i) => !g.orig.has(i.id) && i.type !== 'ink').map(boxOf).filter((r) => rectsIntersect(r, view));
-          if (box) ({ dx: sx, dy: sy, guides: g.guides } = snapToGuides(box, others, GUIDE_SNAP / this.cam.z));
-        }
-        this.board.transact(() => {
-          for (const [id, o] of g.orig) this.board.update(id, { x: Math.round(o.x + dx + sx), y: Math.round(o.y + dy + sy) });
-        });
-        if (g.guides) this.requestRender();
-        return;
-      }
-      case 'resize': {
-        const it = this.board.get(g.id);
-        if (!it) return;
-        const min = it.type === 'frame' ? 80 : it.type === 'ink' ? 4 : it.type === 'audio' ? 32 : it.type === 'icon' || it.type === 'emoji' || it.type === 'image' ? 16 : 40;
-        // A turned item is stretched along its own sides.
-        const { w: w0, h: h0 } = g.orig, d = turn({ x: w.x - g.start.x, y: w.y - g.start.y }, { x: 0, y: 0 }, -angleOf(g.orig));
-        let nw = Math.max(min, Math.round(w0 + d.x));
-        let nh = Math.max(min, Math.round(h0 + d.y));
-        // Stickers, icons, emoji, drawings and pictures keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
-        const keep = it.type === 'sticky' || it.type === 'image' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || it.type === 'ink' || it.type === 'audio' || e.shiftKey;
-        if (keep) {
-          const k = Math.max(nw / w0, nh / h0);
-          nw = Math.round(w0 * k);
-          nh = Math.round(h0 * k);
-        }
-        if (it.type === 'text') nh = itemTextHeight(it, it.text, nw);
-        // A task can be made taller by hand, never shorter than its text.
-        if (it.type === 'task') nh = Math.max(nh, fitHeight(it, it.text, nw)!);
-        this.board.update(g.id, it.type === 'table' ? withScale(it, nw, nh) : g.orig.rot ? { w: nw, h: nh, ...resizedAt(g.orig, nw, nh) } : { w: nw, h: nh });
-        return;
-      }
-      case 'rotate': {
-        // Shift turns in steps of 15°; otherwise the turn sticks to the square angles when near them.
-        let deg = g.rot0 + ((Math.atan2(w.y - g.c.y, w.x - g.c.x) - g.a0) * 180) / Math.PI;
-        if (e.shiftKey) deg = Math.round(deg / 15) * 15;
-        else if (Math.abs(deg - Math.round(deg / 90) * 90) < ROTATE_SNAP) deg = Math.round(deg / 90) * 90;
-        deg = Math.round((((deg % 360) + 540) % 360 - 180) * 10) / 10;
-        // What a frame holds goes round its middle, turning as much (what can't turn just goes round).
-        const d = deg - g.rot0, a = (d * Math.PI) / 180;
-        this.board.transact(() => {
-          this.board.update(g.id, { rot: deg || undefined });
-          for (const h of g.held) {
-            const it = this.board.get(h.id);
-            if (!it) continue;
-            const c = turn(h.c, g.c, a), patch: Partial<Item> = { x: Math.round(c.x - it.w / 2), y: Math.round(c.y - it.h / 2) };
-            if (ROTATABLE.includes(it.type)) patch.rot = Math.round((((h.rot0 + d) % 360 + 540) % 360 - 180) * 10) / 10 || undefined;
-            this.board.update(h.id, patch);
-          }
-        });
-        if (this.canvas) this.canvas.style.cursor = rotateCursor(deg + 90);
-        return;
-      }
-      case 'tableLine': {
-        const it = this.board.get(g.id);
-        if (!it) return;
-        // The dragged lines move together, the gaps between them kept.
-        const patch: Partial<Item> = {};
-        const cols = g.lines.filter((l) => l.axis === 'col').map((l) => l.index);
-        const rows = g.lines.filter((l) => l.axis === 'row').map((l) => l.index);
-        if (cols.length) { patch.cols = movedLines(g.cols0, cols, w.x - g.start.x, MIN_COL); patch.w = patch.cols.reduce((a, b) => a + b, 0); }
-        if (rows.length) { patch.rows = movedLines(g.rows0, rows, w.y - g.start.y, MIN_ROW); patch.h = patch.rows.reduce((a, b) => a + b, 0); }
-        this.board.update(g.id, patch);
-        return;
-      }
-      case 'create': {
-        let r = normRect(g.origin, w);
-        if (e.shiftKey) { const s = Math.max(r.w, r.h); r = { ...r, w: s, h: s }; }
-        this.board.update(g.id, { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.w), h: Math.round(r.h) });
-        return;
-      }
-      case 'mindMove': {
-        const t = hitItem(this.shown(), w, this.cam.z);
-        g.to = w;
-        g.target = t && canMoveTo(g.id, t.id, this.board.list()) ? t.id : null;
-        this.requestRender();
-        return;
-      }
-      case 'link': {
-        const t = hitItem(this.shown(), w, this.cam.z);
-        g.to = w;
-        g.target = t && t.id !== g.from ? t.id : null;
-        this.requestRender();
-        return;
-      }
-      case 'draw': {
-        // Coalesced events keep fast strokes smooth; skip points closer than a pixel and a half.
-        for (const ev of e.getCoalescedEvents?.() ?? [e]) {
-          const l = this.local(ev), p = this.toWorld(l.x, l.y), last = g.pts[g.pts.length - 1];
-          if (Math.hypot(p.x - last.x, p.y - last.y) * this.cam.z >= 1.5) g.pts.push(p);
-        }
-        this.requestRender();
-        return;
-      }
-      case 'erase':
-        this.eraseAlong(g.last, w);
-        g.last = w;
-        return;
-      case 'marquee': {
-        g.rect = normRect(g.start, w);
-        const next = new Set(g.base);
-        for (const it of this.shown()) {
-          const inside = it.type === 'frame' ? rectContains(g.rect, boxOf(it)) : rectsIntersect(g.rect, boxOf(it));
-          if (inside) next.add(it.id);
-        }
-        this.setSelection(next);
-        return;
-      }
-    }
+    moveGesture(this, this.gesture, e, sp, w);
   }
 
   private onPointerUp(e: PointerEvent): void {
@@ -1548,209 +915,12 @@ export class Editor {
     this.pointers.delete(e.pointerId);
     const g = this.gesture;
     if (!g) return;
+    // A pinch ends when the last finger is off.
     if (g.type === 'pinch') { if (!this.pointers.size) this.gesture = null; return; }
     this.gesture = null;
     this.canvas?.classList.remove('panning');
     this.setMoving(false);
-
-    switch (g.type) {
-      case 'pan':
-        if (g.tap && !g.moved && (this.selection.size || this.pickedLines.length)) {
-          this.pickedLines = [];
-          this.setSelection([]);
-        }
-        return;
-      case 'drag':
-        if (g.moved) {
-          // What was dragged into a frame is in it now, and what was dragged out of one is out.
-          this.settle([...this.selection]);
-          this.board.endGesture();
-        }
-        else if (g.dbl) {
-          const it = this.board.get(g.id);
-          this.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
-        } else if (g.cell) {
-          const it = this.board.get(g.id), i = it ? cellAt(it, g.start) : null;
-          if (i !== null) this.pickCell(i, e.shiftKey ? 'range' : e.metaKey || e.ctrlKey ? 'toggle' : 'one');
-        } else if (this.board.get(g.id)?.type === 'mind' && this.selection.size === 1 && !e.shiftKey) {
-          // A mind map node opens for typing on a single click, the caret after its text.
-          this.startEditing(g.id, null, 'end');
-        }
-        return;
-      case 'resize':
-      case 'rotate':
-      case 'tableLine':
-        this.board.endGesture();
-        return;
-      case 'place': {
-        const d = DEFAULTS[g.tool];
-        const it = g.tool === 'text'
-          ? this.newItem('text', g.at.x - 4, g.at.y - 14)
-          : this.newItem(g.tool, g.at.x - d.w / 2, g.at.y - d.h / 2, g.tool === 'table' ? newTable() : g.tool === 'mind' ? { text: MIND_TOPIC } : {});
-        if (it.type === 'text') it.h = itemTextHeight(it);
-        if (it.type === 'mind') Object.assign(it, mindSize(it), { x: Math.round(g.at.x - mindSize(it).w / 2) });
-        this.addItem(it);
-        this.setTool('select');
-        this.setSelection([it.id]);
-        this.startEditing(it.id);
-        return;
-      }
-      case 'create': {
-        const it = this.board.get(g.id);
-        if (it) {
-          const d = DEFAULTS[it.type];
-          if (it.w < 10 && it.h < 10) this.board.update(it.id, { w: d.w, h: d.h, x: Math.round(g.origin.x - d.w / 2), y: Math.round(g.origin.y - d.h / 2) });
-          else this.board.update(it.id, { w: Math.max(it.w, 30), h: Math.max(it.h, 30) });
-          this.settleNew(it.id);
-        }
-        this.board.endGesture();
-        this.setTool('select');
-        this.setSelection([g.id]);
-        if (it?.type === 'frame') this.startEditing(g.id);
-        return;
-      }
-      case 'link':
-        if (g.target && !this.board.hasLink(g.from, g.target)) {
-          const target = this.board.get(g.target)!;
-          const l: Link = g.fromSide
-            ? { id: uid(), from: g.from, to: g.target, fromSide: g.fromSide, toSide: nearestSide(target, g.to) }
-            : { id: uid(), from: g.from, to: g.target };
-          this.board.addLink(l);
-          this.setTool('select');
-          this.setSelection([l.id]);
-        }
-        this.requestRender();
-        return;
-      case 'mindMove':
-        // The branch hangs from the node it's dropped on now, on that side of a central topic.
-        if (g.target) {
-          const target = this.board.get(g.target)!, toward = g.to.x >= target.x + target.w / 2 ? 1 : -1;
-          const moves = moveBranch(g.id, g.target, this.board.list(), toward);
-          this.board.transact(() => {
-            this.board.update(g.id, { parent: g.target! });
-            moves.forEach((p, id) => this.board.update(id, p));
-          });
-        }
-        this.requestRender();
-        return;
-      case 'marquee':
-        this.requestRender();
-        return;
-      case 'draw':
-        this.addInk(g.tool, g.pts);
-        return;
-      case 'erase':
-        this.board.endGesture();
-        return;
-    }
-  }
-
-  /** Turns a drawn line into an ink item boxed around it, its points kept relative to the box. */
-  private addInk(tool: PenTool, pts: Point[]): void {
-    const style = this.penStyle(tool), sw = style.size / this.cam.z;
-    let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
-    for (const p of pts) { x1 = Math.min(x1, p.x); y1 = Math.min(y1, p.y); x2 = Math.max(x2, p.x); y2 = Math.max(y2, p.y); }
-    const x = Math.floor(x1 - sw / 2), y = Math.floor(y1 - sw / 2);
-    const w = Math.ceil(x2 + sw / 2) - x, h = Math.ceil(y2 + sw / 2) - y;
-    const r = (v: number) => Math.round(v * 10) / 10;
-    this.addItem(this.newItem('ink', x, y, {
-      w, h, iw: w, sw: r(sw), color: style.color, hl: tool === 'marker' || undefined,
-      pts: pts.flatMap((p) => [r(p.x - x), r(p.y - y)]),
-    }));
-  }
-
-  /** Removes every stroke the eraser touches between two points, checked at steps narrower than the eraser. */
-  private eraseAlong(a: Point, b: Point): void {
-    const tol = 8 / this.cam.z, steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / tol));
-    const gone = new Set<string>();
-    for (const it of this.board.list()) {
-      if (it.type !== 'ink') continue;
-      const box = { x: it.x - tol, y: it.y - tol, w: it.w + tol * 2, h: it.h + tol * 2 };
-      for (let i = 0; i <= steps; i++) {
-        const p = { x: a.x + (b.x - a.x) * i / steps, y: a.y + (b.y - a.y) * i / steps };
-        if (pointInRect(toLocal(it, p), box) && nearInk(it, p, tol)) { gone.add(it.id); break; }
-      }
-    }
-    if (gone.size) this.board.remove(gone);
-  }
-
-  private cancelGesture(): void {
-    const g = this.gesture;
-    if (!g) return;
-    if (g.type === 'create') { this.board.remove([g.id]); this.board.endGesture(); }
-    if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'rotate' || g.type === 'erase' || g.type === 'tableLine') this.board.endGesture();
-    this.gesture = null;
-    this.setMoving(false);
-    this.requestRender();
-  }
-
-  private updateCursor(w: Point, alt: boolean): void {
-    if (!this.canvas || this.gesture || this.tool !== 'select') return;
-    const single = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
-    const dot = single && !this.editingId ? this.dotAt(single, w) : null;
-    if (dot !== this.hotDot) { this.hotDot = dot; this.requestRender(); }
-    let cursor = '';
-    const near = this.editingId || dot ? null : this.tableLineAt(w, hitItem(this.shown(), w, this.cam.z));
-    this.restOn(near);
-    const line = this.lineRest?.armed ? this.lineRest.line : null;
-    if (!sameLine(line, this.hotLine)) { this.hotLine = line; this.requestRender(); }
-    const plus = single ? this.plusAt(single, w) : null;
-    if (plus !== this.hotPlus) { this.hotPlus = plus; this.requestRender(); }
-    if (plus || this.frameButtonAt(w)) cursor = 'pointer';
-    else if (dot) cursor = 'crosshair';
-    else if (single && this.onHandle(single, w)) cursor = 'nwse-resize';
-    else if (single && this.onRotate(single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);
-    else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
-    else if (hitLink(this.shownLinks(), (id) => this.board.get(id), w, this.cam.z)) cursor = 'pointer';
-    else {
-      const hit = hitItem(this.shown(), w, this.cam.z);
-      if ((hit?.type === 'task' && onTaskBox(hit, w, this.cam.z)) || (hit?.type === 'audio' && onAudioButton(hit, w))) cursor = 'pointer';
-      else if (hit) cursor = alt ? 'copy' : 'move';
-    }
-    this.canvas.style.cursor = cursor;
-  }
-
-  /** Starts (or stops) waiting for the mouse to rest on a table line; a picked line is ready at once. */
-  private restOn(line: TableLine | null): void {
-    if (sameLine(line, this.lineRest?.line ?? null)) return;
-    clearTimeout(this.lineRest?.timer);
-    this.lineRest = null;
-    if (!line) return;
-    const rest = { line, armed: this.pickedLines.some((l) => sameLine(l, line)), timer: 0 };
-    if (!rest.armed) {
-      rest.timer = window.setTimeout(() => {
-        rest.armed = true;
-        if (this.lineRest !== rest || this.gesture) return;
-        this.hotLine = line;
-        if (this.canvas) this.canvas.style.cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
-        this.requestRender();
-      }, LINE_REST);
-    }
-    this.lineRest = rest;
-  }
-
-  /** The table line a press here takes hold of: one picked already; with the mouse, one it has rested
-   *  on; with a finger, one of the table that's selected. */
-  private grabbableLine(w: Point, hit: Item | null, pointer: string): TableLine | null {
-    const tl = this.tableLineAt(w, hit);
-    if (!tl) return null;
-    if (this.pickedLines.some((l) => sameLine(l, tl))) return tl;
-    if (pointer === 'touch') return this.selection.size === 1 && this.selection.has(tl.id) ? tl : null;
-    return this.lineRest?.armed && sameLine(this.lineRest.line, tl) ? tl : null;
-  }
-
-  /** The table line under the point: of the table there, or just past a table's right or bottom edge. */
-  private tableLineAt(w: Point, hit: Item | null): TableLine | null {
-    if (hit && hit.type !== 'table' && hit.type !== 'frame') return null;
-    // A finger gets a wider band, but not so wide a small cell is all lines.
-    const tol = (this.byFinger ? 10 : 5) / this.cam.z, items = this.shown();
-    for (let i = items.length - 1; i >= 0; i--) {
-      const it = items[i];
-      if (it.type !== 'table') continue;
-      const l = lineAt(it, w, tol);
-      if (l) return { id: it.id, ...l };
-    }
-    return null;
+    endGesture(this, g, e);
   }
 
   private sendCursor(w: Point): void {
@@ -1759,83 +929,4 @@ export class Editor {
     this.lastCursorSent = now;
     this.presence.setCursor({ x: Math.round(w.x), y: Math.round(w.y) });
   }
-
-  /** Wheel and trackpad: zoom or scroll the board. `sp` is the screen point zooming keeps still,
-   *  the pointer by default; the board map passes the middle of the screen. */
-  wheel(e: WheelEvent, sp: Point = this.local(e)): void {
-    e.preventDefault();
-    const mouseWheel = e.deltaMode !== 0 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
-    const pan = (dx: number, dy: number) => { this.cam = { ...this.cam, x: this.cam.x - dx, y: this.cam.y - dy }; this.camChanged(); };
-    // Cmd + wheel scrolls up and down, Shift + wheel sideways; a sideways swipe moves sideways.
-    if (e.metaKey) pan(e.deltaX, e.deltaY);
-    else if (e.shiftKey) pan(e.deltaX || e.deltaY, 0);
-    // A trackpad pinch (it comes as Ctrl + wheel) zooms with the fingers.
-    else if (e.ctrlKey) this.zoomAt(sp.x, sp.y, Math.exp(-e.deltaY * 0.004));
-    else if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) pan(e.deltaX, 0);
-    // The wheel zooms linearly: every notch adds or takes the same WHEEL_STEP, a smooth wheel as much per 100px.
-    else {
-      const step = mouseWheel ? Math.sign(e.deltaY) * WHEEL_STEP : (e.deltaY / 100) * WHEEL_STEP;
-      this.zoomAt(sp.x, sp.y, (this.cam.z - step) / this.cam.z);
-    }
-  }
-
-  /* ---------- keyboard ---------- */
-
-  private onKeyDown(e: KeyboardEvent): void {
-    const t = e.target as HTMLElement | null;
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-    const mod = e.ctrlKey || e.metaKey;
-    if (e.code === 'Space') { e.preventDefault(); this.setSpace(true); return; }
-    if (mod) {
-      switch (e.code) {
-        case 'KeyZ': e.preventDefault(); if (e.shiftKey) this.redo(); else this.undo(); return;
-        case 'KeyY': e.preventDefault(); this.redo(); return;
-        case 'KeyC': this.copy(); return;
-        case 'KeyX': if (this.copy()) this.deleteSelection(); return;
-        case 'KeyV': e.preventDefault(); this.paste(); return;
-        case 'KeyD': e.preventDefault(); this.duplicate(); return;
-        case 'KeyA': e.preventDefault(); this.setSelection(this.shown().map((i) => i.id)); return;
-        case 'KeyG': e.preventDefault(); this.frameSelection(); return;
-      }
-      return;
-    }
-    if ((e.key === 'Delete' || e.key === 'Backspace') && this.cells.length) {
-      // With cells picked, their text goes, not the table.
-      e.preventDefault();
-      const it = this.selectedItems()[0];
-      if (it?.type === 'table') this.board.update(it.id, { cells: (it.cells ?? []).map((c, i) => (this.cells.includes(i) ? '' : c)) });
-      return;
-    }
-    if (e.key === 'Delete' || e.key === 'Backspace') { if (this.selection.size) { e.preventDefault(); this.deleteSelection(); } return; }
-    if (e.key === 'Escape' && this.cells.length) { this.cells = []; this.emit(); this.requestRender(); return; }
-    if (e.key === 'Escape') { this.pickedLines = []; this.setSelection([]); this.setTool('select'); window.dispatchEvent(new CustomEvent('planx:close-popovers')); return; }
-    // On a mind map node, Tab adds a branch to it and Enter one beside it (to the centre: a branch).
-    const one = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
-    if (one?.type === 'mind' && (e.key === 'Tab' || e.key === 'Enter')) {
-      e.preventDefault();
-      this.addMindNode(one.id, e.key === 'Enter' && one.parent ? 'below' : 'child');
-      return;
-    }
-    if (e.key === 'Enter' && this.selection.size === 1) { e.preventDefault(); this.startEditing([...this.selection][0]); return; }
-    if (e.shiftKey && e.code === 'Digit1') { this.fit(); return; }
-    if (e.shiftKey && e.code === 'Digit0') { this.zoomCenter(1 / this.cam.z); return; }
-    if (e.key === '+' || e.key === '=') { this.zoomCenter(1.2); return; }
-    if (e.key === '-' || e.key === '_') { this.zoomCenter(1 / 1.2); return; }
-    if (e.key.startsWith('Arrow') && this.selection.size) {
-      e.preventDefault();
-      const s = e.shiftKey ? 10 : 1;
-      const dx = e.key === 'ArrowLeft' ? -s : e.key === 'ArrowRight' ? s : 0;
-      const dy = e.key === 'ArrowUp' ? -s : e.key === 'ArrowDown' ? s : 0;
-      this.board.transact(() => this.selectedItems().forEach((it) => this.board.update(it.id, { x: it.x + dx, y: it.y + dy })));
-      return;
-    }
-    const tools: Record<string, Tool> = { KeyV: 'select', KeyH: 'hand', KeyN: 'sticky', KeyS: 'sticky', KeyT: 'text', KeyR: 'rect', KeyO: 'ellipse', KeyC: 'link', KeyL: 'link', KeyF: 'frame', KeyP: 'pen', KeyM: 'marker', KeyE: 'eraser' };
-    if (e.code === 'KeyI') { window.dispatchEvent(new CustomEvent('planx:toggle-icons')); return; }
-    if (tools[e.code]) this.setTool(tools[e.code]);
-  }
-}
-
-function readPens(): Pens {
-  const saved = readJSON<Pens>(PENS_KEY);
-  return saved?.pen?.presets?.length && saved.marker?.presets?.length ? saved : DEFAULT_PENS;
 }
