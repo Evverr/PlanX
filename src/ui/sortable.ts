@@ -20,6 +20,9 @@ export interface DropOut {
   hold?: (key: string) => boolean;
 }
 
+/** Where a lifted button is: on its panel, or in the panel's "more" popover. */
+type Zone = 'bar' | 'more';
+
 /** Separators are items too, keyed 'sep…' (a line) or 'gap…' (a space). */
 export const isSeparator = (key: string) => key.startsWith('sep') || key.startsWith('gap');
 
@@ -61,15 +64,21 @@ export function readOrder(storageKey: string, defaults: string[], renames: Recor
  */
 export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 'y', renames: Record<string, string> = {}, dropOut?: DropOut) {
   const [order, setOrder] = useState(() => readOrder(storageKey, defaults, renames));
+  // One button lifted at a time, in one of two places: on the panel itself ('bar', where it only
+  // moves along the panel) or in its "more" popover ('more', where it moves both ways, as the
+  // popover may have rows and columns). It can go from one to the other while it's dragged.
   const [drag, setDrag] = useState<{
-    key: string; grab: number; at: number; at0: number; moved: boolean;
-    /** Out of the panel, where the pointer is on screen, and the order from before the drag. */
-    out: boolean; x: number; y: number; x0: number; y0: number; before: string[];
+    key: string; zone: Zone;
+    /** Where in the button it was taken hold of, from its top left corner. */
+    gx: number; gy: number;
+    /** Where the pointer is on screen, and where the press began. */
+    x: number; y: number; x0: number; y0: number;
+    /** Whether it has moved yet, whether it's out over the board, and the order from before. */
+    moved: boolean; out: boolean; before: string[];
   } | null>(null);
-  const press = useRef<{ el: HTMLElement; key: string; x0: number; y0: number; x: number; y: number; timer: number; held?: boolean } | null>(null);
+  const press = useRef<{ el: HTMLElement; key: string; zone: Zone; x0: number; y0: number; x: number; y: number; timer: number; held?: boolean } | null>(null);
   const ref = useRef<HTMLElement>(null);
   const els = useRef(new Map<string, HTMLElement>());
-  const offsets = useRef(new Map<string, number>());
   const swallowClick = useRef(false);
   const shown = useRef<string[]>(order);
   // Panels too long for the screen: how many elements fit, their sizes as last seen (the hidden ones
@@ -81,78 +90,89 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
   const keys = useRef<string[]>([]);
   const moreRef = useRef<HTMLElement | null>(null);
   const [, redraw] = useState(0);
-  // The "more" popover's buttons can be rearranged too, among themselves, in a row or in columns:
-  // the lifted one follows the pointer both ways and takes the place of whichever it comes over.
   const moreZone = useRef<HTMLElement | null>(null);
   const moreEls = useRef(new Map<string, HTMLElement>());
-  const moreOffsets = useRef(new Map<string, { x: number; y: number }>());
   const moreShown = useRef<string[]>([]);
-  const [moreDrag, setMoreDrag] = useState<{
-    key: string; gx: number; gy: number; x: number; y: number; x0: number; y0: number; moved: boolean; out: boolean; before: string[];
-  } | null>(null);
-  const morePress = useRef<{ el: HTMLElement; key: string; x0: number; y0: number; timer: number } | null>(null);
+  // Where each button stood when last seen, to slide it from there to a new place.
+  const offsets = useRef(new Map<string, { x: number; y: number }>());
 
-  const pos = (e: { clientX: number; clientY: number }) => (axis === 'y' ? e.clientY : e.clientX);
-  const offset = (el: HTMLElement) => (axis === 'y' ? el.offsetTop : el.offsetLeft);
-  const size = (el: HTMLElement) => (axis === 'y' ? el.offsetHeight : el.offsetWidth);
-  const naturalStart = (key: string) => {
-    const r = ref.current!.getBoundingClientRect();
-    return (axis === 'y' ? r.top : r.left) + offset(els.current.get(key)!);
+  const zones = {
+    bar: { box: () => ref.current, els: els.current, keys: () => shown.current },
+    more: { box: () => moreZone.current, els: moreEls.current, keys: () => moreShown.current },
   };
-  const shift = (d: number) => (axis === 'y' ? `translateY(${d}px)` : `translateX(${d}px)`);
+  /** Where a button's slot is on screen (where it stands, whatever it's moved by). */
+  const slot = (zone: Zone, el: HTMLElement) => {
+    const r = zones[zone].box()!.getBoundingClientRect();
+    return { x: r.left + el.offsetLeft, y: r.top + el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
+  };
+  const along = (x: number, y: number) => (axis === 'y' ? y : x);
+  const inside = (r: DOMRect | undefined, e: { clientX: number; clientY: number }, margin = 0) =>
+    !!r && e.clientX >= r.left - margin && e.clientX <= r.right + margin && e.clientY >= r.top - margin && e.clientY <= r.bottom + margin;
+  const over = (zone: Zone, e: { clientX: number; clientY: number }) => inside(zones[zone].box()?.getBoundingClientRect(), e);
 
-  // The lifted button follows the pointer, wherever its slot is now; dragged out of the panel, it
-  // waits faintly in its old slot while its preview follows the pointer instead.
+  // The lifted button follows the pointer (along the panel on the panel, both ways in "more"),
+  // wherever its slot is now; dragged out of the panel, it waits faintly in its old slot while its
+  // preview follows the pointer instead.
   useLayoutEffect(() => {
     if (!drag) return;
-    const el = els.current.get(drag.key);
-    if (!el) return;
-    el.style.transform = drag.out ? '' : `${shift(drag.at - drag.grab - naturalStart(drag.key))} scale(1.12)`;
-    el.style.opacity = drag.out ? '.3' : '';
+    const el = zones[drag.zone].els.get(drag.key);
+    if (!el || !zones[drag.zone].box()) return;
+    if (drag.out) { el.style.transform = ''; el.style.opacity = '.3'; return; }
+    const at = slot(drag.zone, el);
+    let dx = drag.x - drag.gx - at.x, dy = drag.y - drag.gy - at.y;
+    if (drag.zone === 'bar') { if (axis === 'y') dx = 0; else dy = 0; }
+    el.style.transform = `translate(${dx}px, ${dy}px) scale(1.12)`;
+    el.style.opacity = '';
   });
   // Buttons that changed places slide into their new ones.
   useLayoutEffect(() => {
-    for (const [key, el] of els.current) {
-      const before = offsets.current.get(key), now = offset(el);
-      offsets.current.set(key, now);
-      if (before !== undefined && before !== now && key !== drag?.key) {
-        el.animate([{ transform: shift(before - now) }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
-      }
-    }
-    for (const [key, el] of moreEls.current) {
-      const before = moreOffsets.current.get(key), now = { x: el.offsetLeft, y: el.offsetTop };
-      moreOffsets.current.set(key, now);
-      if (before && (before.x !== now.x || before.y !== now.y) && key !== moreDrag?.key) {
-        el.animate([{ transform: `translate(${before.x - now.x}px, ${before.y - now.y}px)` }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
+    for (const zone of ['bar', 'more'] as const) {
+      for (const [key, el] of zones[zone].els) {
+        const id = `${zone}:${key}`, before = offsets.current.get(id), now = { x: el.offsetLeft, y: el.offsetTop };
+        offsets.current.set(id, now);
+        if (before && (before.x !== now.x || before.y !== now.y) && key !== drag?.key) {
+          el.animate([{ transform: `translate(${before.x - now.x}px, ${before.y - now.y}px)` }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
+        }
       }
     }
   }, [order]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Where the popover's buttons stand as soon as it opens, so the first change slides them too; and
-  // forgetting those gone from it, so they don't slide in from their old place when it opens again.
+  // Where buttons stand as soon as they show (the popover just opened), so the first change slides
+  // them too; and forgetting those gone, so they don't slide in from an old place when back.
   useLayoutEffect(() => {
-    for (const [key, el] of moreEls.current) if (!moreOffsets.current.has(key)) moreOffsets.current.set(key, { x: el.offsetLeft, y: el.offsetTop });
-    for (const key of moreOffsets.current.keys()) if (!moreEls.current.has(key)) moreOffsets.current.delete(key);
+    const seen = new Set<string>();
+    for (const zone of ['bar', 'more'] as const) {
+      for (const [key, el] of zones[zone].els) {
+        const id = `${zone}:${key}`;
+        seen.add(id);
+        if (!offsets.current.has(id)) offsets.current.set(id, { x: el.offsetLeft, y: el.offsetTop });
+      }
+    }
+    for (const id of offsets.current.keys()) if (!seen.has(id)) offsets.current.delete(id);
   });
 
   // Lifts the pressed button: `x0`, `y0` is where the press began, `x`, `y` where the pointer is now.
-  const lift = (p: { el: HTMLElement; key: string; x0: number; y0: number; x: number; y: number }) => {
-    const at0 = axis === 'y' ? p.y0 : p.x0, at = axis === 'y' ? p.y : p.x, r = p.el.getBoundingClientRect();
-    setDrag({ key: p.key, grab: at0 - (axis === 'y' ? r.top : r.left), at, at0, moved: false, out: false, x: p.x, y: p.y, x0: p.x0, y0: p.y0, before: order });
+  const lift = (p: { el: HTMLElement; key: string; zone: Zone; x0: number; y0: number; x: number; y: number }) => {
+    const r = p.el.getBoundingClientRect();
+    setDrag({ key: p.key, zone: p.zone, gx: p.x0 - r.left, gy: p.y0 - r.top, x: p.x, y: p.y, x0: p.x0, y0: p.y0, moved: false, out: false, before: order });
   };
-  const onPointerDown = (e: ReactPointerEvent<HTMLElement>) => {
+  /** A press on a button of the panel or of its popover: held still a moment, it lifts. */
+  const pressOn = (zone: Zone) => (e: ReactPointerEvent<HTMLElement>) => {
     const target = e.target as Element;
-    const el = target.closest<HTMLElement>('[data-key]');
-    if (!el || e.button !== 0 || target.closest('[data-nosort]') || !ref.current?.contains(el)) return;
-    const p = { el, key: el.dataset.key!, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, timer: 0, held: false };
+    const el = target.closest<HTMLElement>(zone === 'bar' ? '[data-key]' : '[data-more-key]');
+    if (!el || e.button !== 0 || !zones[zone].box()?.contains(el)) return;
+    // Parts that mustn't start a drag (on the panel: anything marked, the "more" popover included).
+    const nosort = target.closest('[data-nosort]');
+    if (nosort && (zone === 'bar' || el.contains(nosort))) return;
+    const p = { el, key: (zone === 'bar' ? el.dataset.key : el.dataset.moreKey)!, zone, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, timer: 0, held: false };
     p.timer = window.setTimeout(() => {
       // A hold that opens the button's variants keeps the press: moving on still drags the button.
       // It's followed on the window from then on, as whatever opened may now lie under the pointer.
-      if (dropOut?.hold?.(p.key)) {
+      if (zone === 'bar' && dropOut?.hold?.(p.key)) {
         swallowClick.current = true;
         p.held = true;
         const off = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
-        const move = (ev: PointerEvent) => { if (press.current === p) onPointerMove(ev); if (press.current !== p) off(); };
-        const up = () => { off(); onPointerUp(); };
+        const move = (ev: PointerEvent) => { if (press.current === p) pressMove(ev); if (press.current !== p) off(); };
+        const up = () => { off(); pressUp(); };
         window.addEventListener('pointermove', move);
         window.addEventListener('pointerup', up);
         return;
@@ -164,7 +184,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
   };
   // Wandering off the button before it lifts cancels the hold, except in a panel whose buttons can
   // be dragged onto the board: there pulling a button away picks it up at once.
-  const onPointerMove = (e: { clientX: number; clientY: number }) => {
+  const pressMove = (e: { clientX: number; clientY: number }) => {
     const p = press.current;
     if (!p) return;
     p.x = e.clientX;
@@ -174,178 +194,97 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     press.current = null;
     if (dropOut) lift(p);
   };
-  // Once it has lifted, the pointer is followed on the window, so it can leave the panel; nothing
-  // is captured, so letting go in place still lands on the button as a click.
-  const dragMove = (e: PointerEvent) => {
-    if (!drag) return;
-    const at = pos(e);
-    const moved = drag.moved || Math.abs(at - drag.at0) > HOLD_SLOP || Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) > HOLD_SLOP * 3;
-    // Over the open "more" popover, it goes in there.
-    if (moved && overMore(e)) { intoMore(drag.key, e, drag.before); return; }
-    // Gone from the panel (into "more", or back where it was when it went out over the board):
-    // over the panel again, it takes a place there.
-    if (!els.current.has(drag.key)) {
-      if (overBar(e)) ontoBar(drag.key, e, drag.before, drag.grab, drag.x0, drag.y0);
-      else setDrag({ ...drag, moved, x: e.clientX, y: e.clientY });
-      return;
-    }
-    const r = ref.current!.getBoundingClientRect();
-    const out = !!dropOut && moved && (e.clientX < r.left - OUT_MARGIN || e.clientX > r.right + OUT_MARGIN || e.clientY < r.top - OUT_MARGIN || e.clientY > r.bottom + OUT_MARGIN);
-    if (out) {
-      if (!drag.out) setOrder(drag.before);
-      setDrag({ ...drag, at, moved, out, x: e.clientX, y: e.clientY });
-      return;
-    }
-    // Swap with the neighbour on screen once the lifted button's middle passes the neighbour's.
-    const list = shown.current, i = list.indexOf(drag.key);
-    const middle = (k: string) => naturalStart(k) + size(els.current.get(k)!) / 2;
-    const mid = at - drag.grab + size(els.current.get(drag.key)!) / 2;
-    const other = i + 1 < list.length && mid > middle(list[i + 1]) ? list[i + 1] : i > 0 && mid < middle(list[i - 1]) ? list[i - 1] : null;
-    if (other) {
-      const next = [...order], a = next.indexOf(drag.key), b = next.indexOf(other);
-      [next[a], next[b]] = [next[b], next[a]];
-      setOrder(next);
-    }
-    setDrag({ ...drag, at, moved, out, x: e.clientX, y: e.clientY });
-  };
-  const onPointerUp = () => {
+  const pressUp = () => {
     const held = press.current?.held;
     if (press.current) { clearTimeout(press.current.timer); press.current = null; }
     // A hold that did something of its own: the click that comes with letting go goes nowhere.
     if (held && !drag) setTimeout(() => { swallowClick.current = false; }, 0);
   };
+
+  type Lifted = NonNullable<typeof drag>;
+  /** Lets go of whatever transform a button was dragged with. */
+  const unlift = (el: HTMLElement | undefined) => { if (el) { el.style.transform = ''; el.style.opacity = ''; } };
+  /** Puts the dragged button on the panel, among the buttons either side of the pointer (never last:
+   *  what's last on a full panel is what goes into "more"), and drags it on along the panel. */
+  const ontoBar = (d: Lifted, e: PointerEvent) => {
+    const at = along(e.clientX, e.clientY), list = shown.current.filter((k) => k !== d.key && els.current.has(k));
+    const middle = (k: string) => { const s = slot('bar', els.current.get(k)!); return axis === 'y' ? s.y + s.h / 2 : s.x + s.w / 2; };
+    const next = list.find((k) => middle(k) > at) ?? list[list.length - 1];
+    const rest = order.filter((k) => k !== d.key);
+    rest.splice(next ? rest.indexOf(next) : 0, 0, d.key);
+    unlift(moreEls.current.get(d.key));
+    setOrder(rest);
+    setDrag({ ...d, zone: 'bar', x: e.clientX, y: e.clientY, moved: true, out: false });
+  };
+  /** Puts the dragged button in the "more" popover, before the one under the pointer (never first:
+   *  a place freed on the panel goes to what's first there), and drags it on in there. */
+  const intoMore = (d: Lifted, e: PointerEvent) => {
+    const el = els.current.get(d.key), r = el?.getBoundingClientRect();
+    const list = moreShown.current.filter((k) => k !== d.key && moreEls.current.has(k));
+    const hit = list.findIndex((k) => { const s = slot('more', moreEls.current.get(k)!); return e.clientX >= s.x && e.clientX <= s.x + s.w && e.clientY >= s.y && e.clientY <= s.y + s.h; });
+    const rest = order.filter((k) => k !== d.key);
+    if (list.length) rest.splice(hit > 0 ? rest.indexOf(list[hit]) : rest.indexOf(list[hit === 0 ? 0 : list.length - 1]) + 1, 0, d.key);
+    else rest.push(d.key);
+    unlift(el);
+    setOrder(rest);
+    setDrag({ ...d, zone: 'more', gx: r ? r.width / 2 : 15, gy: r ? r.height / 2 : 15, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: true, out: false });
+  };
+  /** The button whose place the lifted one takes: on the panel, the neighbour whose middle its own
+   *  has passed; in "more", whichever slot its middle is over. */
+  const passed = (d: Lifted, el: HTMLElement): string | null => {
+    if (d.zone === 'more') {
+      const cx = d.x - d.gx + el.offsetWidth / 2, cy = d.y - d.gy + el.offsetHeight / 2;
+      return moreShown.current.find((k) => {
+        const o = k !== d.key && moreEls.current.get(k);
+        if (!o) return false;
+        const s = slot('more', o);
+        return cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h;
+      }) ?? null;
+    }
+    const list = shown.current, i = list.indexOf(d.key);
+    const middle = (k: string) => { const s = slot('bar', els.current.get(k)!); return axis === 'y' ? s.y + s.h / 2 : s.x + s.w / 2; };
+    const mid = along(d.x - d.gx, d.y - d.gy) + (axis === 'y' ? el.offsetHeight : el.offsetWidth) / 2;
+    return i + 1 < list.length && mid > middle(list[i + 1]) ? list[i + 1] : i > 0 && mid < middle(list[i - 1]) ? list[i - 1] : null;
+  };
+  // Once it has lifted, the pointer is followed on the window, so it can leave the panel; nothing
+  // is captured, so letting go in place still lands on the button as a click.
+  const dragMove = (e: PointerEvent) => {
+    if (!drag) return;
+    const d = drag, dist = Math.hypot(e.clientX - d.x0, e.clientY - d.y0);
+    const moved = d.moved || (d.zone === 'bar' ? Math.abs(along(e.clientX, e.clientY) - along(d.x0, d.y0)) > HOLD_SLOP || dist > HOLD_SLOP * 3 : dist > HOLD_SLOP);
+    // Over the other place (the open popover from the panel, the panel from the popover), it goes there.
+    if (moved && d.zone === 'bar' && over('more', e)) { intoMore(d, e); return; }
+    if (moved && (d.zone === 'more' || !els.current.has(d.key)) && over('bar', e)) { ontoBar(d, e); return; }
+    const out = !!dropOut && moved && !inside(zones[d.zone].box()?.getBoundingClientRect(), e, OUT_MARGIN);
+    const next = { ...d, x: e.clientX, y: e.clientY, moved, out };
+    if (out) {
+      if (!d.out) setOrder(d.before);
+      setDrag(next);
+      return;
+    }
+    // Not where it's dragged (gone into "more", or back where it was when it went out over the board).
+    const el = zones[d.zone].els.get(d.key);
+    if (!el) { setDrag(next); return; }
+    const other = passed(next, el);
+    if (other) {
+      const list = order.filter((k) => k !== d.key), after = order.indexOf(other) > order.indexOf(d.key);
+      list.splice(list.indexOf(other) + (after ? 1 : 0), 0, d.key);
+      setOrder(list);
+    }
+    setDrag(next);
+  };
   const dragEnd = () => {
     if (!drag) return;
     // Settle into the slot from wherever it was let go, and don't count the release as a click.
-    const el = els.current.get(drag.key);
+    const el = zones[drag.zone].els.get(drag.key);
     if (el) {
       const from = el.style.transform;
-      el.style.transform = '';
-      el.style.opacity = '';
+      unlift(el);
       if (!drag.out) el.animate([{ transform: from }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
     }
     setDrag(null);
     if (!drag.moved) return;
     if (drag.out) dropOut!.drop(drag.key, { x: drag.x, y: drag.y });
-    else writeJSON(storageKey, order);
-    swallowClick.current = true;
-    setTimeout(() => { swallowClick.current = false; }, 0);
-  };
-
-  const inside = (r: DOMRect | undefined, e: { clientX: number; clientY: number }) =>
-    !!r && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-  const overBar = (e: { clientX: number; clientY: number }) => inside(ref.current?.getBoundingClientRect(), e);
-  const overMore = (e: { clientX: number; clientY: number }) => inside(moreZone.current?.getBoundingClientRect(), e);
-  /** Lets go of whatever transform a button was dragged with. */
-  const unlift = (el: HTMLElement | undefined) => { if (el) { el.style.transform = ''; el.style.opacity = ''; } };
-  /** Puts the dragged button on the panel, among the buttons either side of the pointer (never last:
-   *  what's last on a full panel is what goes into "more"), and drags it on along the panel. */
-  const ontoBar = (key: string, e: { clientX: number; clientY: number }, before: string[], grab: number, x0: number, y0: number) => {
-    const at = pos(e), list = shown.current.filter((k) => k !== key && els.current.has(k));
-    const next = list.find((k) => naturalStart(k) + size(els.current.get(k)!) / 2 > at) ?? list[list.length - 1];
-    const rest = order.filter((k) => k !== key);
-    rest.splice(next ? rest.indexOf(next) : 0, 0, key);
-    unlift(moreEls.current.get(key));
-    setOrder(rest);
-    setMoreDrag(null);
-    setDrag({ key, grab, at, at0: axis === 'y' ? y0 : x0, moved: true, out: false, x: e.clientX, y: e.clientY, x0, y0, before });
-  };
-  /** Puts the dragged button in the "more" popover, before the one under the pointer (never first:
-   *  a place freed on the panel goes to what's first there), and drags it on in there. */
-  const intoMore = (key: string, e: { clientX: number; clientY: number }, before: string[]) => {
-    const el = els.current.get(key), r = el?.getBoundingClientRect();
-    const list = moreShown.current.filter((k) => k !== key && moreEls.current.has(k));
-    const hit = list.findIndex((k) => { const sl = slot(moreEls.current.get(k)!); return e.clientX >= sl.x && e.clientX <= sl.x + sl.w && e.clientY >= sl.y && e.clientY <= sl.y + sl.h; });
-    const rest = order.filter((k) => k !== key);
-    if (list.length) {
-      const i = hit > 0 ? rest.indexOf(list[hit]) : rest.indexOf(list[hit === 0 ? 0 : list.length - 1]) + 1;
-      rest.splice(i, 0, key);
-    } else rest.push(key);
-    unlift(el);
-    setOrder(rest);
-    setDrag(null);
-    setMoreDrag({ key, gx: r ? r.width / 2 : 15, gy: r ? r.height / 2 : 15, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: true, out: false, before });
-  };
-
-  // Where a popover button's slot is on screen.
-  const slot = (el: HTMLElement) => {
-    const r = moreZone.current!.getBoundingClientRect();
-    return { x: r.left + el.offsetLeft, y: r.top + el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
-  };
-  useLayoutEffect(() => {
-    if (!moreDrag || !moreZone.current) return;
-    const el = moreEls.current.get(moreDrag.key);
-    if (!el) return;
-    const at = slot(el);
-    el.style.transform = moreDrag.out ? '' : `translate(${moreDrag.x - moreDrag.gx - at.x}px, ${moreDrag.y - moreDrag.gy - at.y}px) scale(1.12)`;
-    el.style.opacity = moreDrag.out ? '.3' : '';
-  });
-  const liftMore = (p: { el: HTMLElement; key: string; x0: number; y0: number }, x: number, y: number) => {
-    const r = p.el.getBoundingClientRect();
-    setMoreDrag({ key: p.key, gx: p.x0 - r.left, gy: p.y0 - r.top, x, y, x0: p.x0, y0: p.y0, moved: false, out: false, before: order });
-  };
-  const moreDown = (e: ReactPointerEvent<HTMLElement>) => {
-    const target = e.target as Element, el = target.closest<HTMLElement>('[data-more-key]');
-    const nosort = target.closest('[data-nosort]');
-    if (!el || e.button !== 0 || !moreZone.current?.contains(el) || (nosort && el.contains(nosort))) return;
-    const p = { el, key: el.dataset.moreKey!, x0: e.clientX, y0: e.clientY, timer: 0 };
-    p.timer = window.setTimeout(() => { morePress.current = null; liftMore(p, p.x0, p.y0); }, HOLD_MS);
-    morePress.current = p;
-  };
-  const moreMovePress = (e: ReactPointerEvent<HTMLElement>) => {
-    const p = morePress.current;
-    if (!p || Math.hypot(e.clientX - p.x0, e.clientY - p.y0) <= HOLD_SLOP) return;
-    clearTimeout(p.timer);
-    morePress.current = null;
-    if (dropOut) liftMore(p, e.clientX, e.clientY);
-  };
-  const moreUpPress = () => {
-    if (morePress.current) { clearTimeout(morePress.current.timer); morePress.current = null; }
-  };
-  const moreMove = (e: PointerEvent) => {
-    const d = moreDrag, zone = moreZone.current;
-    if (!d || !zone) return;
-    const moved = d.moved || Math.hypot(e.clientX - d.x0, e.clientY - d.y0) > HOLD_SLOP;
-    const r = zone.getBoundingClientRect();
-    const out = !!dropOut && moved && (e.clientX < r.left - OUT_MARGIN || e.clientX > r.right + OUT_MARGIN || e.clientY < r.top - OUT_MARGIN || e.clientY > r.bottom + OUT_MARGIN);
-    const next = { ...d, x: e.clientX, y: e.clientY, moved, out };
-    // Brought onto the panel itself, it takes its place there and is dragged on along the panel.
-    if (moved && overBar(e)) { ontoBar(d.key, e, d.before, axis === 'y' ? d.gy : d.gx, d.x0, d.y0); return; }
-    if (out) {
-      if (!d.out) setOrder(d.before);
-      setMoreDrag(next);
-      return;
-    }
-    // The lifted button's middle over another's slot: it goes there, the rest shifting along.
-    const el = moreEls.current.get(d.key);
-    if (!el) { setMoreDrag(next); return; }
-    const cx = e.clientX - d.gx + el.offsetWidth / 2, cy = e.clientY - d.gy + el.offsetHeight / 2;
-    const other = moreShown.current.find((k) => {
-      const o = k !== d.key && moreEls.current.get(k);
-      if (!o) return false;
-      const s = slot(o);
-      return cx >= s.x && cx <= s.x + s.w && cy >= s.y && cy <= s.y + s.h;
-    });
-    if (other) {
-      const after = order.indexOf(other) > order.indexOf(d.key), list = order.filter((k) => k !== d.key);
-      list.splice(list.indexOf(other) + (after ? 1 : 0), 0, d.key);
-      setOrder(list);
-    }
-    setMoreDrag(next);
-  };
-  const moreEnd = () => {
-    const d = moreDrag;
-    if (!d) return;
-    const el = moreEls.current.get(d.key);
-    if (el) {
-      const from = el.style.transform;
-      el.style.transform = '';
-      el.style.opacity = '';
-      if (!d.out) el.animate([{ transform: from }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
-    }
-    setMoreDrag(null);
-    if (!d.moved) return;
-    if (d.out) dropOut!.drop(d.key, { x: d.x, y: d.y });
     else writeJSON(storageKey, order);
     swallowClick.current = true;
     setTimeout(() => { swallowClick.current = false; }, 0);
@@ -389,8 +328,8 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
   }, [moreOpen]);
 
   const handlers = useRef({ move: dragMove, end: dragEnd });
-  handlers.current = moreDrag ? { move: moreMove, end: moreEnd } : { move: dragMove, end: dragEnd };
-  const lifted = !!drag || !!moreDrag;
+  handlers.current = { move: dragMove, end: dragEnd };
+  const lifted = !!drag;
   useEffect(() => {
     if (!lifted) return;
     const move = (e: PointerEvent) => handlers.current.move(e), end = () => handlers.current.end();
@@ -406,9 +345,9 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
 
   return {
     ref,
-    sorting: !!drag || !!moreDrag,
+    sorting: !!drag,
     container: {
-      onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp,
+      onPointerDown: pressOn('bar'), onPointerMove: pressMove, onPointerUp: pressUp, onPointerCancel: pressUp,
       onClickCapture: (e: MouseEvent) => { if (swallowClick.current) { e.stopPropagation(); e.preventDefault(); } },
       onContextMenu: (e: MouseEvent) => { if (drag) e.preventDefault(); },
     },
@@ -417,14 +356,14 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
       'data-key': key,
       ref: (el: HTMLElement | null) => { if (el) els.current.set(key, el); else els.current.delete(key); },
     }),
-    lifted: (key: string) => drag?.key === key || moreDrag?.key === key,
+    lifted: (key: string) => drag?.key === key,
     /** Props for the "more" popover holding the buttons `keys` (in order), whose buttons can be
      *  rearranged among themselves (and dragged out onto the board, with dropOut). */
     moreZone: (keys: string[]) => {
       moreShown.current = keys.filter((k) => !isSeparator(k));
       return {
         ref: (el: HTMLElement | null) => { moreZone.current = el; },
-        onPointerDown: moreDown, onPointerMove: moreMovePress, onPointerUp: moreUpPress, onPointerCancel: moreUpPress,
+        onPointerDown: pressOn('more'), onPointerMove: pressMove, onPointerUp: pressUp, onPointerCancel: pressUp,
         onClickCapture: (e: MouseEvent) => { if (swallowClick.current) { e.stopPropagation(); e.preventDefault(); } },
       };
     },
@@ -434,19 +373,19 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
       ref: (el: HTMLElement | null) => { if (el) moreEls.current.set(key, el); else moreEls.current.delete(key); },
     }),
     /** The preview under the pointer while a button is dragged out of the panel. */
-    ghost: (drag?.out || moreDrag?.out) && dropOut
-      ? createPortal(createElement('div', { className: 'pick-ghost preview', style: { left: (drag ?? moreDrag)!.x, top: (drag ?? moreDrag)!.y } }, dropOut.preview((drag ?? moreDrag)!.key)), document.body)
+    ghost: drag?.out && dropOut
+      ? createPortal(createElement('div', { className: 'pick-ghost preview', style: { left: drag.x, top: drag.y } }, dropOut.preview(drag.key)), document.body)
       : null,
     /** One element of the panel with its key, ref and 'lifted' class. A component can't take the ref,
      *  so it goes in a wrapper that does: everything on a panel can be moved, components too. */
     place(k: string, el: ReactElement): ReactElement {
-      const lifted = drag?.key === k && 'lifted';
+      const lifted = drag?.zone === 'bar' && drag.key === k && 'lifted';
       if (typeof el.type !== 'string') return createElement('span', { key: k, ...this.item(k), className: ['sort-wrap', lifted].filter(Boolean).join(' ') }, el);
       return cloneElement(el, { key: k, ...this.item(k), className: [el.props.className, lifted].filter(Boolean).join(' ') });
     },
     /** Like place, for a button in the "more" popover. */
     placeMore(k: string, el: ReactElement): ReactElement {
-      const lifted = moreDrag?.key === k && 'lifted';
+      const lifted = drag?.zone === 'more' && drag.key === k && 'lifted';
       if (isSeparator(k)) return cloneElement(el, { key: k });
       if (typeof el.type !== 'string') return createElement('span', { key: k, ...this.moreItem(k), className: ['sort-wrap', lifted].filter(Boolean).join(' ') }, el);
       return cloneElement(el, { key: k, ...this.moreItem(k), className: [el.props.className, lifted].filter(Boolean).join(' ') });
