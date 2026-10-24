@@ -164,7 +164,7 @@ button { font: inherit; color: inherit; }
 .zpct { min-width: 52px; text-align: center; font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; border: 0; background: transparent; cursor: pointer; padding: 8px 6px; border-radius: 6px; transition: background-color .12s ease-out; }
 .zpct:hover { background: var(--fmt-hover); }
 
-.panel { left: 50%; transform: translateX(-50%); width: max-content; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; flex-wrap: nowrap; transition: bottom .2s ease; }
+.panel { left: 50%; transform: translateX(-50%); width: max-content; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); padding: 6px 16px; flex-wrap: nowrap; }
 /* Too wide to sit beside the zoom panel: one bar's height (52px) and a gap higher. */
 .panel.raised { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
 .panel.docked.raised { bottom: 60px; border-radius: 12px; }
@@ -447,6 +447,13 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 .peek-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 15px/1 "Inter", var(--ui); color: var(--ink); }
 .peek canvas { display: block; }
 @keyframes peek-in { from { transform: scale(.96); opacity: 0; } }
+
+/* Every panel (the bars, the selection panel, the map, the tool rail and what opens beside it)
+   slides to a new place alike: stuck to the edges or back, raised over another, put back as by
+   default. While one is dragged by an edge (see grip.ts), they all follow at once. */
+:is(.bar, .tools, .tools-more, .draw-panel) { transition: top .2s ease, bottom .2s ease, left .2s ease, right .2s ease, border-radius .2s ease; }
+.tools { transition-property: top, bottom, left, right, border-radius, transform; }
+body.gripping :is(.bar, .tools, .tools-more, .draw-panel) { transition: none; }
 
 /* Bars moved by hand to the other edge of the screen (see grip.ts): the top bar to the bottom, the
    zoom bar to the top, the tool rail to the right; what opens from them opens the other way. */
