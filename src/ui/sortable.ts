@@ -131,6 +131,12 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
       }
     }
   }, [order]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Where the popover's buttons stand as soon as it opens, so the first change slides them too; and
+  // forgetting those gone from it, so they don't slide in from their old place when it opens again.
+  useLayoutEffect(() => {
+    for (const [key, el] of moreEls.current) if (!moreOffsets.current.has(key)) moreOffsets.current.set(key, { x: el.offsetLeft, y: el.offsetTop });
+    for (const key of moreOffsets.current.keys()) if (!moreEls.current.has(key)) moreOffsets.current.delete(key);
+  });
 
   // Lifts the pressed button: `x0`, `y0` is where the press began, `x`, `y` where the pointer is now.
   const lift = (p: { el: HTMLElement; key: string; x0: number; y0: number; x: number; y: number }) => {
@@ -428,7 +434,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     /** Props for one button in the "more" popover. */
     moreItem: (key: string) => ({
       'data-more-key': key,
-      ref: (el: HTMLElement | null) => { if (el) moreEls.current.set(key, el); else { moreEls.current.delete(key); moreOffsets.current.delete(key); } },
+      ref: (el: HTMLElement | null) => { if (el) moreEls.current.set(key, el); else moreEls.current.delete(key); },
     }),
     /** The preview under the pointer while a button is dragged out of the panel. */
     ghost: (drag?.out || moreDrag?.out) && dropOut
