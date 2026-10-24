@@ -3,11 +3,11 @@ import { createPortal } from 'react-dom';
 import picture from './clear/plan.webp';
 
 /** How long the picture comes in, stays and flies off, in ms (matched by the keyframes in the styles). */
-const COME = 1000, STAY = 1000, GO = 1000;
+const COME = 1000, STAY = 600, GO = 1000;
 
 /**
  * The picture over the board once it's been cleared: it comes in growing from small, stays a
- * second, then fades away growing faster and faster, as if flying at you. It lets clicks through
+ * moment, then fades away growing faster and faster, as if flying at you. It lets clicks through
  * the whole time. Fetched only when first shown.
  */
 export function ClearFx({ onDone }: { onDone: () => void }) {
