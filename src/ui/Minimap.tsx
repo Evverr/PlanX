@@ -66,7 +66,7 @@ export function Minimap({ editor, items, docked, onClose }: { editor: Editor; it
           <rect key={it.id} className={it.type === 'frame' ? 'mm-frame' : 'mm-item'}
             x={ox + it.x * s} y={oy + it.y * s} width={Math.max(it.w * s, 1.5)} height={Math.max(it.h * s, 1.5)} />
         ))}
-        <rect className="mm-view" x={ox + view.x * s} y={oy + view.y * s} width={view.w * s} height={view.h * s} />
+        <rect className="mm-view" rx={4} x={ox + view.x * s} y={oy + view.y * s} width={view.w * s} height={view.h * s} />
       </svg>
     </div>
   );
