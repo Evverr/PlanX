@@ -357,9 +357,9 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
    7px corners, 4px taller than in Figma (33px), fading in over 0.6 s. Beside an upright panel it has
    the Figma bubble's pointer, cut from the Figma bubble itself at its own size, its tip 2px over the
    button; over or under a flat bar, the same bubble without the pointer. */
-.tip { position: fixed; z-index: 60; pointer-events: none; box-sizing: border-box; height: 33px; display: flex; align-items: center;
+.tip { position: fixed; z-index: 60; pointer-events: none; box-sizing: border-box; height: 37px; display: flex; align-items: center;
   white-space: nowrap; font: 600 12px/1 "Inter", var(--ui); color: #fff; animation: fade-in .6s ease-out;
-  background: rgba(0, 95, 228, .9); border-radius: 7px; padding: 0 15.5px; }
+  background: rgba(0, 95, 228, .9); border-radius: 9px; padding: 0 15.5px; }
 .tip::before { content: ""; position: absolute; width: 5.89px; height: 15px;
   background: url(./ui/tip-bubble.svg) 0 -7px / 80.89px 29px no-repeat; }
 .tip.right::before { top: 50%; left: -5.89px; transform: translateY(-50%); }
