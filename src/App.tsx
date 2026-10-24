@@ -21,6 +21,8 @@ import { ClearFx } from './ui/ClearFx';
 import { BoardMenu } from './ui/BoardMenu';
 import { overPanels, resetPanels, savePanels, useGrip, useStoredNumber, type Grips } from './ui/grip';
 import type { Item, Link } from './model/types';
+import { readJSON, readText, writeJSON, writeText } from './storage';
+import { EDGE } from './layout';
 
 /** Where a board copied into a new tab waits for it, followed by the new board's id. */
 const COPY_KEY = 'planx-copy:';
@@ -68,16 +70,14 @@ export function App({ boardId }: { boardId: string }) {
   }, [toast]);
 
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    try {
-      const saved = localStorage.getItem('planx-theme');
-      if (saved === 'light' || saved === 'dark') return saved;
-    } catch { /* storage can be unavailable */ }
+    const saved = readText('planx-theme');
+    if (saved === 'light' || saved === 'dark') return saved;
     return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
-    try { localStorage.setItem('planx-theme', next); } catch { /* the choice just won't be remembered */ }
+    writeText('planx-theme', next);
   };
   // The canvas watches data-theme and redraws itself.
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
@@ -98,8 +98,6 @@ export function App({ boardId }: { boardId: string }) {
   // moves it along its edge, or over to the other edge of the screen once past the middle; dragging
   // its right end makes it shorter or longer, what doesn't fit going under "more". Once moved (or
   // resized), a bar stands from its left end; the zoom bar till then from the screen's right.
-  /** How far every panel stands from the screen's edges. */
-  const EDGE_GAP = 12;
   const [topX, setTopX] = useStoredNumber('planx-topbar-x');
   const [topW, setTopW] = useStoredNumber('planx-topbar-w');
   const [topLow, setTopLow] = useStoredNumber('planx-topbar-low');
@@ -125,7 +123,7 @@ export function App({ boardId }: { boardId: string }) {
     if (zoomX === null || !r) root.style.removeProperty('--zoom-r');
     else root.style.setProperty('--zoom-r', `${Math.round(innerWidth - r.right)}px`);
   });
-  const zoomLeft = zoomX ?? (zoomWidth ? innerWidth - EDGE_GAP - zoomWidth : null);
+  const zoomLeft = zoomX ?? (zoomWidth ? innerWidth - EDGE - zoomWidth : null);
   /** A bar's grips: its left end moves it, its right end resizes it. */
   const barGrips = (ref: React.RefObject<HTMLElement | null>, at: {
     setPos: (v: number | null) => void; setW: (v: number | null) => void; setFar: (v: number | null) => void; high: boolean;
@@ -136,12 +134,12 @@ export function App({ boardId }: { boardId: string }) {
         const r = ref.current!.getBoundingClientRect();
         return {
           move: (dx: number, dy: number) => {
-            const p = Math.min(Math.max(r.left + dx, EDGE_GAP), Math.max(EDGE_GAP, innerWidth - EDGE_GAP - r.width));
+            const p = Math.min(Math.max(r.left + dx, EDGE), Math.max(EDGE, innerWidth - EDGE - r.width));
             // Past the middle of the screen, over to the other edge.
             const below = r.top + r.height / 2 + dy > innerHeight / 2, f = at.high ? below : !below;
             // Where that puts it (12px from the edge, as every panel): not over another panel; it
             // stays where it last could be.
-            const onTop = at.high !== f, gap = docked ? 0 : EDGE_GAP;
+            const onTop = at.high !== f, gap = docked ? 0 : EDGE;
             const place = { left: p, top: onTop ? gap : innerHeight - gap - r.height, width: r.width, height: r.height };
             if (overPanels(place, ref.current)) return;
             at.setPos(p);
@@ -176,8 +174,8 @@ export function App({ boardId }: { boardId: string }) {
   });
   const topGrip = useGrip(topSort.ref, barGrips(topSort.ref, { setPos: setTopX, setW: setTopW, setFar: setTopLow, high: true }));
   const zoomGrip = useGrip(zoomSort.ref, barGrips(zoomSort.ref, { setPos: setZoomX, setW: setZoomW, setFar: setZoomHigh, high: false }));
-  const topSpace = Math.min(innerWidth - (topX ?? EDGE_GAP) - EDGE_GAP, topW ?? Infinity);
-  const zoomSpace = Math.min(innerWidth - (zoomX ?? EDGE_GAP) - EDGE_GAP, zoomW ?? Infinity);
+  const topSpace = Math.min(innerWidth - (topX ?? EDGE) - EDGE, topW ?? Infinity);
+  const zoomSpace = Math.min(innerWidth - (zoomX ?? EDGE) - EDGE, zoomW ?? Infinity);
   const closeMinimap = useCallback(() => setMinimap(false), []);
 
   // A copy of this board opens in a new tab, named after it with a number added ("План" → "План 2"
@@ -185,20 +183,18 @@ export function App({ boardId }: { boardId: string }) {
   const openNewBoard = () => {
     const t = board.title.trim() || 'Доска', m = t.match(/^(.*?)(\d+)$/);
     const name = m ? `${m[1]}${Number(m[2]) + 1}` : `${t} 2`, id = newBoardId();
-    try { localStorage.setItem(`${COPY_KEY}${id}`, JSON.stringify({ items: board.list(), links: board.linkList() })); } catch { /* too big or no storage: it opens empty */ }
+    // Too big for the storage, or none: it opens empty.
+    writeJSON(`${COPY_KEY}${id}`, { items: board.list(), links: board.linkList() });
     window.open(`${location.pathname}?board=${id}&title=${encodeURIComponent(name)}`, '_blank');
   };
   // Opened that way, the board takes the copy and the name from the address, which is then tidied away.
   useEffect(() => {
     const params = new URLSearchParams(location.search), name = params.get('title'), key = `${COPY_KEY}${params.get('board')}`;
-    try {
-      const copy = localStorage.getItem(key);
-      if (copy) {
-        localStorage.removeItem(key);
-        const { items, links } = JSON.parse(copy) as { items: Item[]; links: Link[] };
-        board.replaceAll(items, links);
-      }
-    } catch { /* storage can be unavailable */ }
+    const copy = readJSON<{ items: Item[]; links: Link[] }>(key);
+    if (copy) {
+      writeText(key, null);
+      board.replaceAll(copy.items, copy.links);
+    }
     if (!name) return;
     if (!board.title) board.setTitle(name.slice(0, 30));
     board.undoManager.clear();  // the copy and its name are where this board starts, not something to undo

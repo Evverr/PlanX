@@ -7,6 +7,8 @@ import { overPanels, panelScale, useGrip, usePanelSize, useStoredNumber } from '
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { isSeparator, useSortable } from './sortable';
 import { ToolPreview } from './ToolPreview';
+import { readText, writeText } from '../storage';
+import { EDGE } from '../layout';
 
 /** Tool panel from the Figma mockup (Mol / Bar vertical). */
 const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
@@ -36,18 +38,14 @@ const moreCol = (k: number) => ({ pad: Math.round(MORE_COL.pad * k) * 2, size: M
 /** Where the rail's chosen length is kept, and how close to its top or bottom edge the pointer (or
  *  a finger) has to be to drag that edge. */
 const CAP_KEY = 'planx-tools-cap', TOP_KEY = 'planx-tools-top', SIDE_KEY = 'planx-tools-right';
-/** How close to the screen's edges a rail put by hand may come (other panels it keeps clear of anyway). */
-const RAIL_EDGE = 12;
 
 /** Rail buttons with variants, opened by holding the button still. */
 const VARIANTS = new Set(['oval', 'draw']);
 
 const SHAPE_KEY = 'planx-last-shape';
 function savedShape(): Tool {
-  try {
-    const t = localStorage.getItem(SHAPE_KEY) as Tool | null;
-    if (t && SHAPE_TOOLS.includes(t)) return t;
-  } catch { /* storage can be unavailable */ }
+  const t = readText(SHAPE_KEY) as Tool | null;
+  if (t && SHAPE_TOOLS.includes(t)) return t;
   return 'rect';
 }
 
@@ -64,7 +62,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   const shaping = SHAPE_TOOLS.includes(tool);
   if (shaping && lastShape.current !== tool) {
     lastShape.current = tool;
-    try { localStorage.setItem(SHAPE_KEY, tool); } catch { /* storage can be unavailable */ }
+    writeText(SHAPE_KEY, tool);
   }
   const shapeIcon = SHAPES.find(([t]) => t === lastShape.current)?.[1] ?? 'landscape';
   // The variants beside the rail (the shapes, or the pens and their colours): opened by holding their
@@ -144,11 +142,11 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   };
   // Centred: clear of the top bar above and as far from the bottom edge. Put by hand: from there down
   // to near the bottom.
-  const room = (from = top) => (from === null ? innerHeight - railClear * 2 : innerHeight - RAIL_EDGE - from);
+  const room = (from = top) => (from === null ? innerHeight - railClear * 2 : innerHeight - EDGE - from);
   useLayoutEffect(() => {
     if (railHeight(all.length) === null) return;
     // On a screen grown shorter, a rail put low comes up to keep at least one button in sight.
-    const lowest = Math.max(RAIL_EDGE, innerHeight - RAIL_EDGE - railHeight(1)!);
+    const lowest = Math.max(EDGE, innerHeight - EDGE - railHeight(1)!);
     if (top !== null && top > lowest) { setTop(lowest); return; }
     let n = Math.min(all.length, cap);
     while (n > 1 && railHeight(n)! > room()) n--;
@@ -169,7 +167,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
         if (fit !== Infinity && fit < cap) setCap(fit);
         return {
           move: (dx, dy) => {
-            const t = Math.min(Math.max(r.top + dy, RAIL_EDGE), Math.max(RAIL_EDGE, innerHeight - RAIL_EDGE - r.height));
+            const t = Math.min(Math.max(r.top + dy, EDGE), Math.max(EDGE, innerHeight - EDGE - r.height));
             const f = r.left + r.width / 2 + dx > innerWidth / 2;
             // Not over another panel: it stays where it last could be.
             const margin = right ? innerWidth - r.right : r.left;

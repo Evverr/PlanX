@@ -49,16 +49,6 @@ export function lineAt(it: Item, p: Point, tol: number): { axis: 'col' | 'row'; 
   return row >= 0 ? { axis: 'row', index: row } : null;
 }
 
-/** Fields after setting one column's width or one row's height. */
-export function withSize(it: Item, axis: 'col' | 'row', index: number, size: number): Partial<Item> {
-  if (axis === 'col') {
-    const cols = colsOf(it).map((v, i) => (i === index ? Math.max(MIN_COL, Math.round(size)) : v));
-    return { cols, w: sum(cols) };
-  }
-  const rows = rowsOf(it).map((v, i) => (i === index ? Math.max(MIN_ROW, Math.round(size)) : v));
-  return { rows, h: sum(rows) };
-}
-
 /**
  * Sizes after moving the picked lines (line i ends column or row i) by d together, the gaps between
  * them kept: the lines past the last picked one go along, those before the first stay put, and an

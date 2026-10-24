@@ -1,6 +1,7 @@
 import { cloneElement, createElement, useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type PointerEvent as ReactPointerEvent, type ReactElement, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { PanelIcon } from './PanelIcon';
+import { readJSON, writeJSON } from '../storage';
 
 /** How long to hold a button before it lifts, and how far the pointer may wander meanwhile; a lifted
  *  button let go without moving more than HOLD_SLOP still counts as a click. */
@@ -35,21 +36,16 @@ const MORE_SIZE = 40;
 
 /** The saved order (with renamed keys renamed), minus anything no longer in the panel, plus anything new at the end. */
 export function readOrder(storageKey: string, defaults: string[], renames: Record<string, string>): string[] {
-  try {
-    let saved = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
-    if (Array.isArray(saved)) saved = saved.map((k) => renames[k] ?? k);
-    if (Array.isArray(saved)) {
-      // A button added since goes where it is by default: before the next one that was already there.
-      const order: string[] = saved.filter((k: string) => defaults.includes(k));
-      defaults.forEach((k, i) => {
-        if (order.includes(k)) return;
-        const next = defaults.slice(i + 1).find((d) => order.includes(d));
-        order.splice(next ? order.indexOf(next) : order.length, 0, k);
-      });
-      return order;
-    }
-  } catch { /* storage can be unavailable */ }
-  return defaults;
+  const saved = readJSON<string[]>(storageKey);
+  if (!Array.isArray(saved)) return defaults;
+  // A button added since goes where it is by default: before the next one that was already there.
+  const order = saved.map((k) => renames[k] ?? k).filter((k) => defaults.includes(k));
+  defaults.forEach((k, i) => {
+    if (order.includes(k)) return;
+    const next = defaults.slice(i + 1).find((d) => order.includes(d));
+    order.splice(next ? order.indexOf(next) : order.length, 0, k);
+  });
+  return order;
 }
 
 /**
@@ -231,7 +227,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     setDrag(null);
     if (!drag.moved) return;
     if (drag.out) dropOut!.drop(drag.key, { x: drag.x, y: drag.y });
-    else try { localStorage.setItem(storageKey, JSON.stringify(order)); } catch { /* just won't be remembered */ }
+    else writeJSON(storageKey, order);
     swallowClick.current = true;
     setTimeout(() => { swallowClick.current = false; }, 0);
   };
@@ -350,7 +346,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     setMoreDrag(null);
     if (!d.moved) return;
     if (d.out) dropOut!.drop(d.key, { x: d.x, y: d.y });
-    else try { localStorage.setItem(storageKey, JSON.stringify(order)); } catch { /* just won't be remembered */ }
+    else writeJSON(storageKey, order);
     swallowClick.current = true;
     setTimeout(() => { swallowClick.current = false; }, 0);
   };

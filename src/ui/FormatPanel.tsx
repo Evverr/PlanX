@@ -9,6 +9,7 @@ import { boxOf } from '../canvas/geometry';
 import { FONTS } from '../canvas/text';
 import { PanelIcon as Icon, type PanelIconName as IconName } from './PanelIcon';
 import { useSortable } from './sortable';
+import { EDGE } from '../layout';
 
 function Btn({ icon, label, on, off, swatch, menu, onClick }: {
   icon: IconName; label: string; on?: boolean; off?: boolean; swatch?: string; menu?: boolean; onClick?: () => void;
@@ -54,12 +55,12 @@ const ORDER = ['font', 'gap', 'style', 'gap2', 'size', 'gap3', 'bold', 'italic',
 type Menu = 'font' | 'style' | 'size' | 'color' | 'mark' | 'align' | 'list';
 
 /** Gap between the selected item's top dot and the text panel, and the panel's margin to the screen edge. */
-const GAP = 20, MARGIN = 12;
+const GAP = 20;
 
 /** How wide the text panel may be: the screen less its margins, and the tool rail beside it. */
 function textRoom(): number {
   const rail = document.querySelector('.tools')?.getBoundingClientRect();
-  return innerWidth - MARGIN - (rail ? rail.right + MARGIN : MARGIN);
+  return innerWidth - EDGE - (rail ? rail.right + EDGE : EDGE);
 }
 
 /** Hung 20px over the top dot of the selected text or sticker (under the bottom dot when there's no room above). */
@@ -78,11 +79,11 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
     // Above the item if it fits under the top bar (when level with it), otherwise below.
     const bar = document.querySelector('.topbar')?.getBoundingClientRect();
     const underBar = bar && top.x - w / 2 < bar.right && top.x + w / 2 > bar.left;
-    const y = top.y - reach - h >= (underBar ? bar.bottom : 0) + MARGIN ? top.y - reach - h : bottom + reach;
+    const y = top.y - reach - h >= (underBar ? bar.bottom : 0) + EDGE ? top.y - reach - h : bottom + reach;
     // Stay clear of the tool rail when level with it.
     const rail = document.querySelector('.tools')?.getBoundingClientRect();
-    const minX = rail && rail.top < y + h && rail.bottom > y ? rail.right + MARGIN : MARGIN;
-    box.style.left = `${Math.max(minX, Math.min(top.x - w / 2, innerWidth - w - MARGIN))}px`;
+    const minX = rail && rail.top < y + h && rail.bottom > y ? rail.right + EDGE : EDGE;
+    box.style.left = `${Math.max(minX, Math.min(top.x - w / 2, innerWidth - w - EDGE))}px`;
     box.style.top = `${y}px`;
   });
   // Its bottom stays that far over the item whatever size it turns (the panels' size, fonts coming in).

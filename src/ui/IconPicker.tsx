@@ -6,6 +6,7 @@ import { EMOJI, emojiRect, emojiSrc, onEmojiLoad } from '../emoji/emoji';
 import { DEFAULTS, FILLS } from '../model/types';
 import { Glyph } from './glyphs';
 import { readOrder } from './sortable';
+import { writeJSON } from '../storage';
 
 type Tab = 'emoji' | 'stickers' | 'icons';
 export type PickKind = 'emoji' | 'sticky' | 'icon';
@@ -132,7 +133,7 @@ export function IconPicker({ zoom, onPick }: { zoom: number; onPick: (kind: Pick
       setOrders((o) => ({ ...o, [p.tab]: p.before }));
       onPick(KIND[p.tab], p.id, { x: e.clientX, y: e.clientY });
     } else if (p.moved) {
-      try { localStorage.setItem(ORDER_KEY[p.tab], JSON.stringify(orders[p.tab])); } catch { /* just won't be remembered */ }
+      writeJSON(ORDER_KEY[p.tab], orders[p.tab]);
     }
   };
 

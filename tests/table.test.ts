@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cellAt, cellItem, cellRect, lineAt, movedLines, newTable, withCellFormat, withCount, withScale, withSize, withTableFormat } from '../src/model/table';
+import { cellAt, cellItem, cellRect, lineAt, movedLines, newTable, withCellFormat, withCount, withScale, withTableFormat } from '../src/model/table';
 import type { Item } from '../src/model/types';
 
 const table = (extra: Partial<Item> = {}): Item => ({ id: 't', type: 'table', x: 0, y: 0, z: 0, ...newTable(), ...extra } as Item);
@@ -22,8 +22,6 @@ describe('table', () => {
 
   it('keeps the size in step with the columns and rows', () => {
     const t = table();
-    expect(withSize(t, 'col', 1, 200)).toEqual({ cols: [120, 200, 120], w: 440 });
-    expect(withSize(t, 'row', 0, 5)).toEqual({ rows: [24, 40, 40], h: 104 });
     expect(withScale(t, 720, 60)).toEqual({ cols: [240, 240, 240], rows: [20, 20, 20], w: 720, h: 60 });
   });
 

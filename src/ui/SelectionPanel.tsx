@@ -7,6 +7,7 @@ import { colsOf, rowsOf } from '../model/table';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
 import { ColorPicker } from './ColorPicker';
+import { crowds, EDGE, shownRects } from '../layout';
 
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
@@ -227,13 +228,11 @@ function TableColors({ editor, table, cells }: { editor: Editor; table: Item; ce
   );
 }
 
-/** Room between the panel and the screen's edges or the other panels, as between all panels. */
-const GAP = 12;
 
 /** How wide the panel may be: the screen less its margins and the tool rail. */
 function selectionRoom(): number {
   const rail = document.querySelector('.tools')?.getBoundingClientRect();
-  return innerWidth - GAP * 2 - (rail ? rail.width + GAP : 0);
+  return innerWidth - EDGE * 2 - (rail ? rail.width + EDGE : 0);
 }
 
 export function SelectionPanel({ editor, items, cells, linkCount, docked }: { editor: Editor; items: Item[]; cells: number[]; linkCount: number; docked: boolean }) {
@@ -264,21 +263,20 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
     const outer = (k: HTMLElement) => { const cs = getComputedStyle(k); return k.offsetWidth + parseFloat(cs.marginLeft) + parseFloat(cs.marginRight); };
     const cs = getComputedStyle(el), gap = parseFloat(cs.columnGap) || 0, pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
     const w = kids.reduce((t, k) => t + outer(k), 0) + gap * (kids.length - 1) + pad, h = el.offsetHeight;
-    const seen = (q: string) => [...document.querySelectorAll(q)].map((e) => e.getBoundingClientRect()).filter((r) => r.width && r.height);
     // Across: centred, but clear of the tool rail and what opens beside it.
-    let lo = GAP, hi = innerWidth - GAP - w;
-    for (const r of seen('.tools, .tools-more, .draw-panel')) {
-      if (r.left < innerWidth / 2) lo = Math.max(lo, r.right + GAP); else hi = Math.min(hi, r.left - GAP - w);
+    let lo = EDGE, hi = innerWidth - EDGE - w;
+    for (const r of shownRects('.tools, .tools-more, .draw-panel')) {
+      if (r.left < innerWidth / 2) lo = Math.max(lo, r.right + EDGE); else hi = Math.min(hi, r.left - EDGE - w);
     }
     const centred = (innerWidth - w) / 2, left = Math.max(lo, Math.min(hi, centred));
     // Up: from the bottom, above every panel it would lie over.
-    const base = docked ? 0 : GAP, others = seen('.topbar, .bar.zoom');
+    const base = docked ? 0 : EDGE, others = shownRects('.topbar, .bar.zoom');
     let bottom = base;
     for (let tries = 0; tries < 4; tries++) {
       const top = innerHeight - bottom - h;
-      const hit = others.find((r) => left < r.right + GAP && left + w > r.left - GAP && top < r.bottom + GAP && top + h > r.top - GAP);
+      const hit = others.find((r) => crowds({ left, top, width: w, height: h }, r));
       if (!hit) break;
-      bottom = innerHeight - hit.top + GAP;
+      bottom = innerHeight - hit.top + EDGE;
     }
     // How far off the middle it stands (moved by a shift, so it slides there and back).
     const next = { left: Math.round(left - centred), bottom: bottom === base ? null : Math.round(bottom) };
