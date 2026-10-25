@@ -92,6 +92,8 @@ export class Editor {
   hotDot: Side | null = null;
   /** The mind map node button under the pointer (see buttonKey). */
   hotPlus: string | null = null;
+  /** Shared: the mind map node last made and opened for typing at once (Tab in it makes the next). */
+  justMade: string | null = null;
   /** Shared: the node and way (`id:way`) a "+" has just given its first branches: no chevron there
    *  till the node is picked again, so nothing new turns up by the "+" while it's clicked on. */
   chevronless: string | null = null;

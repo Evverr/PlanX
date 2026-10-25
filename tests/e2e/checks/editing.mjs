@@ -170,6 +170,28 @@ export const checks = {
     expect(await p.ev(`planx.board.list().filter((i) => i.type === 'mind').length`), 'nothing new made').toBe(4);
   },
 
+  async 'Tab while typing in a new mind map node goes on in a new one after it, again and again'(p) {
+    await p.make('mind', [500, 400]);
+    await p.escape();
+    const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
+    await p.ev(`planx.editor.setSelection(['${root}'])`);
+    await p.key('Tab', 'Tab', 9);
+    for (const t of ['один', 'два', 'три']) {
+      await p.cdp('Input.insertText', { text: t });
+      await p.key('Tab', 'Tab', 9);
+    }
+    await p.escape();
+    const kids = await p.ev(`planx.board.list().filter((i) => i.parent === '${root}').sort((m, n) => m.y - n.y).map((i) => i.text ?? '')`);
+    expect(kids.join(','), 'one after another, the last still empty').toBe('один,два,три,');
+    // Opened again later, Tab goes to the next one instead.
+    const ids = await p.ev(`planx.board.list().filter((i) => i.parent === '${root}').sort((m, n) => m.y - n.y).map((i) => i.id)`);
+    await p.ev(`planx.editor.setSelection(['${ids[3]}']); planx.editor.startEditing('${ids[3]}')`);
+    await sleep(200);
+    await p.key('Tab', 'Tab', 9);
+    expect(await p.ev('planx.editor.editingId'), 'round to the first').toBe(ids[0]);
+    expect(await p.ev(`planx.board.list().filter((i) => i.parent === '${root}').length`), 'nothing new').toBe(4);
+  },
+
   async 'the hand pans the board and the wheel zooms it'(p) {
     const cam0 = await p.ev('planx.editor.cam');
     await p.key('h', 'KeyH', 72);
