@@ -148,7 +148,8 @@ describe('mind map: branches led down from the central topic', () => {
   it('a branch under its parent growing as it is typed in moves those after it, and its own down', () => {
     const moves = makeRoom('d1', 20, 10, all.map((i) => (i.id === 'd1' ? { ...i, w: 120, h: 50 } : i)));
     expect(moves.get('d2')).toEqual({ x: 82, y: 88 });
-    expect(moves.get('d11')).toEqual({ x: -62, y: 186 });
+    // Still centred under it, and down with its lower edge.
+    expect(moves.get('d11')).toEqual({ x: -52, y: 186 });
   });
 
   it('the line to a branch under its parent runs down from the parent\'s bottom to its top', () => {
@@ -272,5 +273,33 @@ describe('mind map: going from branch to branch', () => {
   it('none for a branch alone on its side, or the central topic', () => {
     expect(siblingOf('l', all)).toBe(null);
     expect(siblingOf('r', all)).toBe(null);
+  });
+});
+
+describe('mind map: a node growing as it is typed in pushes what grows from it', () => {
+  const r = node('r', 0, 0), a = node('a', 160, 0, { parent: 'r' }), a1 = node('a1', 320, 0, { parent: 'a' }), a11 = node('a11', 480, 0, { parent: 'a1' });
+  const l = node('l', -160, 0, { parent: 'r' }), l1 = node('l1', -320, 0, { parent: 'l' }), d = node('d', 0, 88, { parent: 'r', down: true });
+
+  it('wider, its next level and all past it move out by as much, keeping the gap', () => {
+    const moves = makeRoom('a', 50, 0, [r, a, a1, a11].map((i) => (i.id === 'a' ? { ...i, w: 150 } : i)));
+    expect(moves.get('a1')).toEqual({ x: 370, y: 0 });
+    expect(moves.get('a11')).toEqual({ x: 530, y: 0 });
+  });
+
+  it('on the left it grows leftwards, and pushes them left', () => {
+    const moves = makeRoom('l', 50, 0, [r, l, l1].map((i) => (i.id === 'l' ? { ...i, x: -210, w: 150 } : i)));
+    expect(moves.get('l1')).toEqual({ x: -370, y: 0 });
+  });
+
+  it('taller, they stay centred on it', () => {
+    expect(makeRoom('a', 0, 20, [r, a, a1].map((i) => (i.id === 'a' ? { ...i, h: 60 } : i))).get('a1')).toEqual({ x: 320, y: 10 });
+  });
+
+  it('the central topic pushes its branches on the right out, and those below down', () => {
+    const moves = makeRoom('r', 40, 20, [r, a, a1, l, d].map((i) => (i.id === 'r' ? { ...i, w: 140, h: 60 } : i)));
+    expect(moves.get('a')).toEqual({ x: 200, y: 10 });
+    expect(moves.get('a1')).toEqual({ x: 360, y: 10 });
+    expect(moves.get('l')).toEqual({ x: -160, y: 10 });
+    expect(moves.get('d')).toEqual({ x: 20, y: 108 });
   });
 });

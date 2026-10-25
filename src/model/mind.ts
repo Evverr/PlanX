@@ -206,19 +206,25 @@ export function insertBeside(id: string, from: string, where: 'above' | 'below',
 
 /**
  * New places (by id) for when node `id` has grown by dw × dh as it's typed in (a negative one when it
- * shrinks; it grows away from the centre, and downwards but over its parent, upwards): beside its
- * parent, the branches below it follow; under (or over) its parent, those after it move along, and
- * what grows from it moves down (or up) with its far edge. The rest of the map stays put.
+ * shrinks; it grows away from the centre, and downwards but over its parent, upwards; a central topic
+ * rightwards and downwards): beside its parent, the branches below it follow; under (or over) its
+ * parent, those after it move along. What grows from it keeps its gap from it, moving out with its far
+ * edge, and stays centred on it. The rest of the map stays put.
  */
 export function makeRoom(id: string, dw: number, dh: number, items: Item[]): Map<string, Point> {
   const { all, byId, block } = working(items);
   const node = byId.get(id), p = node?.parent ? byId.get(node.parent) : undefined;
-  if (node && p) {
+  if (!node) return new Map();
+  // Its own branches, each way they grow, with all that grows from them.
+  for (const k of all.filter((i) => i.type === 'mind' && i.parent === node.id)) {
+    const way = mindWay(k, node), d = {
+      right: { x: dw, y: dh / 2 }, left: { x: p ? -dw : 0, y: dh / 2 }, down: { x: dw / 2, y: dh }, up: { x: dw / 2, y: p ? -dh : 0 },
+    }[way];
+    block(k).forEach((n) => { n.x += d.x; n.y += d.y; });
+  }
+  if (p) {
     const way = mindWay(node, p);
-    if (upright(way)) {
-      pushPast(node, null, dw, 1, all, byId, block, 1);
-      block(node).slice(1).forEach((n) => { n.y += way === 'up' ? -dh : dh; });
-    } else pushPast(node, null, dh, 1, all, byId, block, 1);
+    pushPast(node, null, upright(way) ? dw : dh, 1, all, byId, block, 1);
     clearCousins(p, way, all, byId);
   }
   return moved(items, byId);
