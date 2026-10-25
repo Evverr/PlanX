@@ -195,7 +195,9 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         board.endGesture();
       } else if (g.dbl) {
         const it = board.get(g.id);
-        ed.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
+        // A frame folds on a double click, and unfolds; on its title over it, that opens for typing.
+        if (it?.type === 'frame' && (it.fold || toLocal(it, g.start).y >= it.y)) ed.setFolded(it.id, !it.fold);
+        else ed.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
       } else if (g.cell) {
         const it = board.get(g.id), i = it ? cellAt(it, g.start) : null;
         if (i !== null) ed.pickCell(i, e.shiftKey ? 'range' : e.metaKey || e.ctrlKey ? 'toggle' : 'one');

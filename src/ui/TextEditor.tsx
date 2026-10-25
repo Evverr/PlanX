@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 import type { Editor } from '../editor/editor';
 import { alignOf, TEXT_COLORS, textPad, textPadY, type Item } from '../model/types';
 import { fontOf, FONTS, LINE_HEIGHT, textBlockHeight } from '../canvas/text';
-import { FOLD_FS, FOLD_GAP, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP } from '../model/frame';
+import { FOLD_FS, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP } from '../model/frame';
 import { center, TASK_INSET } from '../canvas/geometry';
 
 /**
@@ -44,7 +44,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   const pad = textPad(item), padY = textPadY(item);
   // A task's text starts right of its checkbox.
   const inset = item.type === 'task' ? TASK_INSET : 0;  // a task's text keeps clear of its checkbox
-  const width = folded ? Math.max(160, item.w - FOLD_PAD - FOLD_TITLE_GAP - FOLD_ICON * 2 - FOLD_GAP - FOLD_RIGHT)
+  const width = folded ? Math.max(160, item.w - FOLD_PAD - FOLD_TITLE_GAP - FOLD_ICON - FOLD_RIGHT)
     : isFrame ? Math.max(160, item.w * 0.6) : item.w - inset * 2 - pad * 2;
   const top = folded ? item.y + (item.h - 26) / 2 : isFrame ? item.y - 30 : item.y + padY;
   const p = editor.toScreen({ x: item.x + (folded ? FOLD_PAD : isFrame ? 0 : inset + pad), y: top });
