@@ -1,0 +1,7 @@
+/* The picture after clearing the board (ui/ClearFx.tsx): in growing from small, a second's stay,
+   then off growing faster and faster as it fades, as if flying at you; clicks pass through. */
+.clear-fx { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; pointer-events: none; }
+.clear-fx-pic { width: 360px; height: 360px; max-width: 70vw; max-height: 70vw; opacity: 0;
+  animation: clear-in var(--come) cubic-bezier(.22, 1, .36, 1) forwards, clear-go var(--go) cubic-bezier(.5, 0, .75, 0) calc(var(--come) + var(--stay)) forwards; }
+@keyframes clear-in { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+@keyframes clear-go { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.8); } }

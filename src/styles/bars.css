@@ -1,0 +1,82 @@
+.topbar { left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); padding: var(--s6) var(--s12) var(--s6) var(--s20); gap: var(--s8); max-width: calc(100vw - var(--e24)); }
+/* With its menu open, the top bar (and so the menu) comes over every other panel. */
+.topbar:has(.board-menu) { z-index: 30; }
+/* 15px from the logo to its separator. */
+.topbar .logo + .sep { margin-left: var(--s7); }
+.logo { font-family: "Inter", var(--ui); font-weight: 700; font-size: var(--s18); letter-spacing: -0.01em; white-space: nowrap; }
+/* The title field and an invisible copy of its text share one grid cell, so the copy sets the width. */
+.title-fit { display: inline-grid; min-width: 0; flex: 0 1 auto; font-size: var(--s15); }
+.title-fit::after { content: attr(data-text) " "; visibility: hidden; white-space: pre; overflow: hidden; font-weight: 500; padding: var(--s6) var(--s8); grid-area: 1 / 1; }
+.title-input { grid-area: 1 / 1; width: 100%; min-width: 0; border: 0; background: transparent; font: inherit; font-weight: 500; color: var(--ink); padding: var(--s6) var(--s8); border-radius: var(--s6); transition: background-color .12s ease-out; }
+.title-input:focus { outline: none; }
+.tb { border: 0; background: transparent; border-radius: 6px; padding: 8px 10px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); white-space: nowrap; transition: background-color .12s ease-out; }
+.tb:hover { background: var(--fmt-hover); color: var(--ink); }
+
+
+.avatars { display: flex; align-items: center; padding: 0 var(--s4) 0 var(--s4); }
+.avatar { width: var(--e30); height: var(--e30); border-radius: 50%; display: grid; place-items: center; background: var(--avatar-bg); border: var(--s2) solid var(--surface); margin-left: 0; cursor: default; padding: 0; }
+.avatar img { width: var(--e22); height: var(--e22); display: block; pointer-events: none; opacity: var(--avatar-fade); }
+.avatar:first-child { margin-left: 0; }
+/* With the panels cleared away by your cat, only the cat stays, in the bottom right corner. */
+[data-ui="bare"] .bar, [data-ui="bare"] .tools, [data-ui="bare"] .tools-more, [data-ui="bare"] .draw-panel, [data-ui="bare"] .pop, [data-ui="bare"] .tfmt { display: none !important; }
+.cat-corner { position: fixed; z-index: 5; right: 0; bottom: 0; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 12px 0 0 0; cursor: pointer;
+  display: grid; place-items: center; background: var(--surface); box-shadow: var(--shadow); }
+.cat-corner img { width: 24px; height: 24px; display: block; pointer-events: none; opacity: var(--avatar-fade); }
+.avatar.me { cursor: pointer; }
+.more { font-size: var(--s12); color: var(--muted); padding: 0 var(--s4); }
+
+/* Down from the top (not up from the bottom), so it can slide to the top and back. */
+.zoom { right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(100% - 12px - var(--bar-h) - env(safe-area-inset-bottom, 0px)); padding: var(--s6) var(--s16); }
+/* Panels stuck to their screen edge (the chevron button) lose the corners on that side. */
+.topbar.docked { top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
+.zoom.docked, .panel.docked { bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.zoom.docked { top: calc(100% - var(--bar-h)); }
+/* Board map above the zoom panel: items as translucent blue blocks, the dark frame is the screen. */
+.minimap { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(20px + var(--bar) + env(safe-area-inset-bottom, 0px)); padding: var(--s8); }
+.minimap.docked { bottom: calc(8px + var(--bar)); }
+.minimap svg { display: block; width: var(--e240); height: var(--e160); cursor: pointer; touch-action: none; }
+.minimap .mm-item { fill: rgba(75, 145, 255, .35); }
+.minimap .mm-frame { fill: rgba(75, 145, 255, .12); }
+.minimap .mm-view { fill: none; stroke: var(--ink); stroke-width: 2; stroke-opacity: .3; }
+.zpct { min-width: var(--s52); text-align: center; font-size: var(--s13); font-weight: 500; font-variant-numeric: tabular-nums; border: 0; background: transparent; cursor: pointer; padding: var(--s8) var(--s6); border-radius: var(--s6); transition: background-color .12s ease-out; }
+.zpct:hover { background: var(--fmt-hover); }
+
+.panel { left: 50%; transform: translateX(-50%); width: max-content; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); padding: var(--s6) var(--s16); flex-wrap: nowrap; }
+/* Too wide to sit beside the zoom panel: one bar's height (52px) and a gap higher. */
+.panel.raised { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+.panel.docked.raised { bottom: var(--s60); border-radius: var(--s12); }
+.sw { width: var(--e26); height: var(--e26); border-radius: 50%; border: var(--s2) solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; margin: 0 3.5px; }
+.sw.on { box-shadow: 0 0 0 2px var(--accent); }
+.sw-group, .sort-wrap { display: flex; align-items: center; }
+.table-count { gap: var(--s2); font-size: var(--s14); color: var(--fmt-ink); }
+/* A table's rows and columns carry their own separators, wherever they're moved to: a line either
+   side, spaced like the bar's separators, but none at the panel's end or doubling one already there. */
+.table-count::before, .table-count::after { content: ""; flex: none; width: 1px; height: var(--e20); background: var(--fmt-line); }
+.table-count::before { margin: 0 var(--s4) 0 var(--s2); }
+.table-count::after { margin: 0 var(--s2) 0 var(--s4); }
+.table-count:first-child::before, .sep + .table-count::before, .table-count + .table-count::before,
+.table-count:last-child::after, .table-count:has(+ .sep)::after { display: none; }
+.table-count span { padding: 0 var(--s4) 0 var(--s8); }
+.sw.custom { position: relative; overflow: hidden; display: inline-block; background: conic-gradient(#FF5E5E, #FFD25E, #8CE35E, #5ED9E3, #5E8CFF, #C45EFF, #FF5E5E); }
+.sw.custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.sw.none { background: linear-gradient(135deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%), var(--surface) !important; }
+.paint-target { gap: var(--s2); }
+.op-wrap { position: relative; display: flex; }
+/* As tall as the panel under it, with its shadow. */
+.op-pop { position: absolute; bottom: calc(100% + var(--s18)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: var(--s10); height: var(--e52); box-sizing: border-box; padding: 0 var(--s16); background: var(--surface); border-radius: var(--s12); box-shadow: var(--shadow); white-space: nowrap; animation: fade-in .12s ease-out; }
+/* The slider drawn by hand: a plain grey track (no outline), blue up to the knob, and a knob 2px
+   bigger than the browser's. --p is how far along it is. */
+.op-pop input[type="range"] { -webkit-appearance: none; appearance: none; width: var(--e150); height: var(--e4); margin: 0; border-radius: var(--s2); cursor: pointer;
+  background: linear-gradient(to right, var(--fmt-on-ink) var(--p), var(--op-track) var(--p)); }
+.op-pop input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: var(--e18); height: var(--e18); border: 0; border-radius: 50%; background: var(--fmt-on-ink); }
+.op-pop input[type="range"]::-moz-range-thumb { width: var(--e18); height: var(--e18); border: 0; border-radius: 50%; background: var(--fmt-on-ink); }
+/* The palette's popover: the fill/outline switch, the colours, the opacity slider, lines between. */
+.op-pop.palette-pop { gap: 0; padding: 0 var(--s12); }
+.op-pop.palette-pop .paint-target { gap: var(--s2); }
+.op-pop.palette-pop .sep { margin: 0 var(--s8); }
+.op-pop.palette-pop input[type="range"] { width: var(--e110); margin-right: var(--s10); }
+.op-pop > span { min-width: var(--e38); text-align: right; font-size: var(--s13); font-weight: 500; font-variant-numeric: tabular-nums; color: var(--ink); }
+.paint-fill, .paint-stroke { width: var(--e18); height: var(--e18); border-radius: 50%; box-sizing: border-box; }
+.paint-fill { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
+.paint-stroke { border: 2.5px solid; }
+.paint-fill.none, .paint-stroke.none { background: linear-gradient(135deg, transparent 44%, var(--danger) 44%, var(--danger) 56%, transparent 56%) !important; box-shadow: inset 0 0 0 1px var(--line); border: 0; }

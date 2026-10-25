@@ -1,0 +1,19 @@
+/* Any colour: the picker in the app's popover style (12px corners, the popups' shadow, 12px in
+   from every edge), above the circle that opened it. Inside, as the browser's own: a saturation and
+   brightness square, the hue strip beside the colour, and the colour's code. */
+.cp-wrap { position: relative; display: flex; }
+.color-picker { position: absolute; bottom: calc(100% + var(--s22)); left: 50%; transform: translateX(-50%); z-index: 8; width: var(--e224); box-sizing: border-box;
+  display: flex; flex-direction: column; gap: var(--s12); padding: var(--s12); background: var(--surface); border-radius: var(--s12); box-shadow: 0 6px 12px rgba(0, 0, 0, .15);
+  animation: fade-in .12s ease-out; cursor: default; }
+.cp-square { position: relative; height: var(--e140); border-radius: var(--s6); cursor: crosshair;
+  background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent) !important; background-blend-mode: normal; }
+.cp-square i, .cp-hue i { position: absolute; width: var(--e14); height: var(--e14); border-radius: 50%; border: var(--s2) solid #fff; box-sizing: border-box;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .2); transform: translate(-50%, -50%); pointer-events: none; }
+.cp-row { display: flex; align-items: center; gap: var(--s10); }
+.cp-swatch { flex: none; width: var(--e24); height: var(--e24); border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .1); }
+.cp-hue { position: relative; flex: 1; height: var(--e10); border-radius: var(--s5); cursor: pointer;
+  background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+.cp-hue i { top: 50%; }
+.cp-code { display: flex; align-items: center; gap: var(--s8); font: 500 var(--s12)/1 "Inter", var(--ui); color: var(--muted); }
+.cp-code input { flex: 1; min-width: 0; height: var(--e28); box-sizing: border-box; padding: 0 var(--s8); border: 1px solid var(--line); border-radius: var(--s6);
+  background: var(--bg); color: var(--ink); font: 500 var(--s12)/1 "Inter", var(--ui); text-transform: uppercase; }

@@ -1,0 +1,24 @@
+/* Every panel (the bars, the selection panel, the map, the tool rail and what opens beside it)
+   slides to a new place alike: stuck to the edges or back, raised over another, put back as by
+   default. While one is dragged by an edge (see ui/panels/grip.ts), they all follow at once. */
+:is(.bar, .tools, .tools-more, .draw-panel) { transition: top .2s ease, bottom .2s ease, left .2s ease, right .2s ease, border-radius .2s ease; }
+:is(.tools, .panel) { transition-property: top, bottom, left, right, border-radius, transform; }
+/* The one being dragged follows the pointer at once; the others make way smoothly. */
+.gripped { transition: none !important; }
+
+/* Bars moved by hand to the other edge of the screen (see ui/panels/grip.ts): the top bar to the bottom, the
+   zoom bar to the top, the tool rail to the right; what opens from them opens the other way. */
+:root[data-topbar="low"] .topbar { top: calc(100% - 12px - var(--bar-h) - env(safe-area-inset-bottom, 0px)); }
+:root[data-topbar="low"] .topbar.docked { top: calc(100% - var(--bar-h)); border-radius: var(--s12) var(--s12) 0 0; }
+:root[data-topbar="low"] .board-menu:not(.sub) { top: auto; bottom: calc(100% + var(--s12)); }
+:root[data-topbar="low"] .board-menu.sub { top: auto; bottom: round(calc(-13px * var(--k)), 1px); }
+:root[data-topbar="low"] .confirm { top: auto; bottom: calc(18px + var(--bar) + env(safe-area-inset-bottom, 0px)); }
+:root[data-zoom="high"] .zoom { top: calc(12px + env(safe-area-inset-top, 0px)); }
+:root[data-zoom="high"] .zoom.docked { top: 0; border-radius: 0 0 var(--s12) var(--s12); }
+:root[data-zoom="high"] :is(.minimap, .help, .namepop) { bottom: auto; top: calc(20px + var(--bar) + env(safe-area-inset-top, 0px)); }
+:root[data-zoom="high"] .minimap.docked { top: calc(8px + var(--bar)); }
+/* From the left still (so it can slide across): as far as leaves 12px at the right. */
+:root[data-rail="right"] .tools { left: calc(100% - 12px - var(--rail-w) - env(safe-area-inset-right, 0px)); }
+:root[data-rail="right"] .tools.docked { left: calc(100% - var(--rail-w)); border-radius: var(--s12) 0 0 var(--s12); }
+:root[data-rail="right"] :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(24px + var(--rail-w) + env(safe-area-inset-right, 0px)); }
+:root[data-rail="right"] .tools.docked ~ :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(12px + var(--rail-w) + env(safe-area-inset-right, 0px)); }

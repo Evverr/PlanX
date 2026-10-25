@@ -1,0 +1,40 @@
+/* Panel icons (Figma SVGs used as masks): the panel's ink, blue on a pressed button. */
+.pi { display: block; flex: none; width: var(--e30); height: var(--e30); pointer-events: none; background: var(--fmt-ink);
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; -webkit-mask-size: contain; mask-size: contain; }
+.on .pi { background: var(--fmt-on-ink); }
+.ib:disabled { cursor: default; background: transparent; }
+.ib:disabled .pi { background: var(--fmt-off-ink); }
+.pi.caret { width: var(--e24); height: var(--e24); }
+.dock-chevron { transition: transform .25s ease; }
+.fsep { flex: none; width: 5px; height: var(--e24); position: relative; }
+.fsep.line::after { content: ""; position: absolute; left: 50%; top: var(--s2); width: 1px; height: var(--e20); background: var(--fmt-line); }
+/* Text controls over the selected text or sticker; TextPanel in FormatPanel.tsx places it. */
+.tfmt { position: fixed; z-index: 5; display: flex; flex-wrap: nowrap; align-items: center; column-gap: var(--s14); padding: var(--s12) var(--s18) var(--s12) var(--s22); width: max-content;
+  background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: var(--s16); box-shadow: var(--fmt-shadow); color: var(--fmt-ink); }
+.tfmt .caret { margin: 0 round(calc(-10px * var(--k)), 1px); }
+/* The text panel fades in when it shows up. */
+.tfmt { animation: fade-in .3s ease; }
+@keyframes fade-in { from { opacity: 0; } }
+.tf-drop { position: relative; display: flex; }
+.tf-menu { position: absolute; z-index: 6; top: calc(100% + var(--s18)); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: var(--s2);
+  min-width: 100%; max-height: var(--e300); overflow-y: auto; padding: var(--s6); background: var(--surface); border-radius: var(--s12); box-shadow: var(--shadow); }
+.tf-menu.grid { display: grid; grid-template-columns: repeat(4, var(--s26)); gap: var(--s13); padding: var(--s12); }
+.tf-menu.grid .sw { margin: 0; }
+.tf-item { border: 0; background: transparent; border-radius: var(--s6); padding: var(--s7) var(--s12); text-align: left; white-space: nowrap; cursor: pointer; font-size: var(--s14); color: var(--ink); transition: background-color .12s ease-out; }
+.tf-item.num { text-align: center; font-variant-numeric: tabular-nums; }
+.tf-item:hover { background: var(--fmt-hover); }
+.tf-item.on { background: var(--fmt-on); }
+.tf-row { display: flex; gap: var(--s14); padding: var(--s8) var(--s10); }
+.fb { position: relative; isolation: isolate; flex: none; min-width: var(--e30); height: var(--e30); border: 0; background: transparent; display: flex; align-items: center; justify-content: center; gap: var(--s5); padding: 0; cursor: pointer; }
+/* Highlight is 42px tall (6px past the 30px icon on each side), as in the Figma "Ato / Hover icon". */
+.fb::before, .fpick::before { content: ""; position: absolute; inset: round(calc(-6px * var(--k)), 1px); border-radius: var(--s6); z-index: -1; transition: background-color .12s ease-out; }
+.fb:hover:not(:disabled)::before, .fpick:hover::before { background: var(--fmt-hover); }
+/* Font, weight and size names: the highlight reaches 2px further to each side. */
+.fpick::before { inset: round(calc(-6px * var(--k)), 1px) round(calc(-8px * var(--k)), 1px); }
+.fb.on::before { background: var(--fmt-on); }
+.fb:disabled { opacity: .3; cursor: default; }
+.fb.sw-btn { min-width: var(--e24); width: var(--e24); height: var(--e30); }
+.fb.sw-btn::before { inset: round(calc(-6px * var(--k)), 1px) round(calc(-9px * var(--k)), 1px); }
+.fb.sw-btn > .pi { margin: 0 round(calc(-3px * var(--k)), 1px); }
+.fb .swatch { position: absolute; left: var(--s4); right: var(--s4); bottom: -1px; height: var(--e4); border-radius: var(--s2); }
+.fpick { position: relative; isolation: isolate; flex: none; height: var(--e30); border: 0; background: transparent; display: flex; align-items: center; gap: var(--s10); padding: 0; cursor: pointer; font: 500 var(--s15)/1 "Inter", var(--ui); color: var(--fmt-ink); white-space: nowrap; }

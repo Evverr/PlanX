@@ -1,0 +1,38 @@
+/* Full-screen canvas with floating chrome: tool rail left, board bar top-left,
+   people, share and zoom bottom-right, selection panel bottom-centre. */
+:root {
+  --bg: #ECEEF2; --link: #BEC4CE; --surface: #FFFFFF; --ink: #1B2130; --muted: #5D6575; --line: #D3D8E0;
+  --accent: #0F7C8A; --accent-soft: rgba(15, 124, 138, .13); --frame: rgba(255, 255, 255, .6); --danger: #C2412D;
+  --grad-1: #FAFAFA; --grad-2: #FCF0FA; --grad-3: #ECF2FC; --grid: 0, 0, 0;
+  /* Format panel (Figma "Mol / Bar") and how much board fills are dimmed. */
+  --fmt-bg: rgba(255, 255, 255, .9); --fmt-ink: #454545; --fmt-line: rgba(0, 0, 0, .07); --fmt-hover: rgba(0, 0, 0, .05);
+  --fmt-on: rgba(75, 145, 255, .14); --fmt-shadow: 0 2px 6px rgba(0, 0, 0, .18); --fmt-on-ink: #0080FF; --fmt-off-ink: #CDD0D5; --menu-ink: #292929; --btn-ink: #2F2F2F; --btn-line: rgba(0, 0, 0, .08); --op-track: #E2E4E9; --fmt-marker: #5A5A5A; --fill-dim: 1;
+  /* Every panel and popover casts the tool rail's shadow. */
+  --shadow: var(--fmt-shadow);
+  --sticky-ink: #1B2130; --shape-stroke: rgba(20, 25, 40, .45);
+  /* Avatar cats sit on a white disc; in the dark theme on nothing, a touch dimmer. */
+  --avatar-bg: #fff; --avatar-fade: 1;
+  --ui: "Onest", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: "Unbounded", "Onest", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171C; --link: #4A525F; --surface: #1E222A; --ink: #E7EAF0; --muted: #9AA3B2; --line: #343A46;
+    --accent: #43BCCB; --accent-soft: rgba(67, 188, 203, .18); --frame: rgba(255, 255, 255, .035); --danger: #F07A63;
+    --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
+    --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
+    --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --menu-ink: var(--ink); --btn-ink: var(--ink); --btn-line: rgba(255, 255, 255, .12); --op-track: #3A404B; --fmt-marker: #BFC4CC; --fill-dim: .85;
+    --shape-stroke: rgba(10, 12, 16, .6); --avatar-bg: transparent; --avatar-fade: .85;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171C; --link: #4A525F; --surface: #1E222A; --ink: #E7EAF0; --muted: #9AA3B2; --line: #343A46;
+  --accent: #43BCCB; --accent-soft: rgba(67, 188, 203, .18); --frame: rgba(255, 255, 255, .035); --danger: #F07A63;
+  --grad-1: #14171C; --grad-2: #14171C; --grad-3: #14171C; --grid: 255, 255, 255;
+  --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
+  --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --menu-ink: var(--ink); --btn-ink: var(--ink); --btn-line: rgba(255, 255, 255, .12); --op-track: #3A404B; --fmt-marker: #BFC4CC; --fill-dim: .85;
+  --shape-stroke: rgba(10, 12, 16, .6); --avatar-bg: transparent; --avatar-fade: .85;
+  color-scheme: dark;
+}
