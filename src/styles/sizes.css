@@ -1,0 +1,89 @@
+/* The panels' sizes, all scaled by --k (1 as by default; less for the board menu's medium and
+   small panels), each rounded to whole pixels: --sN is N px scaled, --eN the same to an even number
+   (for what has an icon centred in it). The bars' height and the rail's width are made of them. */
+:root {
+  --k: 1;
+  --s2: round(calc(2px * var(--k)), 1px);
+  --s3: round(calc(3px * var(--k)), 1px);
+  --s4: round(calc(4px * var(--k)), 1px);
+  --s5: round(calc(5px * var(--k)), 1px);
+  --s6: round(calc(6px * var(--k)), 1px);
+  --s7: round(calc(7px * var(--k)), 1px);
+  --s8: round(calc(8px * var(--k)), 1px);
+  --s9: round(calc(9px * var(--k)), 1px);
+  --s10: round(calc(10px * var(--k)), 1px);
+  --s11: round(calc(11px * var(--k)), 1px);
+  --s12: round(calc(12px * var(--k)), 1px);
+  --s13: round(calc(13px * var(--k)), 1px);
+  --s14: round(calc(14px * var(--k)), 1px);
+  --s15: round(calc(15px * var(--k)), 1px);
+  --s16: round(calc(16px * var(--k)), 1px);
+  --s17: round(calc(17px * var(--k)), 1px);
+  --s18: round(calc(18px * var(--k)), 1px);
+  --s19: round(calc(19px * var(--k)), 1px);
+  --s20: round(calc(20px * var(--k)), 1px);
+  --s21: round(calc(21px * var(--k)), 1px);
+  --s22: round(calc(22px * var(--k)), 1px);
+  --s24: round(calc(24px * var(--k)), 1px);
+  --s26: round(calc(26px * var(--k)), 1px);
+  --s28: round(calc(28px * var(--k)), 1px);
+  --s32: round(calc(32px * var(--k)), 1px);
+  --s34: round(calc(34px * var(--k)), 1px);
+  --s35: round(calc(35px * var(--k)), 1px);
+  --s44: round(calc(44px * var(--k)), 1px);
+  --s52: round(calc(52px * var(--k)), 1px);
+  --s54: round(calc(54px * var(--k)), 1px);
+  --s60: round(calc(60px * var(--k)), 1px);
+  --s220: round(calc(220px * var(--k)), 1px);
+  --e4: round(calc(4px * var(--k)), 2px);
+  --e10: round(calc(10px * var(--k)), 2px);
+  --e14: round(calc(14px * var(--k)), 2px);
+  --e18: round(calc(18px * var(--k)), 2px);
+  --e20: round(calc(20px * var(--k)), 2px);
+  --e22: round(calc(22px * var(--k)), 2px);
+  --e24: round(calc(24px * var(--k)), 2px);
+  --e26: round(calc(26px * var(--k)), 2px);
+  --e28: round(calc(28px * var(--k)), 2px);
+  --e30: round(calc(30px * var(--k)), 2px);
+  --e32: round(calc(32px * var(--k)), 2px);
+  --e34: round(calc(34px * var(--k)), 2px);
+  --e38: round(calc(38px * var(--k)), 2px);
+  --e40: round(calc(40px * var(--k)), 2px);
+  --e48: round(calc(48px * var(--k)), 2px);
+  --e52: round(calc(52px * var(--k)), 2px);
+  --e62: round(calc(62px * var(--k)), 2px);
+  --e64: round(calc(64px * var(--k)), 2px);
+  --e84: round(calc(84px * var(--k)), 2px);
+  --e88: round(calc(88px * var(--k)), 2px);
+  --e96: round(calc(96px * var(--k)), 2px);
+  --e110: round(calc(110px * var(--k)), 2px);
+  --e140: round(calc(140px * var(--k)), 2px);
+  --e150: round(calc(150px * var(--k)), 2px);
+  --e160: round(calc(160px * var(--k)), 2px);
+  --e196: round(calc(196px * var(--k)), 2px);
+  --e224: round(calc(224px * var(--k)), 2px);
+  --e240: round(calc(240px * var(--k)), 2px);
+  --e286: round(calc(286px * var(--k)), 2px);
+  --e300: round(calc(300px * var(--k)), 2px);
+  --e316: round(calc(316px * var(--k)), 2px);
+  --e340: round(calc(340px * var(--k)), 2px);
+  --e380: round(calc(380px * var(--k)), 2px);
+  --bar: calc(var(--s6) * 2 + var(--e40));
+  --rail-w: calc(var(--e30) + var(--s15) * 2);
+}
+:root[data-size="m"] { --k: .9; }
+:root[data-size="s"] { --k: .8; }
+/* Only when scaled: lines the usual size leaves to the font, and fractions it keeps. */
+:root[data-compact] .logo { line-height: var(--s24); }
+:root[data-compact] .title-fit { line-height: var(--s21); }
+:root[data-compact] .zpct { line-height: var(--s18); }
+:root[data-compact] .ink-preset, :root[data-compact] .ink-size { border: round(calc(1.5px * var(--k)), 1px) solid var(--fmt-line); }
+:root[data-compact] .sw { margin: 0 round(calc(3.5px * var(--k)), 1px); }
+:root[data-compact] .paint-stroke { border: round(calc(2.5px * var(--k)), 1px) solid; }
+:root[data-compact] .fsep { width: round(calc(5px * var(--k)), 2px); }
+:root[data-compact] .recorder { width: round(calc(303px * var(--k)), 2px); }
+:root[data-compact] .rec-meter i { min-height: round(calc(3px * var(--k)), 2px); }
+:root[data-compact] .confirm p { max-width: round(calc(207px * var(--k)), 2px); }
+:root[data-compact] .emoji-grid .pick-emoji { width: round(calc(27px * var(--k)), 2px); }
+:root[data-compact] .emoji-grid .pick-emoji { height: round(calc(27px * var(--k)), 2px); }
+:root[data-compact] .menu-line { width: round(calc(259px * var(--k)), 2px); }

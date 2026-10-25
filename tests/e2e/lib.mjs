@@ -29,7 +29,12 @@ export async function start() {
   await until(async () => (await fetch(`http://localhost:${DEBUG_PORT}/json/version`)).ok, 'Chrome');
   return {
     page: () => openPage(),
-    stop: () => { chrome.kill(); vite.kill(); rmSync(profile, { recursive: true, force: true }); },
+    stop: () => {
+      chrome.kill();
+      vite.kill();
+      // Chrome may still be writing its profile as it goes; what's left is in the temp folder anyway.
+      try { rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch { /* left behind */ }
+    },
   };
 }
 

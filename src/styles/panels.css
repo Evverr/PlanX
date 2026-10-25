@@ -1,0 +1,69 @@
+.bar { position: fixed; z-index: 5; display: flex; align-items: center; gap: var(--s4); padding: var(--s6); background: var(--surface); border-radius: var(--s12); box-shadow: var(--shadow); }
+.ib { position: relative; width: var(--e40); height: var(--e40); border: 0; background: transparent; border-radius: var(--s6); display: grid; place-items: center; cursor: pointer; color: var(--ink); padding: 0; transition: background-color .12s ease-out; }
+/* Hovers everywhere match the tool panel's (.fb): a neutral grey, the pressed state light blue. */
+.ib:hover { background: var(--fmt-hover); }
+.ib.on { background: var(--fmt-on); }
+.ib svg { width: 20px; height: 20px; }
+.ib svg.stroke { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ib svg.glyph { width: 24px; height: 24px; }
+/* Separators in the bars: the tool rail's line (.tsep) turned upright. */
+.sep { flex: none; width: 1px; height: var(--s20); background: var(--fmt-line); margin: 0 var(--s2); }
+
+/* Buttons in the panels answer the pointer across the whole panel (its height in a bar, its width
+   in an upright one) and halfway to their neighbours, while their highlight keeps its own size. */
+.bar { --gap: var(--s4); --bar-h: var(--bar); }
+.topbar { --gap: var(--s8); }
+.tfmt { --gap: var(--s14); --bar-h: var(--s54); }
+.draw-panel { --gap: var(--s18); }
+.tb, .zpct, .bar .sw:not(.custom) { position: relative; }
+.bar .ib::after, .bar .tb::after, .bar .zpct::after, .bar .sw:not(.custom)::after,
+.tfmt .sort-wrap > .fb::after, .tfmt .tf-drop > .fb::after, .tfmt .tf-drop > .fpick::after {
+  content: ""; position: absolute; top: 50%; height: var(--bar-h); transform: translateY(-50%);
+  left: calc(var(--gap) / -2); right: calc(var(--gap) / -2); }
+/* Swatches sit 7px apart within their group. */
+.bar .sw:not(.custom)::after { left: -3.5px; right: -3.5px; }
+.tools .fb::after, .draw-panel .fb::after, .draw-panel .ink-preset::after {
+  content: ""; position: absolute; left: 50%; width: var(--e62); transform: translateX(-50%);
+  top: calc(var(--gap) / -2); bottom: calc(var(--gap) / -2); }
+.tools .fb::after { width: var(--rail-w); }
+.tools-more .fb::after { content: ""; position: absolute; left: round(calc(-9px * var(--k)), 1px); right: round(calc(-9px * var(--k)), 1px); top: round(calc(-9px * var(--k)), 1px); bottom: round(calc(-9px * var(--k)), 1px); }
+
+/* Tool panel, 1:1 with the Figma component "Mol / Bar vertical"; buttons share the format panel's styles. */
+.tools { position: fixed; z-index: 5; left: calc(12px + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: center; width: var(--rail-w); padding: var(--s19) var(--s15);
+  /* 18px gaps as in the mockup, whatever the screen: what doesn't fit goes under the "more" button. */
+  --gap: var(--s18);
+  gap: var(--gap);
+  background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: var(--s12); box-shadow: var(--fmt-shadow); }
+.tools.docked { left: 0; border-radius: 0 var(--s12) var(--s12) 0; }
+/* With the rail stuck to the edge, what opens beside it moves in with it (keeping its 12px gap). */
+.tools.docked ~ .tools-more, .tools.docked ~ .draw-panel, .tools.docked ~ .recorder, .tools.docked ~ .icon-pick { left: calc(12px + var(--rail-w) + env(safe-area-inset-left, 0px)); }
+/* The rail's buttons that didn't fit, upright beside it like the rail itself and level with its
+   bottom, in as many columns as the screen's height needs (rows and place set in Toolbar.tsx). */
+.tools-more { position: fixed; z-index: 5; left: calc(24px + var(--rail-w) + env(safe-area-inset-left, 0px));
+  display: grid; grid-auto-flow: column; grid-auto-columns: var(--e30); gap: var(--s18); padding: var(--s21) var(--s15);
+  background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: var(--s12); box-shadow: var(--fmt-shadow);
+  animation: fade-in .12s ease-out; }
+/* Panels whose buttons can be rearranged: holding one lifts it so it can be moved (see ui/sortable.ts). */
+.sortable { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.sortable.sorting, .sortable.sorting * { cursor: grabbing !important; }
+.sortable .lifted { position: relative; z-index: 1; }
+.sortable .fb.lifted::before { background: var(--fmt-bg); box-shadow: var(--fmt-shadow); }
+.sortable .lifted:not(.fb, .sep, .tsep, .fsep) { background: var(--surface); box-shadow: var(--fmt-shadow); border-radius: var(--s6); }
+.tsep { flex: none; width: var(--s20); height: var(--s7); position: relative; }
+/* Drawing tools, opened from the rail's drawing button: a second rail beside the first. */
+.draw-panel { position: fixed; z-index: 5; left: calc(24px + var(--rail-w) + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: var(--s18); width: var(--e62); padding: var(--s21) var(--s16);
+  background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: var(--s12); box-shadow: var(--fmt-shadow); }
+.ink-preset, .ink-size { position: relative; flex: none; width: var(--e34); height: var(--e34); border-radius: 50%; border: 1.5px solid var(--fmt-line); background: transparent;
+  display: grid; place-items: center; padding: 0; cursor: pointer; transition: border-color .12s ease-out; }
+.ink-preset:hover, .ink-size:hover { border-color: var(--muted); }
+.ink-preset.on, .ink-size.on { border: var(--s2) solid #4DA3FF; }
+.ink-preset i, .ink-size i { display: block; border-radius: 50%; }
+.ink-size i { background: var(--ink); }
+.ink-style { position: absolute; left: calc(100% + var(--s10)); bottom: 0; width: var(--e196); padding: var(--s12); display: flex; flex-direction: column; gap: var(--s12);
+  background: var(--surface); border-radius: var(--s12); box-shadow: var(--shadow); }
+.ink-colors { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s11); justify-items: center; }
+.ink-colors .sw { margin: 0; }
+.ink-sizes { display: flex; justify-content: space-between; }
+.tsep::after { content: ""; position: absolute; left: 0; top: var(--s3); width: var(--s20); height: 1px; background: var(--fmt-line); }

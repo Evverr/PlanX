@@ -1,0 +1,50 @@
+/* A bar's "more" button and the popover with what didn't fit, 8px outside the bar. */
+.more-wrap { position: relative; display: flex; flex: none; }
+.more-pop { position: absolute; right: calc(var(--s6) * -1); z-index: 6; display: flex; align-items: center; gap: var(--s4); padding: var(--s6); white-space: nowrap;
+  background: var(--surface); border-radius: var(--s12); box-shadow: var(--shadow); animation: fade-in .12s ease-out; }
+.more-pop.above { bottom: calc(100% + var(--s14)); }
+.more-pop.below { top: calc(100% + var(--s14)); }
+
+/* The board's menu, 1:1 with the Figma "Mol / Menu right": 286 wide, rows of a 24px icon and
+   Inter 13 text 11px apart, 14px between rows, a faint line between groups; under its button,
+   6px below the top bar. */
+.menu-wrap { position: relative; display: flex; }
+.board-menu { position: absolute; left: round(calc(-6px * var(--k)), 1px); top: calc(100% + var(--s12)); z-index: 7; width: var(--e286); box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 0; padding: var(--s13) var(--s18) var(--s17) var(--s14);
+  background: var(--surface); border-radius: var(--s12); box-shadow: 0 6px 6px rgba(0, 0, 0, .15); animation: fade-in .12s ease-out; }
+.menu-item { position: relative; width: 100%; }
+.menu-row { position: relative; display: flex; align-items: center; gap: var(--s11); width: 100%; border: 0; background: none; padding: 0;
+  font: 400 var(--s13)/normal "Inter", var(--ui); color: var(--menu-ink); text-align: left; white-space: nowrap; cursor: pointer; }
+.menu-row.light { color: var(--fmt-ink); }
+.menu-row img { flex: none; display: block; }
+.menu-icon { flex: none; width: var(--e24); height: var(--e24); color: #A6A6A6; }
+.menu-row { box-sizing: border-box; min-height: var(--e38); padding: var(--s7) 0; }
+/* A menu without icons sits 4px further in; in one with some, a row without lines its text up with
+   theirs (an icon's 24px and the 11px after it). */
+.board-menu.plain { padding-left: var(--s18); }
+.menu-row.indent { padding-left: var(--s35); }
+/* Rows touch (the 14px between them is 7px of each), so the pointer lights them up edge to edge. */
+.menu-more { position: absolute; right: round(calc(-5px * var(--k)), 1px); top: var(--s8); }
+.menu-line { width: 259px; height: 1px; margin: var(--s7) 0; background: #6E6E6E; opacity: .1; }
+/* The switch: a 24×14 track, grey with the knob at its left, blue with it at its right when on. */
+.menu-switch { position: absolute; right: round(calc(-2px * var(--k)), 1px); top: 50%; width: var(--e24); height: var(--e24); transform: translateY(-50%); }
+/* The panels' size: three dots at the row's end (a stand-in till they're drawn), the chosen one blue. */
+.size-dots { display: flex; gap: var(--s8); margin-left: auto; }
+.size-dot { width: var(--e10); height: var(--e10); border-radius: 50%; background: #D9D9D9; cursor: pointer; }
+.size-dot:hover { background: #BDBDBD; }
+.size-dot.on { background: #4DA3FF; }
+.menu-switch::before { content: ""; position: absolute; left: 0; top: var(--s5); width: var(--e24); height: var(--e14); border-radius: var(--s220); background: #D9D9D9; transition: background-color .15s ease-out; }
+.menu-switch.on::before { background: #007CFF; }
+.menu-switch i { position: absolute; top: 29.17%; bottom: 29.17%; left: 12.5%; right: 45.83%; border-radius: var(--s220); background: #fff;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, .07); transition: left .15s ease-out, right .15s ease-out; }
+.menu-switch.on i { left: 45.83%; right: 12.5%; box-shadow: 0 1px 1px rgba(0, 0, 0, .17); }
+/* A further level opens beside its row, 3px over the menu's edge, its first row level with it. */
+.board-menu.sub { left: calc(100% + var(--s15)); top: round(calc(-13px * var(--k)), 1px); bottom: auto; }
+/* Where the screen ends, it opens to the left instead, 3px over the menu's other edge. */
+.board-menu.sub.leftward { left: auto; right: calc(100% + var(--s11)); }
+.board-menu.plain > .menu-item > .board-menu.sub.leftward { right: calc(100% + var(--s15)); }
+/* A row lights up under the pointer, and while its further level is open. */
+.menu-row { isolation: isolate; }
+.menu-row::before { content: ""; position: absolute; inset: 0 round(calc(-18px * var(--k)), 1px) 0 round(calc(-14px * var(--k)), 1px); z-index: -1; transition: background-color .12s ease-out; }
+.board-menu.plain > .menu-item > .menu-row::before { left: round(calc(-18px * var(--k)), 1px); }
+.menu-row:hover::before, .menu-row[aria-expanded="true"]::before { background: var(--fmt-hover); }

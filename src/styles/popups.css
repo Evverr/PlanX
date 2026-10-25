@@ -1,0 +1,108 @@
+/* Popups, as the Figma "Clear the board" one: 20px in from every edge, a 12px corner, a soft
+   shadow, Inter 13 on 21px lines; buttons 28px under the text, 9px apart, at the right. */
+.pop { position: fixed; z-index: 6; background: var(--surface); box-shadow: 0 6px 12px rgba(0, 0, 0, .15); border-radius: var(--s12); padding: var(--s20);
+  font: 400 var(--s13)/var(--s21) "Inter", var(--ui); color: var(--menu-ink); }
+.pop p { margin: 0 0 var(--s10); }
+.pop p:has(+ .row) { margin-bottom: 0; }
+.pop .row { display: flex; gap: var(--s9); justify-content: flex-end; margin-top: var(--s18); }
+.pop p + .row { margin-top: var(--s28); }
+/* Buttons: 32px tall, 7px corners, Inter Semi Bold 12. The plain one has only a faint edge inside;
+   the main one is the blue gradient, both at 90%. */
+.btn { position: relative; isolation: isolate; height: var(--e32); box-sizing: border-box; padding: 0 var(--s14); border: 0; border-radius: var(--s7); background: none;
+  font: 600 var(--s12)/var(--s32) "Inter", var(--ui); color: var(--btn-ink); white-space: nowrap; cursor: pointer; }
+.btn::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; opacity: .9; box-shadow: inset 0 0 0 1px var(--btn-line); transition: filter .12s ease-out; }
+.btn:hover::before { background: var(--fmt-hover); }
+.btn.primary { color: #fff; }
+.btn.primary::before { box-shadow: none; background: linear-gradient(#549BFF, #005FE3); }
+.btn.primary:hover::before { filter: brightness(1.08); }
+
+/* Audio note recorder beside the tool rail. */
+.recorder { left: calc(24px + var(--rail-w) + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: 303px; max-width: calc(100vw - var(--e96)); box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; gap: var(--s20); text-align: center; padding: var(--s16) var(--s18) var(--s19); box-shadow: 0 6px 6px rgba(0, 0, 0, .15); }
+/* As in Figma: the title at the top left in Inter Bold 13, the grey cross 11px in from the top right
+   corner, the microphone in its pale blue circle 7px under the title, the button 20px under it. */
+.recorder-head { align-self: stretch; display: flex; align-items: center; margin: 0; }
+.recorder-head h3 { margin: 0; font: 700 var(--s13)/var(--s21) "Inter", var(--ui); color: var(--menu-ink); }
+.rec-close { position: absolute; top: var(--s11); right: var(--s11); width: var(--e24); height: var(--e24); padding: 0; border: 0; background: none; cursor: pointer; }
+.rec-close img { display: block; opacity: .3; transition: opacity .12s ease-out; }
+.rec-close:hover img { opacity: .6; }
+.rec-mic { margin-top: round(calc(-13px * var(--k)), 1px); width: var(--e88); height: var(--e88); padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; transition: transform .15s ease; }
+.rec-mic img { display: block; }
+.rec-mic:hover:not(:disabled) { transform: scale(1.04); }
+.recorder p { margin: 0; }
+.rec-btn { width: var(--e64); height: var(--e64); border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; background: var(--danger); padding: 0; transition: transform .15s ease; }
+.rec-btn:hover:not(:disabled) { transform: scale(1.05); }
+.rec-btn:disabled { opacity: .5; cursor: default; }
+.rec-btn .pi { background: #fff; }
+.rec-stop { display: block; width: var(--e20); height: var(--e20); border-radius: var(--s4); background: #fff; }
+.rec-meter { align-self: stretch; height: var(--e48); display: flex; align-items: center; gap: var(--s2); }
+.rec-meter i { flex: 1; border-radius: var(--s2); background: var(--danger); min-height: 3px; }
+.rec-clock { font-size: var(--s20); font-weight: 600; font-variant-numeric: tabular-nums; }
+.rec-clock .muted { font-size: var(--s14); font-weight: 500; }
+.rec-preview { width: 100%; height: var(--e40); }
+.recorder .row { align-self: stretch; justify-content: space-between; }
+.recorder .row .btn { flex: 1; white-space: nowrap; }
+.confirm { left: var(--topbar-l, calc(12px + env(safe-area-inset-left, 0px))); top: calc(18px + var(--bar) + env(safe-area-inset-top, 0px)); width: var(--e286); box-sizing: border-box; }
+.confirm p { max-width: 207px; }
+.namepop { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(20px + var(--bar) + env(safe-area-inset-bottom, 0px)); width: var(--e240); }
+.namepop input, .icon-pick input { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: var(--s8); padding: var(--s8) var(--s10); font: inherit; margin-bottom: var(--s10); }
+.toast { left: 50%; transform: translateX(-50%); top: calc(18px + var(--bar) + env(safe-area-inset-top, 0px)); padding: var(--s10) var(--s14); }
+
+.icon-pick { left: calc(24px + var(--rail-w) + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: var(--e316); max-width: calc(100vw - var(--e84)); padding: var(--s12); }
+.icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--s44), 1fr)); gap: var(--s4); max-height: min(var(--e340), 55vh); overflow-y: auto; }
+.icon-grid button { aspect-ratio: 1; border: 0; background: transparent; border-radius: var(--s6); cursor: pointer; color: var(--ink); display: grid; place-items: center; padding: 0; transition: background-color .12s ease-out; }
+.icon-grid button:hover { background: var(--fmt-hover); }
+.icon-grid svg { width: var(--e26); height: var(--e26); }
+.emoji-grid { grid-template-columns: repeat(auto-fill, minmax(var(--s34), 1fr)); gap: var(--s6); }
+.emoji-grid .pick-emoji { width: 27px; height: 27px; }
+/* An emoji's square; its picture is placed in it as in the Figma set, and may stick out of it. */
+.pick-emoji { position: relative; display: block; pointer-events: none; }
+.pick-emoji img { position: absolute; display: block; }
+/* An emoji or icon being dragged out of the picker: twice its size in the picker, under the pointer. */
+.pick-ghost { position: fixed; z-index: 10; pointer-events: none; transform: translate(-50%, -50%); color: var(--ink); filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .2)); }
+.pick-ghost .pick-emoji { width: 54px; height: 54px; }
+.pick-ghost .pick-glyph { display: block; width: 52px; height: 52px; }
+.pick-ghost .pick-glyph svg { display: block; width: 100%; height: 100%; }
+/* Outside the picker the ghost is a preview of the item at its board size. */
+.pick-ghost.preview { filter: drop-shadow(0 2px 6px rgba(0, 0, 0, .15)); opacity: .9; }
+/* The tile being dragged leaves a faint place-holder where it will land in the picker. */
+.icon-grid button.dragging { opacity: .25; }
+/* Previews of what a rail tool makes, while it's dragged onto the board (ui/ToolPreview.tsx). */
+.tp-sticky { display: block; box-shadow: 0 2px 4px rgba(0, 0, 0, .15); }
+.tp-mind { display: block; white-space: nowrap; background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .07); }
+.tp-text { display: block; color: var(--ink); white-space: nowrap; }
+.tp-task { display: grid; place-items: center; position: relative; box-sizing: border-box; border: 2px solid var(--shape-stroke); border-radius: 8px; color: var(--sticky-ink); font-weight: 600; }
+.tp-task i { position: absolute; top: 8px; right: 8px; border-radius: 50%; border: 1.6px solid var(--shape-stroke); box-sizing: border-box; }
+.tp-frame { display: block; box-sizing: border-box; position: relative; background: var(--frame); border: 1px solid var(--line); border-radius: 8px; }
+.tp-frame b { position: absolute; left: 2px; bottom: 100%; margin-bottom: 4px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.tp-svg { display: block; overflow: visible; fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+.tp-svg.shape { stroke: var(--shape-stroke); stroke-width: 2; stroke-linejoin: round; }
+.tp-icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 10px; background: var(--fmt-bg); box-shadow: var(--fmt-shadow); }
+.sticky-grid { grid-template-columns: repeat(4, 1fr); gap: var(--s8); }
+.pick-sticky { display: block; width: 44px; height: 44px; box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
+.pick-ghost .pick-sticky { width: 88px; height: 88px; }
+.pick-tabs { display: flex; gap: var(--s4); margin-bottom: var(--s10); }
+.pick-tabs button { flex: 1; border: 0; background: transparent; border-radius: var(--s8); padding: var(--s7) var(--s10); cursor: pointer; font-size: var(--s13); font-weight: 500; color: var(--muted); }
+.pick-tabs button:hover { background: var(--fmt-hover); color: var(--ink); }
+.pick-tabs button.on { background: var(--fmt-on); color: var(--ink); }
+.muted { color: var(--muted); }
+
+.help { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(20px + var(--bar) + env(safe-area-inset-bottom, 0px)); width: var(--e380); max-width: calc(100vw - var(--e24)); box-sizing: border-box; }
+.help h3 { margin: 0 0 var(--s8); font-size: var(--s13); font-weight: 600; }
+.help dl { display: grid; grid-template-columns: auto 1fr; gap: var(--s4) var(--s12); margin: 0; }
+.help dt { font-weight: 600; white-space: nowrap; }
+.help dd { margin: 0; color: var(--muted); }
+kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); border-radius: 4px; padding: 1px 5px; }
+
+.text-edit { position: fixed; z-index: 4; margin: 0; border: 0; outline: none; resize: none; overflow: hidden; background: transparent; font-family: var(--ui); transform-origin: 0 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.text-edit.sticky, .text-edit.rect, .text-edit.ellipse, .text-edit.polygon, .text-edit.task { text-align: center; color: var(--sticky-ink); }
+.text-edit.text, .text-edit.table { color: var(--ink); }
+.text-edit.mind { text-align: center; color: var(--ink); }
+.text-edit.frame { color: var(--muted); font-weight: 600; background: var(--surface); border-radius: 4px; }
+.text-edit.frame.folded { color: var(--ink); background: transparent; }
+.text-edit.nofill { color: var(--ink); }
+
+@media (max-width: 640px) {
+  .title-fit { max-width: 120px; }
+  .tools { top: auto; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); transform: none; }
+}
