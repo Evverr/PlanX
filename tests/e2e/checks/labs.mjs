@@ -15,12 +15,26 @@ export const checks = {
     const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Нововведения')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
     await sleep(250);
-    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(8);
+    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(9);
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.labs-menu .menu-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`document.querySelector('.labs-menu [aria-checked="false"]')?.textContent`), 'switched off').toBe('Общий таймер');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
     await p.reload();
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'and still gone after a reload').toBeFalsy();
+  },
+
+  async '"Экспорт в PDF" saves the board as a PDF of one page'(p) {
+    await stickers(p);
+    // What's handed to the browser to save.
+    await p.ev(`window.saved = null; URL.createObjectURL = (b) => { window.saved = b; return 'blob:x'; }`);
+    await p.click(await p.at('.labs-rail button[aria-label="Экспорт в PDF"]'));
+    expect(await p.ev(`document.querySelector('.export-pop h3')?.textContent`), 'its window').toBe('Экспорт в PDF');
+    expect(await p.ev(`[...document.querySelectorAll('.export-pop .labs-seg button')].some((b) => b.textContent === 'Прозрачный')`), 'no see-through background').toBe(false);
+    await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.export-pop button')].find((b) => b.textContent === 'Скачать PDF'); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(500);
+    const f = await p.ev(`(async () => { const b = window.saved; if (!b) return null; const t = new TextDecoder('latin1').decode(await b.arrayBuffer()); return { type: b.type, size: b.size, head: t.slice(0, 8), tail: t.slice(-6), jpeg: t.includes('/DCTDecode') }; })()`);
+    expect(f?.type, 'a PDF').toBe('application/pdf');
+    expect(f.head === '%PDF-1.4' && f.tail === '%%EOF\n' && f.jpeg, 'whole, with the picture in it').toBe(true);
   },
 
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {

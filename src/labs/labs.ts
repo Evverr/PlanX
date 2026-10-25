@@ -7,13 +7,14 @@ import { readJSON, readText, writeJSON, writeText } from '../storage';
  * browser. Everything they need lives in this folder; the app only asks labOn() where a feature
  * changes what it does, so one that isn't kept comes out by deleting its file and those few lines.
  */
-export type LabId = 'export' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'keys';
+export type LabId = 'export' | 'pdf' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'keys';
 
 export interface Lab { id: LabId; label: string; icon: string; hint: string }
 
 /** In the order they're listed in the menu. `icon` is from the board's icon set. */
 export const LABS: Lab[] = [
   { id: 'export', label: 'Экспорт в PNG', icon: 'download', hint: 'Скачать доску или выделенное картинкой' },
+  { id: 'pdf', label: 'Экспорт в PDF', icon: 'file', hint: 'Скачать доску или выделенное PDF-файлом' },
   { id: 'lock', label: 'Замок', icon: 'lock-l', hint: 'Закреплённое не сдвинуть и не удалить' },
   { id: 'search', label: 'Поиск по доске', icon: 'search', hint: 'Ctrl+F: найти текст на доске' },
   { id: 'timer', label: 'Общий таймер', icon: 'timer', hint: 'Отсчёт, который видят все на доске' },

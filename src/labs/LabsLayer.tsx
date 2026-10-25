@@ -9,11 +9,12 @@ import { drawLabs, laser, LASER_FADE, pillAt, toggleReaction } from './overlays'
 import { LabsPresence, useFollowing } from './presence';
 import { cameraFor, flyTo, stopFlight } from './camera';
 import { downloadPicture, pictureSize, renderPicture, type Background, type ExportOptions } from './exportPng';
+import { downloadPdf } from './exportPdf';
 import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
 import './labs.css';
 
-type LabPop = 'export' | 'search' | 'timer' | 'keys';
+type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'keys';
 
 /** Popups that close on a press anywhere but in them (the cheat sheet has its own backdrop). */
 const AWAY = '.labs-pop, .labs-rail, .labs-more';
@@ -133,8 +134,9 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
 
   const toggle = (p: LabPop) => setPop((cur) => (cur === p ? null : p));
   const summon = () => setToast(presence.summon() ? 'Все участники перенесены к вам' : 'На доске пока никого нет. Откройте ссылку на доску во втором окне');
-  const all: Record<'export' | 'search' | 'timer' | 'laser' | 'follow' | 'keys', RailButton> = {
+  const all: Record<'export' | 'pdf' | 'search' | 'timer' | 'laser' | 'follow' | 'keys', RailButton> = {
     export: { icon: 'download', title: 'Экспорт в PNG', on: pop === 'export', onClick: () => toggle('export') },
+    pdf: { icon: 'file', title: 'Экспорт в PDF', on: pop === 'pdf', onClick: () => toggle('pdf') },
     search: { icon: 'search', title: 'Поиск по доске (Ctrl+F)', on: pop === 'search', onClick: () => toggle('search') },
     timer: { icon: 'timer', title: 'Общий таймер', on: pop === 'timer', onClick: () => toggle('timer') },
     laser: { icon: 'magic-wand', title: 'Лазерная указка (K)', on: laserOn, onClick: () => setLaserOn(!laserOn) },
@@ -146,7 +148,8 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
   return (
     <>
       <LabsRail buttons={buttons} docked={docked} />
-      {pop === 'export' && <ExportPop editor={editor} onCancel={() => setPop(null)} onDone={(ok) => { setPop(null); setToast(ok ? 'Картинка сохранена' : 'На доске пока пусто'); }} />}
+      {pop === 'export' && <ExportPop editor={editor} format="png" onCancel={() => setPop(null)} onDone={(ok) => { setPop(null); setToast(ok ? 'Картинка сохранена' : 'На доске пока пусто'); }} />}
+      {pop === 'pdf' && <ExportPop editor={editor} format="pdf" onCancel={() => setPop(null)} onDone={(ok) => { setPop(null); setToast(ok ? 'PDF сохранён' : 'На доске пока пусто'); }} />}
       {pop === 'search' && <SearchPop editor={editor} />}
       {pop === 'timer' && <TimerPop onStart={(min) => { startTimer(editor.board.doc, min * 60000, conn.me.name); setPop(null); }} />}
       {pop === 'keys' && <KeysSheet onClose={() => setPop(null)} />}
@@ -178,30 +181,31 @@ function Choice<T extends string | number>({ value, options, onPick }: { value: 
   );
 }
 
-function ExportPop({ editor, onCancel, onDone }: { editor: Editor; onCancel: () => void; onDone: (ok: boolean) => void }) {
+/** Saving the board, or what's selected, as a picture or a PDF (which has nothing see-through). */
+function ExportPop({ editor, format, onCancel, onDone }: { editor: Editor; format: 'png' | 'pdf'; onCancel: () => void; onDone: (ok: boolean) => void }) {
   const hasSelection = editor.selectedItems().length > 0;
   const [what, setWhat] = useState<ExportOptions['what']>(hasSelection ? 'selection' : 'all');
   const [scale, setScale] = useState(2);
   const [bg, setBg] = useState<Background>('white');
   const opts = { what, scale, bg };
   const preview = useMemo(() => renderPicture(editor, opts, { w: 252, h: 150 })?.toDataURL() ?? null, [what, bg, editor.board.getVersion()]); // eslint-disable-line react-hooks/exhaustive-deps
-  const size = pictureSize(editor, opts);
+  const size = pictureSize(editor, opts), title = format === 'pdf' ? 'Экспорт в PDF' : 'Экспорт в PNG';
   return (
-    <div className="pop labs-pop export-pop" role="dialog" aria-label="Экспорт в PNG">
-      <h3>Экспорт в PNG</h3>
+    <div className="pop labs-pop export-pop" role="dialog" aria-label={title}>
+      <h3>{title}</h3>
       <div className={`export-preview ${bg === 'none' ? 'checker' : ''}`}>
         {preview ? <img src={preview} alt="Так будет выглядеть картинка" /> : <span>На доске пока пусто</span>}
       </div>
       <label>Что</label>
       <Choice value={what} onPick={setWhat} options={hasSelection ? [['selection', 'Выделенное'], ['all', 'Вся доска']] : [['all', 'Вся доска']]} />
       <label>Фон</label>
-      <Choice value={bg} onPick={setBg} options={[['white', 'Белый'], ['board', 'Как на доске'], ['none', 'Прозрачный']]} />
+      <Choice value={bg} onPick={setBg} options={format === 'pdf' ? [['white', 'Белый'], ['board', 'Как на доске']] : [['white', 'Белый'], ['board', 'Как на доске'], ['none', 'Прозрачный']]} />
       <label>Качество</label>
       <Choice value={scale} onPick={setScale} options={[[1, '1×'], [2, '2×'], [3, '3×']]} />
       {size && <p className="muted">{size.w} × {size.h} пикселей</p>}
       <div className="row">
         <button className="btn" onClick={onCancel}>Отмена</button>
-        <button className="btn primary" disabled={!size} onClick={() => void downloadPicture(editor, opts).then(onDone)}>Скачать PNG</button>
+        <button className="btn primary" disabled={!size} onClick={() => void (format === 'pdf' ? downloadPdf : downloadPicture)(editor, opts).then(onDone)}>{format === 'pdf' ? 'Скачать PDF' : 'Скачать PNG'}</button>
       </div>
     </div>
   );
