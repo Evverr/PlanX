@@ -26,7 +26,7 @@ export const checks = {
   async 'the rail moves up and over to the right, keeping its length'(p) {
     // (Up, to keep clear of the zoom bar in the lower right; with the trial features' rail, which
     // stands at the right edge, switched off.)
-    await p.ev(`localStorage.setItem('planx-labs', JSON.stringify(['export', 'search', 'timer', 'laser', 'follow', 'keys']))`);
+    await p.ev(`localStorage.setItem('planx-labs', JSON.stringify(['export', 'pdf', 'search', 'timer', 'laser', 'follow', 'keys']))`);
     await p.reload();
     const before = await p.rail(), r0 = await p.rect('.tools');
     await p.dragEdge('.tools', 'top', 1000, -60);
