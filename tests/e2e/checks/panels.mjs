@@ -118,6 +118,29 @@ export const checks = {
     expect((await p.rect('.topbar')).t, 'stuck again').toBe(0);
   },
 
+  async 'the zoom bar slides to the edge when stuck, not stretching on the way'(p) {
+    const heights = [];
+    await p.ev(`document.querySelector('.dock-chevron').closest('button').click()`);
+    for (let i = 0; i < 8; i++) { heights.push((await p.rect('.bar.zoom')).h); await sleep(30); }
+    expect(heights.every((h) => h === 52), `its height on the way: ${heights}`).toBeTruthy();
+    expect((await p.rect('.bar.zoom')).b, 'down at the edge').toBe(800);
+  },
+
+  async 'a bar beside the rail moves with it when the panels come off the edges'(p) {
+    // Stuck to the edges: the rail low on the left, the top bar at the bottom 12px right of it.
+    await p.ev(`localStorage.setItem('planx-dock-panels', '1'); localStorage.setItem('planx-tools-top', '400');
+      localStorage.setItem('planx-topbar-low', '1'); localStorage.setItem('planx-topbar-x', '72')`);
+    await p.reload();
+    await sleep(400);
+    const rail0 = await p.rect('.tools'), top0 = await p.rect('.topbar');
+    expect(top0.l - rail0.r, 'stuck: 12px between them').toBe(12);
+    await p.ev(`document.querySelector('.dock-chevron').closest('button').click()`);
+    await sleep(500);
+    const rail = await p.rect('.tools'), top = await p.rect('.topbar');
+    expect(rail.l, 'the rail off the edge').toBe(12);
+    expect(top.l - rail.r, 'still 12px between them').toBe(12);
+  },
+
   async 'unsaved moves are gone after a reload'(p) {
     const t0 = (await p.rect('.tools')).t;
     await p.dragEdge('.tools', 'top', 0, 80);
