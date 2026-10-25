@@ -193,11 +193,10 @@ describe('mind map: folding a node\'s branches away', () => {
     expect(folding(a, 'right', true)).toEqual({ collapsed: true });
   });
 
-  it('a folded node\'s count sits where its chevron was, coming in from past it', () => {
+  it('a folded node\'s count sits where its chevron was', () => {
     expect(foldBadge(a, 'right', 1, 3)).toEqual({ x: 293, y: 20, w: 18, h: 18 });
     expect(foldBadge(l, 'left', 1, 3)).toEqual({ x: -193, y: 20, w: 18, h: 18 });
     expect(foldBadge(d, 'down', 1, 3)).toEqual({ x: 50, y: 161, w: 18, h: 18 });
-    expect(foldBadge(a, 'right', 1, 3, 1)).toEqual({ x: 315, y: 20, w: 18, h: 18 });
     // A wider one keeps its near end there.
     expect(foldBadge(a, 'right', 1, 120)).toEqual({ x: 298, y: 20, w: 28, h: 18 });
     expect(foldBadge(d, 'down', 1, 120)).toEqual({ x: 50, y: 161, w: 28, h: 18 });

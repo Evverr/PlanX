@@ -69,8 +69,6 @@ export interface Scene {
   plusFade: number;
   /** How many nodes each folded mind map node hides, each way, shown by it. */
   folded?: Map<string, Map<Way, number>>;
-  /** How far out past its chevron each folded node's count has moved, 0…1, by `id:way`. */
-  slide?: Map<string, number>;
   /** The node and way (`id:way`) a "+" has just given its first branches, with no chevron there yet. */
   chevronless?: string | null;
   /** A mind map branch being dragged by its arrow button to hang from another node. */
@@ -449,7 +447,7 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
 /** A folded mind map node's count of what it hides that way: a pill in the next level's colour on a
  *  stub of branch, the number in it. */
 function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, way: Way, n: number) {
-  const { theme, cam } = s, b = foldBadge(it, way, cam.z, n, s.slide?.get(`${it.id}:${way}`) ?? 0);
+  const { theme, cam } = s, b = foldBadge(it, way, cam.z, n);
   ctx.strokeStyle = shade(levelColor(mindDepth(it, s.get) + 1), theme.dim);
   ctx.lineWidth = it.parent ? 0.75 : 1.5;
   ctx.beginPath();
