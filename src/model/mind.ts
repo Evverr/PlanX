@@ -72,18 +72,22 @@ export function descendants(ids: Iterable<string>, items: Item[]): string[] {
 /** Which side of its parent a node is on: 1 to the right, -1 to the left. */
 export const mindSide = (it: Item, parent: Item): 1 | -1 => (it.x + it.w / 2 >= parent.x + parent.w / 2 ? 1 : -1);
 
-/** Which way a node grows from its parent: to the right, to the left, or down (a branch led down from
- *  the central topic, and all that grows from it, has `down`). */
-export type Way = 'right' | 'left' | 'down';
-export const mindWay = (it: Item, parent: Item): Way => (it.down ? 'down' : mindSide(it, parent) > 0 ? 'right' : 'left');
+/** Which way a node grows from its parent: to the right, to the left, down or up (a branch led down
+ *  from the central topic, and all that grows from it, has `down`; one led up, `up`). */
+export type Way = 'right' | 'left' | 'down' | 'up';
+export const mindWay = (it: Item, parent: Item): Way => (it.up ? 'up' : it.down ? 'down' : mindSide(it, parent) > 0 ? 'right' : 'left');
+/** Whether branches growing that way are under or over their parent, side by side. */
+export const upright = (way: Way) => way === 'down' || way === 'up';
+/** Which way a new branch of a central topic grows: right (1), left (-1), down or up. */
+export type Toward = 1 | -1 | 'down' | 'up';
 
 /** Gaps: from a parent to its branches beside it, and between those (one under another); from a
- *  parent to its branches under it, and between those (side by side). */
+ *  parent to its branches under (or over) it, and between those (side by side). */
 export const MIND_GAP_X = 60, MIND_GAP_Y = 16, MIND_GAP_DOWN = 48, MIND_GAP_ROW = 24;
 
-/** The axis branches growing that way line up along (y beside their parent, x under it), their size
- *  along it and the gap between them. */
-const axis = (way: Way) => (way === 'down' ? { at: 'x', size: 'w', gap: MIND_GAP_ROW } as const : { at: 'y', size: 'h', gap: MIND_GAP_Y } as const);
+/** The axis branches growing that way line up along (y beside their parent, x under or over it), their
+ *  size along it and the gap between them. */
+const axis = (way: Way) => (upright(way) ? { at: 'x', size: 'w', gap: MIND_GAP_ROW } as const : { at: 'y', size: 'h', gap: MIND_GAP_Y } as const);
 type Axis = ReturnType<typeof axis>;
 const lo = (b: Item[], a: Axis) => Math.min(...b.map((n) => n[a.at]));
 const hi = (b: Item[], a: Axis) => Math.max(...b.map((n) => n[a.at] + n[a.size]));
@@ -98,24 +102,29 @@ function working(items: Item[]) {
 }
 const branchesOf = (p: Item, way: Way, all: Item[]) => all.filter((i) => i.type === 'mind' && i.parent === p.id && mindWay(i, p) === way);
 /** The way a new branch of `parent` grows: its parent's own way, or for a central topic, `toward`. */
-const wayFrom = (parent: Item, get: Get, toward?: 1 | -1 | 'down'): Way => {
+const wayFrom = (parent: Item, get: Get, toward?: Toward): Way => {
   const up = parent.parent ? get(parent.parent) : undefined;
-  return up ? mindWay(parent, up) : toward === 'down' ? 'down' : toward === -1 ? 'left' : 'right';
+  return up ? mindWay(parent, up) : toward === 'down' || toward === 'up' ? toward : toward === -1 ? 'left' : 'right';
 };
+/** Where a branch growing that way from `n` stands across the way it grows: beside it 60 off its side,
+ *  under or over it 48 off. */
+function outFrom(n: Item, way: Way, k: { w: number; h: number }): Partial<Point> {
+  if (way === 'down') return { y: n.y + n.h + MIND_GAP_DOWN };
+  if (way === 'up') return { y: n.y - MIND_GAP_DOWN - k.h };
+  return { x: way === 'right' ? n.x + n.w + MIND_GAP_X : n.x - MIND_GAP_X - k.w };
+}
 
 /**
  * Where a new node of size w × h goes under `parent`: out from it the way its branches grow there
- * (beside it on its side of the centre, or under it), after everything branching from it that way
- * (level with it when it's the first), and further along still while that spot is taken by another
- * node. `toward` picks the way for a central topic, which has all three.
+ * (beside it on its side of the centre, or under or over it), after everything branching from it that
+ * way (level with it when it's the first), and further along still while that spot is taken by another
+ * node. `toward` picks the way for a central topic, which has all four.
  */
-export function childPlace(parent: Item, items: Item[], get: Get, w: number, h: number, toward?: 1 | -1 | 'down'): Point {
+export function childPlace(parent: Item, items: Item[], get: Get, w: number, h: number, toward?: Toward): Point {
   const way = wayFrom(parent, get, toward), a = axis(way);
   const kids = items.filter((i) => i.type === 'mind' && i.parent === parent.id && mindWay(i, parent) === way);
   const placed = kids.flatMap((k) => [k, ...descendants([k.id], items).map(get)]).filter((i): i is Item => !!i);
-  const at = { x: 0, y: 0 };
-  if (way === 'down') at.y = parent.y + parent.h + MIND_GAP_DOWN;
-  else at.x = way === 'right' ? parent.x + parent.w + MIND_GAP_X : parent.x - MIND_GAP_X - w;
+  const at = { x: 0, y: 0, ...outFrom(parent, way, { w, h }) };
   at[a.at] = placed.length ? hi(placed, a) + a.gap : middle(parent, a) - (a.at === 'x' ? w : h) / 2;
   const nodes = items.filter((i) => i.type === 'mind'), g = a.gap / 2;
   for (let tries = 0; tries < 100; tries++) {
@@ -185,7 +194,8 @@ export function insertBeside(id: string, from: string, where: 'above' | 'below',
   const way = mindWay(start, p), a = axis(way), own = block(start);
   if (way === 'right') node.x = start.x;
   else if (way === 'left') node.x = start.x + start.w - node.w;
-  else node.y = start.y;
+  else if (way === 'down') node.y = start.y;
+  else node.y = start.y + start.h - node.h;
   node[a.at] = dir > 0 ? hi(own, a) + a.gap : lo(own, a) - a.gap - node[a.size];
   pushPast(start, node, (node[a.size] + a.gap) * dir, dir, all, byId, block, 1);
   clearCousins(p, way, all, byId);
@@ -194,18 +204,18 @@ export function insertBeside(id: string, from: string, where: 'above' | 'below',
 
 /**
  * New places (by id) for when node `id` has grown by dw × dh as it's typed in (a negative one when it
- * shrinks; it grows away from the centre and downwards): beside its parent, the branches below it
- * follow; under its parent, those after it move along, and what grows from it moves down with its
- * lower edge. The rest of the map stays put.
+ * shrinks; it grows away from the centre, and downwards but over its parent, upwards): beside its
+ * parent, the branches below it follow; under (or over) its parent, those after it move along, and
+ * what grows from it moves down (or up) with its far edge. The rest of the map stays put.
  */
 export function makeRoom(id: string, dw: number, dh: number, items: Item[]): Map<string, Point> {
   const { all, byId, block } = working(items);
   const node = byId.get(id), p = node?.parent ? byId.get(node.parent) : undefined;
   if (node && p) {
     const way = mindWay(node, p);
-    if (way === 'down') {
+    if (upright(way)) {
       pushPast(node, null, dw, 1, all, byId, block, 1);
-      block(node).slice(1).forEach((n) => { n.y += dh; });
+      block(node).slice(1).forEach((n) => { n.y += way === 'up' ? -dh : dh; });
     } else pushPast(node, null, dh, 1, all, byId, block, 1);
     clearCousins(p, way, all, byId);
   }
@@ -227,8 +237,8 @@ function pushPast(start: Item, skip: Item | null, by: number, dir: 1 | -1, all: 
 
 /**
  * Keeps the branches of `p` growing that way, with all that grows from them, clear of the branches of
- * the same level from other parents in the same part of the map (to the right, left or below the
- * centre): those that now overlap them move away along the line, just as far as it takes, and the ones
+ * the same level from other parents in the same part of the map (to the right, left, below or above
+ * the centre): those that now overlap them move away along the line, just as far as it takes, and the ones
  * beyond them in turn; the levels further in stay put.
  */
 function clearCousins(p: Item, way: Way, all: Item[], byId: Map<string, Item>): void {
@@ -264,8 +274,7 @@ function layOut(n: Item, way: Way, all: Item[], block: (k: Item) => Item[]): voi
   const a = axis(way), across = a.at === 'x' ? 'y' : 'x';
   const kids = all.filter((k) => k.type === 'mind' && k.parent === n.id).sort((m, q) => m[across] - q[across] || m[a.at] - q[a.at]);
   for (const k of kids) {
-    if (way === 'down') k.y = n.y + n.h + MIND_GAP_DOWN;
-    else k.x = way === 'right' ? n.x + n.w + MIND_GAP_X : n.x - MIND_GAP_X - k.w;
+    Object.assign(k, outFrom(n, way, k));
     k[a.at] = n[a.at];
     layOut(k, way, all, block);
   }
@@ -289,28 +298,28 @@ export function canMoveTo(id: string, to: string, items: Item[]): boolean {
 }
 
 /**
- * Where everything goes (and which nodes now grow down) when node `id`, with all that grows from it,
- * moves to hang from `to`: after the branches `to` has growing its way (`toward` picks the way for a
- * central topic), the whole branch mirrored if it changes sides, laid out afresh if it turns between
- * beside and under, and the branches round both its old and new place re-centred.
+ * Where everything goes (and which nodes now grow down or up) when node `id`, with all that grows from
+ * it, moves to hang from `to`: after the branches `to` has growing its way (`toward` picks the way for
+ * a central topic), the whole branch mirrored if it changes sides, laid out afresh if it turns between
+ * beside, under and over, and the branches round both its old and new place re-centred.
  */
-export function moveBranch(id: string, to: string, items: Item[], toward: 1 | -1 | 'down'): Map<string, Point & { down?: boolean }> {
+export function moveBranch(id: string, to: string, items: Item[], toward: Toward): Map<string, Point & { down?: boolean; up?: boolean }> {
   const { all, byId, block } = working(items);
   const node = byId.get(id)!, target = byId.get(to)!, old = byId.get(node.parent!)!, get = (k: string) => byId.get(k);
   const sub = descendants([id], all).map((k) => byId.get(k)!);
   const moving = new Set([id, ...sub.map((d) => d.id)]);
   const oldWay = mindWay(node, old), way = wayFrom(target, get, toward);
   const at = childPlace(target, all.filter((i) => !moving.has(i.id)), get, node.w, node.h, toward);
-  if ((oldWay === 'down') !== (way === 'down')) {
-    // Turned between beside and under: everything in it grows the new way, laid out afresh.
-    for (const n of [node, ...sub]) n.down = way === 'down' ? true : undefined;
+  if (oldWay !== way && (upright(oldWay) || upright(way))) {
+    // Turned between beside, under and over: everything in it grows the new way, laid out afresh.
+    for (const n of [node, ...sub]) Object.assign(n, { down: way === 'down' || undefined, up: way === 'up' || undefined });
     Object.assign(node, at, { parent: to });
     layOut(node, way, all, block);
   } else {
     // Over to the other side: the branch mirrored about its node.
-    const cx = node.x + node.w / 2, flip = way !== oldWay && way !== 'down', dx = at.x - node.x, dy = at.y - node.y;
+    const cx = node.x + node.w / 2, flip = way !== oldWay, dx = at.x - node.x, dy = at.y - node.y;
     for (const d of sub) {
-      if (way === 'down') d.x += dx;
+      if (upright(way)) d.x += dx;
       else { const rel = d.x + d.w / 2 - cx; d.x = at.x + node.w / 2 + (flip ? -rel : rel) - d.w / 2; }
       d.y += dy;
     }
@@ -320,10 +329,10 @@ export function moveBranch(id: string, to: string, items: Item[], toward: 1 | -1
   for (const k of [id, all.find((i) => i.parent === old.id && i.type === 'mind' && mindWay(i, old) === oldWay && !moving.has(i.id))?.id]) {
     if (k) balance(k, all).forEach((pt, n) => Object.assign(byId.get(n)!, pt));
   }
-  const out = new Map<string, Point & { down?: boolean }>();
+  const out = new Map<string, Point & { down?: boolean; up?: boolean }>();
   for (const i of items) {
     const n = byId.get(i.id)!, x = Math.round(n.x), y = Math.round(n.y);
-    if (x !== i.x || y !== i.y || !!n.down !== !!i.down) out.set(i.id, { x, y, down: n.down });
+    if (x !== i.x || y !== i.y || !!n.down !== !!i.down || !!n.up !== !!i.up) out.set(i.id, { x, y, down: n.down, up: n.up });
   }
   return out;
 }
@@ -337,10 +346,10 @@ const BUTTON_OFF = 11;
  * branches, past that a chevron pointing back at it, folding them away (all that grows from it); "+"
  * before and after it (above and below beside its parent, left and right under it) for a parallel
  * branch; and on the side of its parent a circle with an arrow, dragged onto another node to move the
- * branch there. The central topic has "+" to the right and "+" below (a branch led down). A folded
- * node has its count where the chevron was (see foldBadge).
+ * branch there. The central topic has "+" on all four sides: right, left, below (a branch led down)
+ * and above (led up). A folded node has its count where the chevron was (see foldBadge).
  */
-export type MindButton = 'child' | 'fold' | 'down' | 'above' | 'below' | 'move';
+export type MindButton = 'child' | 'left' | 'down' | 'up' | 'fold' | 'above' | 'below' | 'move';
 
 /** How far past the "+" for a branch the chevron (or the count) sits, in screen pixels: a button across and 4 more. */
 const FOLD_OFF = 22;
@@ -349,7 +358,7 @@ const FOLD_OFF = 22;
  *  pixels from it, and which way that is. */
 function farSpot(it: Item, up: Item | undefined, off: number, zoom: number): Point & { way: Way } {
   const way = up ? mindWay(it, up) : 'right', d = off / zoom;
-  if (way === 'down') return { x: it.x + it.w / 2, y: it.y + it.h + d, way };
+  if (upright(way)) return { x: it.x + it.w / 2, y: way === 'down' ? it.y + it.h + d : it.y - d, way };
   return { x: way === 'right' ? it.x + it.w + d : it.x - d, y: it.y + it.h / 2, way };
 }
 
@@ -359,14 +368,17 @@ export function mindButtons(it: Item, get: Get, zoom: number, branches = false):
   const up = it.parent ? get(it.parent) : undefined;
   const off = BUTTON_OFF / zoom, r = 9 / zoom, cx = it.x + it.w / 2, cy = it.y + it.h / 2;
   const child = { kind: 'child' as const, ...farSpot(it, up, BUTTON_OFF, zoom), r };
-  if (!up) return [child, { kind: 'down', x: cx, y: it.y + it.h + off, r }];
+  if (!up) {
+    return [child, { kind: 'left', x: it.x - off, y: cy, r }, { kind: 'down', x: cx, y: it.y + it.h + off, r }, { kind: 'up', x: cx, y: it.y - off, r }];
+  }
   const own = branches && !it.collapsed ? [child, { kind: 'fold' as const, ...farSpot(it, up, BUTTON_OFF + FOLD_OFF, zoom), r }] : [child];
-  if (mindWay(it, up) === 'down') {
+  const way = mindWay(it, up);
+  if (upright(way)) {
     return [
       ...own,
       { kind: 'above', x: it.x - off, y: cy, r },
       { kind: 'below', x: it.x + it.w + off, y: cy, r },
-      { kind: 'move', x: cx, y: it.y - off, r },
+      { kind: 'move', x: cx, y: way === 'down' ? it.y - off : it.y + it.h + off, r },
     ];
   }
   const right = mindWay(it, up) === 'right';
@@ -383,16 +395,17 @@ export function mindButtons(it: Item, get: Get, zoom: number, branches = false):
  *  leading to it under the "+" (its middle, width and height, in screen pixels whatever the zoom). */
 export function foldBadge(it: Item, get: Get, zoom: number, count: number): Point & { w: number; h: number } {
   const up = it.parent ? get(it.parent) : undefined, w = Math.max(18, String(count).length * 6 + 10), h = 18;
-  const along = up && mindWay(it, up) === 'down' ? h : w;
+  const along = up && upright(mindWay(it, up)) ? h : w;
   const { x, y } = farSpot(it, up, BUTTON_OFF + FOLD_OFF + (along - h) / 2, zoom);
   return { x, y, w: w / zoom, h: h / zoom };
 }
 
 /** The connecting branch from a parent to a child: from the parent's facing side to the child's,
- *  leaving and arriving level (or, under it, upright). */
+ *  leaving and arriving level (or, under or over it, upright). */
 export function branchCurve(parent: Item, child: Item): [Point, Point, Point, Point] {
-  if (child.down) {
-    const a = { x: parent.x + parent.w / 2, y: parent.y + parent.h }, b = { x: child.x + child.w / 2, y: child.y };
+  if (child.down || child.up) {
+    const a = { x: parent.x + parent.w / 2, y: child.up ? parent.y : parent.y + parent.h };
+    const b = { x: child.x + child.w / 2, y: child.up ? child.y + child.h : child.y };
     const dy = (b.y - a.y) / 2;
     return [a, { x: a.x, y: a.y + dy }, { x: b.x, y: b.y - dy }, b];
   }

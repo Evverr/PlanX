@@ -112,8 +112,8 @@ describe('mind map: branches led down from the central topic', () => {
   const all = [r, d1, d2, d11];
   const get = (id: string) => all.find((i) => i.id === id);
 
-  it('the central topic has a "+" below it, for a branch led down', () => {
-    expect(mindButtons(r, get, 1).map((b) => b.kind)).toEqual(['child', 'down']);
+  it('the central topic has a "+" on each side: right, left, below and above', () => {
+    expect(mindButtons(r, get, 1).map((b) => [b.kind, b.x, b.y])).toEqual([['child', 111, 20], ['left', -11, 20], ['down', 50, 51], ['up', 50, -11]]);
     const kinds = Object.fromEntries(mindButtons(d1, get, 1).map((b) => [b.kind, [b.x, b.y]]));
     // Under its parent: its own branch below, the parallel ones left and right, the arrow on top.
     expect(kinds.child).toEqual([-12, 139]);
@@ -176,7 +176,7 @@ describe('mind map: folding a node\'s branches away', () => {
     expect(kinds(a, true)).toEqual(['child', 'fold', 'above', 'below', 'move']);
     expect(kinds({ ...a, collapsed: true }, true)).toEqual(['child', 'above', 'below', 'move']);
     // The central topic keeps its "+"s.
-    expect(kinds(r, true)).toEqual(['child', 'down']);
+    expect(kinds(r, true)).toEqual(['child', 'left', 'down', 'up']);
     // The chevron 22 past the "+", pointing back at the node.
     const at = (it: Item) => mindButtons(it, get, 1, true).filter((b) => b.kind === 'child' || b.kind === 'fold').map((b) => [b.x, b.y, b.way]);
     expect(at(a)).toEqual([[271, 20, 'right'], [293, 20, 'right']]);
@@ -193,5 +193,58 @@ describe('mind map: folding a node\'s branches away', () => {
     expect(foldBadge(d, get, 1, 120)).toEqual({ x: 50, y: 161, w: 28, h: 18 });
     // In screen pixels whatever the zoom.
     expect(foldBadge(a, get, 2, 3)).toEqual({ x: 276.5, y: 20, w: 9, h: 9 });
+  });
+});
+
+describe('mind map: branches led up from the central topic', () => {
+  // The central topic (100 × 40 at 0, 0), two branches led up, one with a branch of its own.
+  const r = node('r', 0, 0), u1 = node('u1', -62, -88, { parent: 'r', up: true }), u2 = node('u2', 62, -88, { parent: 'r', up: true });
+  const u11 = node('u11', -62, -176, { parent: 'u1', up: true });
+  const all = [r, u1, u2, u11];
+  const get = (id: string) => all.find((i) => i.id === id);
+
+  it('a first branch led up goes over the topic, centred', () => {
+    expect(childPlace(r, [r], (id) => (id === 'r' ? r : undefined), 100, 40, 'up')).toEqual({ x: 0, y: -88 });
+  });
+
+  it('branches over a node stand side by side, centred on it', () => {
+    const u3 = node('u3', 186, -88, { parent: 'r', up: true });
+    const moves = addChild('u3', [...all, u3]);
+    expect(moves.get('u1')).toEqual({ x: -124, y: -88 });
+    expect(moves.get('u11')).toEqual({ x: -124, y: -176 });
+    expect(moves.get('u3')).toEqual({ x: 124, y: -88 });
+  });
+
+  it('its buttons: its own branch above, the parallel ones left and right, the arrow under it', () => {
+    const kinds = Object.fromEntries(mindButtons(u1, get, 1).map((b) => [b.kind, [b.x, b.y]]));
+    expect(kinds.child).toEqual([-12, -99]);
+    expect(kinds.above).toEqual([-73, -68]);
+    expect(kinds.below).toEqual([49, -68]);
+    expect(kinds.move).toEqual([-12, -37]);
+  });
+
+  it('a parallel branch over a node lines up with its lower edge', () => {
+    const x = node('x', 0, 0, { parent: 'r', up: true, h: 30 });
+    const moves = insertBeside('x', 'u1', 'below', [...all, x]);
+    expect(moves.get('x')).toEqual({ x: 62, y: -78 });
+    expect(moves.get('u2')).toEqual({ x: 186, y: -88 });
+  });
+
+  it('one growing taller as it is typed in moves what grows from it up', () => {
+    const moves = makeRoom('u1', 0, 10, all.map((i) => (i.id === 'u1' ? { ...i, y: -98, h: 50 } : i)));
+    expect(moves.get('u11')).toEqual({ x: -62, y: -186 });
+  });
+
+  it('the line to a branch over its parent runs up from the parent\'s top to its bottom', () => {
+    const [a, , , b] = branchCurve(r, u1);
+    expect(a).toEqual({ x: 50, y: 0 });
+    expect(b).toEqual({ x: -12, y: -48 });
+  });
+
+  it('a branch moved from under the topic to over it is laid out upwards, all of it', () => {
+    const d = node('d', 0, 88, { parent: 'r', down: true }), d1 = node('d1', 0, 176, { parent: 'd', down: true });
+    const moves = moveBranch('d', 'r', [r, d, d1], 'up');
+    expect(moves.get('d')).toEqual({ x: 0, y: -88, down: undefined, up: true });
+    expect(moves.get('d1')).toEqual({ x: 0, y: -176, down: undefined, up: true });
   });
 });

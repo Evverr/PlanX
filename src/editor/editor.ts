@@ -17,7 +17,7 @@ import { carried, hiddenIn, linksIn, membersOf, peekView, settled } from './fram
 import { endGesture, moveGesture, type Gesture } from './gestures';
 import { updateCursor } from './hover';
 import { onKeyDown } from './keys';
-import { addMindNode, mindFit, refitMind, removeMindNode } from './mindOps';
+import { addMindNode, mindFit, refitMind, removeMindNode, type MindAdd } from './mindOps';
 import { press } from './press';
 import { formatCells, pickCell, restOn, setTableLines } from './tables';
 import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, type Pens, type PenTool, type Tool } from './tools';
@@ -809,7 +809,7 @@ export class Editor {
   }
 
   /** Adds a node to a mind map (see mindOps.ts). */
-  addMindNode(fromId: string, kind: 'child' | 'down' | 'above' | 'below', byPlus = false): void { addMindNode(this, fromId, kind, byPlus); }
+  addMindNode(fromId: string, kind: MindAdd, byPlus = false): void { addMindNode(this, fromId, kind, byPlus); }
 
   /** Takes away an emptied mind map node (see mindOps.ts). */
   removeMindNode(id: string): void { removeMindNode(this, id); }

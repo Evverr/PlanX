@@ -1,22 +1,26 @@
 import type { Item } from '../model/types';
 import { DEFAULTS } from '../model/types';
 import { mindSize } from '../canvas/text';
-import { addChild, childPlace, descendants, insertBeside, mindSide } from '../model/mind';
+import { addChild, childPlace, descendants, insertBeside, mindSide, type Toward } from '../model/mind';
+
+/** The ways a node is added to a mind map (see addMindNode). */
+export type MindAdd = 'child' | 'left' | 'down' | 'up' | 'above' | 'below';
 import type { Editor } from './editor';
 
 /** A mind map node's size for its text; one growing leftwards keeps its right edge where it is (one
- *  under its parent grows rightwards). Nothing for other items. */
+ *  under or over its parent grows rightwards). Nothing for other items. */
 export function mindFit(ed: Editor, it: Item, text: string): Partial<Item> {
   if (it.type !== 'mind') return {};
   const { w, h } = mindSize(it, text), up = it.parent ? ed.board.get(it.parent) : undefined;
-  const left = up && !it.down && mindSide(it, up) < 0;
-  // New lines grow it downwards.
-  return { w, h, x: left ? it.x + it.w - w : it.x };
+  const left = up && !it.down && !it.up && mindSide(it, up) < 0;
+  // New lines grow it downwards, or over its parent, upwards.
+  return { w, h, x: left ? it.x + it.w - w : it.x, y: up && it.up ? it.y + it.h - h : it.y };
 }
 
-/** Adds a node to a mind map: a child of `from` (`down`: one led down from a central topic), or
- *  another child of its parent right after it (`below`) or before it (`above`), and opens it for typing. */
-export function addMindNode(ed: Editor, fromId: string, kind: 'child' | 'down' | 'above' | 'below', byPlus = false): void {
+/** Adds a node to a mind map: a child of `from` (`left`, `down`, `up`: one led that way from a central
+ *  topic), or another child of its parent right after it (`below`) or before it (`above`), and opens it
+ *  for typing. */
+export function addMindNode(ed: Editor, fromId: string, kind: MindAdd, byPlus = false): void {
   const board = ed.board, from = board.get(fromId);
   if (from?.type !== 'mind') return;
   const beside = kind === 'above' || kind === 'below';
@@ -31,9 +35,12 @@ export function addMindNode(ed: Editor, fromId: string, kind: 'child' | 'down' |
   // A branch of its own goes out from the node, the way its branches grow (and re-centres them); a
   // parallel one goes right before or after the node it's added beside, which stays put (so more can
   // be added from the same spot), the branches past it making room (see insertBeside). A branch led
-  // down, and all in it, grows down.
-  const at = beside ? { x: from.x, y: from.y } : childPlace(parent, items, get, w, h, kind === 'down' ? 'down' : undefined);
-  const it = ed.newItem('mind', at.x, at.y, { w, h, fs: draft.fs, parent: parent.id, down: kind === 'down' || from.down || undefined });
+  // down (or up), and all in it, grows down (or up).
+  const toward: Toward | undefined = kind === 'left' ? -1 : kind === 'down' || kind === 'up' ? kind : undefined;
+  const at = beside ? { x: from.x, y: from.y } : childPlace(parent, items, get, w, h, toward);
+  const it = ed.newItem('mind', at.x, at.y, {
+    w, h, fs: draft.fs, parent: parent.id, down: kind === 'down' || from.down || undefined, up: kind === 'up' || from.up || undefined,
+  });
   board.beginGesture();
   // A folded node unfolds to show its new branch.
   if (parent.collapsed) board.update(parent.id, { collapsed: undefined });

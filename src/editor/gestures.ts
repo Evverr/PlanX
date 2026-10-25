@@ -251,11 +251,12 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       ed.requestRender();
       return;
     case 'mindMove':
-      // The branch hangs from the node it's dropped on now: dropped below a central topic, led down
-      // from it; otherwise on the side of it where it's let go. A folded node unfolds to show it.
+      // The branch hangs from the node it's dropped on now, on a central topic the way of the side it's
+      // let go nearest to: right, left, down or up. A folded node unfolds to show it.
       if (g.target) {
         const target = board.get(g.target)!;
-        const toward = !target.parent && g.to.y > target.y + target.h ? 'down' : g.to.x >= target.x + target.w / 2 ? 1 : -1;
+        const dx = (g.to.x - target.x) / target.w - 0.5, dy = (g.to.y - target.y) / target.h - 0.5;
+        const toward = !target.parent && Math.abs(dy) > Math.abs(dx) ? (dy > 0 ? 'down' : 'up') : dx >= 0 ? 1 : -1;
         const moves = moveBranch(g.id, g.target, board.list(), toward);
         board.transact(() => {
           board.update(g.id, { parent: g.target! });
