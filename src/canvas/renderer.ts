@@ -6,7 +6,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchCurve, mindButtons, mindDepth, nodeColors, siblingTints, type MindButton } from '../model/mind';
+import { branchCurve, mindButtons, nodeColors, siblingTints, type MindButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
@@ -89,7 +89,9 @@ export interface InkStroke { pts: Point[]; color: string; width: number; hl: boo
 
 /** Corner radius of everything with corners except stickers, in board units. */
 const CORNER = 8;
-const corner = (it: Item) => (it.type === 'rect' || it.type === 'frame' || it.type === 'task' ? CORNER : 0);
+const corner = (it: Item) => (it.type === 'rect' || it.type === 'frame' || it.type === 'task' ? CORNER
+  // A mind map node's: the central topic's rounder.
+  : it.type === 'mind' ? Math.min(it.h / 2, it.parent ? 10 : 14) : 0);
 /** A ticked task's checkbox. */
 const DONE_COLOR = '#15C674';
 
@@ -402,46 +404,34 @@ function outlinePolygon(ctx: CanvasRenderingContext2D, it: Item) {
   ctx.closePath();
 }
 
-/** A mind map node in its colour: the central topic solid, first-level nodes tinted, the rest white
- *  with an edge of it. */
+/** A mind map node: white (or a fill of its own) on a faint shadow, with no edge. */
 function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
   // Dimmed in the dark theme like the other fills.
-  const { theme } = s, depth = mindDepth(it, s.get), own = nodeColors(it, tints), color = shade(own.color, theme.dim);
+  const { theme } = s, own = nodeColors(it, tints);
   ctx.beginPath();
-  ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.h / 2, depth === 0 ? 14 : 10));
+  ctx.roundRect(it.x, it.y, it.w, it.h, corner(it));
   ctx.globalAlpha = it.fo ?? 1;
-  // A node can have a fill of its own (instead of the tint or white); the central topic is white,
-  // on a faint shadow (black at 7%, 2 blurred, 1 down, growing with the zoom like the node).
-  const fill = own.fill ? shade(own.fill, theme.dim) : null;
-  if (depth === 0) {
-    const k = s.cam.z * s.dpr;
-    ctx.shadowColor = 'rgba(0, 0, 0, .07)';
-    ctx.shadowBlur = 2 * k;
-    ctx.shadowOffsetY = 1 * k;
-  }
+  // The shadow: black at 7%, 2 blurred, 1 down, growing with the zoom like the node.
+  const k = s.cam.z * s.dpr;
+  ctx.shadowColor = 'rgba(0, 0, 0, .07)';
+  ctx.shadowBlur = 2 * k;
+  ctx.shadowOffsetY = 1 * k;
   ctx.fillStyle = theme.surface;
   ctx.fill();
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 0;
-  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
-  else if (depth === 1) { ctx.globalAlpha = (it.fo ?? 1) * 0.18; ctx.fillStyle = color; ctx.fill(); }
+  if (own.fill) { ctx.fillStyle = shade(own.fill, theme.dim); ctx.fill(); }
   ctx.globalAlpha = 1;
-  // A node a branch is being dragged onto shows it with its edge dashed (the solid central topic,
-  // with a white dashed line just inside its edge).
-  const target = s.mindMove?.target?.id === it.id;
-  // The same dashes as the dragged arrow's, 6px on and off on screen.
-  if (target) ctx.setLineDash([6 / s.cam.z, 6 / s.cam.z]);
-  if (depth > 0 || target) {
-    // The edge is at 70% until the node is picked (or a branch is dropped on it); the central topic
-    // has none but the dashed one while a branch is dropped on it.
-    ctx.globalAlpha = (s.selection.has(it.id) || target ? 1 : 0.7) * (it.so ?? 1);
-    ctx.lineWidth = depth <= 1 ? 2 : 1.5;
-    ctx.strokeStyle = color;
+  // A node a branch is being dragged onto shows it by an edge dashed in its colour, the same dashes
+  // as the dragged arrow's, 6px on and off on screen.
+  if (s.mindMove?.target?.id === it.id) {
+    ctx.setLineDash([6 / s.cam.z, 6 / s.cam.z]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = shade(own.color, theme.dim);
     ctx.stroke();
-    ctx.globalAlpha = 1;
+    ctx.setLineDash([]);
   }
-  ctx.setLineDash([]);
   if (!editing) drawText(ctx, it, textPad(it), theme.ink, true, s, textPadY(it));
 }
 
@@ -802,8 +792,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   for (const id of s.selection) {
     const it = s.get(id);
     if (!it) continue;
-    // A mind map node shows it's picked by its "+" buttons alone.
-    if (it.type !== 'mind') outline(ctx, it, cam.z, SELECT_COLOR);
+    // A mind map node shows it's picked by its "+" buttons alone, which a few picked together don't get.
+    if (it.type !== 'mind' || s.selection.size > 1) outline(ctx, it, cam.z, SELECT_COLOR);
     // A mind map node sizes itself and links by its branches: instead of the handle and dots it
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && it.type === 'mind') {
