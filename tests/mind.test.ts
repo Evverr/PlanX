@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addChild, balance, branchCurve, canMoveTo, childPlace, descendants, foldBadge, insertBeside, makeRoom, mindButtons, mindDepth, moveBranch } from '../src/model/mind';
+import { addChild, balance, branchCurve, buttonKey, canMoveTo, childPlace, descendants, foldBadge, foldedAway, folding, insertBeside, makeRoom, mindButtons, mindDepth, moveBranch, type Way } from '../src/model/mind';
 import type { Item } from '../src/model/types';
 
 const node = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item =>
@@ -170,29 +170,38 @@ describe('mind map: folding a node\'s branches away', () => {
   const all = [r, a, l, d];
   const get = (id: string) => all.find((i) => i.id === id);
 
-  it('a node with branches has a chevron past its "+" for a branch; a folded one only the "+"', () => {
-    const kinds = (it: Item, branches: boolean) => mindButtons(it, get, 1, branches).map((b) => b.kind);
-    expect(kinds(a, false)).toEqual(['child', 'above', 'below', 'move']);
-    expect(kinds(a, true)).toEqual(['child', 'fold', 'above', 'below', 'move']);
-    expect(kinds({ ...a, collapsed: true }, true)).toEqual(['child', 'above', 'below', 'move']);
-    // The central topic keeps its "+"s.
-    expect(kinds(r, true)).toEqual(['child', 'left', 'down', 'up']);
-    // The chevron 22 past the "+", pointing back at the node.
-    const at = (it: Item) => mindButtons(it, get, 1, true).filter((b) => b.kind === 'child' || b.kind === 'fold').map((b) => [b.x, b.y, b.way]);
-    expect(at(a)).toEqual([[271, 20, 'right'], [293, 20, 'right']]);
-    expect(at(l)).toEqual([[-171, 20, 'left'], [-193, 20, 'left']]);
-    expect(at(d)).toEqual([[50, 139, 'down'], [50, 161, 'down']]);
+  it('a node with branches has a chevron past its "+" for a branch: folding, or folded, unfolding', () => {
+    const kinds = (it: Item, ways: Way[]) => mindButtons(it, get, 1, ways).map((b) => b.kind);
+    expect(kinds(a, [])).toEqual(['child', 'above', 'below', 'move']);
+    expect(kinds(a, ['right'])).toEqual(['child', 'fold', 'above', 'below', 'move']);
+    expect(kinds({ ...a, collapsed: true }, ['right'])).toEqual(['child', 'unfold', 'above', 'below', 'move']);
+    // The chevron 22 past the "+".
+    const at = (it: Item) => mindButtons(it, get, 1, ['right']).filter((b) => b.kind === 'child' || b.kind === 'fold').map((b) => [b.x, b.y]);
+    expect(at(a)).toEqual([[271, 20], [293, 20]]);
+    expect(at(l)).toEqual([[-171, 20], [-193, 20]]);
+    expect(at(d)).toEqual([[50, 139], [50, 161]]);
   });
 
-  it('a folded node\'s count sits where its chevron was, as wide as the number needs', () => {
-    expect(foldBadge(a, get, 1, 3)).toEqual({ x: 293, y: 20, w: 18, h: 18 });
-    expect(foldBadge(l, get, 1, 3)).toEqual({ x: -193, y: 20, w: 18, h: 18 });
-    expect(foldBadge(d, get, 1, 3)).toEqual({ x: 50, y: 161, w: 18, h: 18 });
+  it('the central topic has a chevron each way it has branches, folding that way on its own', () => {
+    const folded = { ...r, foldedWays: ['left' as const] };
+    expect(mindButtons(folded, get, 1, ['right', 'left']).map(buttonKey)).toEqual(['child', 'fold:right', 'left', 'unfold:left', 'down', 'up']);
+    expect([...foldedAway(folded, all, get)]).toEqual([['left', ['l']]]);
+    expect(folding(folded, 'down', true)).toEqual({ foldedWays: ['left', 'down'] });
+    expect(folding(folded, 'left', false)).toEqual({ foldedWays: undefined });
+    // Another node folds all its branches at once.
+    expect(folding(a, 'right', true)).toEqual({ collapsed: true });
+  });
+
+  it('a folded node\'s count sits where its chevron is, moving out past it while that shows', () => {
+    expect(foldBadge(a, 'right', 1, 3)).toEqual({ x: 293, y: 20, w: 18, h: 18 });
+    expect(foldBadge(l, 'left', 1, 3)).toEqual({ x: -193, y: 20, w: 18, h: 18 });
+    expect(foldBadge(d, 'down', 1, 3)).toEqual({ x: 50, y: 161, w: 18, h: 18 });
+    expect(foldBadge(a, 'right', 1, 3, 1)).toEqual({ x: 315, y: 20, w: 18, h: 18 });
     // A wider one keeps its near end there.
-    expect(foldBadge(a, get, 1, 120)).toEqual({ x: 298, y: 20, w: 28, h: 18 });
-    expect(foldBadge(d, get, 1, 120)).toEqual({ x: 50, y: 161, w: 28, h: 18 });
+    expect(foldBadge(a, 'right', 1, 120)).toEqual({ x: 298, y: 20, w: 28, h: 18 });
+    expect(foldBadge(d, 'down', 1, 120)).toEqual({ x: 50, y: 161, w: 28, h: 18 });
     // In screen pixels whatever the zoom.
-    expect(foldBadge(a, get, 2, 3)).toEqual({ x: 276.5, y: 20, w: 9, h: 9 });
+    expect(foldBadge(a, 'right', 2, 3)).toEqual({ x: 276.5, y: 20, w: 9, h: 9 });
   });
 });
 

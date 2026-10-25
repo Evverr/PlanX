@@ -3,7 +3,7 @@ import { ROTATABLE } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { hitItem, hitLink, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, HANDLE } from '../canvas/renderer';
-import { foldBadge, mindButtons, type MindButton } from '../model/mind';
+import { branchWays, buttonKey, foldBadge, mindButtons, type MindButtonAt, type Way } from '../model/mind';
 import { frameButtonAt } from './frames';
 import { rotateCursor } from './cursors';
 import { restOn, sameLine, tableLineAt } from './tables';
@@ -21,26 +21,27 @@ export function onHandle(ed: Editor, it: Item, w: Point): boolean {
 }
 
 /** Which of a mind map node's buttons is under the point, once they're showing. */
-export function plusAt(ed: Editor, it: Item, w: Point): MindButton | null {
+export function plusAt(ed: Editor, it: Item, w: Point): MindButtonAt | null {
   if (it.type !== 'mind' || ed.plusFade() === 0) return null;
-  const branches = ed.board.list().some((i) => i.type === 'mind' && i.parent === it.id);
   // The nearest within reach: the "+" for a branch and the chevron past it are close.
-  let best: MindButton | null = null, near = Infinity;
-  for (const b of mindButtons(it, (id) => ed.board.get(id), ed.cam.z, branches)) {
+  let best: MindButtonAt | null = null, near = Infinity;
+  for (const b of mindButtons(it, (id) => ed.board.get(id), ed.cam.z, branchWays(it, ed.board.list()))) {
     const d = Math.hypot(w.x - b.x, w.y - b.y);
-    if (d <= Math.max(b.r * 1.5, ed.reach(0)) && d < near) { best = b.kind; near = d; }
+    if (d <= Math.max(b.r * 1.5, ed.reach(0)) && d < near) { best = b; near = d; }
   }
   return best;
 }
 
-/** The folded mind map node whose count is under the point, picked or not. */
-export function foldBadgeAt(ed: Editor, w: Point): string | null {
+/** The folded mind map node whose count is under the point, picked or not, and the way it's on. */
+export function foldBadgeAt(ed: Editor, w: Point): { id: string; way: Way } | null {
   const pad = ed.reach(4);
-  for (const [id, n] of ed.folded()) {
+  for (const [id, ways] of ed.folded()) {
     const it = ed.board.get(id);
     if (!it || ed.hidden().has(id)) continue;
-    const b = foldBadge(it, (k) => ed.board.get(k), ed.cam.z, n);
-    if (Math.abs(w.x - b.x) <= b.w / 2 + pad && Math.abs(w.y - b.y) <= b.h / 2 + pad) return id;
+    for (const [way, n] of ways) {
+      const b = foldBadge(it, way, ed.cam.z, n, ed.slid.get(`${id}:${way}`) ?? 0);
+      if (Math.abs(w.x - b.x) <= b.w / 2 + pad && Math.abs(w.y - b.y) <= b.h / 2 + pad) return { id, way };
+    }
   }
   return null;
 }
@@ -80,8 +81,8 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   restOn(ed, near);
   const line = ed.lineRest?.armed ? ed.lineRest.line : null;
   if (!sameLine(line, ed.hotLine)) { ed.hotLine = line; ed.requestRender(); }
-  const plus = picked ? plusAt(ed, picked, w) : null;
-  if (plus !== ed.hotPlus) { ed.hotPlus = plus; ed.requestRender(); }
+  const plus = picked ? plusAt(ed, picked, w) : null, hot = plus && buttonKey(plus);
+  if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (plus || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (dot) cursor = 'crosshair';
   else if (single && onHandle(ed, single, w)) cursor = 'nwse-resize';

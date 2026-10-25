@@ -72,6 +72,8 @@ export interface Item {
   up?: boolean;
   /** A mind map node with all that grows from it folded away (see model/mind.ts). */
   collapsed?: boolean;
+  /** The ways a mind map's central topic has its branches folded away, each on its own. */
+  foldedWays?: Array<'right' | 'left' | 'down' | 'up'>;
   /** A folded frame's unfolded size (see model/frame.ts). */
   fold?: { w: number; h: number };
   sw?: number;

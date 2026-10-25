@@ -9,7 +9,7 @@ import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { newTable, withCellFormat, withCount, withTableFormat, type TableLine } from '../model/table';
 import type { AudioNote } from '../canvas/audio';
-import { descendants, makeRoom, mindDepth, type MindButton } from '../model/mind';
+import { descendants, foldedAway, folding, makeRoom, mindDepth, type Way } from '../model/mind';
 import { readJSON, writeJSON } from '../storage';
 import { clamp, fittedTo, freeArea, wheelMove, zoomedAt } from './camera';
 import { copiesOf } from './copies';
@@ -90,8 +90,13 @@ export class Editor {
   lastEmpty = { t: 0, x: 0, y: 0 };
   needsFit: boolean;
   hotDot: Side | null = null;
-  /** The mind map node button under the pointer. */
-  hotPlus: MindButton | null = null;
+  /** The mind map node button under the pointer (see buttonKey). */
+  hotPlus: string | null = null;
+  /** How far out past its chevron each folded mind map node's count has moved (by node and way, see
+   *  slideOut), and on its way back in, from how far and since when. */
+  private slides = new Map<string, { v: number; from?: number; since?: number }>();
+  /** Shared: the same, as last drawn. */
+  slid = new Map<string, number>();
   /** Whether the last press was a finger's: small things to grab (the resize handle, the link dots,
    *  the turning corner, a mind map node's buttons) then reach FINGER px across, not their own size. */
   byFinger = false;
@@ -129,7 +134,7 @@ export class Editor {
   private plusTimer = 0;
   /** What's in sight, worked out once for each change of the board (it's asked for on every move
    *  of the pointer and every frame drawn). */
-  private sight: { version: number; hidden: Set<string>; folded: Map<string, number>; shown: Item[]; links: Link[] } | null = null;
+  private sight: { version: number; hidden: Set<string>; folded: Map<string, Map<Way, number>>; shown: Item[]; links: Link[] } | null = null;
   /** Steps undone along with the board's though they aren't on it (the panels put back as by
    *  default), each at the place in the board's history it was taken. */
   private outside: Array<{ undo: () => void; depth: number }> = [];
@@ -296,6 +301,7 @@ export class Editor {
       hotPlus: this.hotPlus,
       plusFade,
       folded: this.folded(),
+      slide: this.slideOut(plusFade),
       mindMove: g?.type === 'mindMove' ? { from: g.from, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null } : null,
       tableLines: this.hotLine ? [...this.pickedLines, this.hotLine] : this.pickedLines,
       editingCell: this.editingCell,
@@ -825,8 +831,12 @@ export class Editor {
     const version = this.board.getVersion();
     if (this.sight?.version !== version) {
       const items = this.board.list(), hidden = hiddenIn(this.board, items);
-      // How many nodes each folded mind map node hides.
-      const folded = new Map(items.filter((i) => i.type === 'mind' && i.collapsed).map((i) => [i.id, descendants([i.id], items).length]));
+      // How many nodes each folded mind map node hides, each way.
+      const get = (id: string) => this.board.get(id), folded = new Map<string, Map<Way, number>>();
+      for (const i of items) {
+        if (i.type !== 'mind' || (!i.collapsed && !i.foldedWays)) continue;
+        folded.set(i.id, new Map([...foldedAway(i, items, get)].map(([way, ids]) => [way, ids.length])));
+      }
       this.sight = { version, hidden, folded, shown: hidden.size ? items.filter((i) => !hidden.has(i.id)) : items, links: linksIn(this.board, items, hidden) };
     }
     return this.sight;
@@ -835,8 +845,30 @@ export class Editor {
   /** Shared: everything folded frames hold and folded mind map nodes hide, out of sight. */
   hidden(): Set<string> { return this.inSight().hidden; }
 
-  /** Shared: how many nodes each folded mind map node hides. */
-  folded(): Map<string, number> { return this.inSight().folded; }
+  /** Shared: how many nodes each folded mind map node hides, each way. */
+  folded(): Map<string, Map<Way, number>> { return this.inSight().folded; }
+
+  /** How far out past its chevron each folded node's count is (0…1, by `id:way`): out with the picked
+   *  node's buttons as they fade in, back in as smoothly once they're gone. */
+  private slideOut(plusFade: number): Map<string, number> {
+    const now = performance.now(), out = new Map<string, number>();
+    const picked = this.selection.size === 1 ? [...this.selection][0] : null;
+    for (const [id, ways] of this.folded()) {
+      for (const way of ways.keys()) {
+        const key = `${id}:${way}`, to = id === picked ? plusFade : 0, was = this.slides.get(key) ?? { v: to };
+        let v = to;
+        if (to < was.v) {
+          const from = was.from ?? was.v, since = was.since ?? now;
+          v = Math.max(to, from * (1 - (now - since) / PLUS_FADE));
+          this.slides.set(key, { v, from, since });
+          if (v > to) this.requestRender();
+        } else this.slides.set(key, { v });
+        out.set(key, v * v * (3 - 2 * v));
+      }
+    }
+    this.slid = out;
+    return out;
+  }
 
   /** The items in sight: all but what folded frames hold and folded mind map nodes hide. */
   shown(): Item[] { return this.inSight().shown; }
@@ -892,11 +924,12 @@ export class Editor {
     this.requestRender();
   }
 
-  /** Folds away all that grows from a mind map node, or unfolds it again. */
-  setCollapsed(id: string, on: boolean): void {
+  /** Folds away all that grows from a mind map node's branches growing `way` (all of them, but a
+   *  central topic's), or unfolds them again. */
+  setCollapsed(id: string, way: Way, on: boolean): void {
     const it = this.board.get(id);
-    if (it?.type !== 'mind' || !!it.collapsed === on) return;
-    this.board.update(id, { collapsed: on || undefined });
+    if (it?.type !== 'mind') return;
+    this.board.update(id, folding(it, way, on));
     if (on) {
       const hidden = this.hidden();
       this.setSelection([...this.selection].filter((s) => !hidden.has(s)));

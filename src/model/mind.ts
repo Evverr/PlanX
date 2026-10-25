@@ -343,61 +343,94 @@ const BUTTON_OFF = 11;
 /**
  * The buttons round a selected node: "+" on its far side for a branch of its own (the node holding
  * still and its branches centred on it, so it can be clicked again and again), and once it has
- * branches, past that a chevron pointing back at it, folding them away (all that grows from it); "+"
- * before and after it (above and below beside its parent, left and right under it) for a parallel
- * branch; and on the side of its parent a circle with an arrow, dragged onto another node to move the
- * branch there. The central topic has "+" on all four sides: right, left, below (a branch led down)
- * and above (led up). A folded node has its count where the chevron was (see foldBadge).
+ * branches, past that a chevron: pointing back at it to fold them away (all that grows from them), or,
+ * folded, pointing away from it to unfold them, the count of what's hidden moving out past it (see
+ * foldBadge); "+" before and after it (above and below beside its parent, left and right under it) for
+ * a parallel branch; and on the side of its parent a circle with an arrow, dragged onto another node to
+ * move the branch there. The central topic has "+" on all four sides: right, left, below (a branch led
+ * down) and above (led up), each way with a chevron of its own, folding that way on its own.
  */
-export type MindButton = 'child' | 'left' | 'down' | 'up' | 'fold' | 'above' | 'below' | 'move';
+export type MindButton = 'child' | 'left' | 'down' | 'up' | 'fold' | 'unfold' | 'above' | 'below' | 'move';
+export type MindButtonAt = Point & { kind: MindButton; r: number; way?: Way };
+/** A button's name among a node's: its kind, and for a chevron its way too (a central topic has one each way). */
+export const buttonKey = (b: { kind: MindButton; way?: Way }): string => (b.kind === 'fold' || b.kind === 'unfold' ? `${b.kind}:${b.way}` : b.kind);
 
 /** How far past the "+" for a branch the chevron (or the count) sits, in screen pixels: a button across and 4 more. */
 const FOLD_OFF = 22;
 
-/** A point off a node's far side from its parent (where its own branches go out), `off` in screen
- *  pixels from it, and which way that is. */
-function farSpot(it: Item, up: Item | undefined, off: number, zoom: number): Point & { way: Way } {
-  const way = up ? mindWay(it, up) : 'right', d = off / zoom;
-  if (upright(way)) return { x: it.x + it.w / 2, y: way === 'down' ? it.y + it.h + d : it.y - d, way };
-  return { x: way === 'right' ? it.x + it.w + d : it.x - d, y: it.y + it.h / 2, way };
+/** The ways a node's branches are folded away: a central topic's each on its own, another's all at once (its one way). */
+export function foldedWays(it: Item, up: Item | undefined): Way[] {
+  if (!up) return it.foldedWays ?? [];
+  return it.collapsed ? [mindWay(it, up)] : [];
 }
 
-/** Where each of a node's buttons is and its radius, sized in screen pixels whatever the zoom;
- *  `branches`: whether it has any. The chevron says which way it points back at the node. */
-export function mindButtons(it: Item, get: Get, zoom: number, branches = false): Array<Point & { kind: MindButton; r: number; way?: Way }> {
-  const up = it.parent ? get(it.parent) : undefined;
-  const off = BUTTON_OFF / zoom, r = 9 / zoom, cx = it.x + it.w / 2, cy = it.y + it.h / 2;
-  const child = { kind: 'child' as const, ...farSpot(it, up, BUTTON_OFF, zoom), r };
-  if (!up) {
-    return [child, { kind: 'left', x: it.x - off, y: cy, r }, { kind: 'down', x: cx, y: it.y + it.h + off, r }, { kind: 'up', x: cx, y: it.y - off, r }];
+/** The ways a node has branches growing, of these items. */
+export function branchWays(it: Item, items: Item[]): Way[] {
+  const out = new Set<Way>();
+  for (const k of items) if (k.type === 'mind' && k.parent === it.id) out.add(mindWay(k, it));
+  return [...out];
+}
+
+/** What a node's folding hides, by way: its branches growing each way folded, and all that grows from them. */
+export function foldedAway(it: Item, items: Item[], get: Get): Map<Way, string[]> {
+  const up = it.parent ? get(it.parent) : undefined, out = new Map<Way, string[]>();
+  for (const way of foldedWays(it, up)) {
+    const kids = items.filter((k) => k.type === 'mind' && k.parent === it.id && (up || mindWay(k, it) === way)).map((k) => k.id);
+    out.set(way, [...kids, ...descendants(kids, items)]);
   }
-  const own = branches && !it.collapsed ? [child, { kind: 'fold' as const, ...farSpot(it, up, BUTTON_OFF + FOLD_OFF, zoom), r }] : [child];
+  return out;
+}
+
+/** The change folding a node's branches growing `way` away makes (all of them, but a central topic's), or unfolding them. */
+export function folding(it: Item, way: Way, on: boolean): Partial<Item> {
+  if (it.parent) return { collapsed: on || undefined };
+  const rest = (it.foldedWays ?? []).filter((w) => w !== way), ways = on ? [...rest, way] : rest;
+  return { foldedWays: ways.length ? ways : undefined };
+}
+
+/** A point `off` screen pixels out from a node's side facing `way`, halfway along it. */
+function spot(it: Item, way: Way, off: number, zoom: number): Point {
+  const d = off / zoom;
+  if (upright(way)) return { x: it.x + it.w / 2, y: way === 'down' ? it.y + it.h + d : it.y - d };
+  return { x: way === 'right' ? it.x + it.w + d : it.x - d, y: it.y + it.h / 2 };
+}
+
+/** Where each of a node's buttons is and its radius, sized in screen pixels whatever the zoom; `ways`:
+ *  those it has branches growing (folded ones too). A chevron says the way it's on. */
+export function mindButtons(it: Item, get: Get, zoom: number, ways: Way[] = []): MindButtonAt[] {
+  const up = it.parent ? get(it.parent) : undefined, folded = foldedWays(it, up);
+  const off = BUTTON_OFF / zoom, r = 9 / zoom, cx = it.x + it.w / 2, cy = it.y + it.h / 2;
+  // The "+" for a branch growing that way, and past it the chevron once there are some.
+  const own = (kind: MindButton, way: Way): MindButtonAt[] => [
+    { kind, ...spot(it, way, BUTTON_OFF, zoom), r },
+    ...((up ? ways.length : ways.includes(way)) ? [{ kind: folded.includes(way) ? 'unfold' as const : 'fold' as const, ...spot(it, way, BUTTON_OFF + FOLD_OFF, zoom), r, way }] : []),
+  ];
+  if (!up) return [...own('child', 'right'), ...own('left', 'left'), ...own('down', 'down'), ...own('up', 'up')];
   const way = mindWay(it, up);
   if (upright(way)) {
     return [
-      ...own,
+      ...own('child', way),
       { kind: 'above', x: it.x - off, y: cy, r },
       { kind: 'below', x: it.x + it.w + off, y: cy, r },
       { kind: 'move', x: cx, y: way === 'down' ? it.y - off : it.y + it.h + off, r },
     ];
   }
-  const right = mindWay(it, up) === 'right';
+  const right = way === 'right';
   return [
-    ...own,
+    ...own('child', way),
     { kind: 'above', x: cx, y: it.y - off, r },
     { kind: 'below', x: cx, y: it.y + it.h + off, r },
     { kind: 'move', x: right ? it.x - off : it.x + it.w + off, y: cy, r },
   ];
 }
 
-/** A folded node's count of what it hides, where its chevron was, always in sight: a pill as tall as
- *  a button and as wide as the number needs, its near end where the chevron's was, a stub of branch
- *  leading to it under the "+" (its middle, width and height, in screen pixels whatever the zoom). */
-export function foldBadge(it: Item, get: Get, zoom: number, count: number): Point & { w: number; h: number } {
-  const up = it.parent ? get(it.parent) : undefined, w = Math.max(18, String(count).length * 6 + 10), h = 18;
-  const along = up && upright(mindWay(it, up)) ? h : w;
-  const { x, y } = farSpot(it, up, BUTTON_OFF + FOLD_OFF + (along - h) / 2, zoom);
-  return { x, y, w: w / zoom, h: h / zoom };
+/** The count of what a node's folding hides that way, always in sight: a pill as tall as a button and as
+ *  wide as the number needs, its near end where the chevron sits, moved out past the chevron as far as
+ *  `out` (0…1) while that's showing, a stub of branch leading to it (its middle, width and height, in
+ *  screen pixels whatever the zoom). */
+export function foldBadge(it: Item, way: Way, zoom: number, count: number, out = 0): Point & { w: number; h: number } {
+  const w = Math.max(18, String(count).length * 6 + 10), h = 18, along = upright(way) ? h : w;
+  return { ...spot(it, way, BUTTON_OFF + FOLD_OFF * (1 + out) + (along - h) / 2, zoom), w: w / zoom, h: h / zoom };
 }
 
 /** The connecting branch from a parent to a child: from the parent's facing side to the child's,
@@ -414,4 +447,16 @@ export function branchCurve(parent: Item, child: Item): [Point, Point, Point, Po
   const b = { x: side > 0 ? child.x : child.x + child.w, y: child.y + child.h / 2 };
   const dx = (b.x - a.x) / 2;
   return [a, { x: a.x + dx, y: a.y }, { x: b.x - dx, y: b.y }, b];
+}
+
+/** Whether the branch from `parent` to `child` runs through the rectangle anywhere (tried at 24 points along it). */
+export function branchCrosses(parent: Item, child: Item, r: { x: number; y: number; w: number; h: number }): boolean {
+  const [a, b, c, d] = branchCurve(parent, child);
+  for (let i = 0; i <= 24; i++) {
+    const t = i / 24, u = 1 - t;
+    const x = u * u * u * a.x + 3 * u * u * t * b.x + 3 * u * t * t * c.x + t * t * t * d.x;
+    const y = u * u * u * a.y + 3 * u * u * t * b.y + 3 * u * t * t * c.y + t * t * t * d.y;
+    if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return true;
+  }
+  return false;
 }
