@@ -5,6 +5,7 @@ import { fontOf, FONTS, LINE_HEIGHT, textBlockHeight } from '../canvas/text';
 import { FOLD_FS, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP } from '../model/frame';
 import { center, TASK_INSET } from '../canvas/geometry';
 import { siblingOf } from '../model/mind';
+import { colsOf, rowsOf } from '../model/table';
 
 /**
  * A textarea laid over the item being edited, scaled with the board so the
@@ -124,6 +125,14 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           e.preventDefault();
           done.current = true;
           editor.removeMindNode(id);
+        } else if (e.key === 'Tab' && editor.board.get(id)?.type === 'table' && editor.editingCell !== null) {
+          // In a table, Tab goes on typing in the next cell (along the row, then the next row), Shift+Tab
+          // the one before; not past the first or the last.
+          e.preventDefault();
+          const t = editor.board.get(id)!, next = editor.editingCell + (e.shiftKey ? -1 : 1);
+          if (next < 0 || next >= colsOf(t).length * rowsOf(t).length) return;
+          commit();
+          editor.startEditing(id, next);
         } else if (item.type === 'mind' && e.key === 'Tab' && fresh.current && item.parent) {
           // A node being typed in for the first time: Tab goes on typing in a new one after it (Shift+Tab,
           // before it), and so on, one after another.

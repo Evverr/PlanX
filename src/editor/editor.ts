@@ -92,6 +92,11 @@ export class Editor {
   hotDot: Side | null = null;
   /** The mind map node button under the pointer (see buttonKey). */
   hotPlus: string | null = null;
+  /** How far each folded mind map node's count (by `id:way`) has moved out from the "+" to the chevron's
+   *  place, and on its way back, from how far and since when (see slideOut). */
+  private slides = new Map<string, { v: number; from?: number; since?: number }>();
+  /** Shared: the same, eased, as last drawn. */
+  slid = new Map<string, number>();
   /** Shared: the mind map node last made and opened for typing at once (Tab in it makes the next). */
   justMade: string | null = null;
   /** Shared: the node and way (`id:way`) a "+" has just given its first branches: no chevron there
@@ -302,6 +307,7 @@ export class Editor {
       hotPlus: this.hotPlus,
       plusFade,
       folded: this.folded(),
+      slide: this.slideOut(plusFade),
       chevronless: this.chevronless,
       mindMove: g?.type === 'mindMove' ? { from: g.from, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null } : null,
       tableLines: this.hotLine ? [...this.pickedLines, this.hotLine] : this.pickedLines,
@@ -851,6 +857,29 @@ export class Editor {
 
   /** Shared: how many nodes each folded mind map node hides, each way. */
   folded(): Map<string, Map<Way, number>> { return this.inSight().folded; }
+
+  /** How far out each folded node's count is (0…1, by `id:way`): from the "+" (which shows only with
+   *  the node's buttons) to the chevron's place, out with the picked node's buttons as they fade in,
+   *  back as smoothly once they're gone. */
+  private slideOut(plusFade: number): Map<string, number> {
+    const now = performance.now(), out = new Map<string, number>();
+    const picked = this.selection.size === 1 ? [...this.selection][0] : null;
+    for (const [id, ways] of this.folded()) {
+      for (const way of ways.keys()) {
+        const key = `${id}:${way}`, to = id === picked ? plusFade : 0, was = this.slides.get(key) ?? { v: to };
+        let v = to;
+        if (to < was.v) {
+          const from = was.from ?? was.v, since = was.since ?? now;
+          v = Math.max(to, from * (1 - (now - since) / PLUS_FADE));
+          this.slides.set(key, { v, from, since });
+          if (v > to) this.requestRender();
+        } else this.slides.set(key, { v });
+        out.set(key, v * v * (3 - 2 * v));
+      }
+    }
+    this.slid = out;
+    return out;
+  }
 
 
   /** The items in sight: all but what folded frames hold and folded mind map nodes hide. */
