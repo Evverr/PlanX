@@ -307,19 +307,19 @@ export function App({ boardId }: { boardId: string }) {
         <div className="pop help" role="dialog" aria-label="Управление">
           <h3>Управление</h3>
           <dl>
-            <dt>Пробел + тянуть</dt><dd>двигать доску</dd>
-            <dt>Колесо, щипок</dt><dd>масштаб</dd>
-            <dt>Двойной клик</dt><dd>редактировать текст</dd>
-            <dt>Shift + клик</dt><dd>выделить несколько</dd>
-            <dt>Shift + тянуть за угол</dt><dd>стикер любой формы, фигура в пропорции</dd>
-            <dt>Alt + тянуть</dt><dd>копировать элемент</dd>
-            <dt>Тянуть за синюю точку</dt><dd>связать с другим элементом</dd>
-            <dt><kbd>V H N T R O C F P M E I</kbd></dt><dd>инструменты</dd>
-            <dt>Удерживать инструмент</dt><dd>переставить его на панели</dd>
-            <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></dt><dd>отменить / вернуть свои действия</dd>
-            <dt><kbd>Ctrl</kbd>+<kbd>C</kbd> <kbd>V</kbd> <kbd>D</kbd></dt><dd>копировать, вставить, дублировать</dd>
-            <dt><kbd>Ctrl</kbd>+<kbd>G</kbd></dt><dd>фрейм вокруг выделенного</dd>
-            <dt><kbd>Del</kbd></dt><dd>удалить выделенное</dd>
+            <dt>Двигать доску</dt><dd>Пробел + тянуть</dd>
+            <dt>Масштаб</dt><dd>Колесо, щипок</dd>
+            <dt>Редактировать текст</dt><dd>Двойной клик</dd>
+            <dt>Выделить несколько</dt><dd>Shift + клик</dd>
+            <dt>Стикер любой формы, фигура в пропорции</dt><dd>Shift + тянуть за угол</dd>
+            <dt>Копировать элемент</dt><dd>Alt + тянуть</dd>
+            <dt>Связать с другим элементом</dt><dd>Тянуть за синюю точку</dd>
+            <dt>Инструменты</dt><dd><kbd>V H N T R O C F P M E I</kbd></dd>
+            <dt>Переставить инструмент на панели</dt><dd>Удерживать его</dd>
+            <dt>Отменить / вернуть свои действия</dt><dd><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></dd>
+            <dt>Копировать, вставить, дублировать</dt><dd><kbd>Ctrl</kbd>+<kbd>C</kbd> <kbd>V</kbd> <kbd>D</kbd></dd>
+            <dt>Фрейм вокруг выделенного</dt><dd><kbd>Ctrl</kbd>+<kbd>G</kbd></dd>
+            <dt>Удалить выделенное</dt><dd><kbd>Del</kbd></dd>
           </dl>
         </div>
       )}
