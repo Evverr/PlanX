@@ -124,8 +124,8 @@ export const checks = {
     expect((await p.rect('.labs-rail')).r, 'at the right edge').toBe(1200 - 12);
     const keys = () => p.ev(`[...document.querySelectorAll('.labs-rail > [data-key]')].map((e) => { const r = e.getBoundingClientRect(); return [e.dataset.key, Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)]; })`);
     const k0 = await keys();
-    expect(k0.map((k) => k[0]).join(), 'in order').toBe('export,search,timer,laser,follow,keys');
-    // Brought to the laser's middle, it passes the two before it, as on the tool rail.
+    expect(k0.map((k) => k[0]).join(), 'in order').toBe('export,pdf,search,timer,laser,follow,keys');
+    // Brought to the fourth one's middle, it passes the two before that, as on the tool rail.
     await carry(p, k0[0].slice(1), [k0[3].slice(1)]);
     const k1 = (await keys()).map((k) => k[0]);
     expect(k1.indexOf('export'), 'export moved down two places').toBe(2);
