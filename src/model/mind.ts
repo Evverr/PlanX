@@ -343,17 +343,17 @@ const BUTTON_OFF = 11;
 /**
  * The buttons round a selected node: "+" on its far side for a branch of its own (the node holding
  * still and its branches centred on it, so it can be clicked again and again), and once it has
- * branches, past that a chevron: pointing back at it to fold them away (all that grows from them), or,
- * folded, pointing away from it to unfold them, the count of what's hidden moving out past it (see
- * foldBadge); "+" before and after it (above and below beside its parent, left and right under it) for
+ * branches, past that a chevron pointing back at it, folding them away (all that grows from them; the
+ * count of what's hidden then stands there, and a click on it unfolds them, see foldBadge); "+" before
+ * and after it (above and below beside its parent, left and right under it) for
  * a parallel branch; and on the side of its parent a circle with an arrow, dragged onto another node to
  * move the branch there. The central topic has "+" on all four sides: right, left, below (a branch led
  * down) and above (led up), each way with a chevron of its own, folding that way on its own.
  */
-export type MindButton = 'child' | 'left' | 'down' | 'up' | 'fold' | 'unfold' | 'above' | 'below' | 'move';
+export type MindButton = 'child' | 'left' | 'down' | 'up' | 'fold' | 'above' | 'below' | 'move';
 export type MindButtonAt = Point & { kind: MindButton; r: number; way?: Way };
 /** A button's name among a node's: its kind, and for a chevron its way too (a central topic has one each way). */
-export const buttonKey = (b: { kind: MindButton; way?: Way }): string => (b.kind === 'fold' || b.kind === 'unfold' ? `${b.kind}:${b.way}` : b.kind);
+export const buttonKey = (b: { kind: MindButton; way?: Way }): string => (b.kind === 'fold' ? `fold:${b.way}` : b.kind);
 
 /** How far past the "+" for a branch the chevron (or the count) sits, in screen pixels: a button across and 4 more. */
 const FOLD_OFF = 22;
@@ -396,14 +396,15 @@ function spot(it: Item, way: Way, off: number, zoom: number): Point {
 }
 
 /** Where each of a node's buttons is and its radius, sized in screen pixels whatever the zoom; `ways`:
- *  those it has branches growing (folded ones too). A chevron says the way it's on. */
-export function mindButtons(it: Item, get: Get, zoom: number, ways: Way[] = []): MindButtonAt[] {
+ *  those it has branches growing (folded ones too), `kept`: a way just folded whose chevron stays while
+ *  the pointer is on it. A chevron says the way it's on. */
+export function mindButtons(it: Item, get: Get, zoom: number, ways: Way[] = [], kept?: Way): MindButtonAt[] {
   const up = it.parent ? get(it.parent) : undefined, folded = foldedWays(it, up);
   const off = BUTTON_OFF / zoom, r = 9 / zoom, cx = it.x + it.w / 2, cy = it.y + it.h / 2;
   // The "+" for a branch growing that way, and past it the chevron once there are some.
   const own = (kind: MindButton, way: Way): MindButtonAt[] => [
     { kind, ...spot(it, way, BUTTON_OFF, zoom), r },
-    ...((up ? ways.length : ways.includes(way)) ? [{ kind: folded.includes(way) ? 'unfold' as const : 'fold' as const, ...spot(it, way, BUTTON_OFF + FOLD_OFF, zoom), r, way }] : []),
+    ...((up ? ways.length : ways.includes(way)) && (!folded.includes(way) || way === kept) ? [{ kind: 'fold' as const, ...spot(it, way, BUTTON_OFF + FOLD_OFF, zoom), r, way }] : []),
   ];
   if (!up) return [...own('child', 'right'), ...own('left', 'left'), ...own('down', 'down'), ...own('up', 'up')];
   const way = mindWay(it, up);
@@ -425,9 +426,9 @@ export function mindButtons(it: Item, get: Get, zoom: number, ways: Way[] = []):
 }
 
 /** The count of what a node's folding hides that way, always in sight: a pill as tall as a button and as
- *  wide as the number needs, its near end where the chevron sits, moved out past the chevron as far as
- *  `out` (0…1) while that's showing, a stub of branch leading to it (its middle, width and height, in
- *  screen pixels whatever the zoom). */
+ *  wide as the number needs, its near end where the chevron was, moved out past it as far as `out` (0…1)
+ *  while the chevron that folded it stays under the pointer, a stub of branch leading to it (its middle,
+ *  width and height, in screen pixels whatever the zoom). */
 export function foldBadge(it: Item, way: Way, zoom: number, count: number, out = 0): Point & { w: number; h: number } {
   const w = Math.max(18, String(count).length * 6 + 10), h = 18, along = upright(way) ? h : w;
   return { ...spot(it, way, BUTTON_OFF + FOLD_OFF * (1 + out) + (along - h) / 2, zoom), w: w / zoom, h: h / zoom };

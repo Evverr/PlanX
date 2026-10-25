@@ -106,7 +106,10 @@ export function press(ed: Editor, e: PointerEvent): void {
   const plus = single && plusAt(ed, single, w);
   if (single && plus) {
     if (plus.kind === 'move') ed.gesture = { type: 'mindMove', id: single.id, from: w, to: w, target: null };
-    else if (plus.kind === 'fold' || plus.kind === 'unfold') ed.setCollapsed(single.id, plus.way!, plus.kind === 'fold');
+    else if (plus.kind === 'fold') {
+      ed.setCollapsed(single.id, plus.way!, true);
+      ed.afterFold = `${single.id}:${plus.way}`;
+    }
     else ed.addMindNode(single.id, plus.kind, true);
     return;
   }

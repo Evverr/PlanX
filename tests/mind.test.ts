@@ -170,11 +170,13 @@ describe('mind map: folding a node\'s branches away', () => {
   const all = [r, a, l, d];
   const get = (id: string) => all.find((i) => i.id === id);
 
-  it('a node with branches has a chevron past its "+" for a branch: folding, or folded, unfolding', () => {
+  it('a node with branches has a chevron past its "+" for a branch, folding them; folded, none (but just after)', () => {
     const kinds = (it: Item, ways: Way[]) => mindButtons(it, get, 1, ways).map((b) => b.kind);
     expect(kinds(a, [])).toEqual(['child', 'above', 'below', 'move']);
     expect(kinds(a, ['right'])).toEqual(['child', 'fold', 'above', 'below', 'move']);
-    expect(kinds({ ...a, collapsed: true }, ['right'])).toEqual(['child', 'unfold', 'above', 'below', 'move']);
+    expect(kinds({ ...a, collapsed: true }, ['right'])).toEqual(['child', 'above', 'below', 'move']);
+    // Just folded by it, the chevron stays while the pointer is on it.
+    expect(mindButtons({ ...a, collapsed: true }, get, 1, ['right'], 'right').map((b) => b.kind)).toEqual(['child', 'fold', 'above', 'below', 'move']);
     // The chevron 22 past the "+".
     const at = (it: Item) => mindButtons(it, get, 1, ['right']).filter((b) => b.kind === 'child' || b.kind === 'fold').map((b) => [b.x, b.y]);
     expect(at(a)).toEqual([[271, 20], [293, 20]]);
@@ -184,7 +186,7 @@ describe('mind map: folding a node\'s branches away', () => {
 
   it('the central topic has a chevron each way it has branches, folding that way on its own', () => {
     const folded = { ...r, foldedWays: ['left' as const] };
-    expect(mindButtons(folded, get, 1, ['right', 'left']).map(buttonKey)).toEqual(['child', 'fold:right', 'left', 'unfold:left', 'down', 'up']);
+    expect(mindButtons(folded, get, 1, ['right', 'left']).map(buttonKey)).toEqual(['child', 'fold:right', 'left', 'down', 'up']);
     expect([...foldedAway(folded, all, get)]).toEqual([['left', ['l']]]);
     expect(folding(folded, 'down', true)).toEqual({ foldedWays: ['left', 'down'] });
     expect(folding(folded, 'left', false)).toEqual({ foldedWays: undefined });
@@ -192,7 +194,7 @@ describe('mind map: folding a node\'s branches away', () => {
     expect(folding(a, 'right', true)).toEqual({ collapsed: true });
   });
 
-  it('a folded node\'s count sits where its chevron is, moving out past it while that shows', () => {
+  it('a folded node\'s count sits where its chevron was, out past it while that stays', () => {
     expect(foldBadge(a, 'right', 1, 3)).toEqual({ x: 293, y: 20, w: 18, h: 18 });
     expect(foldBadge(l, 'left', 1, 3)).toEqual({ x: -193, y: 20, w: 18, h: 18 });
     expect(foldBadge(d, 'down', 1, 3)).toEqual({ x: 50, y: 161, w: 18, h: 18 });
