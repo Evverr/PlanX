@@ -112,6 +112,28 @@ export const checks = {
     expect(e, 'its branch under it, led down too').toBe(true);
   },
 
+  async 'the "+" over a central topic leads a branch up, which grows upwards as it is typed in'(p) {
+    await p.make('mind', [600, 400]);
+    await p.escape();
+    const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
+    await p.ev(`planx.editor.setSelection(['${root}'])`);
+    const plus = await p.ev(`(async () => { const m = await import('/src/model/mind.ts'), ed = planx.editor;
+      const b = m.mindButtons(planx.board.get('${root}'), (k) => planx.board.get(k), ed.cam.z).find((b) => b.kind === 'up');
+      const s = ed.toScreen(b), c = ed.canvas.getBoundingClientRect(); return [s.x + c.left, s.y + c.top]; })()`);
+    await p.mouse('mouseMoved', ...plus);
+    await sleep(700);
+    await p.click(plus);
+    const u = await p.ev(`(() => { const r = planx.board.get('${root}'), u = planx.board.list().find((i) => i.parent === r.id);
+      return { id: u.id, up: u.up, over: u.y + u.h < r.y, centred: Math.abs(u.x + u.w / 2 - (r.x + r.w / 2)) < 1, bottom: u.y + u.h, h: u.h }; })()`);
+    expect(u.up, 'led up').toBe(true);
+    expect(u.over && u.centred, 'over the topic, centred').toBe(true);
+    expect(await p.ev(`[...planx.editor.selection].join()`), 'the topic still picked, for another click').toBe(root);
+    await p.ev(`planx.editor.previewText('${u.id}', 'one\\ntwo')`);
+    const after = await p.ev(`planx.board.get('${u.id}')`);
+    expect(after.h > u.h, 'a line taller').toBe(true);
+    expect(after.y + after.h, 'its lower edge holds still').toBe(u.bottom);
+  },
+
   async 'the hand pans the board and the wheel zooms it'(p) {
     const cam0 = await p.ev('planx.editor.cam');
     await p.key('h', 'KeyH', 72);

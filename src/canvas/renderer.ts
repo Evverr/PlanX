@@ -446,12 +446,13 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
 /** A folded mind map node's count of what it hides: a pill in the next level's colour on a stub of
  *  branch, the number in it. */
 function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, n: number) {
-  const { theme, cam } = s, b = foldBadge(it, s.get, cam.z, n), down = !!it.down && !!it.parent;
+  const { theme, cam } = s, b = foldBadge(it, s.get, cam.z, n), upright = (!!it.down || !!it.up) && !!it.parent;
   ctx.globalAlpha = 0.5;
   ctx.strokeStyle = shade(nodeColors(it, tints).color, theme.dim);
   ctx.lineWidth = 0.75;
   ctx.beginPath();
-  if (down) { ctx.moveTo(b.x, it.y + it.h); ctx.lineTo(b.x, b.y - b.h / 2); }
+  if (upright && it.up) { ctx.moveTo(b.x, it.y); ctx.lineTo(b.x, b.y + b.h / 2); }
+  else if (upright) { ctx.moveTo(b.x, it.y + it.h); ctx.lineTo(b.x, b.y - b.h / 2); }
   else { const right = b.x > it.x; ctx.moveTo(right ? it.x + it.w : it.x, b.y); ctx.lineTo(right ? b.x - b.w / 2 : b.x + b.w / 2, b.y); }
   ctx.stroke();
   ctx.globalAlpha = 1;
@@ -846,10 +847,11 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
           ctx.lineCap = 'round';
           ctx.lineJoin = 'round';
           ctx.beginPath();
-          if (b.kind === 'move' && b.y < it.y) {
-            // Over a node led down: an arrow pointing up, away from it.
-            ctx.moveTo(b.x, b.y + r * 0.5); ctx.lineTo(b.x, b.y - r * 0.5);
-            ctx.moveTo(b.x - r * 0.4, b.y - r * 0.1); ctx.lineTo(b.x, b.y - r * 0.5); ctx.lineTo(b.x + r * 0.4, b.y - r * 0.1);
+          if (b.kind === 'move' && (b.y < it.y || b.y > it.y + it.h)) {
+            // Over a node led down (or under one led up): an arrow pointing up (or down), away from it.
+            const d = b.y < it.y ? -1 : 1;
+            ctx.moveTo(b.x, b.y - d * r * 0.5); ctx.lineTo(b.x, b.y + d * r * 0.5);
+            ctx.moveTo(b.x - r * 0.4, b.y + d * r * 0.1); ctx.lineTo(b.x, b.y + d * r * 0.5); ctx.lineTo(b.x + r * 0.4, b.y + d * r * 0.1);
           } else if (b.kind === 'move') {
             // An arrow pointing away from the node.
             const d = b.x < it.x ? -1 : 1;
@@ -857,7 +859,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
             ctx.moveTo(b.x + d * r * 0.1, b.y - r * 0.4); ctx.lineTo(b.x + d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.1, b.y + r * 0.4);
           } else if (b.kind === 'fold') {
             // A chevron pointing back at the node, for folding its branches away.
-            const [dx, dy] = b.way === 'down' ? [0, -1] : b.way === 'left' ? [1, 0] : [-1, 0];
+            const [dx, dy] = b.way === 'down' ? [0, -1] : b.way === 'up' ? [0, 1] : b.way === 'left' ? [1, 0] : [-1, 0];
             const tip = { x: b.x + dx * r * 0.25, y: b.y + dy * r * 0.25 }, back = r * 0.45;
             ctx.moveTo(tip.x - dx * back - dy * back, tip.y - dy * back - dx * back);
             ctx.lineTo(tip.x, tip.y);
