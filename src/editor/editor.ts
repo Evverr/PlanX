@@ -633,11 +633,11 @@ export class Editor {
     if (type === 'text' || type === 'task' || type === 'frame' || type === 'mind') this.startEditing(it.id);
   }
 
-  /** Puts a frame around two or more selected items, 40 units clear of them, and opens its title
-   *  for typing as a new frame's is. Returns whether there was enough to frame. */
+  /** Puts a frame around the selected items (one is enough), 40 units clear of them, and opens its
+   *  title for typing as a new frame's is. Returns whether there was anything to frame. */
   frameSelection(): boolean {
     const b = boundsOf(this.selectedItems());
-    if (this.selectedItems().length < 2 || !b) return false;
+    if (!this.selectedItems().length || !b) return false;
     // Just under the lowest of them, not under everything: a frame they already sit in stays below.
     const pad = 40, z = Math.min(...this.selectedItems().map((i) => i.z)) - 0.5;
     const it = this.newItem('frame', b.x - pad, b.y - pad, { w: Math.round(b.w + pad * 2), h: Math.round(b.h + pad * 2), z, members: [] });

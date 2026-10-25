@@ -65,6 +65,23 @@ export const checks = {
     expect(now.indexOf(ids.outer) < now.indexOf(ids.s), 'still under the sticky').toBe(true);
   },
 
+  async 'the frame button with something picked puts a frame round it, one item as well'(p) {
+    const o = await origin(p);
+    await p.make('sticky', await screen(p, o.x + 200, o.y + 200));
+    const s = await p.ev(`planx.board.list().find((i) => i.type === 'sticky')`);
+    await p.ev(`planx.editor.setSelection(['${s.id}'])`);
+    await p.click(await p.at('.tools [data-key="frames"]'));
+    await p.escape();
+    const f = await p.ev(`planx.board.list().find((i) => i.type === 'frame')`);
+    expect(!!f, 'a frame made').toBe(true);
+    expect(f.members.join(), 'the sticky in it').toBe(s.id);
+    expect(f.x < s.x && f.y < s.y && f.x + f.w > s.x + s.w && f.y + f.h > s.y + s.h, 'round it').toBe(true);
+    // With nothing picked, the button picks the frame tool instead.
+    await p.ev(`planx.editor.setSelection([])`);
+    await p.click(await p.at('.tools [data-key="frames"]'));
+    expect(await p.ev('planx.editor.tool'), 'the frame tool').toBe('frame');
+  },
+
   async 'a table line takes hold only after the mouse rests on it'(p) {
     const id = await put(p, `const t = e.newItem('table', X, Y, { cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill(''), w: 360, h: 120 }); b.add(t); return t.id;`);
     await sleep(200);
