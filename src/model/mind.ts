@@ -16,6 +16,8 @@ export const MIND_PALETTE = ['#3E7BFA', '#0C8599', '#30A46C', '#E8892B', '#E5484
  *  to yellow, the central topic blue, the fourth level and further yellow. */
 const LEVEL_COLORS = ['blue', 'purple', 'pink', 'orange', 'yellow'].map((k) => FILLS[k]);
 export const levelColor = (depth: number): string => LEVEL_COLORS[Math.min(depth, LEVEL_COLORS.length - 1)];
+/** The colour of the branch leading to a node: the colour given it, or else its level's. */
+export const branchColor = (it: Item, get: Get): string => (it.color?.startsWith('#') ? it.color : levelColor(mindDepth(it, get)));
 
 /** A '#rrggbb' colour halfway to white. */
 export function lighter(hex: string): string {
@@ -396,15 +398,15 @@ function spot(it: Item, way: Way, off: number, zoom: number): Point {
 }
 
 /** Where each of a node's buttons is and its radius, sized in screen pixels whatever the zoom; `ways`:
- *  those it has branches growing (folded ones too), `kept`: a way just folded whose chevron stays while
- *  the pointer is on it. A chevron says the way it's on. */
-export function mindButtons(it: Item, get: Get, zoom: number, ways: Way[] = [], kept?: Way): MindButtonAt[] {
+ *  those it has branches growing (folded ones too), `fresh`: a way that's only just got them, with no
+ *  chevron yet. A chevron says the way it's on. */
+export function mindButtons(it: Item, get: Get, zoom: number, ways: Way[] = [], fresh?: Way): MindButtonAt[] {
   const up = it.parent ? get(it.parent) : undefined, folded = foldedWays(it, up);
   const off = BUTTON_OFF / zoom, r = 9 / zoom, cx = it.x + it.w / 2, cy = it.y + it.h / 2;
   // The "+" for a branch growing that way, and past it the chevron once there are some.
   const own = (kind: MindButton, way: Way): MindButtonAt[] => [
     { kind, ...spot(it, way, BUTTON_OFF, zoom), r },
-    ...((up ? ways.length : ways.includes(way)) && (!folded.includes(way) || way === kept) ? [{ kind: 'fold' as const, ...spot(it, way, BUTTON_OFF + FOLD_OFF, zoom), r, way }] : []),
+    ...((up ? ways.length : ways.includes(way)) && !folded.includes(way) && way !== fresh ? [{ kind: 'fold' as const, ...spot(it, way, BUTTON_OFF + FOLD_OFF, zoom), r, way }] : []),
   ];
   if (!up) return [...own('child', 'right'), ...own('left', 'left'), ...own('down', 'down'), ...own('up', 'up')];
   const way = mindWay(it, up);
@@ -426,9 +428,9 @@ export function mindButtons(it: Item, get: Get, zoom: number, ways: Way[] = [], 
 }
 
 /** The count of what a node's folding hides that way, always in sight: a pill as tall as a button and as
- *  wide as the number needs, its near end where the chevron was, moved out past it as far as `out` (0…1)
- *  while the chevron that folded it stays under the pointer, a stub of branch leading to it (its middle,
- *  width and height, in screen pixels whatever the zoom). */
+ *  wide as the number needs, its near end where the chevron was, moved out past that as far as `out`
+ *  (0…1) as it slides in just after folding, a stub of branch leading to it (its middle, width and
+ *  height, in screen pixels whatever the zoom). */
 export function foldBadge(it: Item, way: Way, zoom: number, count: number, out = 0): Point & { w: number; h: number } {
   const w = Math.max(18, String(count).length * 6 + 10), h = 18, along = upright(way) ? h : w;
   return { ...spot(it, way, BUTTON_OFF + FOLD_OFF * (1 + out) + (along - h) / 2, zoom), w: w / zoom, h: h / zoom };
