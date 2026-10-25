@@ -10,6 +10,7 @@ import { clamp, MAX_Z, MIN_Z } from './camera';
 import { rotateCursor } from './cursors';
 import { MIND_TOPIC, type PenTool } from './tools';
 import type { Editor } from './editor';
+import { isLocked } from '../labs/labs';
 
 /** What a press on the board has started, followed till it's let go. */
 export type Gesture =
@@ -302,7 +303,7 @@ export function eraseAlong(ed: Editor, a: Point, b: Point): void {
   const tol = 8 / ed.cam.z, steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / tol));
   const gone = new Set<string>();
   for (const it of ed.board.list()) {
-    if (it.type !== 'ink') continue;
+    if (it.type !== 'ink' || isLocked(it)) continue;
     const box = { x: it.x - tol, y: it.y - tol, w: it.w + tol * 2, h: it.h + tol * 2 };
     for (let i = 0; i <= steps; i++) {
       const p = { x: a.x + (b.x - a.x) * i / steps, y: a.y + (b.y - a.y) * i / steps };

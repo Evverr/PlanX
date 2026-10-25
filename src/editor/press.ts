@@ -7,6 +7,7 @@ import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
 import type { Editor } from './editor';
+import { isLocked } from '../labs/labs';
 
 /** A press on the board: works out what it starts (a gesture followed till it's let go) or does at
  *  once, from the tool, what's under it and what's selected. */
@@ -38,7 +39,7 @@ export function press(ed: Editor, e: PointerEvent): void {
   // A finger on the empty board moves the board, but not on the controls of what's selected (its
   // resize handle, link dots, turning corner, mind map buttons) or on a table's line.
   const picked = ed.selection.size === 1 ? board.get([...ed.selection][0]) : undefined;
-  const onControl = !!picked && !ed.editingId && (onHandle(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!plusAt(ed, picked, w));
+  const onControl = !!picked && !ed.editingId && !isLocked(picked) && (onHandle(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!plusAt(ed, picked, w));
   const empty = ed.tool === 'select' && e.button === 0 && !ed.spaceDown && !e.shiftKey && !hit && !link && !onControl
     && !grabbableLine(ed, w, hit, e.pointerType) && !ed.editingId;
   // Pressed twice on the empty board: everything on it comes into view, as with the "show all" button.
@@ -106,18 +107,18 @@ export function press(ed: Editor, e: PointerEvent): void {
     else ed.addMindNode(single.id, plus, true);
     return;
   }
-  const dot = single && !ed.editingId ? dotAt(ed, single, w) : null;
+  const dot = single && !ed.editingId && !isLocked(single) ? dotAt(ed, single, w) : null;
   if (single && dot) {
     ed.gesture = { type: 'link', from: single.id, fromSide: dot, to: w, target: null };
     return;
   }
-  if (single && onHandle(ed, single, w)) {
+  if (single && !isLocked(single) && onHandle(ed, single, w)) {
     board.beginGesture();
     ed.gesture = { type: 'resize', id: single.id, start: w, orig: { ...single } };
     ed.setMoving(true);
     return;
   }
-  if (single && onRotate(ed, single, w)) {
+  if (single && !isLocked(single) && onRotate(ed, single, w)) {
     board.beginGesture();
     const c = center(single);
     // A frame turns with everything it holds, which keeps a list from then on.

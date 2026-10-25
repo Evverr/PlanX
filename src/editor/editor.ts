@@ -21,6 +21,7 @@ import { addMindNode, mindFit, refitMind, removeMindNode } from './mindOps';
 import { press } from './press';
 import { formatCells, pickCell, restOn, setTableLines } from './tables';
 import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, type Pens, type PenTool, type Tool } from './tools';
+import { isLocked } from '../labs/labs';
 
 export { DRAW_TOOLS, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -106,6 +107,9 @@ export class Editor {
   cells: number[] = [];
   /** The cell a Shift-click range is counted from: the one last clicked on its own. */
   cellAnchor: number | null = null;
+  /** Drawn over the board after it, at screen scale (the features on trial, src/labs): each returns
+   *  true while it's still moving and wants another frame. */
+  overlays = new Set<(ctx: CanvasRenderingContext2D) => boolean | void>();
 
   private ctx: CanvasRenderingContext2D | null = null;
   private theme: Theme | null = null;
@@ -286,7 +290,7 @@ export class Editor {
       marquee: g?.type === 'marquee' ? g.rect : null,
       linkPreview,
       peers: this.presence?.peers() ?? [],
-      showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]),
+      showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]) && !isLocked(this.board.get([...this.selection][0])),
       byFinger: this.byFinger,
       hotDot: this.hotDot,
       hotPlus: this.hotPlus,
@@ -298,6 +302,13 @@ export class Editor {
       pickedCells: this.cells.length && this.selection.size === 1 ? { id: [...this.selection][0], cells: this.cells } : null,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker' } : null,
     });
+    let again = false;
+    for (const draw of this.overlays) {
+      this.ctx.save();
+      if (draw(this.ctx)) again = true;
+      this.ctx.restore();
+    }
+    if (again) this.requestRender();
   }
 
   /** Shared: how far the selected mind map node's "+" buttons have faded in, 0…1. */
@@ -511,12 +522,14 @@ export class Editor {
   }
 
   deleteSelection(): void {
-    if (!this.selection.size) return;
+    // Locked items stay (and stay selected).
+    const ids = new Set([...this.selection].filter((id) => !isLocked(this.board.get(id))));
+    if (!ids.size) return;
     // A mind map node goes with everything branching from it, a folded frame with all it holds.
-    const items = this.board.list(), folded = items.filter((i) => i.fold && this.selection.has(i.id));
+    const items = this.board.list(), folded = items.filter((i) => i.fold && ids.has(i.id));
     const held = folded.length ? [...this.carried(folded).keys()] : [];
-    this.board.remove([...this.selection, ...held, ...descendants(this.selection, items)]);
-    this.setSelection([]);
+    this.board.remove([...ids, ...held, ...descendants(ids, items)].filter((id) => !isLocked(this.board.get(id))));
+    this.setSelection([...this.selection].filter((id) => !ids.has(id)));
   }
 
   setColor(color: string): void {
@@ -733,7 +746,7 @@ export class Editor {
   /** Opens an item's text for typing; for a table, one cell's (the first unless given). */
   startEditing(id: string, cell?: number | null, caret: 'all' | 'end' = 'all'): void {
     const it = this.board.get(id);
-    if (!it || !EDITABLE.includes(it.type)) return;
+    if (!it || !EDITABLE.includes(it.type) || isLocked(it)) return;
     this.editCaret = caret;
     this.editingId = id;
     this.editingCell = it.type === 'table' ? cell ?? 0 : null;
@@ -830,9 +843,9 @@ export class Editor {
    *  where it is now. */
   carried(sel: Item[]): Map<string, Point> { return carried(this.board, sel, this.board.list()); }
 
-  /** Shared: the selected items plus what the selected frames hold. */
+  /** Shared: the selected items plus what the selected frames hold (but those locked in place). */
   dragSet(items: Item[]): Map<string, Point> {
-    return carried(this.board, items.filter((i) => this.selection.has(i.id)), items);
+    return carried(this.board, items.filter((i) => this.selection.has(i.id) && !isLocked(i)), items);
   }
 
   /** Shared: puts each of these items in the frame it lies in, or out of frames (see settled). */
