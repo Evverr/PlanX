@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Connection } from '../collab/connection';
 import { boxOf } from '../canvas/geometry';
 import { Glyph } from '../ui/glyphs';
-import { labOn, subscribeLabs, useLabs, type LabId } from './labs';
+import { labOn, subscribeLabs, useLabs } from './labs';
+import { LabsRail, type RailButton } from './LabsRail';
 import { drawLabs, laser, LASER_FADE, pillAt, toggleReaction } from './overlays';
 import { LabsPresence, useFollowing } from './presence';
 import { cameraFor, flyTo, stopFlight } from './camera';
@@ -15,14 +16,14 @@ import './labs.css';
 type LabPop = 'export' | 'search' | 'timer' | 'keys';
 
 /** Popups that close on a press anywhere but in them (the cheat sheet has its own backdrop). */
-const AWAY = '.labs-pop, .labs-bar';
+const AWAY = '.labs-pop, .labs-rail, .labs-more';
 
 /**
- * The features on trial that live outside the board's own panels: a bar of their buttons at the
+ * The features on trial that live outside the board's own panels: a rail of their buttons at the
  * right edge, their popups, the timer and "following" at the top, and what they do with the
  * pointer and keys. Each shows only while it's switched on in the board menu.
  */
-export function Labs({ editor, conn }: { editor: Editor; conn: Connection }) {
+export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connection; docked: boolean }) {
   const labs = useLabs();
   const [pop, setPop] = useState<LabPop | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -132,19 +133,19 @@ export function Labs({ editor, conn }: { editor: Editor; conn: Connection }) {
 
   const toggle = (p: LabPop) => setPop((cur) => (cur === p ? null : p));
   const summon = () => setToast(presence.summon() ? 'Все участники перенесены к вам' : 'На доске пока никого нет. Откройте ссылку на доску во втором окне');
-  const bar: Array<[LabId, ReactNode]> = [
-    ['export', <BarButton key="export" icon="download" title="Экспорт в PNG" on={pop === 'export'} onClick={() => toggle('export')} />],
-    ['search', <BarButton key="search" icon="search" title="Поиск по доске (Ctrl+F)" on={pop === 'search'} onClick={() => toggle('search')} />],
-    ['timer', <BarButton key="timer" icon="timer" title="Общий таймер" on={pop === 'timer'} onClick={() => toggle('timer')} />],
-    ['laser', <BarButton key="laser" icon="magic-wand" title="Лазерная указка (K)" on={laserOn} onClick={() => setLaserOn(!laserOn)} />],
-    ['follow', <BarButton key="follow" icon="meeting-point" title="Позвать всех ко мне" onClick={summon} />],
-    ['keys', <BarButton key="keys" icon="keyboard" title="Шпаргалка по клавишам (?)" on={pop === 'keys'} onClick={() => toggle('keys')} />],
-  ];
-  const shown = bar.filter(([id]) => labs[id]);
+  const all: Record<'export' | 'search' | 'timer' | 'laser' | 'follow' | 'keys', RailButton> = {
+    export: { icon: 'download', title: 'Экспорт в PNG', on: pop === 'export', onClick: () => toggle('export') },
+    search: { icon: 'search', title: 'Поиск по доске (Ctrl+F)', on: pop === 'search', onClick: () => toggle('search') },
+    timer: { icon: 'timer', title: 'Общий таймер', on: pop === 'timer', onClick: () => toggle('timer') },
+    laser: { icon: 'magic-wand', title: 'Лазерная указка (K)', on: laserOn, onClick: () => setLaserOn(!laserOn) },
+    follow: { icon: 'meeting-point', title: 'Позвать всех ко мне', onClick: summon },
+    keys: { icon: 'keyboard', title: 'Шпаргалка по клавишам (?)', on: pop === 'keys', onClick: () => toggle('keys') },
+  };
+  const buttons = Object.fromEntries(Object.entries(all).filter(([id]) => labs[id as keyof typeof all]));
 
   return (
     <>
-      {shown.length > 0 && <div className="bar labs-bar" role="toolbar" aria-label="Нововведения">{shown.map(([, b]) => b)}</div>}
+      <LabsRail buttons={buttons} docked={docked} />
       {pop === 'export' && <ExportPop editor={editor} onCancel={() => setPop(null)} onDone={(ok) => { setPop(null); setToast(ok ? 'Картинка сохранена' : 'На доске пока пусто'); }} />}
       {pop === 'search' && <SearchPop editor={editor} />}
       {pop === 'timer' && <TimerPop onStart={(min) => { startTimer(editor.board.doc, min * 60000, conn.me.name); setPop(null); }} />}
@@ -163,14 +164,6 @@ export function Labs({ editor, conn }: { editor: Editor; conn: Connection }) {
       {laserOn && labs.laser && <div className="labs-pill laser-pill" role="status">Лазерная указка: тяните по доске. <b>K</b> или <b>Esc</b>, чтобы выйти</div>}
       {toast && <div className="pop toast labs-toast" role="status">{toast}</div>}
     </>
-  );
-}
-
-function BarButton({ icon, title, on, onClick }: { icon: string; title: string; on?: boolean; onClick: () => void }) {
-  return (
-    <button className={`ib ${on ? 'on' : ''}`} title={title} aria-label={title} aria-pressed={on} onClick={onClick}>
-      <Glyph id={icon} className="glyph" />
-    </button>
   );
 }
 

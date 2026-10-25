@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { emojiSrc } from '../emoji/emoji';
-import { Glyph } from '../ui/glyphs';
+import { PanelIcon } from '../ui/PanelIcon';
 import { myId } from './labs';
 import { REACTIONS, toggleReaction } from './overlays';
 
@@ -13,7 +13,7 @@ export function LockButton({ editor, items }: { editor: Editor; items: Item[] })
   return (
     <button className={`ib ${locked ? 'on' : ''}`} title={title} aria-label={title} aria-pressed={locked}
       onClick={() => editor.board.transact(() => items.forEach((i) => editor.board.update(i.id, { lock: locked ? undefined : true })))}>
-      <Glyph id={locked ? 'lock-l' : 'unlock-l'} className="glyph" />
+      <PanelIcon name={locked ? 'lock-l' : 'unlock-l'} />
     </button>
   );
 }
@@ -33,7 +33,7 @@ export function ReactButton({ editor, items }: { editor: Editor; items: Item[] }
   return (
     <div ref={ref} className="op-wrap">
       <button className={`ib ${open ? 'on' : ''}`} title="Реакция" aria-label="Реакция" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <Glyph id="like" className="glyph" />
+        <PanelIcon name="like" />
       </button>
       {open && (
         <div className="op-pop react-pop" data-nosort role="menu" aria-label="Реакции">

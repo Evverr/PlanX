@@ -10,7 +10,7 @@ const settled = (p) => p.ev(`({
   sorting: document.querySelectorAll('.sorting').length })`);
 
 /** Holds a button, then drags it along these points and lets go. */
-async function carry(p, from, path) {
+export async function carry(p, from, path) {
   await p.mouse('mouseMoved', ...from);
   await p.mouse('mousePressed', ...from);
   await sleep(300);

@@ -1,12 +1,19 @@
 /* The features on trial ("Нововведения", src/labs). */
 
-/* Their bar: upright, halfway down the right edge. */
-.labs-bar { right: calc(12px + env(safe-area-inset-right, 0px)); top: 50%; transform: translateY(-50%); flex-direction: column; }
-.labs-bar .ib, .bar.panel .ib:has(> svg.glyph), .op-wrap > .ib:has(> svg.glyph) { color: var(--fmt-ink); }
-.labs-bar .ib.on, .bar.panel .ib.on:has(> svg.glyph) { color: var(--fmt-on-ink); }
+/* Their rail: the tool rail's look (.tools), at the right edge, or the left once moved there
+   (data-labs="left"); from the left all the same, so it slides across. */
+.tools.labs-rail { left: calc(100% - 12px - var(--rail-w) - env(safe-area-inset-right, 0px)); }
+.tools.labs-rail.docked { left: calc(100% - var(--rail-w)); border-radius: var(--s12) 0 0 var(--s12); }
+:root[data-labs="left"] .tools.labs-rail { left: calc(12px + env(safe-area-inset-left, 0px)); }
+:root[data-labs="left"] .tools.labs-rail.docked { left: 0; border-radius: 0 var(--s12) var(--s12) 0; }
+/* What opens beside it: its "more" column and their popups, 12px from it on the board's side. */
+.tools-more.labs-more, .labs-pop { left: auto; right: calc(24px + var(--rail-w) + env(safe-area-inset-right, 0px)); }
+.labs-rail.docked ~ :is(.labs-more, .labs-pop) { right: calc(12px + var(--rail-w) + env(safe-area-inset-right, 0px)); }
+:root[data-labs="left"] :is(.tools-more.labs-more, .labs-pop) { right: auto; left: calc(24px + var(--rail-w) + env(safe-area-inset-left, 0px)); }
+:root[data-labs="left"] .labs-rail.docked ~ :is(.labs-more, .labs-pop) { left: calc(12px + var(--rail-w) + env(safe-area-inset-left, 0px)); }
 
-/* Their popups open beside the bar, to its left. */
-.labs-pop { right: calc(24px + var(--e52) + env(safe-area-inset-right, 0px)); top: 50%; transform: translateY(-50%); width: var(--e300); max-width: calc(100vw - var(--e96)); box-sizing: border-box;
+/* Their popups. */
+.labs-pop { top: 50%; transform: translateY(-50%); width: var(--e300); max-width: calc(100vw - var(--e96)); box-sizing: border-box;
   max-height: calc(100vh - 32px); overflow-y: auto; animation: fade-in .12s ease-out; }
 .labs-pop h3, .labs-keys h3 { margin: 0 0 var(--s12); font: 700 var(--s13)/var(--s21) "Inter", var(--ui); }
 .labs-pop label { display: block; margin: var(--s12) 0 var(--s6); font-weight: 600; font-size: var(--s12); color: var(--muted); }

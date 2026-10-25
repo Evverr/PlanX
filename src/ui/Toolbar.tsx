@@ -34,7 +34,7 @@ const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: '
 /** The "more" column at full size: its padding top and bottom, its buttons and the gap between them
  *  (scaled as the panels are, the way the styles round them). */
 const MORE_COL = { pad: 21, size: 30, gap: 18 };
-const moreCol = (k: number) => ({ pad: Math.round(MORE_COL.pad * k) * 2, size: Math.round((MORE_COL.size * k) / 2) * 2, gap: Math.round(MORE_COL.gap * k) });
+export const moreCol = (k: number) => ({ pad: Math.round(MORE_COL.pad * k) * 2, size: Math.round((MORE_COL.size * k) / 2) * 2, gap: Math.round(MORE_COL.gap * k) });
 
 /** Rail buttons with variants, opened by holding the button still. */
 const VARIANTS = new Set(['oval', 'draw']);

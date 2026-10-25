@@ -18,7 +18,7 @@
 :root[data-zoom="high"] :is(.minimap, .help, .namepop) { bottom: auto; top: calc(20px + var(--bar) + env(safe-area-inset-top, 0px)); }
 :root[data-zoom="high"] .minimap.docked { top: calc(8px + var(--bar)); }
 /* From the left still (so it can slide across): as far as leaves 12px at the right. */
-:root[data-rail="right"] .tools { left: calc(100% - 12px - var(--rail-w) - env(safe-area-inset-right, 0px)); }
-:root[data-rail="right"] .tools.docked { left: calc(100% - var(--rail-w)); border-radius: var(--s12) 0 0 var(--s12); }
-:root[data-rail="right"] :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(24px + var(--rail-w) + env(safe-area-inset-right, 0px)); }
-:root[data-rail="right"] .tools.docked ~ :is(.tools-more, .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(12px + var(--rail-w) + env(safe-area-inset-right, 0px)); }
+:root[data-rail="right"] .tools:not(.labs-rail) { left: calc(100% - 12px - var(--rail-w) - env(safe-area-inset-right, 0px)); }
+:root[data-rail="right"] .tools.docked:not(.labs-rail) { left: calc(100% - var(--rail-w)); border-radius: var(--s12) 0 0 var(--s12); }
+:root[data-rail="right"] :is(.tools-more:not(.labs-more), .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(24px + var(--rail-w) + env(safe-area-inset-right, 0px)); }
+:root[data-rail="right"] .tools.docked ~ :is(.tools-more:not(.labs-more), .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(12px + var(--rail-w) + env(safe-area-inset-right, 0px)); }

@@ -131,7 +131,7 @@ async function openPage() {
       await p.drag(a, [a[0] + dx, a[1] + dy], { rest: 650 });
     },
     /** How many buttons the rail shows, and whether it has its "more" button. */
-    rail: () => p.ev(`({ n: document.querySelectorAll('.tools > [data-key]').length, more: !!document.querySelector('.tools > button[aria-label="Ещё"]') })`),
+    rail: () => p.ev(`({ n: document.querySelectorAll('.tools:not(.labs-rail) > [data-key]').length, more: !!document.querySelector('.tools:not(.labs-rail) > button[aria-label="Ещё"]') })`),
     /** Picks a tool on the rail (or in its "more" column) and clicks the board with it. */
     async make(tool, where) {
       if (!(await p.rect(`.tools [data-key="${tool}"]`))) await p.click(await p.at('.tools > button[aria-label="Ещё"]'));
