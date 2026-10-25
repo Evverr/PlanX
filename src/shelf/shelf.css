@@ -1,0 +1,183 @@
+/* The start page: folders standing on wooden shelves, boards as square tiles (ShelfPage.tsx, Folder.tsx). */
+.shelf-page {
+  --nb-w: 168px; --nb-h: calc(var(--nb-w) * .78); --card: 176px;
+  /* One shelf row: a folder, the plank under it, the name and the date. */
+  --row: calc(var(--nb-h) + 66px); --row-gap: 30px; --col-gap: 28px;
+  --plank-top: #E2CDAE; --plank: #C9A97F; --plank-edge: #A7845B; --plank-shade: rgba(80, 50, 20, .18);
+  position: fixed; inset: 0; overflow-y: auto; overflow-x: hidden;
+  background: radial-gradient(1200px 500px at 20% -10%, var(--grad-3), transparent), var(--bg);
+}
+:root[data-theme="dark"] .shelf-page {
+  --plank-top: #4A3D30; --plank: #3A2F25; --plank-edge: #2A221B; --plank-shade: rgba(0, 0, 0, .4);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .shelf-page { --plank-top: #4A3D30; --plank: #3A2F25; --plank-edge: #2A221B; --plank-shade: rgba(0, 0, 0, .4); }
+}
+@media (max-width: 560px) {
+  .shelf-page { --nb-w: 136px; --card: 140px; --col-gap: 16px; --row-gap: 24px; }
+}
+
+/* Header: name, search, order, theme, and the two ways to add a board. */
+.shelf-head { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 20px;
+  padding: 18px max(16px, calc((100% - 1160px) / 2)); background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.shelf-brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.shelf-logo { border: 0; background: none; padding: 0; cursor: pointer; font-family: "Inter", var(--ui); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; color: var(--accent); }
+.shelf-brand h1 { margin: 0; font: 600 22px/1.2 var(--display); letter-spacing: -0.01em; }
+.shelf-page .narrow-only { display: none; }
+@media (max-width: 560px) { .shelf-page .narrow-only { display: inline; } }
+.shelf-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.shelf-tools .ib { width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 8px; background: none; cursor: pointer; }
+.shelf-tools .ib:hover { background: var(--fmt-hover); }
+.shelf-tools .ib .pi { width: 26px; height: 26px; }
+.shelf-page .btn { display: inline-flex; align-items: center; height: 34px; cursor: pointer; text-decoration: none; color: var(--btn-ink); white-space: nowrap; }
+.shelf-page .btn.primary { color: #fff; }
+.shelf-page .btn:disabled { opacity: .45; cursor: default; }
+.btn.primary.danger::before { background: var(--danger); }
+
+.shelf-search { display: flex; align-items: center; gap: 4px; height: 34px; padding: 0 8px 0 4px; border-radius: 8px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--btn-line); min-width: 220px; }
+.shelf-search:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
+.shelf-search .pi { width: 24px; height: 24px; background: var(--muted); }
+.shelf-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; color: var(--ink); }
+.shelf-search kbd { font: 12px/1 var(--ui); color: var(--muted); padding: 3px 6px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--btn-line); }
+.shelf-sort { height: 34px; padding: 0 8px; border: 0; border-radius: 8px; font: inherit; color: var(--ink); background: var(--surface); box-shadow: inset 0 0 0 1px var(--btn-line); cursor: pointer; }
+@media (max-width: 560px) {
+  .shelf-head { position: static; padding-top: 14px; padding-bottom: 14px; }
+  .shelf-search { flex: 1 1 100%; min-width: 0; }
+  .shelf-sort { flex: 1; min-width: 0; }
+  .shelf-page .wide-only { display: none; }
+  .shelf-tools { width: 100%; }
+}
+
+.shelf-main { padding: 12px max(16px, calc((100% - 1160px) / 2)) 80px; }
+.shelf-title { margin: 26px 0 16px; font: 600 15px/1.2 var(--ui); color: var(--muted); letter-spacing: .02em; }
+.shelf-none { color: var(--muted); }
+
+/* The shelf: a grid of fixed rows, with a wooden plank drawn under each row's folders
+   (as the background, so a half-full row still has a whole plank). */
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--nb-w) + 16px), 1fr)); grid-auto-rows: var(--row);
+  gap: var(--row-gap) var(--col-gap); padding: 10px 14px 0; margin: 0 -14px;
+  background-image:
+    linear-gradient(to bottom, transparent calc(var(--nb-h) + 10px), var(--plank-top) calc(var(--nb-h) + 10px), var(--plank-top) calc(var(--nb-h) + 13px),
+      var(--plank) calc(var(--nb-h) + 13px), var(--plank) calc(var(--nb-h) + 22px), var(--plank-edge) calc(var(--nb-h) + 22px), var(--plank-edge) calc(var(--nb-h) + 24px),
+      var(--plank-shade) calc(var(--nb-h) + 24px), transparent calc(var(--nb-h) + 36px));
+  background-size: 100% calc(var(--row) + var(--row-gap)); background-repeat: repeat-y; border-radius: 4px; }
+.shelf.solo { width: calc(var(--nb-w) + 140px); margin: 0 auto; }
+
+.book { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; text-align: center; }
+.book-cover { display: block; border: 0; padding: 0; background: none; cursor: pointer; color: inherit; transition: transform .18s ease-out; transform-origin: 50% 100%; }
+.book-cover:hover, .book-cover:focus-visible { transform: translateY(-3px); }
+.book-cover:active { transform: translateY(-2px); }
+.book-name { margin-top: 30px; max-width: 100%; font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.book-meta { max-width: 100%; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* "…" over a tile's corner: on hover, always on touch screens. */
+.tile-more { position: absolute; top: 6px; right: calc(50% - var(--tile) / 2 + 6px); width: 30px; height: 30px; display: grid; place-items: center; padding: 0;
+  border: 0; border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); cursor: pointer; opacity: 0; transition: opacity .12s; z-index: 1; }
+.book .tile-more { --tile: var(--nb-w); top: 16px; }
+.card .tile-more { --tile: var(--card); }
+.tile-more .pi { width: 24px; height: 24px; }
+.book:hover .tile-more, .book:focus-within .tile-more, .card:hover .tile-more, .card:focus-within .tile-more, .tile-more.on { opacity: 1; }
+@media (hover: none) { .tile-more { opacity: .92; } }
+.tile-menu { position: absolute; top: 40px; left: calc(50% + var(--tile) / 2 - 36px); z-index: 4; min-width: 210px; padding: 6px; text-align: left;
+  border-radius: 12px; background: var(--surface); box-shadow: 0 8px 24px rgba(0, 0, 0, .18), 0 0 0 1px var(--btn-line); }
+.book .tile-menu { --tile: var(--nb-w); top: 50px; }
+.card .tile-menu { --tile: var(--card); }
+@media (max-width: 560px) { .tile-menu { left: auto; right: 0; } }
+.tile-menu a, .tile-menu button { display: block; width: 100%; padding: 8px 10px; border: 0; border-radius: 7px; background: none; font: inherit; color: var(--menu-ink); text-align: left; text-decoration: none; cursor: pointer; }
+.tile-menu a:hover, .tile-menu button:hover { background: var(--fmt-hover); }
+.tile-menu .danger { color: var(--danger); }
+.tile-menu hr { margin: 4px 6px; border: 0; border-top: 1px solid var(--fmt-line); }
+
+/* The folder: a back with a tab, sheets (its boards' pictures) sticking out, and a front with the count. */
+.fd { position: relative; display: block; width: var(--nb-w); height: var(--nb-h); }
+.fd-back { position: absolute; left: 0; right: 0; bottom: 0; top: 14px; border-radius: 4px 10px 8px 8px; background: var(--folder);
+  background-image: linear-gradient(rgba(0, 0, 0, .22), rgba(0, 0, 0, .22)); }
+.fd-back::before { content: ""; position: absolute; left: 0; top: -13px; width: 42%; height: 16px; border-radius: 8px 10px 0 0; background: inherit; }
+.fd-sheets { position: absolute; left: 9%; right: 9%; top: 6px; height: 64%; }
+.fd-sheet { position: absolute; top: 0; width: 46%; aspect-ratio: 1; overflow: hidden; border-radius: 5px; background: #FBFBFC; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
+.fd-sheet img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.fd-sheet:nth-child(1) { left: 2%; transform: rotate(-6deg); top: 8px; }
+.fd-sheet:nth-child(2) { left: 27%; z-index: 1; }
+.fd-sheet:nth-child(3) { left: 52%; transform: rotate(5deg); top: 6px; }
+/* No boards yet: a couple of blank sheets. */
+.fd-sheets:empty::before, .fd-sheets:empty::after { content: ""; position: absolute; top: 10px; height: 80%; border-radius: 4px; background: #FBFBFC; box-shadow: 0 1px 2px rgba(0, 0, 0, .2); }
+.fd-sheets:empty::before { left: 8%; right: 18%; transform: rotate(-3deg); }
+.fd-sheets:empty::after { left: 18%; right: 8%; top: 14px; transform: rotate(2deg); }
+.fd-front { position: absolute; left: 0; right: 0; bottom: 0; height: 66%; z-index: 2; display: flex; align-items: flex-end; padding: 10px 12px;
+  border-radius: 6px 6px 8px 8px; background: var(--folder);
+  background-image: linear-gradient(170deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, .1));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35), 0 1px 1px rgba(0, 0, 0, .18), 3px 8px 14px -6px rgba(0, 0, 0, .4); }
+.fd-count { color: rgba(255, 255, 255, .95); font: 600 12px/1.25 var(--ui); text-shadow: 0 1px 1px rgba(0, 0, 0, .25); text-align: left;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.book-cover:hover .fd-sheet:nth-child(1), .book-cover:focus-visible .fd-sheet:nth-child(1) { transform: rotate(-9deg) translateY(-6px); }
+.book-cover:hover .fd-sheet:nth-child(2), .book-cover:focus-visible .fd-sheet:nth-child(2) { transform: translateY(-9px); }
+.book-cover:hover .fd-sheet:nth-child(3), .book-cover:focus-visible .fd-sheet:nth-child(3) { transform: rotate(8deg) translateY(-5px); }
+.fd-sheet { transition: transform .18s ease-out; }
+/* Something dragged over a folder: it lights up to take it. */
+.book.drop .fd-front { box-shadow: 0 0 0 3px var(--accent), 3px 8px 14px -6px rgba(0, 0, 0, .4); }
+
+/* The new-folder folder: just an outline and a plus. */
+.fd.fd-new { display: grid; place-items: center; margin-top: 0; border-radius: 6px 10px 8px 8px; border: 2px dashed color-mix(in srgb, var(--muted) 55%, transparent);
+  background: color-mix(in srgb, var(--surface) 55%, transparent); transition: border-color .15s, background .15s; height: calc(var(--nb-h) - 14px); margin-top: 14px; }
+.book-cover:hover .fd-new { border-color: var(--accent); background: var(--accent-soft); }
+.fd-new .pi { width: 40px; height: 40px; background: var(--muted); }
+.book-cover:hover .fd-new .pi { background: var(--accent); }
+
+/* Boards inside: square tiles with everything on the board in miniature. */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--card), 1fr)); gap: 26px 22px; }
+.card { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; text-align: center; }
+.card-cover { position: relative; display: grid; place-items: center; width: var(--card); aspect-ratio: 1; overflow: hidden; padding: 0; border: 0; border-radius: 14px;
+  background: var(--surface); color: var(--muted); cursor: pointer; box-shadow: 0 0 0 1px var(--btn-line), 0 2px 6px rgba(0, 0, 0, .08); transition: transform .15s ease-out, box-shadow .15s; }
+.card-cover:hover, .card-cover:focus-visible { transform: translateY(-3px); box-shadow: 0 0 0 1px var(--btn-line), 0 10px 22px -8px rgba(0, 0, 0, .3); }
+.card-cover img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.card-empty { padding: 0 16px; font-size: 12px; }
+.card-star { position: absolute; top: 8px; left: 10px; color: #F5A524; font-size: 16px; text-shadow: 0 1px 2px rgba(0, 0, 0, .25); }
+.card .book-name { margin-top: 10px; }
+.card-new { box-shadow: none; border: 2px dashed color-mix(in srgb, var(--muted) 55%, transparent); background: color-mix(in srgb, var(--surface) 55%, transparent); }
+.card-new:hover { border-color: var(--accent); background: var(--accent-soft); box-shadow: none; }
+.card-new .pi { width: 40px; height: 40px; background: var(--muted); }
+.card-new:hover .pi { background: var(--accent); }
+
+/* The path to the open folder. */
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 18px; font-size: 18px; }
+.crumbs a { padding: 2px 8px; border-radius: 8px; color: var(--muted); text-decoration: none; }
+.crumbs a:hover { background: var(--fmt-hover); color: var(--ink); }
+.crumbs a.drop { box-shadow: inset 0 0 0 2px var(--accent); background: var(--accent-soft); }
+.crumbs b { display: inline-flex; align-items: center; gap: 8px; padding: 2px 8px; font: 600 22px/1.3 var(--display); }
+.crumb-sep { color: var(--muted); }
+.crumb-dot { display: inline-block; width: 12px; height: 12px; border-radius: 4px; flex: none; }
+
+/* Nothing on the shelf yet. */
+.shelf-empty { max-width: 460px; margin: 40px auto 0; text-align: center; }
+.shelf-empty h2 { margin: 26px 0 8px; font: 600 20px/1.3 var(--display); }
+.shelf-empty p { margin: 0; color: var(--muted); }
+.shelf-empty .row { display: flex; gap: 10px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
+
+/* Dialogs: over a dimmed page, in the middle. */
+.shelf-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px; background: rgba(10, 14, 22, .35); }
+.shelf-dialog { width: min(460px, 100%); max-height: calc(100% - 32px); overflow: auto; padding: 22px; border-radius: 16px; background: var(--surface); box-shadow: 0 20px 50px rgba(0, 0, 0, .3); }
+.shelf-dialog h3 { margin: 0 0 14px; font: 600 18px/1.3 var(--ui); }
+.shelf-dialog p { margin: 0 0 14px; color: var(--muted); }
+.shelf-dialog .row { display: flex; gap: 9px; justify-content: flex-end; margin-top: 20px; }
+.shelf-input { width: 100%; height: 38px; padding: 0 12px; border: 0; border-radius: 8px; font: inherit; color: var(--ink); background: var(--bg); box-shadow: inset 0 0 0 1px var(--btn-line); outline: 0; }
+.shelf-input:focus { box-shadow: inset 0 0 0 2px var(--accent); outline: 0; }
+.shelf-error { margin-top: 6px; font-size: 12px; color: var(--danger); }
+
+.folder-edit { display: flex; gap: 22px; align-items: flex-start; }
+.folder-preview { --nb-w: 150px; --nb-h: 118px; flex: none; padding-top: 4px; }
+.folder-fields { flex: 1; min-width: 0; }
+.cover-label { margin: 16px 0 8px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.cover-colors { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .15); }
+.swatch.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
+@media (max-width: 480px) { .folder-edit { flex-direction: column; align-items: center; } .folder-fields { width: 100%; } }
+
+.move-list { display: flex; flex-direction: column; max-height: 50vh; overflow: auto; margin: 0 -6px; }
+.move-row { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border: 0; border-radius: 8px; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+.move-row:hover:not(:disabled) { background: var(--fmt-hover); }
+.move-row:disabled { color: var(--muted); opacity: .6; cursor: default; }
+.move-none { margin: 8px 12px 0 !important; font-size: 13px; }
+
+.pop.toast.shelf-toast { position: fixed; left: 50%; top: auto; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; z-index: 11; }
+.toast-undo { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; }
