@@ -26,6 +26,7 @@ import { Labs } from './labs/LabsLayer';
 import { useLabs } from './labs/labs';
 import { useFollowing } from './labs/presence';
 import { readJSON, readText, writeJSON, writeText } from './storage';
+import { useShelfTracking } from './shelf/track';
 
 /** Where a board copied into a new tab waits for it, followed by the new board's id. */
 const COPY_KEY = 'planx-copy:';
@@ -43,6 +44,12 @@ export function App({ boardId }: { boardId: string }) {
 
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => editor.mount(canvas.current!), [editor]);
+  // The board keeps its place on the start page's shelf (src/shelf) up to date.
+  useShelfTracking(boardId, board, canvas);
+  const toShelf = () => {
+    window.dispatchEvent(new Event('planx:leave'));
+    location.href = location.pathname;
+  };
 
   const ui = useSyncExternalStore(editor.subscribeUI, editor.getUI);
   useSyncExternalStore(board.subscribe, board.getVersion);
@@ -186,7 +193,8 @@ export function App({ boardId }: { boardId: string }) {
         onPointerMove={(e) => { if (!topSort.sorting) topBar.grip.onPointerMove(e); topSort.container.onPointerMove(e); }}
         onPointerLeave={topBar.grip.onPointerLeave}>
         {topSort.renderFit({
-          logo: <div className="logo" title="Plan — место, где строятся планы">Plan</div>,
+          // The logo leads back to the shelf of all boards.
+          logo: <button className="logo to-shelf" title="Все доски" aria-label="Все доски" onClick={toShelf}>Plan</button>,
           sep: <div className="sep" />,
           // The field is as wide as its text (the copy in data-text sizes it), up to 30 characters.
           title: (

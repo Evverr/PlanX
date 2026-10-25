@@ -80,3 +80,6 @@
 .paint-fill { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
 .paint-stroke { border: 2.5px solid; }
 .paint-fill.none, .paint-stroke.none { background: linear-gradient(135deg, transparent 44%, var(--danger) 44%, var(--danger) 56%, transparent 56%) !important; box-shadow: inset 0 0 0 1px var(--line); border: 0; }
+/* On a board, the logo is the way back to the shelf. */
+.logo.to-shelf { border: 0; background: none; padding: 0; color: inherit; cursor: pointer; }
+.logo.to-shelf:hover { color: var(--accent); }
