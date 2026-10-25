@@ -1,0 +1,151 @@
+/* The start page: boards as notebooks standing on wooden shelves (ShelfPage.tsx, Notebook.tsx). */
+.shelf-page {
+  --nb-w: 132px; --nb-h: calc(var(--nb-w) * 4 / 3);
+  /* One shelf row: a notebook, the plank under it, the name and the date. */
+  --row: calc(var(--nb-h) + 66px); --row-gap: 30px; --col-gap: 28px;
+  --plank-top: #E2CDAE; --plank: #C9A97F; --plank-edge: #A7845B; --plank-shade: rgba(80, 50, 20, .18);
+  position: fixed; inset: 0; overflow-y: auto; overflow-x: hidden;
+  background: radial-gradient(1200px 500px at 20% -10%, var(--grad-3), transparent), var(--bg);
+}
+:root[data-theme="dark"] .shelf-page {
+  --plank-top: #4A3D30; --plank: #3A2F25; --plank-edge: #2A221B; --plank-shade: rgba(0, 0, 0, .4);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .shelf-page { --plank-top: #4A3D30; --plank: #3A2F25; --plank-edge: #2A221B; --plank-shade: rgba(0, 0, 0, .4); }
+}
+@media (max-width: 560px) {
+  .shelf-page { --nb-w: 100px; --col-gap: 18px; --row-gap: 24px; }
+}
+
+/* Header: name, search, order, theme, and the two ways to add a board. */
+.shelf-head { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 20px;
+  padding: 18px max(16px, calc((100% - 1160px) / 2)); background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.shelf-brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.shelf-logo { font-family: "Inter", var(--ui); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; color: var(--accent); }
+.shelf-brand h1 { margin: 0; font: 600 22px/1.2 var(--display); letter-spacing: -0.01em; }
+.shelf-count { font-size: 13px; color: var(--muted); }
+.shelf-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.shelf-tools .ib { width: 34px; height: 34px; display: grid; place-items: center; border: 0; border-radius: 8px; background: none; cursor: pointer; }
+.shelf-tools .ib:hover { background: var(--fmt-hover); }
+.shelf-tools .ib .pi { width: 26px; height: 26px; }
+.shelf-page .btn { display: inline-flex; align-items: center; height: 34px; cursor: pointer; text-decoration: none; color: var(--btn-ink); white-space: nowrap; }
+.shelf-page .btn.primary { color: #fff; }
+.shelf-page .btn:disabled { opacity: .45; cursor: default; }
+.btn.primary.danger::before { background: var(--danger); }
+
+.shelf-search { display: flex; align-items: center; gap: 4px; height: 34px; padding: 0 8px 0 4px; border-radius: 8px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--btn-line); min-width: 220px; }
+.shelf-search:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
+.shelf-search .pi { width: 24px; height: 24px; background: var(--muted); }
+.shelf-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; color: var(--ink); }
+.shelf-search kbd { font: 12px/1 var(--ui); color: var(--muted); padding: 3px 6px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--btn-line); }
+.shelf-sort { height: 34px; padding: 0 8px; border: 0; border-radius: 8px; font: inherit; color: var(--ink); background: var(--surface); box-shadow: inset 0 0 0 1px var(--btn-line); cursor: pointer; }
+@media (max-width: 560px) {
+  .shelf-head { position: static; padding-top: 14px; padding-bottom: 14px; }
+  .shelf-search { flex: 1 1 100%; min-width: 0; }
+  .shelf-tools { width: 100%; }
+}
+
+.shelf-main { padding: 12px max(16px, calc((100% - 1160px) / 2)) 80px; }
+.shelf-title { margin: 26px 0 16px; font: 600 15px/1.2 var(--ui); color: var(--muted); letter-spacing: .02em; }
+.shelf-none { color: var(--muted); }
+
+/* The shelf: a grid of fixed rows, with a wooden plank drawn under each row's notebooks
+   (as the background, so a half-full row still has a whole plank). */
+.shelf { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--nb-w) + 16px), 1fr)); grid-auto-rows: var(--row);
+  gap: var(--row-gap) var(--col-gap); padding: 10px 14px 0; margin: 0 -14px;
+  background-image:
+    linear-gradient(to bottom, transparent calc(var(--nb-h) + 10px), var(--plank-top) calc(var(--nb-h) + 10px), var(--plank-top) calc(var(--nb-h) + 13px),
+      var(--plank) calc(var(--nb-h) + 13px), var(--plank) calc(var(--nb-h) + 22px), var(--plank-edge) calc(var(--nb-h) + 22px), var(--plank-edge) calc(var(--nb-h) + 24px),
+      var(--plank-shade) calc(var(--nb-h) + 24px), transparent calc(var(--nb-h) + 36px));
+  background-size: 100% calc(var(--row) + var(--row-gap)); background-repeat: repeat-y; border-radius: 4px; }
+.shelf.solo { width: calc(var(--nb-w) + 140px); margin: 0 auto; }
+
+.book { position: relative; display: flex; flex-direction: column; align-items: center; min-width: 0; text-align: center; }
+.book-cover { display: block; border: 0; padding: 0; background: none; cursor: pointer; color: inherit; transition: transform .18s ease-out; transform-origin: 50% 100%; }
+.book-cover:hover, .book-cover:focus-visible { transform: translateY(-6px) rotate(-1.5deg); }
+.book-cover:active { transform: translateY(-2px); }
+.book-name { margin-top: 30px; max-width: 100%; font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.book-meta { max-width: 100%; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* "…" over the notebook's corner: on hover, always on touch screens. */
+.book-more { position: absolute; top: 4px; right: calc(50% - var(--nb-w) / 2 + 2px); width: 30px; height: 30px; display: grid; place-items: center; padding: 0;
+  border: 0; border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); cursor: pointer; opacity: 0; transition: opacity .12s; z-index: 1; }
+.book-more .pi { width: 24px; height: 24px; }
+.book:hover .book-more, .book:focus-within .book-more, .book-more.on { opacity: 1; }
+@media (hover: none) { .book-more { opacity: .92; } }
+.book-menu { position: absolute; top: 38px; left: calc(50% + var(--nb-w) / 2 - 30px); z-index: 4; min-width: 210px; padding: 6px; text-align: left;
+  border-radius: 12px; background: var(--surface); box-shadow: 0 8px 24px rgba(0, 0, 0, .18), 0 0 0 1px var(--btn-line); }
+@media (max-width: 560px) { .book-menu { left: auto; right: 0; } }
+.book-menu a, .book-menu button { display: block; width: 100%; padding: 8px 10px; border: 0; border-radius: 7px; background: none; font: inherit; color: var(--menu-ink); text-align: left; text-decoration: none; cursor: pointer; }
+.book-menu a:hover, .book-menu button:hover { background: var(--fmt-hover); }
+.book-menu .danger { color: var(--danger); }
+.book-menu hr { margin: 4px 6px; border: 0; border-top: 1px solid var(--fmt-line); }
+
+/* The notebook: pages showing at the edge, a cover with a spine, label, band and maybe a window. */
+.nb { position: relative; display: block; width: var(--nb-w); height: var(--nb-h); }
+.nb-pages { position: absolute; inset: 3px -4px 3px 6px; border-radius: 3px 8px 8px 3px;
+  background: repeating-linear-gradient(to right, #FBF8F1 0 2px, #E3DED3 2px 3px); box-shadow: 1px 2px 3px rgba(0, 0, 0, .15); }
+.nb-body { position: absolute; inset: 0; overflow: hidden; border-radius: 4px 10px 10px 4px; background-color: var(--cover);
+  background-image: linear-gradient(105deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 40%, rgba(0, 0, 0, .08));
+  box-shadow: inset 9px 0 0 rgba(0, 0, 0, .18), inset 10px 0 0 rgba(255, 255, 255, .12), 0 1px 1px rgba(0, 0, 0, .2), 3px 8px 14px -6px rgba(0, 0, 0, .45); }
+.nb[data-pattern="dots"] .nb-body { background-image: radial-gradient(rgba(255, 255, 255, .22) 1px, transparent 1.6px), linear-gradient(105deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 40%, rgba(0, 0, 0, .08));
+  background-size: 9px 9px, auto; }
+.nb[data-pattern="lines"] .nb-body { background-image: repeating-linear-gradient(to bottom, transparent 0 9px, rgba(255, 255, 255, .18) 9px 10px), linear-gradient(105deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 40%, rgba(0, 0, 0, .08)); }
+.nb[data-pattern="grid"] .nb-body { background-image: linear-gradient(rgba(255, 255, 255, .16) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .16) 1px, transparent 1px),
+  linear-gradient(105deg, rgba(255, 255, 255, .16), rgba(255, 255, 255, 0) 40%, rgba(0, 0, 0, .08));
+  background-size: 10px 10px, 10px 10px, auto; }
+.nb-label { position: absolute; left: 22%; right: 16%; top: 22%; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  padding: 7px 8px; border-radius: 4px; background: #FBF8F1; color: #2B2B2B; font: 600 11.5px/1.25 var(--ui); text-align: center; word-break: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .2); }
+.nb.peeking .nb-label { top: auto; bottom: 10%; -webkit-line-clamp: 2; }
+.nb-window { position: absolute; left: 18%; right: 12%; top: 9%; height: 46%; overflow: hidden; border-radius: 6px; background: #fff; box-shadow: inset 0 0 0 3px #FBF8F1, 0 1px 2px rgba(0, 0, 0, .25); }
+.nb-window img { width: 100%; height: 100%; object-fit: cover; display: block; padding: 3px; box-sizing: border-box; border-radius: 6px; }
+.nb-band { position: absolute; top: 0; bottom: 0; right: 9%; width: 5px; background: rgba(0, 0, 0, .3); box-shadow: 1px 0 0 rgba(255, 255, 255, .12); }
+.nb-ribbon { position: absolute; top: -2px; left: 24%; width: 12px; height: 28px; background: #E5484D;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%); }
+@media (max-width: 560px) { .nb-label { font-size: 10px; padding: 5px; } }
+
+/* The new-board notebook: just an outline and a plus. */
+.nb.nb-new { display: grid; place-items: center; border-radius: 4px 10px 10px 4px; border: 2px dashed color-mix(in srgb, var(--muted) 55%, transparent);
+  background: color-mix(in srgb, var(--surface) 55%, transparent); transition: border-color .15s, background .15s; }
+.new-book:hover .nb-new { border-color: var(--accent); background: var(--accent-soft); }
+.nb-new .pi { width: 40px; height: 40px; background: var(--muted); }
+.new-book:hover .nb-new .pi { background: var(--accent); }
+
+/* Nothing on the shelf yet. */
+.shelf-empty { max-width: 460px; margin: 40px auto 0; text-align: center; }
+.shelf-empty h2 { margin: 26px 0 8px; font: 600 20px/1.3 var(--display); }
+.shelf-empty p { margin: 0; color: var(--muted); }
+.shelf-empty .row { display: flex; gap: 10px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
+
+/* Dialogs: over a dimmed page, in the middle. */
+.shelf-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px; background: rgba(10, 14, 22, .35); }
+.shelf-dialog { width: min(420px, 100%); max-height: calc(100% - 32px); overflow: auto; padding: 22px; border-radius: 16px; background: var(--surface); box-shadow: 0 20px 50px rgba(0, 0, 0, .3); }
+.shelf-dialog.wide { width: min(560px, 100%); }
+.shelf-dialog h3 { margin: 0 0 14px; font: 600 18px/1.3 var(--ui); }
+.shelf-dialog p { margin: 0 0 14px; color: var(--muted); }
+.shelf-dialog .row { display: flex; gap: 9px; justify-content: flex-end; margin-top: 20px; }
+.shelf-input { width: 100%; height: 38px; padding: 0 12px; border: 0; border-radius: 8px; font: inherit; color: var(--ink); background: var(--bg); box-shadow: inset 0 0 0 1px var(--btn-line); outline: 0; }
+.shelf-input:focus { box-shadow: inset 0 0 0 2px var(--accent); outline: 0; }
+.shelf-error { margin-top: 6px; font-size: 12px; color: var(--danger); }
+
+.cover-picker { display: flex; gap: 24px; margin-top: 18px; align-items: flex-start; }
+.cover-preview { --nb-w: 120px; --nb-h: 160px; flex: none; padding: 6px 10px 14px; }
+.cover-options { flex: 1; min-width: 0; }
+.cover-label { margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.cover-label:not(:first-child) { margin-top: 16px; }
+.cover-colors { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .15); }
+.swatch.on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); }
+.cover-patterns { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg { height: 30px; padding: 0 10px; border: 0; border-radius: 7px; background: none; font: inherit; font-size: 13px; color: var(--ink); cursor: pointer; box-shadow: inset 0 0 0 1px var(--btn-line); }
+.seg.on { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.cover-peek { display: flex; align-items: center; gap: 8px; margin-top: 16px; font-size: 13px; cursor: pointer; }
+.cover-peek:has(input:disabled) { color: var(--muted); cursor: default; }
+@media (max-width: 480px) {
+  .cover-picker { flex-direction: column; align-items: center; }
+}
+
+.shelf-toast { position: fixed; left: 50%; top: auto; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; z-index: 11; }
+.toast-undo { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; }
