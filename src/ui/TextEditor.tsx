@@ -14,10 +14,6 @@ import { colsOf, rowsOf } from '../model/table';
 export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const done = useRef(false);
-  // A mind map node opened for typing as it was made, being typed in for the first time.
-  const fresh = useRef(editor.justMade === item.id);
-  // Only this once: opened again later, it's like any other.
-  useLayoutEffect(() => { if (fresh.current) editor.justMade = null; }, [editor]);
   const id = item.id;
 
   const commit = () => {
@@ -138,19 +134,15 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           if (next < 0 || next >= colsOf(t).length * rowsOf(t).length) return;
           commit();
           editor.startEditing(id, next);
-        } else if (item.type === 'mind' && e.key === 'Tab' && fresh.current && item.parent) {
-          // A node being typed in for the first time: Tab goes on typing in a new one after it (Shift+Tab,
-          // before it), and so on, one after another.
-          e.preventDefault();
-          commit();
-          editor.addMindNode(id, e.shiftKey ? 'above' : 'below');
         } else if (item.type === 'mind' && e.key === 'Tab') {
           // In a mind map, Tab goes on typing in the next branch of the same parent (Shift+Tab, the one
-          // before), round to the first past the last; Enter starts a new line.
+          // before), round to the first past the last; a branch alone there gets a second one after it
+          // (before it), typed in at once. Enter starts a new line.
           e.preventDefault();
           const next = siblingOf(id, editor.board.list(), e.shiftKey ? -1 : 1);
-          if (!next) return;
+          if (!next && !item.parent) return;
           commit();
+          if (!next) { editor.addMindNode(id, e.shiftKey ? 'above' : 'below'); return; }
           editor.setSelection([next]);
           editor.startEditing(next, null, 'end');
         }
