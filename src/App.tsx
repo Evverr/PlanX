@@ -22,7 +22,7 @@ import { BoardMenu } from './ui/BoardMenu';
 import { resetPanels, savePanels } from './ui/panels/store';
 import { useBar } from './ui/panels/bar';
 import type { Item, Link } from './model/types';
-import { Labs } from './labs/Labs';
+import { Labs } from './labs/LabsLayer';
 import { useLabs } from './labs/labs';
 import { useFollowing } from './labs/presence';
 import { readJSON, readText, writeJSON, writeText } from './storage';
