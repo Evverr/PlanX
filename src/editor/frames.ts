@@ -35,10 +35,14 @@ export function carried(board: Board, sel: Item[], items: Item[]): Map<string, P
   return orig;
 }
 
-/** Of these items, everything folded frames hold (frames in them, and all those hold, too). */
+/** Whether an item hides what it holds: a folded frame, a mind map node with its branches folded away. */
+const folds = (i: Item) => (i.type === 'frame' && !!i.fold) || (i.type === 'mind' && !!i.collapsed);
+
+/** Of these items, everything folded frames hold (frames in them, and all those hold, too) and all
+ *  that grows from folded mind map nodes. */
 export function hiddenIn(board: Board, items: Item[]): Set<string> {
   const out = new Set<string>();
-  for (const f of items.filter((i) => i.type === 'frame' && i.fold)) {
+  for (const f of items.filter(folds)) {
     for (const id of carried(board, [f], items).keys()) if (id !== f.id) out.add(id);
   }
   return out;
@@ -46,15 +50,15 @@ export function hiddenIn(board: Board, items: Item[]): Set<string> {
 
 /**
  * The links as they're seen: one whose end is hidden in a folded frame goes to that frame's bar
- * instead (the outermost one in sight, for frames in frames), and one with both ends in the same
- * folded frame isn't seen at all.
+ * instead (the outermost one in sight, for frames in frames), one to a node folded away in a mind map
+ * to the folded node, and one with both ends hidden in the same place isn't seen at all.
  */
 export function linksIn(board: Board, items: Item[], hidden: Set<string>): Link[] {
   const links = board.linkList();
   if (!hidden.size) return links;
   const stand = new Map<string, string>();
   for (const f of items) {
-    if (f.type !== 'frame' || !f.fold || hidden.has(f.id)) continue;
+    if (!folds(f) || hidden.has(f.id)) continue;
     for (const id of carried(board, [f], items).keys()) if (id !== f.id) stand.set(id, f.id);
   }
   // A curved link meets the bar on its side towards the other end.

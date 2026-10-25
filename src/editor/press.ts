@@ -2,7 +2,7 @@ import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
 import { center, hitItem, hitLink, onAudioButton, onTaskBox } from '../canvas/geometry';
 import { toggleAudio } from '../canvas/audio';
-import { dotAt, frameButtonUnder, onHandle, onRotate, plusAt } from './hover';
+import { dotAt, foldBadgeAt, frameButtonUnder, onHandle, onRotate, plusAt } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -37,9 +37,11 @@ export function press(ed: Editor, e: PointerEvent): void {
   if (link) hit = null;
 
   // A finger on the empty board moves the board, but not on the controls of what's selected (its
-  // resize handle, link dots, turning corner, mind map buttons) or on a table's line.
+  // resize handle, link dots, turning corner, mind map buttons), on a folded mind map node's count
+  // or on a table's line.
   const picked = ed.selection.size === 1 ? board.get([...ed.selection][0]) : undefined;
-  const onControl = !!picked && !ed.editingId && !isLocked(picked) && (onHandle(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!plusAt(ed, picked, w));
+  const onControl = (!!picked && !ed.editingId && !isLocked(picked) && (onHandle(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!plusAt(ed, picked, w)))
+    || !!foldBadgeAt(ed, w);
   const empty = ed.tool === 'select' && e.button === 0 && !ed.spaceDown && !e.shiftKey && !hit && !link && !onControl
     && !grabbableLine(ed, w, hit, e.pointerType) && !ed.editingId;
   // Pressed twice on the empty board: everything on it comes into view, as with the "show all" button.
@@ -104,7 +106,14 @@ export function press(ed: Editor, e: PointerEvent): void {
   const plus = single && plusAt(ed, single, w);
   if (single && plus) {
     if (plus === 'move') ed.gesture = { type: 'mindMove', id: single.id, from: w, to: w, target: null };
+    else if (plus === 'fold') ed.setCollapsed(single.id, true);
     else ed.addMindNode(single.id, plus, true);
+    return;
+  }
+  // A folded mind map node's count unfolds it.
+  const unfold = e.shiftKey ? null : foldBadgeAt(ed, w);
+  if (unfold) {
+    ed.setCollapsed(unfold, false);
     return;
   }
   const dot = single && !ed.editingId && !isLocked(single) ? dotAt(ed, single, w) : null;

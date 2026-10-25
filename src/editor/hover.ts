@@ -3,7 +3,7 @@ import { ROTATABLE } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { hitItem, hitLink, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, HANDLE } from '../canvas/renderer';
-import { mindButtons, type MindButton } from '../model/mind';
+import { foldBadge, mindButtons, type MindButton } from '../model/mind';
 import { frameButtonAt } from './frames';
 import { rotateCursor } from './cursors';
 import { restOn, sameLine, tableLineAt } from './tables';
@@ -23,7 +23,20 @@ export function onHandle(ed: Editor, it: Item, w: Point): boolean {
 /** Which of a mind map node's buttons is under the point, once they're showing. */
 export function plusAt(ed: Editor, it: Item, w: Point): MindButton | null {
   if (it.type !== 'mind' || ed.plusFade() === 0) return null;
-  return mindButtons(it, (id) => ed.board.get(id), ed.cam.z).find((b) => Math.hypot(w.x - b.x, w.y - b.y) <= Math.max(b.r * 1.5, ed.reach(0)))?.kind ?? null;
+  const branches = ed.board.list().some((i) => i.type === 'mind' && i.parent === it.id);
+  return mindButtons(it, (id) => ed.board.get(id), ed.cam.z, branches).find((b) => Math.hypot(w.x - b.x, w.y - b.y) <= Math.max(b.r * 1.5, ed.reach(0)))?.kind ?? null;
+}
+
+/** The folded mind map node whose count is under the point, picked or not. */
+export function foldBadgeAt(ed: Editor, w: Point): string | null {
+  const pad = ed.reach(4);
+  for (const [id, n] of ed.folded()) {
+    const it = ed.board.get(id);
+    if (!it || ed.hidden().has(id)) continue;
+    const b = foldBadge(it, (k) => ed.board.get(k), ed.cam.z, n);
+    if (Math.abs(w.x - b.x) <= b.w / 2 + pad && Math.abs(w.y - b.y) <= b.h / 2 + pad) return id;
+  }
+  return null;
 }
 
 /** Whether the point is just outside the item's top right corner, where it is turned. */
@@ -63,7 +76,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if (!sameLine(line, ed.hotLine)) { ed.hotLine = line; ed.requestRender(); }
   const plus = picked ? plusAt(ed, picked, w) : null;
   if (plus !== ed.hotPlus) { ed.hotPlus = plus; ed.requestRender(); }
-  if (plus || frameButtonUnder(ed, w)) cursor = 'pointer';
+  if (plus || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (dot) cursor = 'crosshair';
   else if (single && onHandle(ed, single, w)) cursor = 'nwse-resize';
   else if (single && onRotate(ed, single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);

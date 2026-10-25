@@ -129,7 +129,7 @@ export class Editor {
   private plusTimer = 0;
   /** What's in sight, worked out once for each change of the board (it's asked for on every move
    *  of the pointer and every frame drawn). */
-  private sight: { version: number; hidden: Set<string>; shown: Item[]; links: Link[] } | null = null;
+  private sight: { version: number; hidden: Set<string>; folded: Map<string, number>; shown: Item[]; links: Link[] } | null = null;
   /** Steps undone along with the board's though they aren't on it (the panels put back as by
    *  default), each at the place in the board's history it was taken. */
   private outside: Array<{ undo: () => void; depth: number }> = [];
@@ -295,6 +295,7 @@ export class Editor {
       hotDot: this.hotDot,
       hotPlus: this.hotPlus,
       plusFade,
+      folded: this.folded(),
       mindMove: g?.type === 'mindMove' ? { from: g.from, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null } : null,
       tableLines: this.hotLine ? [...this.pickedLines, this.hotLine] : this.pickedLines,
       editingCell: this.editingCell,
@@ -824,15 +825,20 @@ export class Editor {
     const version = this.board.getVersion();
     if (this.sight?.version !== version) {
       const items = this.board.list(), hidden = hiddenIn(this.board, items);
-      this.sight = { version, hidden, shown: hidden.size ? items.filter((i) => !hidden.has(i.id)) : items, links: linksIn(this.board, items, hidden) };
+      // How many nodes each folded mind map node hides.
+      const folded = new Map(items.filter((i) => i.type === 'mind' && i.collapsed).map((i) => [i.id, descendants([i.id], items).length]));
+      this.sight = { version, hidden, folded, shown: hidden.size ? items.filter((i) => !hidden.has(i.id)) : items, links: linksIn(this.board, items, hidden) };
     }
     return this.sight;
   }
 
-  /** Shared: everything folded frames hold, out of sight. */
+  /** Shared: everything folded frames hold and folded mind map nodes hide, out of sight. */
   hidden(): Set<string> { return this.inSight().hidden; }
 
-  /** The items in sight: all but what folded frames hold. */
+  /** Shared: how many nodes each folded mind map node hides. */
+  folded(): Map<string, number> { return this.inSight().folded; }
+
+  /** The items in sight: all but what folded frames hold and folded mind map nodes hide. */
   shown(): Item[] { return this.inSight().shown; }
 
   /** Shared: the links as they're seen, those into folded frames led to their bars. */
@@ -882,6 +888,18 @@ export class Editor {
       this.setSelection([...this.selection].filter((s) => !hidden.has(s)));
     } else {
       this.board.update(id, { w: f.fold!.w, h: f.fold!.h, fold: undefined });
+    }
+    this.requestRender();
+  }
+
+  /** Folds away all that grows from a mind map node, or unfolds it again. */
+  setCollapsed(id: string, on: boolean): void {
+    const it = this.board.get(id);
+    if (it?.type !== 'mind' || !!it.collapsed === on) return;
+    this.board.update(id, { collapsed: on || undefined });
+    if (on) {
+      const hidden = this.hidden();
+      this.setSelection([...this.selection].filter((s) => !hidden.has(s)));
     }
     this.requestRender();
   }

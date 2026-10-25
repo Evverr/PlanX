@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addChild, balance, branchCurve, canMoveTo, childPlace, descendants, insertBeside, makeRoom, mindButtons, mindDepth, moveBranch } from '../src/model/mind';
+import { addChild, balance, branchCurve, canMoveTo, childPlace, descendants, foldBadge, insertBeside, makeRoom, mindButtons, mindDepth, moveBranch } from '../src/model/mind';
 import type { Item } from '../src/model/types';
 
 const node = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item =>
@@ -162,5 +162,29 @@ describe('mind map: branches led down from the central topic', () => {
     const moves = moveBranch('a', 'r', [r, a, a1], 'down');
     expect(moves.get('a')).toEqual({ x: 0, y: 88, down: true });
     expect(moves.get('a1')).toEqual({ x: 0, y: 176, down: true });
+  });
+});
+
+describe('mind map: folding a node\'s branches away', () => {
+  const r = node('r', 0, 0), a = node('a', 160, 0, { parent: 'r' }), l = node('l', -160, 0, { parent: 'r' }), d = node('d', 0, 88, { parent: 'r', down: true });
+  const all = [r, a, l, d];
+  const get = (id: string) => all.find((i) => i.id === id);
+
+  it('a node with branches has "−" where its "+" for a branch was; a folded one neither', () => {
+    expect(mindButtons(a, get, 1).map((b) => b.kind)).toEqual(['child', 'above', 'below', 'move']);
+    expect(mindButtons(a, get, 1, true).map((b) => b.kind)).toEqual(['fold', 'above', 'below', 'move']);
+    expect(mindButtons({ ...a, collapsed: true }, get, 1, true).map((b) => b.kind)).toEqual(['above', 'below', 'move']);
+    // The central topic keeps its "+"s.
+    expect(mindButtons(r, get, 1, true).map((b) => b.kind)).toEqual(['child', 'down']);
+  });
+
+  it('a folded node\'s count sits 6 off its far side, as wide as the number needs', () => {
+    // Right of a node on the right, left of one on the left, under one led down.
+    expect(foldBadge(a, get, 1, 3)).toEqual({ x: 275, y: 20, w: 18, h: 18 });
+    expect(foldBadge(l, get, 1, 3)).toEqual({ x: -175, y: 20, w: 18, h: 18 });
+    expect(foldBadge(d, get, 1, 3)).toEqual({ x: 50, y: 143, w: 18, h: 18 });
+    expect(foldBadge(a, get, 1, 120).w).toBe(28);
+    // In screen pixels whatever the zoom.
+    expect(foldBadge(a, get, 2, 3)).toEqual({ x: 267.5, y: 20, w: 9, h: 9 });
   });
 });

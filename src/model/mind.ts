@@ -332,34 +332,53 @@ export function moveBranch(id: string, to: string, items: Item[], toward: 1 | -1
 const BUTTON_OFF = 11;
 
 /**
- * The buttons round a selected node: "+" on its far side for a branch of its own; "+" before and
- * after it (above and below beside its parent, left and right under it) for a parallel branch; and
- * on the side of its parent a circle with an arrow, dragged onto another node to move the branch
- * there. The central topic has "+" to the right and "+" below (a branch led down).
+ * The buttons round a selected node: "+" on its far side for a branch of its own, or "−" there once it
+ * has branches, folding them away (all that grows from it); "+" before and after it (above and below
+ * beside its parent, left and right under it) for a parallel branch; and on the side of its parent a
+ * circle with an arrow, dragged onto another node to move the branch there. The central topic has "+"
+ * to the right and "+" below (a branch led down). A folded node has its count there instead (see foldBadge).
  */
-export type MindButton = 'child' | 'down' | 'above' | 'below' | 'move';
+export type MindButton = 'child' | 'fold' | 'down' | 'above' | 'below' | 'move';
 
-/** Where each of a node's buttons is and its radius, sized in screen pixels whatever the zoom. */
-export function mindButtons(it: Item, get: Get, zoom: number): Array<Point & { kind: MindButton; r: number }> {
+/** Where a node's own branches go out from: its far side from its parent, in screen pixels off it. */
+function farSpot(it: Item, up: Item | undefined, zoom: number): Point {
+  const off = BUTTON_OFF / zoom, way = up ? mindWay(it, up) : 'right';
+  if (way === 'down') return { x: it.x + it.w / 2, y: it.y + it.h + off };
+  return { x: way === 'right' ? it.x + it.w + off : it.x - off, y: it.y + it.h / 2 };
+}
+
+/** Where each of a node's buttons is and its radius, sized in screen pixels whatever the zoom;
+ *  `branches`: whether it has any. */
+export function mindButtons(it: Item, get: Get, zoom: number, branches = false): Array<Point & { kind: MindButton; r: number }> {
   const up = it.parent ? get(it.parent) : undefined;
   const off = BUTTON_OFF / zoom, r = 9 / zoom, cx = it.x + it.w / 2, cy = it.y + it.h / 2;
-  if (!up) return [{ kind: 'child', x: it.x + it.w + off, y: cy, r }, { kind: 'down', x: cx, y: it.y + it.h + off, r }];
-  const way = mindWay(it, up);
-  if (way === 'down') {
+  if (!up) return [{ kind: 'child', ...farSpot(it, up, zoom), r }, { kind: 'down', x: cx, y: it.y + it.h + off, r }];
+  const own = it.collapsed ? [] : [{ kind: branches ? 'fold' as const : 'child' as const, ...farSpot(it, up, zoom), r }];
+  if (mindWay(it, up) === 'down') {
     return [
-      { kind: 'child', x: cx, y: it.y + it.h + off, r },
+      ...own,
       { kind: 'above', x: it.x - off, y: cy, r },
       { kind: 'below', x: it.x + it.w + off, y: cy, r },
       { kind: 'move', x: cx, y: it.y - off, r },
     ];
   }
-  const right = way === 'right';
+  const right = mindWay(it, up) === 'right';
   return [
-    { kind: 'child', x: right ? it.x + it.w + off : it.x - off, y: cy, r },
+    ...own,
     { kind: 'above', x: cx, y: it.y - off, r },
     { kind: 'below', x: cx, y: it.y + it.h + off, r },
     { kind: 'move', x: right ? it.x - off : it.x + it.w + off, y: cy, r },
   ];
+}
+
+/** A folded node's count of what it hides, where its "−" was, always in sight: a pill as tall as a
+ *  button and as wide as the number needs, 6 off the node's far side, a stub of branch leading to it
+ *  (its middle, width and height, in screen pixels whatever the zoom). */
+export function foldBadge(it: Item, get: Get, zoom: number, count: number): Point & { w: number; h: number } {
+  const up = it.parent ? get(it.parent) : undefined, way = up ? mindWay(it, up) : 'right';
+  const w = Math.max(18, String(count).length * 6 + 10) / zoom, h = 18 / zoom, gap = 6 / zoom;
+  if (way === 'down') return { x: it.x + it.w / 2, y: it.y + it.h + gap + h / 2, w, h };
+  return { x: way === 'right' ? it.x + it.w + gap + w / 2 : it.x - gap - w / 2, y: it.y + it.h / 2, w, h };
 }
 
 /** The connecting branch from a parent to a child: from the parent's facing side to the child's,
