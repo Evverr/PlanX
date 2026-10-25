@@ -120,8 +120,10 @@ export function App({ boardId }: { boardId: string }) {
   };
   // Opened that way, the board takes the copy and the name from the address, which is then tidied away.
   useEffect(() => {
-    const params = new URLSearchParams(location.search), name = params.get('title'), key = `${COPY_KEY}${params.get('board')}`;
-    const copy = readJSON<{ items: Item[]; links: Link[] }>(key);
+    const params = new URLSearchParams(location.search), key = `${COPY_KEY}${params.get('board')}`;
+    // A template from the shelf (shelf/templates.ts) brings its name along with what's on it.
+    const copy = readJSON<{ items: Item[]; links: Link[]; title?: string }>(key);
+    const name = params.get('title') ?? copy?.title;
     if (copy) {
       writeText(key, null);
       board.replaceAll(copy.items, copy.links);
