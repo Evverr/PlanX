@@ -824,7 +824,11 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
           ctx.lineCap = 'round';
           ctx.lineJoin = 'round';
           ctx.beginPath();
-          if (b.kind === 'move') {
+          if (b.kind === 'move' && b.y < it.y) {
+            // Over a node led down: an arrow pointing up, away from it.
+            ctx.moveTo(b.x, b.y + r * 0.5); ctx.lineTo(b.x, b.y - r * 0.5);
+            ctx.moveTo(b.x - r * 0.4, b.y - r * 0.1); ctx.lineTo(b.x, b.y - r * 0.5); ctx.lineTo(b.x + r * 0.4, b.y - r * 0.1);
+          } else if (b.kind === 'move') {
             // An arrow pointing away from the node.
             const d = b.x < it.x ? -1 : 1;
             ctx.moveTo(b.x - d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.5, b.y);

@@ -12,8 +12,6 @@ export const MIND_COLOR = '#3E7BFA';
 /** Colours a node can be given; only that node takes it (and the branch to it), not what grows from it. */
 export const MIND_PALETTE = ['#3E7BFA', '#0C8599', '#30A46C', '#E8892B', '#E5484D', '#D6409F', '#8E4EC6', '#5B6170'];
 
-/** A node's colour: its own, or the blue. */
-
 /** A '#rrggbb' colour halfway to white. */
 export function lighter(hex: string): string {
   const n = parseInt(hex.slice(1), 16), mix = (sh: number) => Math.round(((n >> sh) & 255) / 2 + 127.5);
@@ -66,180 +64,215 @@ export function descendants(ids: Iterable<string>, items: Item[]): string[] {
   return out;
 }
 
-/** Which way a node grows from its parent: 1 to the right, -1 to the left. */
+/** Which side of its parent a node is on: 1 to the right, -1 to the left. */
 export const mindSide = (it: Item, parent: Item): 1 | -1 => (it.x + it.w / 2 >= parent.x + parent.w / 2 ? 1 : -1);
 
-/** Gaps between a parent and its children, and between siblings. */
-export const MIND_GAP_X = 60, MIND_GAP_Y = 16;
+/** Which way a node grows from its parent: to the right, to the left, or down (a branch led down from
+ *  the central topic, and all that grows from it, has `down`). */
+export type Way = 'right' | 'left' | 'down';
+export const mindWay = (it: Item, parent: Item): Way => (it.down ? 'down' : mindSide(it, parent) > 0 ? 'right' : 'left');
+
+/** Gaps: from a parent to its branches beside it, and between those (one under another); from a
+ *  parent to its branches under it, and between those (side by side). */
+export const MIND_GAP_X = 60, MIND_GAP_Y = 16, MIND_GAP_DOWN = 48, MIND_GAP_ROW = 24;
+
+/** The axis branches growing that way line up along (y beside their parent, x under it), their size
+ *  along it and the gap between them. */
+const axis = (way: Way) => (way === 'down' ? { at: 'x', size: 'w', gap: MIND_GAP_ROW } as const : { at: 'y', size: 'h', gap: MIND_GAP_Y } as const);
+type Axis = ReturnType<typeof axis>;
+const lo = (b: Item[], a: Axis) => Math.min(...b.map((n) => n[a.at]));
+const hi = (b: Item[], a: Axis) => Math.max(...b.map((n) => n[a.at] + n[a.size]));
+const middle = (n: Item, a: Axis) => n[a.at] + n[a.size] / 2;
+const shift = (b: Item[], a: Axis, d: number) => b.forEach((n) => { n[a.at] += d; });
+
+/** Copies of the items to lay out, found by id, and a node with everything growing from it. */
+function working(items: Item[]) {
+  const all = items.map((i) => ({ ...i })), byId = new Map(all.map((i) => [i.id, i]));
+  const block = (k: Item) => [k, ...descendants([k.id], all).map((d) => byId.get(d)!)];
+  return { all, byId, block };
+}
+const branchesOf = (p: Item, way: Way, all: Item[]) => all.filter((i) => i.type === 'mind' && i.parent === p.id && mindWay(i, p) === way);
+/** The way a new branch of `parent` grows: its parent's own way, or for a central topic, `toward`. */
+const wayFrom = (parent: Item, get: Get, toward?: 1 | -1 | 'down'): Way => {
+  const up = parent.parent ? get(parent.parent) : undefined;
+  return up ? mindWay(parent, up) : toward === 'down' ? 'down' : toward === -1 ? 'left' : 'right';
+};
 
 /**
- * Where a new node of size w × h goes under `parent`: beside it, on the parent's own side of the
- * centre, below everything branching from the parent there (level with the parent when it's the
- * first), and further down still while that spot is taken by another node. `toward` picks the side
- * of a central topic, which has both.
+ * Where a new node of size w × h goes under `parent`: out from it the way its branches grow there
+ * (beside it on its side of the centre, or under it), after everything branching from it that way
+ * (level with it when it's the first), and further along still while that spot is taken by another
+ * node. `toward` picks the way for a central topic, which has all three.
  */
-export function childPlace(parent: Item, items: Item[], get: Get, w: number, h: number, toward?: 1 | -1): Point {
-  const up = parent.parent ? get(parent.parent) : undefined;
-  const side = up ? mindSide(parent, up) : toward ?? 1;
-  const x = side > 0 ? parent.x + parent.w + MIND_GAP_X : parent.x - MIND_GAP_X - w;
-  const kids = items.filter((i) => i.type === 'mind' && i.parent === parent.id && mindSide(i, parent) === side);
-  const below = kids.flatMap((k) => [k, ...descendants([k.id], items).map(get)]).filter((i): i is Item => !!i);
-  let y = below.length ? Math.max(...below.map((k) => k.y + k.h)) + MIND_GAP_Y : parent.y + parent.h / 2 - h / 2;
-  const nodes = items.filter((i) => i.type === 'mind');
+export function childPlace(parent: Item, items: Item[], get: Get, w: number, h: number, toward?: 1 | -1 | 'down'): Point {
+  const way = wayFrom(parent, get, toward), a = axis(way);
+  const kids = items.filter((i) => i.type === 'mind' && i.parent === parent.id && mindWay(i, parent) === way);
+  const placed = kids.flatMap((k) => [k, ...descendants([k.id], items).map(get)]).filter((i): i is Item => !!i);
+  const at = { x: 0, y: 0 };
+  if (way === 'down') at.y = parent.y + parent.h + MIND_GAP_DOWN;
+  else at.x = way === 'right' ? parent.x + parent.w + MIND_GAP_X : parent.x - MIND_GAP_X - w;
+  at[a.at] = placed.length ? hi(placed, a) + a.gap : middle(parent, a) - (a.at === 'x' ? w : h) / 2;
+  const nodes = items.filter((i) => i.type === 'mind'), g = a.gap / 2;
   for (let tries = 0; tries < 100; tries++) {
-    const hit = nodes.find((n) => n.x < x + w && n.x + n.w > x && n.y < y + h + MIND_GAP_Y / 2 && n.y + n.h + MIND_GAP_Y / 2 > y);
+    const hit = a.at === 'y'
+      ? nodes.find((n) => n.x < at.x + w && n.x + n.w > at.x && n.y < at.y + h + g && n.y + n.h + g > at.y)
+      : nodes.find((n) => n.y < at.y + h && n.y + n.h > at.y && n.x < at.x + w + g && n.x + n.w + g > at.x);
     if (!hit) break;
-    y = hit.y + hit.h + MIND_GAP_Y;
+    at[a.at] = hit[a.at] + hit[a.size] + a.gap;
   }
-  return { x, y };
+  return at;
+}
+
+/** Lines up `blocks` (each a node with what grows from it) one after another along the axis, centred on `on`. */
+function lineUp(blocks: Item[][], a: Axis, on: number): void {
+  const total = blocks.reduce((t, b) => t + hi(b, a) - lo(b, a), 0) + a.gap * (blocks.length - 1);
+  let at = on - total / 2;
+  for (const b of blocks) {
+    const d = at - lo(b, a);
+    shift(b, a, d);
+    at += hi(b, a) - lo(b, a) + a.gap;
+  }
 }
 
 /**
- * New y positions (by id) after laying out the branches along the way from node `id` to the centre:
- * at each node on the way, its branches on that side stack one under another, each with everything
- * growing from it, centred on the node.
+ * New places (by id) after laying out the branches along the way from node `id` to the centre: at
+ * each node on the way, its branches growing the same way line up one after another (one under
+ * another beside it, side by side under it), each with everything growing from it, centred on it.
  */
-export function balance(id: string, items: Item[]): Map<string, number> {
-  const all = items.map((i) => ({ ...i })), byId = new Map(all.map((i) => [i.id, i]));
+export function balance(id: string, items: Item[]): Map<string, Point> {
+  const { all, byId, block } = working(items);
   let cur = byId.get(id);
   for (let guard = 0; cur?.parent && guard < 50; guard++) {
     const p: Item | undefined = byId.get(cur.parent);
     if (!p) break;
-    const side = mindSide(cur, p), mid = (i: Item) => i.y + i.h / 2;
-    const kids = all.filter((i) => i.type === 'mind' && i.parent === p.id && mindSide(i, p) === side).sort((a, b) => mid(a) - mid(b));
-    const blocks = kids.map((k) => {
-      const sub = [k, ...descendants([k.id], all).map((d) => byId.get(d)!)];
-      return { sub, top: Math.min(...sub.map((n) => n.y)), bottom: Math.max(...sub.map((n) => n.y + n.h)) };
-    });
-    const total = blocks.reduce((t, b) => t + b.bottom - b.top, 0) + MIND_GAP_Y * (blocks.length - 1);
-    let y = mid(p) - total / 2;
-    for (const b of blocks) {
-      const dy = y - b.top;
-      b.sub.forEach((n) => { n.y += dy; });
-      y += b.bottom - b.top + MIND_GAP_Y;
-    }
+    const way = mindWay(cur, p), a = axis(way);
+    lineUp(branchesOf(p, way, all).sort((m, n) => middle(m, a) - middle(n, a)).map(block), a, middle(p, a));
     cur = p;
   }
-  const out = new Map<string, number>();
-  for (const i of items) {
-    const y = Math.round(byId.get(i.id)!.y);
-    if (y !== i.y) out.set(i.id, y);
-  }
-  return out;
+  return moved(items, byId);
 }
 
 /**
- * New y positions (by id, the new node's among them) for a new branch `id` (already among the items):
- * its parent's branches on that side re-centre on the parent, with what grows from them; the parent
+ * New places (by id, the new node's among them) for a new branch `id` (already among the items): its
+ * parent's branches growing that way re-centre on the parent, with what grows from them; the parent
  * and every node further up the way to the centre stay put, and where that leaves too little room,
  * the branches of the same level from other parents move away (see clearCousins).
  */
-export function addChild(id: string, items: Item[]): Map<string, number> {
-  const all = items.map((i) => ({ ...i })), byId = new Map(all.map((i) => [i.id, i]));
+export function addChild(id: string, items: Item[]): Map<string, Point> {
+  const { all, byId, block } = working(items);
   const node = byId.get(id), p = node?.parent ? byId.get(node.parent) : undefined;
   if (!node || !p) return new Map();
-  const block = (k: Item) => [k, ...descendants([k.id], all).map((d) => byId.get(d)!)], mid = (i: Item) => i.y + i.h / 2;
-  const top = (b: Item[]) => Math.min(...b.map((n) => n.y)), bottom = (b: Item[]) => Math.max(...b.map((n) => n.y + n.h));
-  const side = mindSide(node, p);
-  const kids = all.filter((i) => i.type === 'mind' && i.parent === p.id && mindSide(i, p) === side).sort((a, b) => mid(a) - mid(b));
-  const blocks = kids.map(block);
-  const total = blocks.reduce((t, b) => t + bottom(b) - top(b), 0) + MIND_GAP_Y * (blocks.length - 1);
-  let y = mid(p) - total / 2;
-  for (const b of blocks) {
-    const dy = y - top(b);
-    b.forEach((n) => { n.y += dy; });
-    y += bottom(b) - top(b) + MIND_GAP_Y;
-  }
-  clearCousins(p, side, all, byId);
-  return movedY(items, byId);
+  const way = mindWay(node, p), a = axis(way);
+  lineUp(branchesOf(p, way, all).sort((m, n) => middle(m, a) - middle(n, a)).map(block), a, middle(p, a));
+  clearCousins(p, way, all, byId);
+  return moved(items, byId);
 }
 
 /**
- * New y positions (by id, the new node's among them) for putting node `id` (already among the
- * items) right above or below node `from`, a branch of the same parent, without `from` moving:
- * the new node goes next to `from` and everything it grows, and the branches beyond it on that
- * side, and beyond each node further up the way to the centre, move out of the way.
+ * New places (by id, the new node's among them) for putting node `id` (already among the items) right
+ * before or after node `from`, a branch of the same parent (above or below it beside its parent, to its
+ * left or right under it), without `from` moving: the new node goes next to `from` and everything it
+ * grows, lined up with it (on the side towards the parent), and the branches beyond it move out of the way.
  */
-export function insertBeside(id: string, from: string, where: 'above' | 'below', items: Item[]): Map<string, number> {
-  const all = items.map((i) => ({ ...i })), byId = new Map(all.map((i) => [i.id, i]));
-  const node = byId.get(id)!, start = byId.get(from)!, dir = where === 'below' ? 1 : -1;
-  const own = [start, ...descendants([start.id], all).map((d) => byId.get(d)!)];
-  node.y = dir > 0 ? Math.max(...own.map((n) => n.y + n.h)) + MIND_GAP_Y : Math.min(...own.map((n) => n.y)) - MIND_GAP_Y - node.h;
-  pushPast(start, node, (node.h + MIND_GAP_Y) * dir, dir, all, byId, 1);
-  const p = start.parent ? byId.get(start.parent) : undefined;
-  if (p) clearCousins(p, mindSide(start, p), all, byId);
-  return movedY(items, byId);
+export function insertBeside(id: string, from: string, where: 'above' | 'below', items: Item[]): Map<string, Point> {
+  const { all, byId, block } = working(items);
+  const node = byId.get(id)!, start = byId.get(from)!, p = byId.get(start.parent!)!, dir = where === 'below' ? 1 : -1;
+  const way = mindWay(start, p), a = axis(way), own = block(start);
+  if (way === 'right') node.x = start.x;
+  else if (way === 'left') node.x = start.x + start.w - node.w;
+  else node.y = start.y;
+  node[a.at] = dir > 0 ? hi(own, a) + a.gap : lo(own, a) - a.gap - node[a.size];
+  pushPast(start, node, (node[a.size] + a.gap) * dir, dir, all, byId, block, 1);
+  clearCousins(p, way, all, byId);
+  return moved(items, byId);
 }
 
-/** New y positions (by id) for when node `id` has grown taller by dh as it's typed in (downwards;
- *  a negative dh when it shrinks): the branches of the same parent below it follow, with what grows
- *  from them; the rest of the map stays put. */
-export function makeRoom(id: string, dh: number, items: Item[]): Map<string, number> {
-  const all = items.map((i) => ({ ...i })), byId = new Map(all.map((i) => [i.id, i]));
-  const node = byId.get(id);
-  const p = node?.parent ? byId.get(node.parent) : undefined;
+/**
+ * New places (by id) for when node `id` has grown by dw × dh as it's typed in (a negative one when it
+ * shrinks; it grows away from the centre and downwards): beside its parent, the branches below it
+ * follow; under its parent, those after it move along, and what grows from it moves down with its
+ * lower edge. The rest of the map stays put.
+ */
+export function makeRoom(id: string, dw: number, dh: number, items: Item[]): Map<string, Point> {
+  const { all, byId, block } = working(items);
+  const node = byId.get(id), p = node?.parent ? byId.get(node.parent) : undefined;
   if (node && p) {
-    pushPast(node, null, dh, 1, all, byId, 1);
-    clearCousins(p, mindSide(node, p), all, byId);
+    const way = mindWay(node, p);
+    if (way === 'down') {
+      pushPast(node, null, dw, 1, all, byId, block, 1);
+      block(node).slice(1).forEach((n) => { n.y += dh; });
+    } else pushPast(node, null, dh, 1, all, byId, block, 1);
+    clearCousins(p, way, all, byId);
   }
-  return movedY(items, byId);
+  return moved(items, byId);
 }
 
-/** Moves by `shift` the branches past `start` (below it for dir 1, above for -1) on its side, with
- *  all that grows from them, and so on at each node up the way to the centre (for `levels` levels);
- *  `skip` stays put. */
-function pushPast(start: Item, skip: Item | null, shift: number, dir: 1 | -1, all: Item[], byId: Map<string, Item>, levels = 50): void {
-  const block = (k: Item) => [k, ...descendants([k.id], all).map((d) => byId.get(d)!)], mid = (i: Item) => i.y + i.h / 2;
+/** Moves by `by` the branches past `start` (after it for dir 1, before for -1) growing its way from
+ *  its parent, with all that grows from them, and so on at each node up the way to the centre (for
+ *  `levels` levels); `skip` stays put. */
+function pushPast(start: Item, skip: Item | null, by: number, dir: 1 | -1, all: Item[], byId: Map<string, Item>, block: (k: Item) => Item[], levels = 50): void {
   for (let cur: Item | undefined = start, guard = 0; cur?.parent && guard < levels; guard++) {
-    const p: Item = byId.get(cur.parent)!, side = mindSide(cur, p), here: Item = cur;
-    for (const k of all) {
-      if (k.type !== 'mind' || k.parent !== p.id || k === here || k === skip || mindSide(k, p) !== side) continue;
-      if ((mid(k) - mid(here)) * dir > 0) block(k).forEach((n) => { n.y += shift; });
+    const p: Item = byId.get(cur.parent)!, way = mindWay(cur, p), a = axis(way), here: Item = cur;
+    for (const k of branchesOf(p, way, all)) {
+      if (k !== here && k !== skip && (middle(k, a) - middle(here, a)) * dir > 0) shift(block(k), a, by);
     }
     cur = p;
   }
 }
 
 /**
- * Keeps the branches of `p` on that side, with all that grows from them, clear of the branches of the
- * same level from other parents on the same side of the centre: those that now overlap them move
- * away, up or down, just as far as it takes, and the ones beyond them in turn; the levels further in
- * stay put.
+ * Keeps the branches of `p` growing that way, with all that grows from them, clear of the branches of
+ * the same level from other parents in the same part of the map (to the right, left or below the
+ * centre): those that now overlap them move away along the line, just as far as it takes, and the ones
+ * beyond them in turn; the levels further in stay put.
  */
-function clearCousins(p: Item, side: 1 | -1, all: Item[], byId: Map<string, Item>): void {
-  const get = (k: string) => byId.get(k), mid = (i: Item) => i.y + i.h / 2;
+function clearCousins(p: Item, way: Way, all: Item[], byId: Map<string, Item>): void {
+  const get = (k: string) => byId.get(k), a = axis(way);
   const block = (k: Item) => [k, ...descendants([k.id], all).map((d) => byId.get(d)!)];
-  const top = (b: Item[]) => Math.min(...b.map((n) => n.y)), bottom = (b: Item[]) => Math.max(...b.map((n) => n.y + n.h));
-  // The central topic and which side of it this is.
-  const way = (n: Item): Item[] => { const out = [n]; for (let c = n; c.parent && out.length < 50;) { const u = get(c.parent); if (!u) break; out.push(u); c = u; } return out; };
-  const toRoot = way(p), root = toRoot[toRoot.length - 1];
+  // The central topic and which part of the map this is in.
+  const chain = (n: Item): Item[] => { const out = [n]; for (let c = n; c.parent && out.length < 50;) { const u = get(c.parent); if (!u) break; out.push(u); c = u; } return out; };
+  const toRoot = chain(p), root = toRoot[toRoot.length - 1];
   if (root === p) return;
-  const half = (n: Item) => { const w = way(n); return w.length > 1 && w[w.length - 1] === root ? mindSide(w[w.length - 2], root) : 0; };
-  const level = toRoot.length, rootSide = half(p);
-  const kids = all.filter((i) => i.type === 'mind' && i.parent === p.id && mindSide(i, p) === side);
+  const part = (n: Item) => { const c = chain(n); return c.length > 1 && c[c.length - 1] === root ? mindWay(c[c.length - 2], root) : null; };
+  const level = toRoot.length, myPart = part(p);
+  const kids = branchesOf(p, way, all);
   if (!kids.length) return;
   const mine = kids.flatMap(block);
-  const others = all.filter((i) => i.type === 'mind' && i.parent && i.parent !== p.id && way(i).length === level + 1 && half(i) === rootSide).map(block);
-  let edge = bottom(mine);
-  for (const b of others.filter((b) => mid(get(b[0].parent!)!) >= mid(p)).sort((a, c) => top(a) - top(c))) {
-    const need = edge + MIND_GAP_Y - top(b);
-    if (need > 0) b.forEach((n) => { n.y += need; });
-    edge = Math.max(edge, bottom(b));
+  const others = all.filter((i) => i.type === 'mind' && i.parent && i.parent !== p.id && chain(i).length === level + 1 && part(i) === myPart).map(block);
+  let edge = hi(mine, a);
+  for (const b of others.filter((b) => middle(get(b[0].parent!)!, a) >= middle(p, a)).sort((m, n) => lo(m, a) - lo(n, a))) {
+    const need = edge + a.gap - lo(b, a);
+    if (need > 0) shift(b, a, need);
+    edge = Math.max(edge, hi(b, a));
   }
-  edge = top(mine);
-  for (const b of others.filter((b) => mid(get(b[0].parent!)!) < mid(p)).sort((a, c) => bottom(c) - bottom(a))) {
-    const need = bottom(b) + MIND_GAP_Y - edge;
-    if (need > 0) b.forEach((n) => { n.y -= need; });
-    edge = Math.min(edge, top(b));
+  edge = lo(mine, a);
+  for (const b of others.filter((b) => middle(get(b[0].parent!)!, a) < middle(p, a)).sort((m, n) => hi(n, a) - hi(m, a))) {
+    const need = hi(b, a) + a.gap - edge;
+    if (need > 0) shift(b, a, -need);
+    edge = Math.min(edge, lo(b, a));
   }
 }
 
-/** The rounded y of every item the working copies moved. */
-function movedY(items: Item[], byId: Map<string, Item>): Map<string, number> {
-  const out = new Map<string, number>();
+/** Lays out afresh what grows from `n`, growing `way`: its branches out from it, lined up and centred
+ *  on it, each laid out the same way in turn (in the order they stood). */
+function layOut(n: Item, way: Way, all: Item[], block: (k: Item) => Item[]): void {
+  const a = axis(way), across = a.at === 'x' ? 'y' : 'x';
+  const kids = all.filter((k) => k.type === 'mind' && k.parent === n.id).sort((m, q) => m[across] - q[across] || m[a.at] - q[a.at]);
+  for (const k of kids) {
+    if (way === 'down') k.y = n.y + n.h + MIND_GAP_DOWN;
+    else k.x = way === 'right' ? n.x + n.w + MIND_GAP_X : n.x - MIND_GAP_X - k.w;
+    k[a.at] = n[a.at];
+    layOut(k, way, all, block);
+  }
+  lineUp(kids.map(block), a, middle(n, a));
+}
+
+/** The rounded place of every item the working copies moved. */
+function moved(items: Item[], byId: Map<string, Item>): Map<string, Point> {
+  const out = new Map<string, Point>();
   for (const i of items) {
-    const y = Math.round(byId.get(i.id)!.y);
-    if (y !== i.y) out.set(i.id, y);
+    const n = byId.get(i.id)!, x = Math.round(n.x), y = Math.round(n.y);
+    if (x !== i.x || y !== i.y) out.set(i.id, { x, y });
   }
   return out;
 }
@@ -251,33 +284,41 @@ export function canMoveTo(id: string, to: string, items: Item[]): boolean {
 }
 
 /**
- * Where everything goes when node `id`, with all that grows from it, moves to hang from `to`: after
- * the branches `to` has on its side (`toward` picks the side of a central topic), the whole branch
- * mirrored if it changes sides, and the branches round both its old and new place re-centred.
+ * Where everything goes (and which nodes now grow down) when node `id`, with all that grows from it,
+ * moves to hang from `to`: after the branches `to` has growing its way (`toward` picks the way for a
+ * central topic), the whole branch mirrored if it changes sides, laid out afresh if it turns between
+ * beside and under, and the branches round both its old and new place re-centred.
  */
-export function moveBranch(id: string, to: string, items: Item[], toward: 1 | -1): Map<string, Point> {
-  const all = items.map((i) => ({ ...i })), byId = new Map(all.map((i) => [i.id, i]));
+export function moveBranch(id: string, to: string, items: Item[], toward: 1 | -1 | 'down'): Map<string, Point & { down?: boolean }> {
+  const { all, byId, block } = working(items);
   const node = byId.get(id)!, target = byId.get(to)!, old = byId.get(node.parent!)!, get = (k: string) => byId.get(k);
   const sub = descendants([id], all).map((k) => byId.get(k)!);
   const moving = new Set([id, ...sub.map((d) => d.id)]);
-  const oldSide = mindSide(node, old), up = target.parent ? byId.get(target.parent) : undefined;
-  const side = up ? mindSide(target, up) : toward;
-  const at = childPlace(target, all.filter((i) => !moving.has(i.id)), get, node.w, node.h, side);
-  const cx = node.x + node.w / 2, flip = side !== oldSide, dy = at.y - node.y;
-  for (const d of sub) {
-    const rel = d.x + d.w / 2 - cx;
-    d.x = at.x + node.w / 2 + (flip ? -rel : rel) - d.w / 2;
-    d.y += dy;
+  const oldWay = mindWay(node, old), way = wayFrom(target, get, toward);
+  const at = childPlace(target, all.filter((i) => !moving.has(i.id)), get, node.w, node.h, toward);
+  if ((oldWay === 'down') !== (way === 'down')) {
+    // Turned between beside and under: everything in it grows the new way, laid out afresh.
+    for (const n of [node, ...sub]) n.down = way === 'down' ? true : undefined;
+    Object.assign(node, at, { parent: to });
+    layOut(node, way, all, block);
+  } else {
+    // Over to the other side: the branch mirrored about its node.
+    const cx = node.x + node.w / 2, flip = way !== oldWay && way !== 'down', dx = at.x - node.x, dy = at.y - node.y;
+    for (const d of sub) {
+      if (way === 'down') d.x += dx;
+      else { const rel = d.x + d.w / 2 - cx; d.x = at.x + node.w / 2 + (flip ? -rel : rel) - d.w / 2; }
+      d.y += dy;
+    }
+    Object.assign(node, at, { parent: to });
   }
-  Object.assign(node, at, { parent: to });
   // Re-centre round the new place, then round the old one if anything is left there.
-  for (const k of [id, all.find((i) => i.parent === old.id && i.type === 'mind' && mindSide(i, old) === oldSide && !moving.has(i.id))?.id]) {
-    if (k) balance(k, all).forEach((y, n) => { byId.get(n)!.y = y; });
+  for (const k of [id, all.find((i) => i.parent === old.id && i.type === 'mind' && mindWay(i, old) === oldWay && !moving.has(i.id))?.id]) {
+    if (k) balance(k, all).forEach((pt, n) => Object.assign(byId.get(n)!, pt));
   }
-  const out = new Map<string, Point>();
+  const out = new Map<string, Point & { down?: boolean }>();
   for (const i of items) {
     const n = byId.get(i.id)!, x = Math.round(n.x), y = Math.round(n.y);
-    if (x !== i.x || y !== i.y) out.set(i.id, { x, y });
+    if (x !== i.x || y !== i.y || !!n.down !== !!i.down) out.set(i.id, { x, y, down: n.down });
   }
   return out;
 }
@@ -286,29 +327,44 @@ export function moveBranch(id: string, to: string, items: Item[], toward: 1 | -1
 const BUTTON_OFF = 11;
 
 /**
- * The buttons round a selected node: "+" on its far side for a branch of its own, "+" above and
- * below for a parallel branch before or after it, and on the side of its parent a circle with an
- * arrow, dragged onto another node to move the branch there. The central topic has only the first.
+ * The buttons round a selected node: "+" on its far side for a branch of its own; "+" before and
+ * after it (above and below beside its parent, left and right under it) for a parallel branch; and
+ * on the side of its parent a circle with an arrow, dragged onto another node to move the branch
+ * there. The central topic has "+" to the right and "+" below (a branch led down).
  */
-export type MindButton = 'child' | 'above' | 'below' | 'move';
+export type MindButton = 'child' | 'down' | 'above' | 'below' | 'move';
 
 /** Where each of a node's buttons is and its radius, sized in screen pixels whatever the zoom. */
 export function mindButtons(it: Item, get: Get, zoom: number): Array<Point & { kind: MindButton; r: number }> {
-  const up = it.parent ? get(it.parent) : undefined, side = up ? mindSide(it, up) : 1;
-  const off = BUTTON_OFF / zoom, r = 9 / zoom, mid = it.y + it.h / 2, far = side > 0 ? it.x + it.w + off : it.x - off;
-  const child = { kind: 'child' as const, x: far, y: mid, r };
-  if (!up) return [child];
+  const up = it.parent ? get(it.parent) : undefined;
+  const off = BUTTON_OFF / zoom, r = 9 / zoom, cx = it.x + it.w / 2, cy = it.y + it.h / 2;
+  if (!up) return [{ kind: 'child', x: it.x + it.w + off, y: cy, r }, { kind: 'down', x: cx, y: it.y + it.h + off, r }];
+  const way = mindWay(it, up);
+  if (way === 'down') {
+    return [
+      { kind: 'child', x: cx, y: it.y + it.h + off, r },
+      { kind: 'above', x: it.x - off, y: cy, r },
+      { kind: 'below', x: it.x + it.w + off, y: cy, r },
+      { kind: 'move', x: cx, y: it.y - off, r },
+    ];
+  }
+  const right = way === 'right';
   return [
-    child,
-    { kind: 'above', x: it.x + it.w / 2, y: it.y - off, r },
-    { kind: 'below', x: it.x + it.w / 2, y: it.y + it.h + off, r },
-    { kind: 'move', x: side > 0 ? it.x - off : it.x + it.w + off, y: mid, r },
+    { kind: 'child', x: right ? it.x + it.w + off : it.x - off, y: cy, r },
+    { kind: 'above', x: cx, y: it.y - off, r },
+    { kind: 'below', x: cx, y: it.y + it.h + off, r },
+    { kind: 'move', x: right ? it.x - off : it.x + it.w + off, y: cy, r },
   ];
 }
 
 /** The connecting branch from a parent to a child: from the parent's facing side to the child's,
- *  leaving and arriving level. */
+ *  leaving and arriving level (or, under it, upright). */
 export function branchCurve(parent: Item, child: Item): [Point, Point, Point, Point] {
+  if (child.down) {
+    const a = { x: parent.x + parent.w / 2, y: parent.y + parent.h }, b = { x: child.x + child.w / 2, y: child.y };
+    const dy = (b.y - a.y) / 2;
+    return [a, { x: a.x, y: a.y + dy }, { x: b.x, y: b.y - dy }, b];
+  }
   const side = mindSide(child, parent);
   const a = { x: side > 0 ? parent.x + parent.w : parent.x, y: parent.y + parent.h / 2 };
   const b = { x: side > 0 ? child.x : child.x + child.w, y: child.y + child.h / 2 };
