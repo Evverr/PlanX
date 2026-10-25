@@ -3,7 +3,8 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import { WebsocketProvider } from 'y-websocket';
 import { Board } from '../model/board';
 import { defaultServerUrl } from '../collab/connection';
-import { newEntry, readShelf, writeShelf, type BoardEntry } from './boards';
+import { newEntry, readShelf, writeShelf, writeThumb, type BoardEntry } from './boards';
+import { previewOf } from './preview';
 
 /** Resolves when `ready` does, or after `ms` at the latest (the server may be away). */
 const within = (ready: Promise<unknown>, ms: number) => Promise.race([ready, new Promise((r) => setTimeout(r, ms))]);
@@ -29,9 +30,16 @@ export async function renameBoard(id: string, title: string): Promise<void> {
   }
 }
 
-/** Forgets this browser's copy of a board (the server's stays, and the board opens again by its link). */
-export function forgetLocalCopy(id: string): void {
-  try { indexedDB.deleteDatabase(`planx-${id}`); } catch { /* nothing to forget */ }
+/** Opens this browser's copy of a board for a moment, to read it. */
+async function readLocal<T>(id: string, read: (board: Board) => T): Promise<T> {
+  const doc = new Y.Doc(), local = new IndexeddbPersistence(`planx-${id}`, doc);
+  try {
+    await within(local.whenSynced, 1500);
+    return read(new Board(doc));
+  } finally {
+    await local.destroy();
+    doc.destroy();
+  }
 }
 
 /**
@@ -43,17 +51,27 @@ export async function findEarlierBoards(): Promise<BoardEntry[]> {
   const names = (await indexedDB.databases()).map((d) => d.name ?? '').filter((n) => /^planx-[A-Za-z0-9_-]{1,64}$/.test(n));
   const found: BoardEntry[] = [];
   for (const name of names) {
-    const id = name.slice('planx-'.length), doc = new Y.Doc(), local = new IndexeddbPersistence(name, doc);
-    try {
-      await within(local.whenSynced, 1500);
-      const board = new Board(doc), count = board.list().length;
-      if (count || board.title) found.push(newEntry(id, { title: board.title, items: count, opened: 0, edited: 0, created: 0 }));
-    } finally {
-      await local.destroy();
-      doc.destroy();
-    }
+    const id = name.slice('planx-'.length);
+    const entry = await readLocal(id, (board) => {
+      const count = board.list().length;
+      return count || board.title ? newEntry(id, { title: board.title, items: count, opened: 0, edited: 0, created: 0 }) : null;
+    });
+    if (entry) found.push(entry);
   }
   return found;
+}
+
+/**
+ * Draws the tiles' pictures afresh from this browser's copies of the boards (someone may have changed
+ * a board since it was last open here), calling back after each so the page shows it.
+ */
+export async function refreshPreviews(ids: string[], done: (id: string) => void): Promise<void> {
+  for (const id of ids) {
+    try {
+      const url = await readLocal(id, (board) => (board.list().length ? previewOf(board) : null));
+      if (url) { writeThumb(id, url); done(id); }
+    } catch { /* keeps the picture it had */ }
+  }
 }
 
 /** The shelf, filled from earlier boards on its first ever opening. */
