@@ -65,20 +65,26 @@ export function pictureSize(ed: Editor, opts: ExportOptions): { w: number; h: nu
   return { w: Math.round(bw * z), h: Math.round(bh * z) };
 }
 
+/** A file name after the board's title, with this ending. */
+export const fileName = (ed: Editor, ext: string) => `${(ed.board.title.trim() || 'Доска').replace(/[\\/:*?"<>|]+/g, ' ')}.${ext}`;
+
+/** Hands the browser a file to save. */
+export function saveFile(blob: Blob, name: string): void {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
 /** Saves the picture as a PNG file named after the board. */
 export function downloadPicture(ed: Editor, opts: ExportOptions): Promise<boolean> {
   const canvas = renderPicture(ed, opts);
   if (!canvas) return Promise.resolve(false);
-  const name = `${(ed.board.title.trim() || 'Доска').replace(/[\\/:*?"<>|]+/g, ' ')}.png`;
   return new Promise((resolve) => canvas.toBlob((blob) => {
-    if (!blob) { resolve(false); return; }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = name;
-    document.body.append(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    resolve(true);
+    if (blob) saveFile(blob, fileName(ed, 'png'));
+    resolve(!!blob);
   }, 'image/png'));
 }
