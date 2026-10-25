@@ -5,6 +5,7 @@ import { Board } from '../model/board';
 import { defaultServerUrl } from '../collab/connection';
 import { newEntry, readShelf, writeShelf, writeThumb, type BoardEntry } from './boards';
 import { previewOf } from './preview';
+import { addTemplates } from './templates';
 
 /** Resolves when `ready` does, or after `ms` at the latest (the server may be away). */
 const within = (ready: Promise<unknown>, ms: number) => Promise.race([ready, new Promise((r) => setTimeout(r, ms))]);
@@ -74,12 +75,13 @@ export async function refreshPreviews(ids: string[], done: (id: string) => void)
   }
 }
 
-/** The shelf, filled from earlier boards on its first ever opening. */
+/** The shelf, filled from earlier boards on its first ever opening, with the templates' folder. */
 export async function loadShelf(): Promise<BoardEntry[]> {
-  const kept = readShelf();
-  if (kept) return kept;
-  let found: BoardEntry[] = [];
-  try { found = await findEarlierBoards(); } catch { /* start empty */ }
-  writeShelf(found);
-  return found;
+  if (!readShelf()) {
+    let found: BoardEntry[] = [];
+    try { found = await findEarlierBoards(); } catch { /* start empty */ }
+    writeShelf(found);
+  }
+  addTemplates();
+  return readShelf() ?? [];
 }
