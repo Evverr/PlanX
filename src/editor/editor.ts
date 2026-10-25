@@ -633,18 +633,20 @@ export class Editor {
     if (type === 'text' || type === 'task' || type === 'frame' || type === 'mind') this.startEditing(it.id);
   }
 
-  /** Puts a frame around the selected items (one is enough), 40 units clear of them, and opens its
-   *  title for typing as a new frame's is. Returns whether there was anything to frame. */
+  /** Puts a frame around the selected items (one is enough) with all that goes with them (a mind map
+   *  node's branches, what a frame holds), 40 units clear of them, and opens its title for typing as a
+   *  new frame's is. Returns whether there was anything to frame. */
   frameSelection(): boolean {
-    const b = boundsOf(this.selectedItems());
-    if (!this.selectedItems().length || !b) return false;
+    const held = [...this.carried(this.selectedItems()).keys()].map((id) => this.board.get(id)).filter((i): i is Item => !!i);
+    const b = boundsOf(held);
+    if (!held.length || !b) return false;
     // Just under the lowest of them, not under everything: a frame they already sit in stays below.
-    const pad = 40, z = Math.min(...this.selectedItems().map((i) => i.z)) - 0.5;
+    const pad = 40, z = Math.min(...held.map((i) => i.z)) - 0.5;
     const it = this.newItem('frame', b.x - pad, b.y - pad, { w: Math.round(b.w + pad * 2), h: Math.round(b.h + pad * 2), z, members: [] });
-    // Only the selected go in: whatever else lies under the new frame stays out of it.
+    // Only these go in: whatever else lies under the new frame stays out of it.
     this.board.beginGesture();
     this.board.add(it);
-    this.settle([...this.selection, it.id], it.id);
+    this.settle([...held.map((i) => i.id), it.id], it.id);
     this.board.endGesture();
     this.setTool('select');
     this.setSelection([it.id]);
