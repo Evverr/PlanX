@@ -6,7 +6,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchCurve, mindButtons, nodeColors, siblingTints, type MindButton } from '../model/mind';
+import { branchCurve, levelColor, mindButtons, mindDepth, nodeColors, siblingTints, type MindButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
@@ -404,7 +404,8 @@ function outlinePolygon(ctx: CanvasRenderingContext2D, it: Item) {
   ctx.closePath();
 }
 
-/** A mind map node: white (or a fill of its own) on a faint shadow, with no edge. */
+/** A mind map node: white (or a fill of its own) on a faint shadow, with no edge but a strip of its
+ *  level's colour on the left. */
 function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
   // Dimmed in the dark theme like the other fills.
   const { theme } = s, own = nodeColors(it, tints);
@@ -422,6 +423,12 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 0;
   if (own.fill) { ctx.fillStyle = shade(own.fill, theme.dim); ctx.fill(); }
+  // A strip 2 wide down its left edge in its level's colour, inside its round corners.
+  ctx.save();
+  ctx.clip();
+  ctx.fillStyle = shade(levelColor(mindDepth(it, s.get)), theme.dim);
+  ctx.fillRect(it.x, it.y, 2, it.h);
+  ctx.restore();
   ctx.globalAlpha = 1;
   // A node a branch is being dragged onto shows it by an edge dashed in its colour, the same dashes
   // as the dragged arrow's, 6px on and off on screen.
