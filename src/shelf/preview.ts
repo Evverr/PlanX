@@ -28,7 +28,7 @@ export function previewOf(board: Board): string | null {
     items, links: linksIn(board, all, hidden), get: (id) => board.get(id),
     cam: { x: (SIZE - b.w * z) / 2 - b.x * z, y: (SIZE - b.h * z) / 2 - b.y * z, z },
     theme, width: SIZE, height: SIZE, dpr: 1,
-    still: true, noBackground: true, selection: new Set(), editingId: null, marquee: null, linkPreview: null, peers: [],
+    noBackground: true, selection: new Set(), editingId: null, marquee: null, linkPreview: null, peers: [],
     showHandle: false, byFinger: false, hotDot: null, hotPlus: null, plusFade: 0, mindMove: null, tableLines: [], editingCell: null,
     guides: [], pickedCells: null, stroke: null,
   });
