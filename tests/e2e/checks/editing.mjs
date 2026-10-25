@@ -87,6 +87,31 @@ export const checks = {
     expect(await p.ev(`planx.board.list().filter((i) => i.parent === '${root}').length`), 'two branches of the root').toBe(2);
   },
 
+  async 'the "+" under a central topic leads a branch down, and Tab on it one further down'(p) {
+    await p.make('mind', [600, 300]);
+    await p.escape();
+    const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
+    await p.ev(`planx.editor.setSelection(['${root}'])`);
+    // Where the editor draws it.
+    const plus = await p.ev(`(async () => { const m = await import('/src/model/mind.ts'), ed = planx.editor;
+      const b = m.mindButtons(planx.board.get('${root}'), (k) => planx.board.get(k), ed.cam.z).find((b) => b.kind === 'down');
+      const s = ed.toScreen(b), c = ed.canvas.getBoundingClientRect(); return [s.x + c.left, s.y + c.top]; })()`);
+    // The buttons show a moment after it's picked.
+    await p.mouse('mouseMoved', ...plus);
+    await sleep(700);
+    await p.click(plus);
+    await p.escape();
+    const d = await p.ev(`(() => { const r = planx.board.get('${root}'), d = planx.board.list().find((i) => i.parent === r.id);
+      return { id: d.id, down: d.down, under: d.y > r.y + r.h, centred: Math.abs(d.x + d.w / 2 - (r.x + r.w / 2)) < 1 }; })()`);
+    expect(d.down, 'led down').toBe(true);
+    expect(d.under && d.centred, 'under the topic, centred').toBe(true);
+    await p.ev(`planx.editor.setSelection(['${d.id}'])`);
+    await p.key('Tab', 'Tab', 9);
+    await p.escape();
+    const e = await p.ev(`(() => { const d = planx.board.get('${d.id}'), e = planx.board.list().find((i) => i.parent === d.id); return e && e.down && e.y > d.y + d.h; })()`);
+    expect(e, 'its branch under it, led down too').toBe(true);
+  },
+
   async 'the hand pans the board and the wheel zooms it'(p) {
     const cam0 = await p.ev('planx.editor.cam');
     await p.key('h', 'KeyH', 72);

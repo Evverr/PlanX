@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addChild, balance, canMoveTo, childPlace, descendants, insertBeside, makeRoom, mindDepth, moveBranch } from '../src/model/mind';
+import { addChild, balance, branchCurve, canMoveTo, childPlace, descendants, insertBeside, makeRoom, mindButtons, mindDepth, moveBranch } from '../src/model/mind';
 import type { Item } from '../src/model/types';
 
 const node = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item =>
@@ -21,9 +21,9 @@ describe('mind map', () => {
     // A second branch on the right under a: the two stack 16 apart, centred on the root's middle (20).
     const a2 = node('a2', 160, 40, { parent: 'r' });
     const moves = balance('a2', [...items, a2]);
-    expect(moves.get('a')).toBe(-28);
-    expect(moves.get('a1')).toBe(-28);
-    expect(moves.get('a2')).toBe(28);
+    expect(moves.get('a')?.y).toBe(-28);
+    expect(moves.get('a1')?.y).toBe(-28);
+    expect(moves.get('a2')?.y).toBe(28);
     expect(moves.has('b')).toBe(false);
   });
 
@@ -40,23 +40,23 @@ describe('mind map', () => {
     const all = [...items, a2, x];
     // Below a (at -60): x goes 16 under it, a2 (further down) moves down by x's height and a gap.
     const below = insertBeside('x', 'a', 'below', all);
-    expect(below.get('x')).toBe(-4);
-    expect(below.get('a2')).toBe(56);
+    expect(below.get('x')?.y).toBe(-4);
+    expect(below.get('a2')?.y).toBe(56);
     expect(below.has('a')).toBe(false);
     // Above a2: x goes over it, and a with its branch moves up instead.
     const above = insertBeside('x', 'a2', 'above', all);
-    expect(above.get('x')).toBe(-56);
-    expect(above.get('a')).toBe(-116);
-    expect(above.get('a1')).toBe(-116);
+    expect(above.get('x')?.y).toBe(-56);
+    expect(above.get('a')?.y).toBe(-116);
+    expect(above.get('a1')?.y).toBe(-116);
   });
 
   it('moves the branches of the same parent below a node that grows as it is typed in', () => {
     const a2 = node('a2', 160, 0, { parent: 'r' }), a3 = node('a3', 320, 40, { parent: 'a2' });
     // a1 grows: nothing else hangs from a, so nothing moves (a2, a level up, stays put).
-    expect(makeRoom('a1', 20, [...items, a2, a3]).size).toBe(0);
-    const moves = makeRoom('a', 20, [...items, a2, a3]);
-    expect(moves.get('a2')).toBe(20);
-    expect(moves.get('a3')).toBe(60);
+    expect(makeRoom('a1', 0, 20, [...items, a2, a3]).size).toBe(0);
+    const moves = makeRoom('a', 0, 20, [...items, a2, a3]);
+    expect(moves.get('a2')?.y).toBe(20);
+    expect(moves.get('a3')?.y).toBe(60);
     expect(moves.has('a')).toBe(false);
     expect(moves.has('b')).toBe(false);  // on the other side of the centre
   });
@@ -78,29 +78,89 @@ describe('mind map: adding keeps the levels further in still', () => {
   // A central topic with three branches, each with branches of its own.
   const base = () => [n('r', 0, 28), n('A', 200, 0, 'r'), n('B', 200, 56, 'r'), n('C', 200, -56, 'r'),
     n('a1', 400, 0, 'A'), n('b1', 400, 56, 'B'), n('b2', 400, 112, 'B'), n('c1', 400, -56, 'C')];
-  const still = (moves: Map<string, number>) => ['r', 'A', 'B', 'C'].forEach((id) => expect(moves.has(id)).toBe(false));
+  const still = (moves: Map<string, unknown>) => ['r', 'A', 'B', 'C'].forEach((id) => expect(moves.has(id)).toBe(false));
 
   it('a new branch re-centres its own level, pushing the same level of other parents away', () => {
     const moves = addChild('a2', [...base(), n('a2', 400, 56, 'A')]);
     still(moves);
-    expect(moves.get('a1')).toBe(-28);
-    expect(moves.get('a2')).toBe(28);
+    expect(moves.get('a1')?.y).toBe(-28);
+    expect(moves.get('a2')?.y).toBe(28);
     // B's and C's branches make way, as far as it takes.
-    expect(moves.get('b1')).toBe(84);
-    expect(moves.get('c1')).toBe(-84);
+    expect(moves.get('b1')?.y).toBe(84);
+    expect(moves.get('c1')?.y).toBe(-84);
   });
 
   it('a branch put beside another moves only that level', () => {
     const moves = insertBeside('a2', 'a1', 'below', [...base(), n('a2', 400, 56, 'A')]);
     still(moves);
     // The new one right under a1 (where it was put), B's branches out of its way.
-    expect(moves.get('a2') ?? 56).toBe(56);
-    expect(moves.get('b1')).toBe(112);
+    expect(moves.get('a2')?.y ?? 56).toBe(56);
+    expect(moves.get('b1')?.y).toBe(112);
   });
 
   it('a node growing as it is typed in pushes its level only', () => {
-    const moves = makeRoom('a1', 30, base().map((i) => (i.id === 'a1' ? { ...i, h: 70 } : i)));
+    const moves = makeRoom('a1', 0, 30, base().map((i) => (i.id === 'a1' ? { ...i, h: 70 } : i)));
     still(moves);
-    expect(moves.get('b1')).toBe(86);
+    expect(moves.get('b1')?.y).toBe(86);
+  });
+});
+
+describe('mind map: branches led down from the central topic', () => {
+  // The central topic (100 × 40 at 0, 0), two branches led down, one with a branch of its own.
+  const r = node('r', 0, 0), d1 = node('d1', -62, 88, { parent: 'r', down: true }), d2 = node('d2', 62, 88, { parent: 'r', down: true });
+  const d11 = node('d11', -62, 176, { parent: 'd1', down: true });
+  const all = [r, d1, d2, d11];
+  const get = (id: string) => all.find((i) => i.id === id);
+
+  it('the central topic has a "+" below it, for a branch led down', () => {
+    expect(mindButtons(r, get, 1).map((b) => b.kind)).toEqual(['child', 'down']);
+    const kinds = Object.fromEntries(mindButtons(d1, get, 1).map((b) => [b.kind, [b.x, b.y]]));
+    // Under its parent: its own branch below, the parallel ones left and right, the arrow on top.
+    expect(kinds.child).toEqual([-12, 139]);
+    expect(kinds.above).toEqual([-73, 108]);
+    expect(kinds.below).toEqual([49, 108]);
+    expect(kinds.move).toEqual([-12, 77]);
+  });
+
+  it('a first branch led down goes under the topic, centred', () => {
+    expect(childPlace(r, [r], (id) => (id === 'r' ? r : undefined), 100, 40, 'down')).toEqual({ x: 0, y: 88 });
+  });
+
+  it('branches under a node stand side by side, centred on it', () => {
+    const d3 = node('d3', 186, 88, { parent: 'r', down: true });
+    const moves = addChild('d3', [...all, d3]);
+    // Three of them, 24 apart: 348 across, centred on the topic's middle (50).
+    expect(moves.get('d1')).toEqual({ x: -124, y: 88 });
+    expect(moves.get('d11')).toEqual({ x: -124, y: 176 });
+    expect(moves.get('d2')).toEqual({ x: 0, y: 88 });
+    expect(moves.get('d3')).toEqual({ x: 124, y: 88 });
+    expect(moves.has('r')).toBe(false);
+  });
+
+  it('a parallel branch under a node goes to its right (or left), level with it', () => {
+    const x = node('x', 0, 0, { parent: 'r', down: true });
+    const moves = insertBeside('x', 'd1', 'below', [...all, x]);
+    expect(moves.get('x')).toEqual({ x: 62, y: 88 });
+    expect(moves.get('d2')).toEqual({ x: 186, y: 88 });
+    expect(moves.has('d1')).toBe(false);
+  });
+
+  it('a branch under its parent growing as it is typed in moves those after it, and its own down', () => {
+    const moves = makeRoom('d1', 20, 10, all.map((i) => (i.id === 'd1' ? { ...i, w: 120, h: 50 } : i)));
+    expect(moves.get('d2')).toEqual({ x: 82, y: 88 });
+    expect(moves.get('d11')).toEqual({ x: -62, y: 186 });
+  });
+
+  it('the line to a branch under its parent runs down from the parent\'s bottom to its top', () => {
+    const [a, , , b] = branchCurve(r, d1);
+    expect(a).toEqual({ x: 50, y: 40 });
+    expect(b).toEqual({ x: -12, y: 88 });
+  });
+
+  it('a branch moved from beside the topic to under it is laid out downwards, all of it', () => {
+    const a = node('a', 160, 0, { parent: 'r' }), a1 = node('a1', 320, 0, { parent: 'a' });
+    const moves = moveBranch('a', 'r', [r, a, a1], 'down');
+    expect(moves.get('a')).toEqual({ x: 0, y: 88, down: true });
+    expect(moves.get('a1')).toEqual({ x: 0, y: 176, down: true });
   });
 });

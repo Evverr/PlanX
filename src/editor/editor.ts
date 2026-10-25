@@ -777,11 +777,12 @@ export class Editor {
         const h = fitHeight(it, value);
         if (h) Object.assign(patch, { h }, it.rot && resizedAt(it, it.w, h));
         this.board.update(id, patch);
-        // A mind map node that grew taller makes room among its neighbours, as while it was typed in
-        // (those of its level only).
-        if (it.type === 'mind' && it.parent && patch.h !== undefined && patch.h !== it.h) {
-          const moves = makeRoom(id, patch.h - it.h, this.board.list());
-          this.board.transact(() => moves.forEach((y, k) => this.board.update(k, { y })));
+        // A mind map node that grew makes room among its neighbours, as while it was typed in (those
+        // of its level only).
+        const dw = (patch.w ?? it.w) - it.w, dh = (patch.h ?? it.h) - it.h;
+        if (it.type === 'mind' && it.parent && (dw || dh)) {
+          const moves = makeRoom(id, dw, dh, this.board.list());
+          this.board.transact(() => moves.forEach((pt, k) => this.board.update(k, pt)));
         }
       }
     }
@@ -795,18 +796,19 @@ export class Editor {
     const h = it && fitHeight(it, text);
     if (it && h && h !== it.h) this.board.update(id, { h, ...(it.rot && resizedAt(it, it.w, h)) });
     if (it?.type === 'mind') {
-      // A node getting a line taller (or shorter) moves what's below it along, so nothing overlaps.
-      const fit = mindFit(this, it, text), dh = (fit.h ?? it.h) - it.h;
-      const moves = dh ? makeRoom(id, dh, this.board.list()) : new Map<string, number>();
+      // A node growing (a line taller, or wider under its parent) moves its neighbours along, so
+      // nothing overlaps.
+      const fit = mindFit(this, it, text), dw = (fit.w ?? it.w) - it.w, dh = (fit.h ?? it.h) - it.h;
+      const moves = it.parent && (dw || dh) ? makeRoom(id, dw, dh, this.board.list()) : new Map<string, Point>();
       this.board.transact(() => {
         this.board.update(id, fit);
-        moves.forEach((y, k) => this.board.update(k, { y }));
+        moves.forEach((pt, k) => this.board.update(k, pt));
       });
     }
   }
 
   /** Adds a node to a mind map (see mindOps.ts). */
-  addMindNode(fromId: string, kind: 'child' | 'above' | 'below', byPlus = false): void { addMindNode(this, fromId, kind, byPlus); }
+  addMindNode(fromId: string, kind: 'child' | 'down' | 'above' | 'below', byPlus = false): void { addMindNode(this, fromId, kind, byPlus); }
 
   /** Takes away an emptied mind map node (see mindOps.ts). */
   removeMindNode(id: string): void { removeMindNode(this, id); }
