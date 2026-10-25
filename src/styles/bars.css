@@ -29,8 +29,10 @@
 .zoom { right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(100% - 12px - var(--bar-h) - env(safe-area-inset-bottom, 0px)); padding: var(--s6) var(--s16); }
 /* Panels stuck to their screen edge (the chevron button) lose the corners on that side. */
 .topbar.docked { top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
-.zoom.docked, .panel.docked { bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.zoom.docked, .panel.docked { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+/* The zoom bar stands down from the top (so only its top slides); the selection panel up from the bottom. */
 .zoom.docked { top: calc(100% - var(--bar-h)); }
+.panel.docked { bottom: 0; }
 /* Board map above the zoom panel: items as translucent blue blocks, the dark frame is the screen. */
 .minimap { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(20px + var(--bar) + env(safe-area-inset-bottom, 0px)); padding: var(--s8); }
 .minimap.docked { bottom: calc(8px + var(--bar)); }

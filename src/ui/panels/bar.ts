@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useState, type RefObject } from 'react';
-import { EDGE } from '../../layout';
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { crowds, EDGE } from '../../layout';
 import { useGrip, type Grips } from './grip';
 import { dragAlong, overPanels, usePanelNumber } from './store';
 
@@ -49,6 +49,29 @@ export function useBar(ref: RefObject<HTMLElement | null>, s: BarSetup) {
   }, [far, x, s.name, s.home]);
 
   const high = s.home === 'top';
+  // When the panels stick to the edges or come off them, the upright rails move 12px out or in: a bar
+  // along the same edge beside one moves with it (at once, not after), keeping 12px from it.
+  const wasDocked = useRef(s.docked);
+  useEffect(() => {
+    if (wasDocked.current === s.docked) return;
+    wasDocked.current = s.docked;
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect(), gap = s.docked ? 0 : EDGE, onTop = high !== !!far;
+    const mine = { left: r.left, top: onTop ? gap : innerHeight - gap - r.height, width: r.width, height: r.height };
+    for (const rail of document.querySelectorAll<HTMLElement>('.tools')) {
+      const q = rail.getBoundingClientRect();
+      if (!q.width) continue;
+      // Where it ends up: at its edge of the screen, gap off it.
+      const right = q.left + q.width / 2 > innerWidth / 2;
+      const to = { left: right ? innerWidth - gap - q.width : gap, top: q.top, width: q.width, height: q.height };
+      if (!crowds(mine, to)) continue;
+      const at = mine.left + mine.width / 2 > to.left + to.width / 2 ? to.left + to.width + EDGE : to.left - EDGE - mine.width;
+      setX(Math.min(Math.max(at, gap), innerWidth - gap - r.width));
+      return;
+    }
+  }, [s.docked]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const grips: Grips = {
     left: {
       cursor: 'move',
