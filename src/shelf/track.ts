@@ -1,29 +1,13 @@
 import { useEffect } from 'react';
 import type { Board } from '../model/board';
-import { readShelf, updateEntry, writeThumb } from './boards';
-
-/** The picture on the cover's window: this wide, as the screen was left. */
-const THUMB_W = 320;
-
-/** Takes a small picture of the board as it's shown now. */
-function snapshot(canvas: HTMLCanvasElement): string | null {
-  if (!canvas.width || !canvas.height) return null;
-  const small = document.createElement('canvas');
-  small.width = THUMB_W;
-  small.height = Math.round((THUMB_W * canvas.height) / canvas.width);
-  const ctx = small.getContext('2d');
-  if (!ctx) return null;
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#ECEEF2';
-  ctx.fillRect(0, 0, small.width, small.height);
-  ctx.drawImage(canvas, 0, 0, small.width, small.height);
-  try { return small.toDataURL('image/webp', 0.7); } catch { return null; }
-}
+import { folderUrl, placeOf, readFolders, readShelf, updateEntry, writeThumb } from './boards';
+import { previewOf } from './preview';
 
 /**
  * Keeps the open board's place on the shelf up to date: when it was opened and changed, its name,
- * how much is on it, and a picture of it for the cover.
+ * how much is on it, and the picture of everything on it for its tile.
  */
-export function useShelfTracking(boardId: string, board: Board, canvas: React.RefObject<HTMLCanvasElement>): void {
+export function useShelfTracking(boardId: string, board: Board): void {
   useEffect(() => {
     const known = readShelf()?.some((b) => b.id === boardId);
     updateEntry(boardId, { opened: Date.now(), ...(known ? {} : { title: board.title, items: board.list().length }) });
@@ -36,10 +20,9 @@ export function useShelfTracking(boardId: string, board: Board, canvas: React.Re
     };
     const off = board.subscribe(() => { if (!timer) timer = window.setTimeout(note, 1000); });
     const picture = () => {
-      if (pictured === board.getVersion() || !canvas.current) return;
+      if (pictured === board.getVersion()) return;
       pictured = board.getVersion();
-      const url = snapshot(canvas.current);
-      if (url) writeThumb(boardId, url);
+      writeThumb(boardId, previewOf(board));
     };
     // A picture now and then while working, and when the tab is hidden or left.
     const every = window.setInterval(picture, 20000);
@@ -57,5 +40,10 @@ export function useShelfTracking(boardId: string, board: Board, canvas: React.Re
       window.removeEventListener('pagehide', picture);
       window.removeEventListener('planx:leave', picture);
     };
-  }, [boardId, board, canvas]);
+  }, [boardId, board]);
+}
+
+/** Where the way back from a board leads: the folder it's in on the shelf. */
+export function shelfUrlFor(boardId: string): string {
+  return folderUrl(placeOf(readShelf()?.find((b) => b.id === boardId)?.folder, readFolders()));
 }
