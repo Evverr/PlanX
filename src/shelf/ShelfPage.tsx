@@ -53,6 +53,7 @@ export function ShelfPage() {
   useEffect(() => {
     void loadShelf().then((list) => {
       setBoards(list);
+      setFolders(readFolders());
       void refreshPreviews(list.filter((b) => b.items > 0).map((b) => b.id), pictured);
     });
     // Another tab (a board open next to this page) changes the shelf: show it here too.
