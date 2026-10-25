@@ -153,6 +153,23 @@ export const checks = {
     expect(JSON.stringify(await p.ev(`[...planx.editor.folded().get('${root}')]`)), 'its count').toBe('[["right",2]]');
   },
 
+  async 'Tab while typing in a mind map node goes on to the next branch of the same parent, Shift+Tab back'(p) {
+    await p.make('mind', [500, 400]);
+    await p.escape();
+    const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
+    await p.ev(`(() => { for (let i = 0; i < 3; i++) planx.editor.addMindNode('${root}', 'child', true); })()`);
+    const kids = await p.ev(`planx.board.list().filter((i) => i.parent === '${root}').sort((m, n) => m.y - n.y).map((i) => i.id)`);
+    await p.ev(`planx.editor.setSelection(['${kids[0]}']); planx.editor.startEditing('${kids[0]}')`);
+    await sleep(200);
+    await p.key('Tab', 'Tab', 9);
+    expect(await p.ev('planx.editor.editingId'), 'the second one typed in').toBe(kids[1]);
+    await p.key('Tab', 'Tab', 9, 8);
+    expect(await p.ev('planx.editor.editingId'), 'back to the first').toBe(kids[0]);
+    await p.key('Tab', 'Tab', 9, 8);
+    expect(await p.ev('planx.editor.editingId'), 'round to the last').toBe(kids[2]);
+    expect(await p.ev(`planx.board.list().filter((i) => i.type === 'mind').length`), 'nothing new made').toBe(4);
+  },
+
   async 'the hand pans the board and the wheel zooms it'(p) {
     const cam0 = await p.ev('planx.editor.cam');
     await p.key('h', 'KeyH', 72);

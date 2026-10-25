@@ -293,6 +293,18 @@ function moved(items: Item[], byId: Map<string, Item>): Map<string, Point> {
   return out;
 }
 
+/** The next branch of the same parent growing the same way after node `id` (one under another
+ *  beside it, left to right under or over it), or before it for dir -1, round to the first (or last)
+ *  past the end; null when it has none. */
+export function siblingOf(id: string, items: Item[], dir: 1 | -1 = 1): string | null {
+  const it = items.find((i) => i.id === id), p = it?.parent ? items.find((i) => i.id === it.parent) : undefined;
+  if (!it || !p) return null;
+  const way = mindWay(it, p), a = axis(way);
+  const row = branchesOf(p, way, items).sort((m, n) => middle(m, a) - middle(n, a));
+  if (row.length < 2) return null;
+  return row[(row.indexOf(it) + dir + row.length) % row.length].id;
+}
+
 /** Whether node `id` can be moved to hang from `to`: another node, not one growing from it. */
 export function canMoveTo(id: string, to: string, items: Item[]): boolean {
   const it = items.find((i) => i.id === id), target = items.find((i) => i.id === to);
