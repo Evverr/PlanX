@@ -97,8 +97,6 @@ export class Editor {
   private slides = new Map<string, { v: number; from?: number; since?: number }>();
   /** Shared: the same, eased, as last drawn. */
   slid = new Map<string, number>();
-  /** Shared: the mind map node last made and opened for typing at once (Tab in it makes the next). */
-  justMade: string | null = null;
   /** Shared: the node and way (`id:way`) a "+" has just given its first branches: no chevron there
    *  till the node is picked again, so nothing new turns up by the "+" while it's clicked on. */
   chevronless: string | null = null;
