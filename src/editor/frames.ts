@@ -13,6 +13,30 @@ export function membersOf(board: Board, f: Item, items: Item[]): string[] {
   return items.filter((i) => i.type !== 'frame' && rectContains(boxOf(f), boxOf(i))).map((i) => i.id);
 }
 
+/**
+ * These items in the order they're drawn (and picked, from the top): as they're stacked, but every
+ * frame under all it holds (frames in it and what those hold too), wherever it is in the stack, so a
+ * frame put round things or things put into it never covers them.
+ */
+export function stacked(board: Board, items: Item[]): Item[] {
+  const frames = items.filter((i) => i.type === 'frame');
+  if (!frames.length) return items;
+  const rank = new Map(items.map((it, i) => [it.id, i])), held = new Map(frames.map((f) => [f.id, membersOf(board, f, items)]));
+  const memo = new Map<string, number>(), on = new Set<string>();
+  // A frame goes just under the lowest of what it holds, if that's lower than it is.
+  const place = (id: string): number => {
+    const own = rank.get(id) ?? Infinity, kids = held.get(id);
+    if (!kids || on.has(id)) return own;
+    if (!memo.has(id)) {
+      on.add(id);
+      memo.set(id, kids.reduce((r, k) => Math.min(r, place(k) - 0.5), own));
+      on.delete(id);
+    }
+    return memo.get(id)!;
+  };
+  return [...items].sort((a, b) => place(a.id) - place(b.id));
+}
+
 /** These items, what the frames among them hold (frames in frames too) and the branches of mind
  *  map nodes, each with where it is now. */
 export function carried(board: Board, sel: Item[], items: Item[]): Map<string, Point> {
@@ -126,7 +150,7 @@ export function peekView(board: Board, id: string, theme: Theme, w: number, h: n
   const open: Item = { ...f, ...(f.fold ?? {}), fold: undefined, text: '' };
   // Frames inside it, folded or not, are shown as they are; what they hold stays hidden if folded.
   const inner = hiddenIn(board, items.filter((i) => held.has(i.id) && i.id !== f.id));
-  const shown = [open, ...items.filter((i) => held.has(i.id) && i.id !== f.id && !inner.has(i.id))];
+  const shown = [open, ...stacked(board, items.filter((i) => held.has(i.id) && i.id !== f.id && !inner.has(i.id)))];
   const ids = new Set(shown.map((i) => i.id));
   const z = Math.min((w - pad * 2) / open.w, (h - pad * 2) / open.h);
   return {

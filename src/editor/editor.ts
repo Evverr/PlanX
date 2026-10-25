@@ -13,7 +13,7 @@ import { descendants, foldedAway, folding, makeRoom, mindDepth, type Way } from 
 import { readJSON, writeJSON } from '../storage';
 import { clamp, fittedTo, freeArea, wheelMove, zoomedAt } from './camera';
 import { copiesOf } from './copies';
-import { carried, hiddenIn, linksIn, membersOf, peekView, settled } from './frames';
+import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked } from './frames';
 import { endGesture, moveGesture, type Gesture } from './gestures';
 import { updateCursor } from './hover';
 import { onKeyDown } from './keys';
@@ -842,7 +842,8 @@ export class Editor {
         if (i.type !== 'mind' || (!i.collapsed && !i.foldedWays)) continue;
         folded.set(i.id, new Map([...foldedAway(i, items, get)].map(([way, ids]) => [way, ids.length])));
       }
-      this.sight = { version, hidden, folded, shown: hidden.size ? items.filter((i) => !hidden.has(i.id)) : items, links: linksIn(this.board, items, hidden) };
+      const shown = stacked(this.board, hidden.size ? items.filter((i) => !hidden.has(i.id)) : items);
+      this.sight = { version, hidden, folded, shown, links: linksIn(this.board, items, hidden) };
     }
     return this.sight;
   }
