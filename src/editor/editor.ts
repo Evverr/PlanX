@@ -92,11 +92,6 @@ export class Editor {
   hotDot: Side | null = null;
   /** The mind map node button under the pointer (see buttonKey). */
   hotPlus: string | null = null;
-  /** Since when each count of a mind map node just folded (by `id:way`) has been sliding into its
-   *  chevron's place (see slideOut). */
-  private slides = new Map<string, number>();
-  /** Shared: how far out past its place each of those counts is, as last drawn. */
-  slid = new Map<string, number>();
   /** Shared: the node and way (`id:way`) a "+" has just given its first branches: no chevron there
    *  till the node is picked again, so nothing new turns up by the "+" while it's clicked on. */
   chevronless: string | null = null;
@@ -305,7 +300,6 @@ export class Editor {
       hotPlus: this.hotPlus,
       plusFade,
       folded: this.folded(),
-      slide: this.slideOut(),
       chevronless: this.chevronless,
       mindMove: g?.type === 'mindMove' ? { from: g.from, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null } : null,
       tableLines: this.hotLine ? [...this.pickedLines, this.hotLine] : this.pickedLines,
@@ -854,19 +848,6 @@ export class Editor {
   /** Shared: how many nodes each folded mind map node hides, each way. */
   folded(): Map<string, Map<Way, number>> { return this.inSight().folded; }
 
-  /** How far out past its place each count just folded is (0…1, by `id:way`): it comes in from past
-   *  the chevron to the chevron's place, which it takes at once, so a click there again unfolds it. */
-  private slideOut(): Map<string, number> {
-    const now = performance.now(), out = new Map<string, number>();
-    for (const [key, since] of this.slides) {
-      const v = 1 - (now - since) / PLUS_FADE;
-      if (v <= 0) { this.slides.delete(key); continue; }
-      out.set(key, v * v * (3 - 2 * v));
-      this.requestRender();
-    }
-    this.slid = out;
-    return out;
-  }
 
   /** The items in sight: all but what folded frames hold and folded mind map nodes hide. */
   shown(): Item[] { return this.inSight().shown; }
@@ -929,7 +910,6 @@ export class Editor {
     if (it?.type !== 'mind') return;
     this.board.update(id, folding(it, way, on));
     if (on) {
-      this.slides.set(`${id}:${way}`, performance.now());
       const hidden = this.hidden();
       this.setSelection([...this.selection].filter((s) => !hidden.has(s)));
     }
