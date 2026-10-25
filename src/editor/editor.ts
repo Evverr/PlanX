@@ -9,7 +9,7 @@ import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { newTable, withCellFormat, withCount, withTableFormat, type TableLine } from '../model/table';
 import type { AudioNote } from '../canvas/audio';
-import { descendants, foldedAway, folding, makeRoom, mindDepth, type Way } from '../model/mind';
+import { addChild, descendants, foldedAway, folding, makeRoom, mindDepth, type Way } from '../model/mind';
 import { readJSON, writeJSON } from '../storage';
 import { clamp, fittedTo, freeArea, wheelMove, zoomedAt } from './camera';
 import { copiesOf } from './copies';
@@ -97,6 +97,13 @@ export class Editor {
   private slides = new Map<string, { v: number; from?: number; since?: number }>();
   /** Shared: the same, eased, as last drawn. */
   slid = new Map<string, number>();
+  /** Shared: the mind map node whose branches are being made one after another by Tab while typed in
+   *  (it began with one), and whether the typing that just ended went on in the next of them. */
+  tabRun: string | null = null;
+  tabStep = false;
+  /** Things gliding to new places (by id): from where, since when (see glide). */
+  private glides = new Map<string, Point>();
+  private glideFrom = 0;
   /** Shared: the node and way (`id:way`) a "+" has just given its first branches: no chevron there
    *  till the node is picked again, so nothing new turns up by the "+" while it's clicked on. */
   chevronless: string | null = null;
@@ -285,10 +292,11 @@ export class Editor {
     }
     const plusFade = this.plusFade();
     if (plusFade > 0 && plusFade < 1) this.requestRender();
+    const glide = this.gliding();
     drawScene(this.ctx, {
-      items: this.shown(),
+      items: glide ? this.shown().map(glide) : this.shown(),
       links: this.shownLinks(),
-      get: (id) => this.board.get(id),
+      get: glide ? (id) => { const it = this.board.get(id); return it && glide(it); } : (id) => this.board.get(id),
       cam: this.cam,
       theme: this.theme,
       width: this.width,
@@ -800,8 +808,38 @@ export class Editor {
         }
       }
     }
+    // Branches made one after another by Tab: once the typing ends there (and doesn't go on in the
+    // next one), they glide to stand centred on their node.
+    if (this.tabRun) {
+      queueMicrotask(() => {
+        if (this.tabStep) { this.tabStep = false; return; }
+        this.tabRun = null;
+        if (this.board.get(id)?.parent) this.glide(addChild(id, this.board.list()));
+      });
+    }
     this.emit();
     this.requestRender();
+  }
+
+  /** Moves things to new places, drawn gliding there from where they were over 300 ms. */
+  glide(moves: Map<string, Point>): void {
+    if (!moves.size) return;
+    this.glides = new Map([...moves.keys()].map((id) => { const it = this.board.get(id)!; return [id, { x: it.x, y: it.y }]; }));
+    this.glideFrom = performance.now();
+    this.board.transact(() => moves.forEach((pt, k) => this.board.update(k, pt)));
+    this.requestRender();
+  }
+
+  /** Where things gliding are drawn now: on the way from where they were to where they are. */
+  private gliding(): ((it: Item) => Item) | null {
+    if (!this.glides.size) return null;
+    const t = Math.min(1, (performance.now() - this.glideFrom) / 300), k = 1 - (1 - t) ** 3;
+    if (t >= 1) { this.glides.clear(); return null; }
+    this.requestRender();
+    return (it) => {
+      const from = this.glides.get(it.id);
+      return from ? { ...it, x: from.x + (it.x - from.x) * k, y: from.y + (it.y - from.y) * k } : it;
+    };
   }
 
   /** Live text while typing, so a text item or a task grows (or shrinks back) as you type and others see it. */
