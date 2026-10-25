@@ -40,6 +40,31 @@ export const checks = {
     expect(await p.ev(`!!planx.board.get('${ids.f}').fold`), 'not folded').toBeFalsy();
   },
 
+  async 'a frame lies under all it holds, a frame made in a frame too'(p) {
+    // The outer frame, a sticky in it, then a frame drawn inside it (new frames go to the bottom of the stack).
+    const o = await origin(p), a = await screen(p, o.x, o.y), b = await screen(p, o.x + 500, o.y + 360);
+    await p.key('f', 'KeyF', 70);
+    await p.drag(a, b);
+    await p.escape();
+    await p.escape();
+    await p.make('sticky', await screen(p, o.x + 400, o.y + 80));
+    await p.key('f', 'KeyF', 70);
+    await p.drag(await screen(p, o.x + 40, o.y + 140), await screen(p, o.x + 300, o.y + 330));
+    await p.escape();
+    await p.escape();
+    const ids = await p.ev(`(() => { const fs = planx.board.list().filter((i) => i.type === 'frame').sort((m, n) => n.w - m.w); return { outer: fs[0].id, inner: fs[1].id, s: planx.board.list().find((i) => i.type === 'sticky').id }; })()`);
+    expect(await p.ev(`planx.board.get('${ids.inner}').z < planx.board.get('${ids.outer}').z`), 'the inner frame lower in the stack').toBe(true);
+    const at = await p.ev(`(() => { const ids = planx.editor.shown().map((i) => i.id); return { outer: ids.indexOf('${ids.outer}'), inner: ids.indexOf('${ids.inner}'), s: ids.indexOf('${ids.s}') }; })()`);
+    expect(at.outer < at.inner && at.outer < at.s, 'drawn under both').toBe(true);
+    // A click inside the inner frame picks it, not the outer one.
+    await p.click(await screen(p, o.x + 200, o.y + 250));
+    expect(await p.ev(`[...planx.editor.selection].join()`), 'the inner frame picked').toBe(ids.inner);
+    // Brought to the top of the stack, the outer frame still lies under the sticky.
+    await p.ev(`planx.board.update('${ids.outer}', { z: planx.board.maxZ() + 1 })`);
+    const now = await p.ev(`planx.editor.shown().map((i) => i.id)`);
+    expect(now.indexOf(ids.outer) < now.indexOf(ids.s), 'still under the sticky').toBe(true);
+  },
+
   async 'a table line takes hold only after the mouse rests on it'(p) {
     const id = await put(p, `const t = e.newItem('table', X, Y, { cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill(''), w: 360, h: 120 }); b.add(t); return t.id;`);
     await sleep(200);

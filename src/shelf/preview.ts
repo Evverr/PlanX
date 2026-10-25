@@ -1,7 +1,7 @@
 import type { Board } from '../model/board';
 import { boundsOf } from '../canvas/geometry';
 import { drawScene, readTheme } from '../canvas/renderer';
-import { hiddenIn, linksIn } from '../editor/frames';
+import { hiddenIn, linksIn, stacked } from '../editor/frames';
 
 /** The board's tile on the shelf: this many pixels a side (twice the tile, for sharp screens). */
 const SIZE = 360, PAD = 22;
@@ -12,7 +12,7 @@ const SIZE = 360, PAD = 22;
  */
 export function previewOf(board: Board): string | null {
   const all = board.list(), hidden = hiddenIn(board, all);
-  const items = hidden.size ? all.filter((i) => !hidden.has(i.id)) : all;
+  const items = stacked(board, hidden.size ? all.filter((i) => !hidden.has(i.id)) : all);
   const b = boundsOf(items);
   if (!b) return null;
   const canvas = document.createElement('canvas');
