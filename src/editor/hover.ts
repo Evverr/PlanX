@@ -25,7 +25,8 @@ export function plusAt(ed: Editor, it: Item, w: Point): MindButtonAt | null {
   if (it.type !== 'mind' || ed.plusFade() === 0) return null;
   // The nearest within reach: the "+" for a branch and the chevron past it are close.
   let best: MindButtonAt | null = null, near = Infinity;
-  for (const b of mindButtons(it, (id) => ed.board.get(id), ed.cam.z, branchWays(it, ed.board.list()))) {
+  const kept = ed.afterFold?.startsWith(`${it.id}:`) ? ed.afterFold.split(':')[1] as Way : undefined;
+  for (const b of mindButtons(it, (id) => ed.board.get(id), ed.cam.z, branchWays(it, ed.board.list()), kept)) {
     const d = Math.hypot(w.x - b.x, w.y - b.y);
     if (d <= Math.max(b.r * 1.5, ed.reach(0)) && d < near) { best = b; near = d; }
   }
@@ -83,6 +84,8 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if (!sameLine(line, ed.hotLine)) { ed.hotLine = line; ed.requestRender(); }
   const plus = picked ? plusAt(ed, picked, w) : null, hot = plus && buttonKey(plus);
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
+  // The chevron that just folded a node goes once the pointer leaves it, the count sliding into its place.
+  if (ed.afterFold && !(picked && hot && ed.afterFold === `${picked.id}:${hot.slice(5)}` && hot.startsWith('fold:'))) { ed.afterFold = null; ed.requestRender(); }
   if (plus || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (dot) cursor = 'crosshair';
   else if (single && onHandle(ed, single, w)) cursor = 'nwse-resize';

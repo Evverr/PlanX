@@ -97,6 +97,9 @@ export class Editor {
   private slides = new Map<string, { v: number; from?: number; since?: number }>();
   /** Shared: the same, as last drawn. */
   slid = new Map<string, number>();
+  /** Shared: the node and way just folded by a chevron (`id:way`), its chevron kept and its count out
+   *  past it till the pointer leaves the chevron. */
+  afterFold: string | null = null;
   /** Whether the last press was a finger's: small things to grab (the resize handle, the link dots,
    *  the turning corner, a mind map node's buttons) then reach FINGER px across, not their own size. */
   byFinger = false;
@@ -302,6 +305,7 @@ export class Editor {
       plusFade,
       folded: this.folded(),
       slide: this.slideOut(plusFade),
+      keptFold: this.afterFold?.startsWith(`${[...this.selection][0]}:`) ? this.afterFold.split(':')[1] as Way : null,
       mindMove: g?.type === 'mindMove' ? { from: g.from, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null } : null,
       tableLines: this.hotLine ? [...this.pickedLines, this.hotLine] : this.pickedLines,
       editingCell: this.editingCell,
@@ -848,14 +852,14 @@ export class Editor {
   /** Shared: how many nodes each folded mind map node hides, each way. */
   folded(): Map<string, Map<Way, number>> { return this.inSight().folded; }
 
-  /** How far out past its chevron each folded node's count is (0…1, by `id:way`): out with the picked
-   *  node's buttons as they fade in, back in as smoothly once they're gone. */
+  /** How far out past its chevron each folded node's count is (0…1, by `id:way`): out at once when a
+   *  chevron folds it, back in smoothly once the pointer leaves the chevron. */
   private slideOut(plusFade: number): Map<string, number> {
     const now = performance.now(), out = new Map<string, number>();
     const picked = this.selection.size === 1 ? [...this.selection][0] : null;
     for (const [id, ways] of this.folded()) {
       for (const way of ways.keys()) {
-        const key = `${id}:${way}`, to = id === picked ? plusFade : 0, was = this.slides.get(key) ?? { v: to };
+        const key = `${id}:${way}`, to = key === this.afterFold && id === picked && plusFade > 0 ? 1 : 0, was = this.slides.get(key) ?? { v: to };
         let v = to;
         if (to < was.v) {
           const from = was.from ?? was.v, since = was.since ?? now;

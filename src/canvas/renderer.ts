@@ -71,6 +71,8 @@ export interface Scene {
   folded?: Map<string, Map<Way, number>>;
   /** How far out past its chevron each folded node's count has moved, 0…1, by `id:way`. */
   slide?: Map<string, number>;
+  /** The way the picked node was just folded by its chevron, which stays while the pointer is on it. */
+  keptFold?: Way | null;
   /** A mind map branch being dragged by its arrow button to hang from another node. */
   mindMove: { from: Point; to: Point; target: Item | null } | null;
   /** Table lines drawn blue: the one under the pointer and those picked to drag together. */
@@ -835,7 +837,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
         // The ways it has branches: those in sight, and those folded away.
         const up = it.parent ? s.get(it.parent) : undefined;
         const ways = [...new Set([...branchWays(it, s.items), ...foldedWays(it, up)])];
-        for (const b of mindButtons(it, s.get, cam.z, ways)) {
+        for (const b of mindButtons(it, s.get, cam.z, ways, s.keptFold ?? undefined)) {
           // Smaller and faint until the pointer comes over it.
           const hot = s.hotPlus === buttonKey(b), r = hot ? b.r : b.r * 0.9;
           ctx.globalAlpha = (hot ? 1 : 0.5) * s.plusFade;
@@ -861,11 +863,9 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
             const d = b.x < it.x ? -1 : 1;
             ctx.moveTo(b.x - d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.5, b.y);
             ctx.moveTo(b.x + d * r * 0.1, b.y - r * 0.4); ctx.lineTo(b.x + d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.1, b.y + r * 0.4);
-          } else if (b.kind === 'fold' || b.kind === 'unfold') {
-            // A chevron pointing back at the node, for folding its branches away, or out from it, for
-            // unfolding them.
-            const toNode = { down: [0, -1], up: [0, 1], left: [1, 0], right: [-1, 0] }[b.way ?? 'right'], k = b.kind === 'fold' ? 1 : -1;
-            const [dx, dy] = [toNode[0] * k, toNode[1] * k];
+          } else if (b.kind === 'fold') {
+            // A chevron pointing back at the node, for folding its branches away.
+            const [dx, dy] = { down: [0, -1], up: [0, 1], left: [1, 0], right: [-1, 0] }[b.way ?? 'right'];
             const tip = { x: b.x + dx * r * 0.25, y: b.y + dy * r * 0.25 }, back = r * 0.45;
             ctx.moveTo(tip.x - dx * back - dy * back, tip.y - dy * back - dx * back);
             ctx.lineTo(tip.x, tip.y);
