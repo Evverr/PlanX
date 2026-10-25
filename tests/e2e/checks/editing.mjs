@@ -170,25 +170,33 @@ export const checks = {
     expect(await p.ev(`planx.board.list().filter((i) => i.type === 'mind').length`), 'nothing new made').toBe(4);
   },
 
-  async 'Tab while typing in a mind map node alone under its parent makes a second one, typed in at once'(p) {
-    await p.make('mind', [500, 400]);
+  async 'Tab while typing in a lone mind map branch makes the next, and the next; once done they centre, and Tab goes round them'(p) {
+    await p.make('mind', [400, 400]);
     await p.escape();
     const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
     await p.ev(`planx.editor.setSelection(['${root}'])`);
     await p.key('Tab', 'Tab', 9);
-    await p.cdp('Input.insertText', { text: 'один' });
-    await p.key('Tab', 'Tab', 9);
-    await p.cdp('Input.insertText', { text: 'два' });
-    const kids = () => p.ev(`planx.board.list().filter((i) => i.parent === '${root}').sort((m, n) => m.y - n.y).map((i) => i.id)`);
-    const two = await kids();
-    expect(two.length, 'a second one made').toBe(2);
-    expect(await p.ev('planx.editor.editingId'), 'and typed in').toBe(two[1]);
-    // With two, Tab only goes from one to the other.
-    await p.key('Tab', 'Tab', 9);
-    expect(await p.ev('planx.editor.editingId'), 'round to the first').toBe(two[0]);
-    expect((await kids()).length, 'nothing more made').toBe(2);
+    for (const t of ['один', 'два', 'три']) {
+      await p.cdp('Input.insertText', { text: t });
+      await p.key('Tab', 'Tab', 9);
+    }
+    await p.cdp('Input.insertText', { text: 'четыре' });
+    const kids = () => p.ev(`planx.board.list().filter((i) => i.parent === '${root}').sort((m, n) => m.y - n.y)`);
+    const going = await kids();
+    expect(going.map((k) => k.text ?? '').join(), 'made one after another, going down').toBe('один,два,три,');
+    expect(await p.ev('planx.editor.editingId'), 'the last typed in').toBe(going[3].id);
+    // Done typing: they glide to stand centred on the topic.
     await p.escape();
-    expect(await p.ev(`planx.board.list().filter((i) => i.parent === '${root}').sort((m, n) => m.y - n.y).map((i) => i.text).join()`), 'what was typed').toBe('один,два');
+    await sleep(500);
+    const done = await kids(), r = await p.ev(`planx.board.get('${root}')`);
+    expect(done.map((k) => k.text).join(), 'what was typed').toBe('один,два,три,четыре');
+    expect((done[0].y + done[3].y + done[3].h) / 2, 'centred on the topic').toBeNear(r.y + r.h / 2, 1);
+    // Typed in again later, Tab only goes from one to the next.
+    await p.ev(`planx.editor.setSelection(['${done[3].id}']); planx.editor.startEditing('${done[3].id}')`);
+    await sleep(200);
+    await p.key('Tab', 'Tab', 9);
+    expect(await p.ev('planx.editor.editingId'), 'round to the first').toBe(done[0].id);
+    expect((await kids()).length, 'nothing more made').toBe(4);
   },
 
   async 'Cmd+Enter while typing keeps the text and leaves nothing picked'(p) {

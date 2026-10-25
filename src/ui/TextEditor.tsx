@@ -136,13 +136,20 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           editor.startEditing(id, next);
         } else if (item.type === 'mind' && e.key === 'Tab') {
           // In a mind map, Tab goes on typing in the next branch of the same parent (Shift+Tab, the one
-          // before), round to the first past the last; a branch alone there gets a second one after it
-          // (before it), typed in at once. Enter starts a new line.
+          // before), round to the first past the last. Typing in a branch alone there, it makes another
+          // after it (before it), typed in at once, and so on while the typing goes on from one to the
+          // next (see commitText). Enter starts a new line.
           e.preventDefault();
           const next = siblingOf(id, editor.board.list(), e.shiftKey ? -1 : 1);
-          if (!next && !item.parent) return;
+          if (item.parent && (!next || editor.tabRun === item.parent)) {
+            editor.tabRun = item.parent;
+            editor.tabStep = true;
+            commit();
+            editor.addMindNode(id, e.shiftKey ? 'above' : 'below');
+            return;
+          }
+          if (!next) return;
           commit();
-          if (!next) { editor.addMindNode(id, e.shiftKey ? 'above' : 'below'); return; }
           editor.setSelection([next]);
           editor.startEditing(next, null, 'end');
         }
