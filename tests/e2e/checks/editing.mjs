@@ -192,6 +192,18 @@ export const checks = {
     expect(await p.ev(`planx.board.list().filter((i) => i.parent === '${root}').length`), 'nothing new').toBe(4);
   },
 
+  async 'Cmd+Enter while typing keeps the text and leaves nothing picked'(p) {
+    await p.make('sticky', [600, 400]);
+    const id = await p.ev(`planx.board.list().find((i) => i.type === 'sticky').id`);
+    await p.ev(`planx.editor.setSelection(['${id}']); planx.editor.startEditing('${id}')`);
+    await sleep(200);
+    await p.cdp('Input.insertText', { text: 'готово' });
+    await p.key('Enter', 'Enter', 13, 4);
+    expect(await p.ev(`planx.board.get('${id}').text`), 'the text kept').toBe('готово');
+    expect(await p.ev('planx.editor.editingId'), 'not typing').toBe(null);
+    expect(await p.ev('planx.editor.selection.size'), 'nothing picked').toBe(0);
+  },
+
   async 'the hand pans the board and the wheel zooms it'(p) {
     const cam0 = await p.ev('planx.editor.cam');
     await p.key('h', 'KeyH', 72);

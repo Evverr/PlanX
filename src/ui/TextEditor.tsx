@@ -117,7 +117,12 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
       onBlur={commit}
       onKeyDown={(e) => {
         e.stopPropagation();
-        if (e.key === 'Escape' || (e.key === 'Enter' && (e.metaKey || e.ctrlKey || isFrame))) {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          // Cmd+Enter is done with it: the text kept and nothing left picked.
+          e.preventDefault();
+          commit();
+          editor.setSelection([]);
+        } else if (e.key === 'Escape' || (e.key === 'Enter' && isFrame)) {
           e.preventDefault();
           commit();
         } else if (item.type === 'mind' && item.parent && (e.key === 'Backspace' || e.key === 'Delete') && !e.currentTarget.value) {
