@@ -35,6 +35,8 @@ export function addMindNode(ed: Editor, fromId: string, kind: 'child' | 'down' |
   const at = beside ? { x: from.x, y: from.y } : childPlace(parent, items, get, w, h, kind === 'down' ? 'down' : undefined);
   const it = ed.newItem('mind', at.x, at.y, { w, h, fs: draft.fs, parent: parent.id, down: kind === 'down' || from.down || undefined });
   board.beginGesture();
+  // A folded node unfolds to show its new branch.
+  if (parent.collapsed) board.update(parent.id, { collapsed: undefined });
   board.add(it);
   const moves = beside ? insertBeside(it.id, from.id, kind, board.list()) : addChild(it.id, board.list());
   board.transact(() => moves.forEach((pt, k) => board.update(k, pt)));

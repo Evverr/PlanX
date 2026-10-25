@@ -6,7 +6,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchCurve, levelColor, mindButtons, mindDepth, nodeColors, siblingTints, type MindButton } from '../model/mind';
+import { branchCurve, foldBadge, levelColor, mindButtons, mindDepth, nodeColors, siblingTints, type MindButton } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
@@ -67,6 +67,8 @@ export interface Scene {
   hotPlus: MindButton | null;
   /** How far the node buttons have faded in, 0…1: they come a moment after the node is picked. */
   plusFade: number;
+  /** How many nodes each folded mind map node hides, shown by it. */
+  folded?: Map<string, number>;
   /** A mind map branch being dragged by its arrow button to hang from another node. */
   mindMove: { from: Point; to: Point; target: Item | null } | null;
   /** Table lines drawn blue: the one under the pointer and those picked to drag together. */
@@ -423,11 +425,11 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 0;
   if (own.fill) { ctx.fillStyle = shade(own.fill, theme.dim); ctx.fill(); }
-  // A strip 2 wide down its left edge in its level's colour, inside its round corners.
+  // A strip 3 wide down its left edge in its level's colour, inside its round corners.
   ctx.save();
   ctx.clip();
   ctx.fillStyle = shade(levelColor(mindDepth(it, s.get)), theme.dim);
-  ctx.fillRect(it.x, it.y, 2, it.h);
+  ctx.fillRect(it.x, it.y, 3, it.h);
   ctx.restore();
   ctx.globalAlpha = 1;
   // A node a branch is being dragged onto shows it by an edge dashed in its colour, the same dashes
@@ -440,6 +442,31 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
     ctx.setLineDash([]);
   }
   if (!editing) drawText(ctx, it, textPad(it), theme.ink, true, s, textPadY(it));
+  const hides = it.collapsed ? s.folded?.get(it.id) : undefined;
+  if (hides) drawFoldBadge(ctx, it, s, hides);
+}
+
+/** A folded mind map node's count of what it hides: a pill in the next level's colour on a stub of
+ *  branch, the number in it. */
+function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, n: number) {
+  const { theme, cam } = s, b = foldBadge(it, s.get, cam.z, n), down = !!it.down && !!it.parent;
+  ctx.globalAlpha = 0.5;
+  ctx.strokeStyle = shade(nodeColors(it, tints).color, theme.dim);
+  ctx.lineWidth = 0.75;
+  ctx.beginPath();
+  if (down) { ctx.moveTo(b.x, it.y + it.h); ctx.lineTo(b.x, b.y - b.h / 2); }
+  else { const right = b.x > it.x; ctx.moveTo(right ? it.x + it.w : it.x, b.y); ctx.lineTo(right ? b.x - b.w / 2 : b.x + b.w / 2, b.y); }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.roundRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h, b.h / 2);
+  ctx.fillStyle = shade(levelColor(mindDepth(it, s.get) + 1), theme.dim);
+  ctx.fill();
+  ctx.font = font(10 / cam.z, 600);
+  ctx.fillStyle = theme.ink;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(n), b.x, b.y + 0.5 / cam.z);
 }
 
 /** The branches of mind maps, under the nodes and half see-through (but for those to picked nodes):
@@ -805,7 +832,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && it.type === 'mind') {
       if (s.plusFade > 0) {
-        for (const b of mindButtons(it, s.get, cam.z)) {
+        const branches = s.items.some((i) => i.type === 'mind' && i.parent === it.id);
+        for (const b of mindButtons(it, s.get, cam.z, branches)) {
           // Smaller and faint until the pointer comes over it.
           const hot = s.hotPlus === b.kind, r = hot ? b.r : b.r * 0.9;
           ctx.globalAlpha = (hot ? 1 : 0.5) * s.plusFade;
@@ -831,8 +859,9 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
             ctx.moveTo(b.x - d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.5, b.y);
             ctx.moveTo(b.x + d * r * 0.1, b.y - r * 0.4); ctx.lineTo(b.x + d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.1, b.y + r * 0.4);
           } else {
+            // A plus, or a minus for folding the branches away.
             ctx.moveTo(b.x - r * 0.5, b.y); ctx.lineTo(b.x + r * 0.5, b.y);
-            ctx.moveTo(b.x, b.y - r * 0.5); ctx.lineTo(b.x, b.y + r * 0.5);
+            if (b.kind !== 'fold') { ctx.moveTo(b.x, b.y - r * 0.5); ctx.lineTo(b.x, b.y + r * 0.5); }
           }
           ctx.stroke();
         }

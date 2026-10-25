@@ -68,6 +68,8 @@ export interface Item {
   members?: string[];
   /** Mind map nodes in a branch led down from the central topic (see model/mind.ts). */
   down?: boolean;
+  /** A mind map node with all that grows from it folded away (see model/mind.ts). */
+  collapsed?: boolean;
   /** A folded frame's unfolded size (see model/frame.ts). */
   fold?: { w: number; h: number };
   sw?: number;
