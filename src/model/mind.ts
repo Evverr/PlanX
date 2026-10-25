@@ -12,6 +12,11 @@ export const MIND_COLOR = '#3E7BFA';
 /** Colours a node can be given; only that node takes it (and the branch to it), not what grows from it. */
 export const MIND_PALETTE = ['#3E7BFA', '#0C8599', '#30A46C', '#E8892B', '#E5484D', '#D6409F', '#8E4EC6', '#5B6170'];
 
+/** The strip down a node's left edge, by how far it is from the centre: the stickers' colours from blue
+ *  to yellow, the central topic blue, the fourth level and further yellow. */
+const LEVEL_COLORS = ['blue', 'purple', 'pink', 'orange', 'yellow'].map((k) => FILLS[k]);
+export const levelColor = (depth: number): string => LEVEL_COLORS[Math.min(depth, LEVEL_COLORS.length - 1)];
+
 /** A '#rrggbb' colour halfway to white. */
 export function lighter(hex: string): string {
   const n = parseInt(hex.slice(1), 16), mix = (sh: number) => Math.round(((n >> sh) & 255) / 2 + 127.5);
