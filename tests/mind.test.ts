@@ -303,3 +303,20 @@ describe('mind map: a node growing as it is typed in pushes what grows from it',
     expect(moves.get('d')).toEqual({ x: 20, y: 108 });
   });
 });
+
+describe('mind map: floors stand clear of the biggest branch next to them', () => {
+  // A wide branch over a narrow one, both on the right of the topic.
+  const r = node('r', 0, 0), a = node('a', 160, -28, { parent: 'r', w: 200 }), b = node('b', 160, 28, { parent: 'r' });
+
+  it('a floor started from the narrow one goes out from the wide one, level with its', () => {
+    const get = (id: string) => [r, a, b].find((i) => i.id === id);
+    expect(childPlace(b, [r, a, b], get, 100, 40).x).toBe(420);
+  });
+
+  it('the wide one growing wider pushes out the narrow one\'s floor too', () => {
+    const b1 = node('b1', 420, 28, { parent: 'b' }), a1 = node('a1', 420, -28, { parent: 'a' });
+    const moves = makeRoom('a', 50, 0, [r, a, b, a1, b1].map((i) => (i.id === 'a' ? { ...i, w: 250 } : i)));
+    expect(moves.get('a1')).toEqual({ x: 470, y: -28 });
+    expect(moves.get('b1')).toEqual({ x: 470, y: 28 });
+  });
+});

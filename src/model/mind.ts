@@ -115,6 +115,34 @@ function outFrom(n: Item, way: Way, k: { w: number; h: number }): Partial<Point>
   if (way === 'up') return { y: n.y - MIND_GAP_DOWN - k.h };
   return { x: way === 'right' ? n.x + n.w + MIND_GAP_X : n.x - MIND_GAP_X - k.w };
 }
+/** Node `n` reaching as far out as the furthest of the branches standing with it under its parent (the
+ *  widest beside it, the tallest under or over it): where a floor of their branches goes out from, so
+ *  one from a small node stands clear of a big one next to it, level with the big one's. */
+function floorOf(n: Item, all: Item[]): Item {
+  const p = n.parent ? all.find((i) => i.id === n.parent) : undefined;
+  if (!p) return n;
+  const way = mindWay(n, p), row = branchesOf(p, way, all);
+  if (way === 'right') return { ...n, w: Math.max(...row.map((k) => k.x + k.w)) - n.x };
+  if (way === 'down') return { ...n, h: Math.max(...row.map((k) => k.y + k.h)) - n.y };
+  if (way === 'left') { const l = Math.min(...row.map((k) => k.x)); return { ...n, x: l, w: n.x + n.w - l }; }
+  const t = Math.min(...row.map((k) => k.y));
+  return { ...n, y: t, h: n.y + n.h - t };
+}
+/** Moves out the floor of branches beyond node `n` and those standing with it, with all that grows from
+ *  them, where any of it is now closer than the gap to the furthest of them. */
+function clearFloor(n: Item, all: Item[], block: (k: Item) => Item[]): void {
+  const p = n.parent ? all.find((i) => i.id === n.parent) : undefined;
+  if (!p) return;
+  const way = mindWay(n, p), edge = floorOf(n, all);
+  for (const k of branchesOf(p, way, all)) {
+    for (const c of branchesOf(k, way, all)) {
+      const at = outFrom(edge, way, c);
+      const d = way === 'right' ? Math.max(0, at.x! - c.x) : way === 'left' ? Math.min(0, at.x! - c.x) : 0;
+      const e = way === 'down' ? Math.max(0, at.y! - c.y) : way === 'up' ? Math.min(0, at.y! - c.y) : 0;
+      if (d || e) block(c).forEach((m) => { m.x += d; m.y += e; });
+    }
+  }
+}
 
 /**
  * Where a new node of size w × h goes under `parent`: out from it the way its branches grow there
@@ -126,7 +154,7 @@ export function childPlace(parent: Item, items: Item[], get: Get, w: number, h: 
   const way = wayFrom(parent, get, toward), a = axis(way);
   const kids = items.filter((i) => i.type === 'mind' && i.parent === parent.id && mindWay(i, parent) === way);
   const placed = kids.flatMap((k) => [k, ...descendants([k.id], items).map(get)]).filter((i): i is Item => !!i);
-  const at = { x: 0, y: 0, ...outFrom(parent, way, { w, h }) };
+  const at = { x: 0, y: 0, ...outFrom(floorOf(parent, items), way, { w, h }) };
   at[a.at] = placed.length ? hi(placed, a) + a.gap : middle(parent, a) - (a.at === 'x' ? w : h) / 2;
   const nodes = items.filter((i) => i.type === 'mind'), g = a.gap / 2;
   for (let tries = 0; tries < 100; tries++) {
@@ -222,6 +250,7 @@ export function makeRoom(id: string, dw: number, dh: number, items: Item[]): Map
     }[way];
     block(k).forEach((n) => { n.x += d.x; n.y += d.y; });
   }
+  clearFloor(node, all, block);
   if (p) {
     const way = mindWay(node, p);
     pushPast(node, null, upright(way) ? dw : dh, 1, all, byId, block, 1);
@@ -282,7 +311,7 @@ function layOut(n: Item, way: Way, all: Item[], block: (k: Item) => Item[]): voi
   const a = axis(way), across = a.at === 'x' ? 'y' : 'x';
   const kids = all.filter((k) => k.type === 'mind' && k.parent === n.id).sort((m, q) => m[across] - q[across] || m[a.at] - q[a.at]);
   for (const k of kids) {
-    Object.assign(k, outFrom(n, way, k));
+    Object.assign(k, outFrom(floorOf(n, all), way, k));
     k[a.at] = n[a.at];
     layOut(k, way, all, block);
   }

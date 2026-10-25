@@ -851,7 +851,8 @@ export class Editor {
       // A node growing (a line taller, or wider under its parent) moves its neighbours along, so
       // nothing overlaps.
       const fit = mindFit(this, it, text), dw = (fit.w ?? it.w) - it.w, dh = (fit.h ?? it.h) - it.h;
-      const moves = dw || dh ? makeRoom(id, dw, dh, this.board.list()) : new Map<string, Point>();
+      // Worked out with it at its new size, as it'll be.
+      const moves = dw || dh ? makeRoom(id, dw, dh, this.board.list().map((i) => (i.id === id ? { ...i, ...fit } : i))) : new Map<string, Point>();
       this.board.transact(() => {
         this.board.update(id, fit);
         moves.forEach((pt, k) => this.board.update(k, pt));
