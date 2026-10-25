@@ -24,7 +24,13 @@ export function onHandle(ed: Editor, it: Item, w: Point): boolean {
 export function plusAt(ed: Editor, it: Item, w: Point): MindButton | null {
   if (it.type !== 'mind' || ed.plusFade() === 0) return null;
   const branches = ed.board.list().some((i) => i.type === 'mind' && i.parent === it.id);
-  return mindButtons(it, (id) => ed.board.get(id), ed.cam.z, branches).find((b) => Math.hypot(w.x - b.x, w.y - b.y) <= Math.max(b.r * 1.5, ed.reach(0)))?.kind ?? null;
+  // The nearest within reach: the "+" for a branch and the chevron past it are close.
+  let best: MindButton | null = null, near = Infinity;
+  for (const b of mindButtons(it, (id) => ed.board.get(id), ed.cam.z, branches)) {
+    const d = Math.hypot(w.x - b.x, w.y - b.y);
+    if (d <= Math.max(b.r * 1.5, ed.reach(0)) && d < near) { best = b.kind; near = d; }
+  }
+  return best;
 }
 
 /** The folded mind map node whose count is under the point, picked or not. */

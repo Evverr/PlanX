@@ -855,10 +855,16 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
             const d = b.x < it.x ? -1 : 1;
             ctx.moveTo(b.x - d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.5, b.y);
             ctx.moveTo(b.x + d * r * 0.1, b.y - r * 0.4); ctx.lineTo(b.x + d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.1, b.y + r * 0.4);
+          } else if (b.kind === 'fold') {
+            // A chevron pointing back at the node, for folding its branches away.
+            const [dx, dy] = b.way === 'down' ? [0, -1] : b.way === 'left' ? [1, 0] : [-1, 0];
+            const tip = { x: b.x + dx * r * 0.25, y: b.y + dy * r * 0.25 }, back = r * 0.45;
+            ctx.moveTo(tip.x - dx * back - dy * back, tip.y - dy * back - dx * back);
+            ctx.lineTo(tip.x, tip.y);
+            ctx.lineTo(tip.x - dx * back + dy * back, tip.y - dy * back + dx * back);
           } else {
-            // A plus, or a minus for folding the branches away.
             ctx.moveTo(b.x - r * 0.5, b.y); ctx.lineTo(b.x + r * 0.5, b.y);
-            if (b.kind !== 'fold') { ctx.moveTo(b.x, b.y - r * 0.5); ctx.lineTo(b.x, b.y + r * 0.5); }
+            ctx.moveTo(b.x, b.y - r * 0.5); ctx.lineTo(b.x, b.y + r * 0.5);
           }
           ctx.stroke();
         }
