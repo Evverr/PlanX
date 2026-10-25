@@ -4,6 +4,7 @@ import { alignOf, TEXT_COLORS, textPad, textPadY, type Item } from '../model/typ
 import { fontOf, FONTS, LINE_HEIGHT, textBlockHeight } from '../canvas/text';
 import { FOLD_FS, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP } from '../model/frame';
 import { center, TASK_INSET } from '../canvas/geometry';
+import { siblingOf } from '../model/mind';
 
 /**
  * A textarea laid over the item being edited, scaled with the board so the
@@ -120,10 +121,14 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           done.current = true;
           editor.removeMindNode(id);
         } else if (item.type === 'mind' && e.key === 'Tab') {
-          // In a mind map, Tab goes on typing in a new branch of this node; Enter starts a new line.
+          // In a mind map, Tab goes on typing in the next branch of the same parent (Shift+Tab, the one
+          // before), round to the first past the last; Enter starts a new line.
           e.preventDefault();
+          const next = siblingOf(id, editor.board.list(), e.shiftKey ? -1 : 1);
+          if (!next) return;
           commit();
-          editor.addMindNode(id, 'child');
+          editor.setSelection([next]);
+          editor.startEditing(next, null, 'end');
         }
       }}
     />

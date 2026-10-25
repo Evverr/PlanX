@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addChild, balance, branchCurve, buttonKey, canMoveTo, childPlace, descendants, foldBadge, foldedAway, folding, insertBeside, makeRoom, mindButtons, mindDepth, moveBranch, type Way } from '../src/model/mind';
+import { addChild, balance, branchCurve, buttonKey, canMoveTo, childPlace, descendants, foldBadge, foldedAway, folding, insertBeside, makeRoom, mindButtons, mindDepth, moveBranch, siblingOf, type Way } from '../src/model/mind';
 import type { Item } from '../src/model/types';
 
 const node = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item =>
@@ -255,5 +255,21 @@ describe('mind map: branches led up from the central topic', () => {
     const moves = moveBranch('d', 'r', [r, d, d1], 'up');
     expect(moves.get('d')).toEqual({ x: 0, y: -88, down: undefined, up: true });
     expect(moves.get('d1')).toEqual({ x: 0, y: -176, down: undefined, up: true });
+  });
+});
+
+describe('mind map: going from branch to branch', () => {
+  const r = node('r', 0, 0), a = node('a', 160, -56, { parent: 'r' }), b = node('b', 160, 0, { parent: 'r' }), c = node('c', 160, 56, { parent: 'r' });
+  const l = node('l', -160, 0, { parent: 'r' }), all = [r, c, a, l, b];
+
+  it('the next branch of the same parent growing the same way, top to bottom, round past the last', () => {
+    expect(siblingOf('a', all)).toBe('b');
+    expect(siblingOf('c', all)).toBe('a');
+    expect(siblingOf('a', all, -1)).toBe('c');
+  });
+
+  it('none for a branch alone on its side, or the central topic', () => {
+    expect(siblingOf('l', all)).toBe(null);
+    expect(siblingOf('r', all)).toBe(null);
   });
 });
