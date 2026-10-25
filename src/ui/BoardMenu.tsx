@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Glyph } from './glyphs';
 import dropIcon from './menu/drop.svg';
 import { usePanelSize, type PanelSize } from './panels/size';
+import { LabsMenu } from '../labs/LabsMenu';
 
 /**
  * The board's menu, opened from the button after its name (Figma "Mol / Menu right"): first keeping
@@ -13,8 +14,9 @@ import { usePanelSize, type PanelSize } from './panels/size';
 export function BoardMenu({ level = 0, onSave, onReset }: { level?: number; onSave?: () => void; onReset?: () => void }) {
   const [on, setOn] = useState(false);
   const [panelSize, setPanelSize] = usePanelSize();
-  // A row with an arrow opens the same menu again beside it while the pointer is on it (or its menu).
-  const [sub, setSub] = useState(false);
+  // A row with an arrow opens a further level beside it (the same menu again, or the one it brings)
+  // while the pointer is on it (or its menu); `sub` is that row's label.
+  const [sub, setSub] = useState<string | null>(null);
   // Icons: every row on the first level, none on the second, just the first row on the third (to
   // try out a menu where rows without one line their text up with the row that has one).
   let n = 0;
@@ -28,33 +30,35 @@ export function BoardMenu({ level = 0, onSave, onReset }: { level?: number; onSa
     if (!el || !level || leftward) return;
     if (el.getBoundingClientRect().right > innerWidth - 8) setLeftward(true);
   }, [level, leftward]);
-  const row = (icon: string, label: string, { end, onClick, light, more }: { end?: ReactNode; onClick?: () => void; light?: boolean; more?: boolean } = {}) => {
-    const withIcon = iconed(n++);
+  const row = (icon: string, label: string, { end, onClick, light, more }: { end?: ReactNode; onClick?: () => void; light?: boolean; more?: boolean | ReactNode } = {}) => {
+    const withIcon = iconed(n++), open = !!more && sub === label;
     return (
-    <div className="menu-item" onPointerEnter={() => setSub(!!more)}>
-      <button className={`menu-row ${light ? 'light' : ''} ${anyIcon && !withIcon ? 'indent' : ''}`} role="menuitem" aria-haspopup={more || undefined} aria-expanded={more ? sub : undefined}
-        onClick={more ? () => setSub(true) : onClick}>
+    <div className="menu-item" onPointerEnter={() => setSub(more ? label : null)}>
+      <button className={`menu-row ${light ? 'light' : ''} ${anyIcon && !withIcon ? 'indent' : ''}`} role="menuitem" aria-haspopup={!!more || undefined} aria-expanded={more ? open : undefined}
+        onClick={more ? () => setSub(label) : onClick}>
         {withIcon && <Glyph id={icon} className="menu-icon" />}
         <span>{label}</span>
         {end}
       </button>
-      {more && sub && level < MAX_LEVEL && <BoardMenu level={level + 1} />}
+      {open && (more === true ? level < MAX_LEVEL && <BoardMenu level={level + 1} /> : more)}
     </div>
     );
   };
+  const arrow = <img className="menu-more" src={dropIcon} alt="" width={24} height={24} />;
   return (
     <div ref={ref} className={`board-menu ${level ? 'sub' : ''} ${leftward ? 'leftward' : ''} ${anyIcon ? '' : 'plain'}`} role="menu" data-nosort>
       {level === 0 && <>
         {row('save-template', 'Сохранить панели', { onClick: onSave })}
         {row('refresh-l', 'Сбросить панели', { onClick: onReset })}
         {row('collapse-l', 'Размер панелей', { end: <SizeDots size={panelSize} onPick={setPanelSize} /> })}
+        {row('lightning-plus', 'Нововведения', { more: <LabsMenu />, end: arrow })}
         <div className="menu-line" />
         {row('user-profile', 'Профиль')}
         {row('settings-l', 'Настройки')}
         <div className="menu-line" />
       </>}
       {row('link-settings', 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
-      {row('change-order', 'Оглавление', { light: true, more: true, end: <img className="menu-more" src={dropIcon} alt="" width={24} height={24} /> })}
+      {row('change-order', 'Оглавление', { light: true, more: true, end: arrow })}
       {row('broom', 'Преобразовать текст в таблицу')}
       {row('server-settings', 'Параметры оглавления')}
       <div className="menu-line" />
@@ -84,6 +88,6 @@ const MAX_LEVEL = 3;
 
 /** The switch at the end of a row (Figma "Check" and "Check 2"): a blue track with the knob right when on,
  *  grey with it left when off. */
-function Switch({ on }: { on: boolean }) {
+export function Switch({ on }: { on: boolean }) {
   return <span className={`menu-switch ${on ? 'on' : ''}`} role="switch" aria-checked={on}><i /></span>;
 }

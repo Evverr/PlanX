@@ -13,7 +13,8 @@ export function copiesOf(src: Item[], srcLinks: Link[], offset: number, maxZ: nu
   const items = [...src].sort((a, b) => a.z - b.z).map((it) => {
     const id = uid();
     map.set(it.id, id);
-    return { ...it, id, x: it.x + offset, y: it.y + offset, z: it.type === 'frame' ? it.z : ++z };
+    // A copy starts with no reactions of its own.
+    return { ...it, id, x: it.x + offset, y: it.y + offset, z: it.type === 'frame' ? it.z : ++z, rx: undefined };
   }).map((it) => {
     if (it.parent && map.has(it.parent)) it.parent = map.get(it.parent);
     if (it.members) it.members = it.members.map((m) => map.get(m)).filter((m): m is string => !!m);

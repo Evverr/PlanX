@@ -81,6 +81,8 @@ export interface Scene {
   editingCell: number | null;
   /** Only a picture, as in the look into a folded frame: no buttons on frames. */
   still?: boolean;
+  /** Left see-through where nothing is drawn (a picture saved without the board's background). */
+  noBackground?: boolean;
 }
 
 export interface InkStroke { pts: Point[]; color: string; width: number; hl: boolean }
@@ -765,7 +767,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   const { cam, theme, dpr } = s;
   tints = siblingTints(s.items);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  drawBackground(ctx, s);
+  if (!s.noBackground) drawBackground(ctx, s);
 
   ctx.setTransform(dpr * cam.z, 0, 0, dpr * cam.z, dpr * cam.x, dpr * cam.y);
   const view: Rect = { x: -cam.x / cam.z - 50, y: -cam.y / cam.z - 50, w: s.width / cam.z + 100, h: s.height / cam.z + 100 };

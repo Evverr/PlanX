@@ -8,11 +8,13 @@ import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
 import { ColorPicker } from './ColorPicker';
 import { crowds, EDGE, shownRects } from '../layout';
+import { useLabs } from '../labs/labs';
+import { LockButton, ReactButton } from '../labs/SelectionLabs';
 
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['colors', 'rows', 'cols', 'front', 'back', 'duplicate', 'trash'];
+const ORDER = ['colors', 'rows', 'cols', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -238,6 +240,7 @@ function selectionRoom(): number {
 export function SelectionPanel({ editor, items, cells, linkCount, docked }: { editor: Editor; items: Item[]; cells: number[]; linkCount: number; docked: boolean }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
   const sort = useSortable('planx-order-selection', ORDER, 'x');
+  const labs = useLabs();
   // Centred at the bottom, clear of the tool rail (on whichever side); where another panel stands
   // there (wherever it's been moved), it goes up above it instead.
   const [place, setPlace] = useState<{ left: number; bottom: number | null }>({ left: 0, bottom: null });
@@ -315,6 +318,9 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
         front: items.length > 0 ? btn('to-front', 'На передний план', () => editor.bringToFront()) : undefined,
         back: items.length > 0 ? btn('to-back', 'На задний план', () => editor.sendToBack()) : undefined,
         duplicate: items.length > 0 ? btn('duplicate', 'Дублировать (Ctrl+D)', () => editor.duplicate()) : undefined,
+        // Features on trial (src/labs), while they're switched on.
+        lock: labs.lock && items.length > 0 ? <LockButton editor={editor} items={items} /> : undefined,
+        react: labs.reactions && items.length > 0 ? <ReactButton editor={editor} items={items} /> : undefined,
         trash: btn('trashcan', 'Удалить (Del)', () => editor.deleteSelection()),
       }, selectionRoom(), 'above')}
     </div>

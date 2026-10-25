@@ -22,6 +22,9 @@ import { BoardMenu } from './ui/BoardMenu';
 import { resetPanels, savePanels } from './ui/panels/store';
 import { useBar } from './ui/panels/bar';
 import type { Item, Link } from './model/types';
+import { Labs } from './labs/Labs';
+import { useLabs } from './labs/labs';
+import { useFollowing } from './labs/presence';
 import { readJSON, readText, writeJSON, writeText } from './storage';
 
 /** Where a board copied into a new tab waits for it, followed by the new board's id. */
@@ -152,6 +155,9 @@ export function App({ boardId }: { boardId: string }) {
     return () => clearTimeout(t);
   }, [textItem?.id, ui.moving]); // eslint-disable-line react-hooks/exhaustive-deps
   const peers = conn.peers();
+  // Features on trial (src/labs): with "following" on, a click on someone's avatar follows them.
+  const labs = useLabs();
+  const following = useFollowing();
 
   const share = async () => {
     const url = `${location.origin}${location.pathname}?board=${boardId}`;
@@ -233,7 +239,13 @@ export function App({ boardId }: { boardId: string }) {
             aria-label="Убрать панели" onClick={() => setBare(true)}>
             <img src={catFor()} alt="" draggable={false} />
           </button>
-          {peers.slice(0, 4).map((p) => (
+          {peers.slice(0, 4).map((p) => labs.follow ? (
+            <button key={p.id} className={`avatar follow ${following?.id === p.id ? 'following' : ''}`} style={{ borderColor: following?.id === p.id ? p.color : undefined }}
+              title={following?.id === p.id ? `Перестать следовать за ${p.name}` : `Следовать за ${p.name}`} aria-label={`Следовать за ${p.name}`}
+              onClick={() => window.dispatchEvent(new CustomEvent('planx:follow', { detail: p.id }))}>
+              <img src={catFor(p.id)} alt="" draggable={false} />
+            </button>
+          ) : (
             <span key={p.id} className="avatar" title={p.name}><img src={catFor(p.id)} alt="" draggable={false} /></span>
           ))}
           {peers.length > 4 && <span className="more">+{peers.length - 4}</span>}
@@ -258,6 +270,7 @@ export function App({ boardId }: { boardId: string }) {
       <FramePeek editor={editor} board={board} />
       {cleared && <ClearFx key={cleared} onDone={endCleared} />}
       <Tooltips />
+      <Labs editor={editor} conn={conn} />
 
       {/* Typing in a table cell, the panel shows and sets that cell's own formatting. */}
       {textItem && textShown === textItem.id && <TextPanel editor={editor}

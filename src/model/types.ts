@@ -70,6 +70,10 @@ export interface Item {
   fold?: { w: number; h: number };
   sw?: number;
   hl?: boolean;
+  /** Locked in place: not moved, resized, typed in or deleted (src/labs, "Замок"). */
+  lock?: boolean;
+  /** Reactions: for each emoji id, who put it, by their browser's id (src/labs, "Реакции"). */
+  rx?: Record<string, string[]>;
 }
 
 export type Side = 'top' | 'right' | 'bottom' | 'left';

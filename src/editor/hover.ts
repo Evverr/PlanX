@@ -8,6 +8,7 @@ import { frameButtonAt } from './frames';
 import { rotateCursor } from './cursors';
 import { restOn, sameLine, tableLineAt } from './tables';
 import type { Editor } from './editor';
+import { isLocked } from '../labs/labs';
 
 /** How far outside a corner (in screen pixels) the pointer turns the item. */
 const ROTATE_ZONE = 18;
@@ -50,7 +51,9 @@ export const frameButtonUnder = (ed: Editor, w: Point) => frameButtonAt(ed.shown
  *  a table line it has rested on, a mind map button) and the cursor says what a press would do. */
 export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if (!ed.canvas || ed.gesture || ed.tool !== 'select') return;
-  const single = ed.selection.size === 1 ? ed.board.get([...ed.selection][0]) : undefined;
+  const picked = ed.selection.size === 1 ? ed.board.get([...ed.selection][0]) : undefined;
+  // A locked item has no handles to take.
+  const single = isLocked(picked) ? undefined : picked;
   const dot = single && !ed.editingId ? dotAt(ed, single, w) : null;
   if (dot !== ed.hotDot) { ed.hotDot = dot; ed.requestRender(); }
   let cursor = '';
@@ -58,7 +61,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   restOn(ed, near);
   const line = ed.lineRest?.armed ? ed.lineRest.line : null;
   if (!sameLine(line, ed.hotLine)) { ed.hotLine = line; ed.requestRender(); }
-  const plus = single ? plusAt(ed, single, w) : null;
+  const plus = picked ? plusAt(ed, picked, w) : null;
   if (plus !== ed.hotPlus) { ed.hotPlus = plus; ed.requestRender(); }
   if (plus || frameButtonUnder(ed, w)) cursor = 'pointer';
   else if (dot) cursor = 'crosshair';
@@ -69,7 +72,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   else {
     const hit = hitItem(ed.shown(), w, ed.cam.z);
     if ((hit?.type === 'task' && onTaskBox(hit, w, ed.cam.z)) || (hit?.type === 'audio' && onAudioButton(hit, w))) cursor = 'pointer';
-    else if (hit) cursor = alt ? 'copy' : 'move';
+    else if (hit && !isLocked(hit)) cursor = alt ? 'copy' : 'move';
   }
   ed.canvas.style.cursor = cursor;
 }

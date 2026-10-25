@@ -1,0 +1,109 @@
+/* The features on trial ("Нововведения", src/labs). */
+
+/* Their bar: upright, halfway down the right edge. */
+.labs-bar { right: calc(12px + env(safe-area-inset-right, 0px)); top: 50%; transform: translateY(-50%); flex-direction: column; }
+.labs-bar .ib, .bar.panel .ib:has(> svg.glyph), .op-wrap > .ib:has(> svg.glyph) { color: var(--fmt-ink); }
+.labs-bar .ib.on, .bar.panel .ib.on:has(> svg.glyph) { color: var(--fmt-on-ink); }
+
+/* Their popups open beside the bar, to its left. */
+.labs-pop { right: calc(24px + var(--e52) + env(safe-area-inset-right, 0px)); top: 50%; transform: translateY(-50%); width: var(--e300); max-width: calc(100vw - var(--e96)); box-sizing: border-box;
+  max-height: calc(100vh - 32px); overflow-y: auto; animation: fade-in .12s ease-out; }
+.labs-pop h3, .labs-keys h3 { margin: 0 0 var(--s12); font: 700 var(--s13)/var(--s21) "Inter", var(--ui); }
+.labs-pop label { display: block; margin: var(--s12) 0 var(--s6); font-weight: 600; font-size: var(--s12); color: var(--muted); }
+.labs-pop .muted { color: var(--muted); font-size: var(--s12); line-height: 1.5; }
+.labs-pop .btn:disabled { opacity: .45; cursor: default; }
+.labs-pop input:not([type="range"]) { width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: var(--s8);
+  padding: var(--s8) var(--s10); font: inherit; outline: none; }
+.labs-pop input:focus { border-color: #4DA3FF; }
+
+/* A row of choices, the picked one blue. */
+.labs-seg { display: flex; gap: 2px; padding: 2px; border-radius: var(--s8); background: var(--fmt-hover); }
+.labs-seg button { flex: 1; height: var(--e28); border: 0; border-radius: var(--s6); background: none; cursor: pointer; font: 500 var(--s12) "Inter", var(--ui); color: var(--menu-ink); white-space: nowrap; }
+.labs-seg button:hover { background: var(--fmt-hover); }
+.labs-seg button.on { background: var(--surface); color: var(--fmt-on-ink); box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
+
+/* Экспорт: a preview of the picture over a grey (a chequer where it's see-through). */
+.export-preview { height: var(--e160); border-radius: var(--s8); background: var(--fmt-hover); display: grid; place-items: center; overflow: hidden; color: var(--muted); font-size: var(--s12); }
+.export-preview img { max-width: calc(100% - 8px); max-height: calc(100% - 8px); box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
+.export-preview.checker img { background: repeating-conic-gradient(#E9EBEF 0 25%, #fff 0 50%) 0 0 / 12px 12px; }
+.export-pop .row { margin-top: var(--s16); }
+
+/* Поиск */
+.search-pop { top: calc(16px + env(safe-area-inset-top, 0px)); transform: none; width: var(--e340); }
+.search-field { position: relative; }
+.search-field .search-icon { position: absolute; left: var(--s8); top: 50%; transform: translateY(-50%); width: var(--e20); height: var(--e20); color: var(--muted); pointer-events: none; }
+.search-pop .search-field input { padding-left: var(--s34); }
+.search-pop > .muted { margin: var(--s10) 0 var(--s4); }
+.search-list { list-style: none; margin: 0 calc(var(--s8) * -1); padding: 0; max-height: min(var(--e380), 60vh); overflow-y: auto; }
+.search-list button { display: flex; gap: var(--s10); align-items: baseline; width: 100%; padding: var(--s7) var(--s8); border: 0; border-radius: var(--s6); background: none; cursor: pointer;
+  text-align: left; font: 400 var(--s13)/var(--s20) "Inter", var(--ui); color: var(--menu-ink); }
+.search-list button.on { background: var(--fmt-on); }
+.search-kind { flex: none; width: var(--e62); font-size: var(--s11); font-weight: 600; color: var(--muted); }
+.search-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-text mark { background: #FFE36E; color: #1B2130; border-radius: 3px; padding: 0 1px; }
+
+/* Таймер */
+.timer-presets { display: flex; flex-wrap: wrap; gap: var(--s6); margin: var(--s12) 0; }
+.timer-custom { display: flex; gap: var(--s8); }
+.timer-custom input { flex: 1; min-width: 0; }
+
+/* Pills at the top in the middle: the timer, and whom you're following. */
+.labs-top { position: fixed; z-index: 6; left: 50%; top: calc(12px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: var(--s8); pointer-events: none; }
+/* Where the top bar would be in the way, they go under it. */
+@media (max-width: 1100px) { .labs-top { top: calc(24px + var(--bar) + env(safe-area-inset-top, 0px)); } }
+.labs-pill { pointer-events: auto; display: flex; align-items: center; gap: var(--s8); height: var(--e40); box-sizing: border-box; padding: 0 var(--s8) 0 var(--s12); border-radius: var(--s20);
+  background: var(--surface); box-shadow: var(--shadow); font: 500 var(--s13) "Inter", var(--ui); color: var(--menu-ink); white-space: nowrap; animation: fade-in .15s ease-out; }
+.pill-icon { width: var(--e20); height: var(--e20); color: var(--fmt-on-ink); }
+.pill-btn { display: grid; place-items: center; width: var(--e28); height: var(--e28); padding: 0; border: 0; border-radius: 50%; background: none; color: var(--fmt-ink); cursor: pointer;
+  font: 700 var(--s12) "Inter", var(--ui); }
+.pill-btn:hover { background: var(--fmt-hover); }
+.pill-btn svg { width: var(--e20); height: var(--e20); }
+.timer-clock { min-width: 3.2em; font-size: var(--s15); font-weight: 700; font-variant-numeric: tabular-nums; }
+.timer-track { width: var(--e96); height: var(--e4); border-radius: 2px; background: var(--op-track); overflow: hidden; }
+.timer-track i { display: block; height: 100%; background: var(--fmt-on-ink); transition: width .25s linear; }
+.timer-pill.paused .timer-clock { color: var(--muted); }
+.timer-pill.ended { background: #FF453A; color: #fff; animation: timer-flash 1s ease-in-out 3; }
+.timer-pill.ended .pill-icon, .timer-pill.ended .pill-btn { color: #fff; }
+.timer-pill.ended .timer-track { display: none; }
+@keyframes timer-flash { 50% { transform: scale(1.06); } }
+.follow-pill { border: 2px solid; padding-left: var(--s10); }
+.follow-pill .btn { height: var(--e28); line-height: var(--e28); }
+.follow-dot { width: var(--e10); height: var(--e10); border-radius: 50%; }
+/* While following, a frame in their colour round the screen. */
+.labs-follow-frame { position: fixed; inset: 0; z-index: 4; border: 3px solid; pointer-events: none; }
+.avatar.follow { cursor: pointer; transition: transform .12s ease-out; }
+.avatar.follow:hover { transform: scale(1.1); }
+.avatar.following { border-width: var(--s3); }
+
+/* Лазер: a red dot for the cursor, and a hint at the bottom. */
+.board-canvas.laser { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='5' fill='%23FF3B30' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 10 10, crosshair !important; }
+.laser-pill { position: fixed; z-index: 6; left: 50%; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: block; line-height: var(--e40); padding: 0 var(--s16); font-weight: 400; }
+.laser-pill b { font-weight: 700; }
+
+.labs-toast { top: calc(66px + var(--bar) + env(safe-area-inset-top, 0px)); }
+
+/* Реакции on the selection panel: a row of emoji above it. */
+.op-pop.react-pop { gap: var(--s4); padding: 0 var(--s8); }
+.react-btn { position: relative; display: grid; place-items: center; width: var(--e40); height: var(--e40); padding: 0; border: 0; border-radius: var(--s8); background: none; cursor: pointer;
+  transition: transform .1s ease-out, background-color .12s ease-out; }
+.react-btn:hover { background: var(--fmt-hover); transform: scale(1.12); }
+.react-btn.on { background: var(--fmt-on); }
+.react-btn img { width: var(--e26); height: var(--e26); pointer-events: none; }
+.react-btn span { position: absolute; right: 1px; bottom: 1px; min-width: 14px; padding: 0 3px; box-sizing: border-box; border-radius: 7px; background: var(--fmt-on-ink); color: #fff; font: 700 9px/14px "Inter", var(--ui); }
+
+/* Шпаргалка: in the middle over a dimmed screen. */
+.labs-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(0, 0, 0, .25); animation: fade-in .12s ease-out; }
+.labs-keys { position: relative; width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; box-sizing: border-box; padding: var(--s20) var(--s24); }
+.keys-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s4); }
+.keys-head h3 { margin: 0; font-size: var(--s15); }
+.keys-grid { columns: 2 300px; column-gap: var(--s32); }
+.keys-grid section { break-inside: avoid; margin-bottom: var(--s16); }
+.keys-grid h4 { margin: var(--s8) 0 var(--s6); font: 700 var(--s11) "Inter", var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.keys-grid dl { margin: 0; }
+.keys-row { display: flex; justify-content: space-between; gap: var(--s12); padding: var(--s4) 0; border-bottom: 1px solid var(--fmt-line); }
+.keys-row dt { display: flex; align-items: center; gap: 3px; white-space: nowrap; color: var(--muted); font-size: var(--s12); }
+.keys-row dd { margin: 0; text-align: right; }
+.labs-keys kbd { min-width: 1.4em; text-align: center; font: 600 11px/18px "Inter", var(--ui); color: var(--menu-ink); background: var(--surface); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; }
+
+/* The menu level with the switches. */
+.labs-menu .menu-row { padding-right: var(--s32); }
