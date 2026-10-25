@@ -55,6 +55,7 @@ export function addMindNode(ed: Editor, fromId: string, kind: MindAdd, byPlus = 
   // can be added one click after another; they're typed in later.
   if (byPlus) return;
   ed.setSelection([it.id]);
+  ed.justMade = it.id;
   ed.startEditing(it.id);
 }
 
