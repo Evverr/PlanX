@@ -49,7 +49,7 @@ export function renderPicture(ed: Editor, opts: ExportOptions, fit?: { w: number
     items, links, get: (id) => byId.get(id) ?? ed.board.get(id),
     cam: { x: (PAD - b.x) * z, y: (PAD - b.y) * z, z },
     theme: opts.bg === 'white' ? lightTheme() : readTheme(), width: w, height: h, dpr: 1,
-    still: true, noBackground: opts.bg !== 'board', selection: new Set(), editingId: null, marquee: null, linkPreview: null, peers: [],
+    noBackground: opts.bg !== 'board', selection: new Set(), editingId: null, marquee: null, linkPreview: null, peers: [],
     showHandle: false, byFinger: false, hotDot: null, hotPlus: null, plusFade: 0, mindMove: null, tableLines: [], editingCell: null,
     guides: [], pickedCells: null, stroke: null,
   });

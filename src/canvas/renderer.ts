@@ -81,8 +81,6 @@ export interface Scene {
   guides: Guide[];
   /** The table cell being edited, its text left to the overlay. */
   editingCell: number | null;
-  /** Only a picture, as in the look into a folded frame: no buttons on frames. */
-  still?: boolean;
   /** Left see-through where nothing is drawn (a picture saved without the board's background). */
   noBackground?: boolean;
 }
@@ -320,7 +318,6 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
         ctx.textBaseline = 'bottom';
         ctx.fillText(it.text, it.x + 2, it.y - 8, it.w);
       }
-      if (!s.still) for (const b of frameButtons(it, cam.z)) drawIcon(ctx, b.icon, b.x, b.y, b.s, theme.muted);
       break;
     }
     case 'icon':
@@ -565,7 +562,7 @@ function drawFolded(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: 
     }
     ctx.fillText(title, it.x + FOLD_PAD, it.y + it.h / 2);
   }
-  for (const b of frameButtons(it, cam.z)) drawIcon(ctx, b.icon, b.x, b.y, b.s, theme.muted);
+  for (const b of frameButtons(it)) drawIcon(ctx, b.icon, b.x, b.y, b.s, theme.muted);
 }
 
 /** A grid on the panel colour with round corners and each cell's text; the cell being edited is

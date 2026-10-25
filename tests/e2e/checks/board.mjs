@@ -1,4 +1,4 @@
-// Things on the board: frames folding, table lines, the selection and text panels, clearing.
+// Things on the board: frames folding by double click, table lines, the selection and text panels, clearing.
 import { expect, sleep } from '../lib.mjs';
 
 /** Puts items on the board through the app's own handle (window.planx), and gives back their ids;
@@ -8,30 +8,36 @@ const screen = (p, x, y) => p.ev(`(() => { const s = planx.editor.toScreen({ x: 
 const origin = (p) => p.ev(`planx.editor.toWorld(300, 200)`);
 
 export const checks = {
-  async 'a frame folds into a bar, shows what it holds in a popup, and unfolds'(p) {
+  async 'a frame folds into a bar on a double click, shows what it holds in a popup, and unfolds on another'(p) {
     const ids = await put(p, `
       const f = e.newItem('frame', X, Y, { w: 400, h: 300, members: [] }), s = e.newItem('sticky', X + 60, Y + 60), o = e.newItem('sticky', X + 600, Y + 60);
       b.add(f); b.add(s); b.add(o); b.update(f.id, { members: [s.id] });
       b.addLink({ id: 'link-1', from: s.id, to: o.id });
       return { f: f.id, s: s.id, o: o.id };`);
     await sleep(200);
-    // The fold arrow, 12px in from the lower right corner on screen, 20 across.
-    const o = await origin(p), corner = await screen(p, o.x + 400, o.y + 300);
-    await p.click([corner[0] - 22, corner[1] - 22]);
+    const twice = async (at) => { await p.mouse('mouseMoved', ...at); for (const _ of [0, 1]) { await p.mouse('mousePressed', ...at); await p.mouse('mouseReleased', ...at); } await sleep(300); };
+    // On an empty spot inside it.
+    const o = await origin(p);
+    await twice(await screen(p, o.x + 300, o.y + 220));
     expect(await p.ev(`!!planx.board.get('${ids.f}').fold`), 'folded').toBeTruthy();
     expect(await p.ev(`planx.editor.shown().some((i) => i.id === '${ids.s}')`), 'its sticky out of sight').toBeFalsy();
     expect(await p.ev(`planx.editor.shownLinks()[0].from`), 'the link starts at the bar').toBe(ids.f);
-    // On the bar: the eye, then the unfold arrow, at its right end.
+    // On the bar: the eye, at its right end.
     const bar = await p.ev(`planx.board.get('${ids.f}')`);
-    const eye = await screen(p, bar.x + bar.w - 20 - 24 - 8 - 12, bar.y + bar.h / 2);
-    await p.click(eye);
+    await p.click(await screen(p, bar.x + bar.w - 20 - 12, bar.y + bar.h / 2));
     expect(!!(await p.rect('.peek')), 'the look into it opens').toBeTruthy();
     await p.escape();
     expect(!!(await p.rect('.peek')), 'and closes on Esc').toBeFalsy();
-    await p.click(await screen(p, bar.x + bar.w - 20 - 12, bar.y + bar.h / 2));
+    await sleep(400);
+    await twice(await screen(p, bar.x + 40, bar.y + bar.h / 2));
     const f = await p.ev(`planx.board.get('${ids.f}')`);
     expect(!!f.fold, 'unfolded').toBeFalsy();
     expect(f.w, 'its size back').toBe(400);
+    // A double click on its title over it opens that for typing instead.
+    await sleep(400);
+    await twice(await screen(p, o.x + 20, o.y - 12));
+    expect(await p.ev('planx.editor.editingId'), 'the title open for typing').toBe(ids.f);
+    expect(await p.ev(`!!planx.board.get('${ids.f}').fold`), 'not folded').toBeFalsy();
   },
 
   async 'a table line takes hold only after the mouse rests on it'(p) {

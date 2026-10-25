@@ -159,11 +159,10 @@ export function press(ed: Editor, e: PointerEvent): void {
     return;
   }
   if (ed.pickedLines.length) { ed.pickedLines = []; ed.requestRender(); }
-  // A frame's buttons: fold it, unfold it, look at what it holds.
+  // A folded frame's button: a look at what it holds.
   const fb = e.shiftKey || (hit && hit.type !== 'frame') ? null : frameButtonUnder(ed, w);
   if (fb) {
-    if (fb.kind === 'peek') window.dispatchEvent(new CustomEvent('planx:peek', { detail: fb.id }));
-    else ed.setFolded(fb.id, fb.kind === 'fold');
+    window.dispatchEvent(new CustomEvent('planx:peek', { detail: fb.id }));
     return;
   }
   // A task's checkbox ticks it off (or back on) instead of picking the task up.

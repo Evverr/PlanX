@@ -72,12 +72,12 @@ export function linksIn(board: Board, items: Item[], hidden: Set<string>): Link[
 
 /** The frame button under the point, of the topmost frame among these that has one there; `pad`
  *  widens each button's reach. */
-export function frameButtonAt(items: Item[], w: Point, zoom: number, pad: number): { id: string; kind: FrameButton } | null {
+export function frameButtonAt(items: Item[], w: Point, pad: number): { id: string; kind: FrameButton } | null {
   for (let i = items.length - 1; i >= 0; i--) {
     const it = items[i];
     if (it.type !== 'frame') continue;
     const p = toLocal(it, w);
-    const b = frameButtons(it, zoom).find((b) => pointInRect(p, { x: b.x - pad, y: b.y - pad, w: b.s + pad * 2, h: b.s + pad * 2 }));
+    const b = frameButtons(it).find((b) => pointInRect(p, { x: b.x - pad, y: b.y - pad, w: b.s + pad * 2, h: b.s + pad * 2 }));
     if (b) return { id: it.id, kind: b.kind };
   }
   return null;
@@ -133,7 +133,7 @@ export function peekView(board: Board, id: string, theme: Theme, w: number, h: n
     get: (k) => (k === id ? open : board.get(k)),
     cam: { x: (w - open.w * z) / 2 - open.x * z, y: (h - open.h * z) / 2 - open.y * z, z },
     theme, width: w, height: h, dpr,
-    still: true, selection: new Set(), editingId: null, marquee: null, linkPreview: null, peers: [], showHandle: false, byFinger: false,
+    selection: new Set(), editingId: null, marquee: null, linkPreview: null, peers: [], showHandle: false, byFinger: false,
     hotDot: null, hotPlus: null, plusFade: 0, mindMove: null, tableLines: [], editingCell: null, guides: [], pickedCells: null, stroke: null,
   };
 }

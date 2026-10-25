@@ -58,7 +58,7 @@ export function dotAt(ed: Editor, it: Item, w: Point): Side | null {
 }
 
 /** The frame button under the point, of the topmost frame in sight that has one there. */
-export const frameButtonUnder = (ed: Editor, w: Point) => frameButtonAt(ed.shown(), w, ed.cam.z, ed.reach(4));
+export const frameButtonUnder = (ed: Editor, w: Point) => frameButtonAt(ed.shown(), w, ed.reach(4));
 
 /** With the pointer over the board and nothing being done: what's under it lights up (a link dot,
  *  a table line it has rested on, a mind map button) and the cursor says what a press would do. */
