@@ -1,7 +1,7 @@
 import type { Item } from '../model/types';
 import { DEFAULTS } from '../model/types';
 import { mindSize } from '../canvas/text';
-import { addChild, childPlace, descendants, foldedWays, folding, insertBeside, mindSide, mindWay, type Toward } from '../model/mind';
+import { addChild, branchWays, childPlace, descendants, foldedWays, folding, insertBeside, mindSide, mindWay, type Toward } from '../model/mind';
 
 /** The ways a node is added to a mind map (see addMindNode). */
 export type MindAdd = 'child' | 'left' | 'down' | 'up' | 'above' | 'below';
@@ -42,8 +42,10 @@ export function addMindNode(ed: Editor, fromId: string, kind: MindAdd, byPlus = 
     w, h, fs: draft.fs, parent: parent.id, down: kind === 'down' || from.down || undefined, up: kind === 'up' || from.up || undefined,
   });
   board.beginGesture();
-  // A node folded that way unfolds to show its new branch.
+  // A node folded that way unfolds to show its new branch; one getting its first there by a "+" shows
+  // no chevron for them till it's picked again.
   const way = mindWay(it, parent);
+  if (byPlus && !beside && !branchWays(parent, items).includes(way)) ed.chevronless = `${parent.id}:${way}`;
   if (foldedWays(parent, parent.parent ? board.get(parent.parent) : undefined).includes(way)) board.update(parent.id, folding(parent, way, false));
   board.add(it);
   const moves = beside ? insertBeside(it.id, from.id, kind, board.list()) : addChild(it.id, board.list());

@@ -6,7 +6,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchCurve, branchWays, buttonKey, foldBadge, foldedWays, levelColor, mindButtons, mindDepth, nodeColors, siblingTints, type Way } from '../model/mind';
+import { branchColor, branchCurve, branchWays, buttonKey, foldBadge, foldedWays, levelColor, mindButtons, mindDepth, nodeColors, siblingTints, type Way } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
@@ -71,8 +71,8 @@ export interface Scene {
   folded?: Map<string, Map<Way, number>>;
   /** How far out past its chevron each folded node's count has moved, 0…1, by `id:way`. */
   slide?: Map<string, number>;
-  /** The way the picked node was just folded by its chevron, which stays while the pointer is on it. */
-  keptFold?: Way | null;
+  /** The node and way (`id:way`) a "+" has just given its first branches, with no chevron there yet. */
+  chevronless?: string | null;
   /** A mind map branch being dragged by its arrow button to hang from another node. */
   mindMove: { from: Point; to: Point; target: Item | null } | null;
   /** Table lines drawn blue: the one under the pointer and those picked to drag together. */
@@ -450,8 +450,7 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
  *  stub of branch, the number in it. */
 function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, way: Way, n: number) {
   const { theme, cam } = s, b = foldBadge(it, way, cam.z, n, s.slide?.get(`${it.id}:${way}`) ?? 0);
-  ctx.globalAlpha = 0.5;
-  ctx.strokeStyle = shade(nodeColors(it, tints).color, theme.dim);
+  ctx.strokeStyle = shade(levelColor(mindDepth(it, s.get) + 1), theme.dim);
   ctx.lineWidth = it.parent ? 0.75 : 1.5;
   ctx.beginPath();
   if (way === 'up') { ctx.moveTo(b.x, it.y); ctx.lineTo(b.x, b.y + b.h / 2); }
@@ -480,9 +479,8 @@ function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
     const up = s.get(it.parent);
     if (!up) continue;
     const [a, c1, c2, b] = branchCurve(up, it);
-    // The branch to a picked node comes up to full strength with its edge.
-    ctx.globalAlpha = s.selection.has(it.id) ? 1 : 0.5;
-    ctx.strokeStyle = shade(nodeColors(it, tints).color, s.theme.dim);
+    // In the colour of the node it leads to.
+    ctx.strokeStyle = shade(branchColor(it, s.get), s.theme.dim);
     ctx.lineWidth = up.parent ? 0.75 : 1.5;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
@@ -837,7 +835,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
         // The ways it has branches: those in sight, and those folded away.
         const up = it.parent ? s.get(it.parent) : undefined;
         const ways = [...new Set([...branchWays(it, s.items), ...foldedWays(it, up)])];
-        for (const b of mindButtons(it, s.get, cam.z, ways, s.keptFold ?? undefined)) {
+        const fresh = s.chevronless?.startsWith(`${it.id}:`) ? s.chevronless.slice(it.id.length + 1) as Way : undefined;
+        for (const b of mindButtons(it, s.get, cam.z, ways, fresh)) {
           // Smaller and faint until the pointer comes over it.
           const hot = s.hotPlus === buttonKey(b), r = hot ? b.r : b.r * 0.9;
           ctx.globalAlpha = (hot ? 1 : 0.5) * s.plusFade;
