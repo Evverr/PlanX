@@ -85,3 +85,10 @@
 /* On a board, the logo is the way back to the shelf. */
 .logo.to-shelf { border: 0; background: none; padding: 0; color: inherit; cursor: pointer; }
 .logo.to-shelf:hover { color: var(--accent); }
+/* A blue dot by the top right of "Plan", 6px off it and 3px up: once a minute it comes for 2 seconds,
+   fading in and out. */
+.logo { position: relative; }
+.logo::after { content: ""; position: absolute; left: calc(100% + var(--s6)); top: calc(0.3em - var(--s3)); width: var(--s4); height: var(--s4);
+  border-radius: 50%; background: #4DA3FF; opacity: 0; pointer-events: none; animation: logo-dot 60s ease-in-out infinite; }
+@keyframes logo-dot { 0% { opacity: 0; } 0.8% { opacity: 1; } 2.5% { opacity: 1; } 3.33% { opacity: 0; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .logo::after { animation: none; } }
