@@ -796,7 +796,7 @@ export class Editor {
         // A mind map node that grew makes room among its neighbours, as while it was typed in (those
         // of its level only).
         const dw = (patch.w ?? it.w) - it.w, dh = (patch.h ?? it.h) - it.h;
-        if (it.type === 'mind' && it.parent && (dw || dh)) {
+        if (it.type === 'mind' && (dw || dh)) {
           const moves = makeRoom(id, dw, dh, this.board.list());
           this.board.transact(() => moves.forEach((pt, k) => this.board.update(k, pt)));
         }
@@ -815,7 +815,7 @@ export class Editor {
       // A node growing (a line taller, or wider under its parent) moves its neighbours along, so
       // nothing overlaps.
       const fit = mindFit(this, it, text), dw = (fit.w ?? it.w) - it.w, dh = (fit.h ?? it.h) - it.h;
-      const moves = it.parent && (dw || dh) ? makeRoom(id, dw, dh, this.board.list()) : new Map<string, Point>();
+      const moves = dw || dh ? makeRoom(id, dw, dh, this.board.list()) : new Map<string, Point>();
       this.board.transact(() => {
         this.board.update(id, fit);
         moves.forEach((pt, k) => this.board.update(k, pt));
