@@ -4,7 +4,7 @@ import type { Point } from '../canvas/geometry';
 import { boxOf, center, nearestSide, pointInRect, rectContains, toLocal } from '../canvas/geometry';
 import type { Scene, Theme } from '../canvas/renderer';
 import { frameButtons, type FrameButton } from '../model/frame';
-import { descendants } from '../model/mind';
+import { descendants, foldedAway } from '../model/mind';
 
 /** What a frame holds: what was put in it, or, in a frame from before frames kept a list,
  *  everything lying inside. */
@@ -35,16 +35,18 @@ export function carried(board: Board, sel: Item[], items: Item[]): Map<string, P
   return orig;
 }
 
-/** Whether an item hides what it holds: a folded frame, a mind map node with its branches folded away. */
-const folds = (i: Item) => (i.type === 'frame' && !!i.fold) || (i.type === 'mind' && !!i.collapsed);
+/** What an item hides: all a folded frame holds (frames in it, and all those hold, too), or what a mind
+ *  map node's folding hides (see foldedAway). */
+function hiddenBy(board: Board, f: Item, items: Item[]): string[] {
+  if (f.type === 'frame') return f.fold ? [...carried(board, [f], items).keys()].filter((id) => id !== f.id) : [];
+  if (f.type === 'mind' && (f.collapsed || f.foldedWays)) return [...foldedAway(f, items, (id) => board.get(id)).values()].flat();
+  return [];
+}
 
-/** Of these items, everything folded frames hold (frames in them, and all those hold, too) and all
- *  that grows from folded mind map nodes. */
+/** Of these items, everything folded frames hold and folded mind map nodes hide. */
 export function hiddenIn(board: Board, items: Item[]): Set<string> {
   const out = new Set<string>();
-  for (const f of items.filter(folds)) {
-    for (const id of carried(board, [f], items).keys()) if (id !== f.id) out.add(id);
-  }
+  for (const f of items) for (const id of hiddenBy(board, f, items)) out.add(id);
   return out;
 }
 
@@ -58,8 +60,8 @@ export function linksIn(board: Board, items: Item[], hidden: Set<string>): Link[
   if (!hidden.size) return links;
   const stand = new Map<string, string>();
   for (const f of items) {
-    if (!folds(f) || hidden.has(f.id)) continue;
-    for (const id of carried(board, [f], items).keys()) if (id !== f.id) stand.set(id, f.id);
+    if (hidden.has(f.id)) continue;
+    for (const id of hiddenBy(board, f, items)) stand.set(id, f.id);
   }
   // A curved link meets the bar on its side towards the other end.
   const moved = (l: Link): Link => {

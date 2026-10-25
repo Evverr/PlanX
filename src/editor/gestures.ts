@@ -5,7 +5,7 @@ import { angleOf, boxOf, hitItem, nearestSide, nearInk, normRect, pointInRect, r
 import { fitHeight, itemTextHeight, mindSize } from '../canvas/text';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, newTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
-import { canMoveTo, moveBranch } from '../model/mind';
+import { branchCrosses, canMoveTo, foldedWays, folding, mindWay, moveBranch } from '../model/mind';
 import { clamp, MAX_Z, MIN_Z } from './camera';
 import { rotateCursor } from './cursors';
 import { MIND_TOPIC, type PenTool } from './tools';
@@ -168,7 +168,9 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       const next = new Set(g.base);
       for (const it of ed.shown()) {
         const inside = it.type === 'frame' ? rectContains(g.rect, boxOf(it)) : rectsIntersect(g.rect, boxOf(it));
-        if (inside) next.add(it.id);
+        // A mind map branch the box takes in picks the node it leads to.
+        const up = it.type === 'mind' && it.parent ? board.get(it.parent) : undefined;
+        if (inside || (up && branchCrosses(up, it, g.rect))) next.add(it.id);
       }
       ed.setSelection(next);
       return;
@@ -260,8 +262,9 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         const moves = moveBranch(g.id, g.target, board.list(), toward);
         board.transact(() => {
           board.update(g.id, { parent: g.target! });
-          if (target.collapsed) board.update(target.id, { collapsed: undefined });
           moves.forEach((p, id) => board.update(id, p));
+          const way = mindWay(board.get(g.id)!, target);
+          if (foldedWays(target, target.parent ? board.get(target.parent) : undefined).includes(way)) board.update(target.id, folding(target, way, false));
         });
       }
       ed.requestRender();

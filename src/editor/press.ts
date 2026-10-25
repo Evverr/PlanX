@@ -105,15 +105,15 @@ export function press(ed: Editor, e: PointerEvent): void {
   const single = ed.selection.size === 1 ? board.get([...ed.selection][0]) : undefined;
   const plus = single && plusAt(ed, single, w);
   if (single && plus) {
-    if (plus === 'move') ed.gesture = { type: 'mindMove', id: single.id, from: w, to: w, target: null };
-    else if (plus === 'fold') ed.setCollapsed(single.id, true);
-    else ed.addMindNode(single.id, plus, true);
+    if (plus.kind === 'move') ed.gesture = { type: 'mindMove', id: single.id, from: w, to: w, target: null };
+    else if (plus.kind === 'fold' || plus.kind === 'unfold') ed.setCollapsed(single.id, plus.way!, plus.kind === 'fold');
+    else ed.addMindNode(single.id, plus.kind, true);
     return;
   }
-  // A folded mind map node's count unfolds it.
+  // A folded mind map node's count unfolds it (that way).
   const unfold = e.shiftKey ? null : foldBadgeAt(ed, w);
   if (unfold) {
-    ed.setCollapsed(unfold, false);
+    ed.setCollapsed(unfold.id, unfold.way, false);
     return;
   }
   const dot = single && !ed.editingId && !isLocked(single) ? dotAt(ed, single, w) : null;

@@ -134,6 +134,25 @@ export const checks = {
     expect(after.y + after.h, 'its lower edge holds still').toBe(u.bottom);
   },
 
+  async 'a box over mind map branches picks the nodes they lead to; a central topic folds each way on its own'(p) {
+    await p.make('mind', [600, 400]);
+    await p.escape();
+    const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
+    await p.ev(`(() => { const e = planx.editor; for (const k of ['child', 'child', 'left']) e.addMindNode('${root}', k, true); })()`);
+    await p.ev(`planx.editor.setSelection([])`);
+    // Between the topic and its branches on the right: no node in the box, only the branches.
+    const box = await p.ev(`(() => { const r = planx.board.get('${root}'), e = planx.editor, c = e.canvas.getBoundingClientRect();
+      const a = e.toScreen({ x: r.x + r.w + 15, y: r.y - 30 }), b = e.toScreen({ x: r.x + r.w + 45, y: r.y + r.h + 30 });
+      return [[a.x + c.left, a.y + c.top], [b.x + c.left, b.y + c.top]]; })()`);
+    await p.drag(...box);
+    const picked = await p.ev(`[...planx.editor.selection].map((id) => planx.board.get(id))`);
+    expect(picked.length, 'two picked').toBe(2);
+    expect(picked.every((i) => i.parent === root && i.x > 0), 'the branches on the right').toBe(true);
+    await p.ev(`planx.editor.setCollapsed('${root}', 'right', true)`);
+    expect(await p.ev(`planx.editor.shown().filter((i) => i.type === 'mind').length`), 'the right side folded away, the left still there').toBe(2);
+    expect(JSON.stringify(await p.ev(`[...planx.editor.folded().get('${root}')]`)), 'its count').toBe('[["right",2]]');
+  },
+
   async 'the hand pans the board and the wheel zooms it'(p) {
     const cam0 = await p.ev('planx.editor.cam');
     await p.key('h', 'KeyH', 72);

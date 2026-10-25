@@ -6,7 +6,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchCurve, foldBadge, levelColor, mindButtons, mindDepth, nodeColors, siblingTints, type MindButton } from '../model/mind';
+import { branchCurve, branchWays, buttonKey, foldBadge, foldedWays, levelColor, mindButtons, mindDepth, nodeColors, siblingTints, type Way } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
@@ -64,11 +64,13 @@ export interface Scene {
   /** The dot under the pointer, drawn larger and at full strength; the others are faint. */
   hotDot: Side | null;
   /** The mind map node button under the pointer, drawn full size and strength; the others are smaller and faint. */
-  hotPlus: MindButton | null;
+  hotPlus: string | null;
   /** How far the node buttons have faded in, 0…1: they come a moment after the node is picked. */
   plusFade: number;
-  /** How many nodes each folded mind map node hides, shown by it. */
-  folded?: Map<string, number>;
+  /** How many nodes each folded mind map node hides, each way, shown by it. */
+  folded?: Map<string, Map<Way, number>>;
+  /** How far out past its chevron each folded node's count has moved, 0…1, by `id:way`. */
+  slide?: Map<string, number>;
   /** A mind map branch being dragged by its arrow button to hang from another node. */
   mindMove: { from: Point; to: Point; target: Item | null } | null;
   /** Table lines drawn blue: the one under the pointer and those picked to drag together. */
@@ -439,21 +441,21 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
     ctx.setLineDash([]);
   }
   if (!editing) drawText(ctx, it, textPad(it), theme.ink, true, s, textPadY(it));
-  const hides = it.collapsed ? s.folded?.get(it.id) : undefined;
-  if (hides) drawFoldBadge(ctx, it, s, hides);
+  for (const [way, n] of s.folded?.get(it.id) ?? []) drawFoldBadge(ctx, it, s, way, n);
 }
 
-/** A folded mind map node's count of what it hides: a pill in the next level's colour on a stub of
- *  branch, the number in it. */
-function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, n: number) {
-  const { theme, cam } = s, b = foldBadge(it, s.get, cam.z, n), upright = (!!it.down || !!it.up) && !!it.parent;
+/** A folded mind map node's count of what it hides that way: a pill in the next level's colour on a
+ *  stub of branch, the number in it. */
+function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, way: Way, n: number) {
+  const { theme, cam } = s, b = foldBadge(it, way, cam.z, n, s.slide?.get(`${it.id}:${way}`) ?? 0);
   ctx.globalAlpha = 0.5;
   ctx.strokeStyle = shade(nodeColors(it, tints).color, theme.dim);
-  ctx.lineWidth = 0.75;
+  ctx.lineWidth = it.parent ? 0.75 : 1.5;
   ctx.beginPath();
-  if (upright && it.up) { ctx.moveTo(b.x, it.y); ctx.lineTo(b.x, b.y + b.h / 2); }
-  else if (upright) { ctx.moveTo(b.x, it.y + it.h); ctx.lineTo(b.x, b.y - b.h / 2); }
-  else { const right = b.x > it.x; ctx.moveTo(right ? it.x + it.w : it.x, b.y); ctx.lineTo(right ? b.x - b.w / 2 : b.x + b.w / 2, b.y); }
+  if (way === 'up') { ctx.moveTo(b.x, it.y); ctx.lineTo(b.x, b.y + b.h / 2); }
+  else if (way === 'down') { ctx.moveTo(b.x, it.y + it.h); ctx.lineTo(b.x, b.y - b.h / 2); }
+  else if (way === 'right') { ctx.moveTo(it.x + it.w, b.y); ctx.lineTo(b.x - b.w / 2, b.y); }
+  else { ctx.moveTo(it.x, b.y); ctx.lineTo(b.x + b.w / 2, b.y); }
   ctx.stroke();
   ctx.globalAlpha = 1;
   ctx.beginPath();
@@ -830,10 +832,12 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && it.type === 'mind') {
       if (s.plusFade > 0) {
-        const branches = s.items.some((i) => i.type === 'mind' && i.parent === it.id);
-        for (const b of mindButtons(it, s.get, cam.z, branches)) {
+        // The ways it has branches: those in sight, and those folded away.
+        const up = it.parent ? s.get(it.parent) : undefined;
+        const ways = [...new Set([...branchWays(it, s.items), ...foldedWays(it, up)])];
+        for (const b of mindButtons(it, s.get, cam.z, ways)) {
           // Smaller and faint until the pointer comes over it.
-          const hot = s.hotPlus === b.kind, r = hot ? b.r : b.r * 0.9;
+          const hot = s.hotPlus === buttonKey(b), r = hot ? b.r : b.r * 0.9;
           ctx.globalAlpha = (hot ? 1 : 0.5) * s.plusFade;
           ctx.fillStyle = SELECT_COLOR;
           ctx.beginPath();
@@ -857,9 +861,11 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
             const d = b.x < it.x ? -1 : 1;
             ctx.moveTo(b.x - d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.5, b.y);
             ctx.moveTo(b.x + d * r * 0.1, b.y - r * 0.4); ctx.lineTo(b.x + d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.1, b.y + r * 0.4);
-          } else if (b.kind === 'fold') {
-            // A chevron pointing back at the node, for folding its branches away.
-            const [dx, dy] = b.way === 'down' ? [0, -1] : b.way === 'up' ? [0, 1] : b.way === 'left' ? [1, 0] : [-1, 0];
+          } else if (b.kind === 'fold' || b.kind === 'unfold') {
+            // A chevron pointing back at the node, for folding its branches away, or out from it, for
+            // unfolding them.
+            const toNode = { down: [0, -1], up: [0, 1], left: [1, 0], right: [-1, 0] }[b.way ?? 'right'], k = b.kind === 'fold' ? 1 : -1;
+            const [dx, dy] = [toNode[0] * k, toNode[1] * k];
             const tip = { x: b.x + dx * r * 0.25, y: b.y + dy * r * 0.25 }, back = r * 0.45;
             ctx.moveTo(tip.x - dx * back - dy * back, tip.y - dy * back - dx * back);
             ctx.lineTo(tip.x, tip.y);
