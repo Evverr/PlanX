@@ -82,6 +82,22 @@ export const checks = {
     expect(await p.ev('planx.editor.tool'), 'the frame tool').toBe('frame');
   },
 
+  async 'a mind map node framed by the frame button goes in with all its branches'(p) {
+    await p.make('mind', await screen(p, (await origin(p)).x + 150, (await origin(p)).y + 150));
+    await p.escape();
+    const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
+    await p.ev(`(() => { const e = planx.editor; e.addMindNode('${root}', 'child', true); e.addMindNode('${root}', 'child', true); })()`);
+    const kid = await p.ev(`planx.board.list().find((i) => i.parent === '${root}').id`);
+    await p.ev(`planx.editor.addMindNode('${kid}', 'child', true); planx.editor.setSelection(['${root}'])`);
+    await p.click(await p.at('.tools [data-key="frames"]'));
+    await p.escape();
+    const f = await p.ev(`planx.board.list().find((i) => i.type === 'frame')`);
+    // The topic in it (its branches go wherever it goes), and all of them inside its box.
+    expect(f.members.join(), 'the topic in it').toBe(root);
+    const outside = await p.ev(`planx.board.list().filter((i) => i.type === 'mind' && !(i.x > ${f.x} && i.y > ${f.y} && i.x + i.w < ${f.x + f.w} && i.y + i.h < ${f.y + f.h})).length`);
+    expect(outside, 'all of them inside it').toBe(0);
+  },
+
   async 'a table line takes hold only after the mouse rests on it'(p) {
     const id = await put(p, `const t = e.newItem('table', X, Y, { cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill(''), w: 360, h: 120 }); b.add(t); return t.id;`);
     await sleep(200);
