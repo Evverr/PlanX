@@ -1,5 +1,6 @@
 // The features on trial ("Нововведения", src/labs): their switches, and each doing its job.
 import { expect, sleep } from '../lib.mjs';
+import { carry } from './sortable.mjs';
 
 /** Two stickers through the app's handle; gives back their ids. */
 const stickers = (p) => p.ev(`(() => { const e = planx.editor, b = planx.board, { x: X, y: Y } = e.toWorld(400, 250);
@@ -9,7 +10,7 @@ const select = (p, id) => p.ev(`planx.editor.setSelection(['${id}'])`);
 
 export const checks = {
   async 'the menu has "Нововведения" with a switch for each, and a switched off one goes away'(p) {
-    expect(!!(await p.rect('.labs-bar button[aria-label="Общий таймер"]')), 'the timer button at first').toBeTruthy();
+    expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'the timer button at first').toBeTruthy();
     await p.click(await p.at('.topbar button[aria-label="Меню"]'));
     const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Нововведения')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
@@ -17,9 +18,9 @@ export const checks = {
     expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(8);
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.labs-menu .menu-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`document.querySelector('.labs-menu [aria-checked="false"]')?.textContent`), 'switched off').toBe('Общий таймер');
-    expect(!!(await p.rect('.labs-bar button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
+    expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
     await p.reload();
-    expect(!!(await p.rect('.labs-bar button[aria-label="Общий таймер"]')), 'and still gone after a reload').toBeFalsy();
+    expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'and still gone after a reload').toBeFalsy();
   },
 
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {
@@ -72,14 +73,14 @@ export const checks = {
 
   async 'the export popup shows a preview and the picture size'(p) {
     await stickers(p);
-    await p.click(await p.at('.labs-bar button[aria-label="Экспорт в PNG"]'));
+    await p.click(await p.at('.labs-rail button[aria-label="Экспорт в PNG"]'));
     expect(await p.ev(`document.querySelector('.export-preview img')?.naturalWidth > 0`), 'a preview').toBeTruthy();
     const size = await p.ev(`document.querySelector('.export-pop .muted').textContent`);
     expect(/^\d+ × \d+ пикселей$/.test(size), `size "${size}"`).toBeTruthy();
   },
 
   async 'the timer starts from its popup, pauses and goes away'(p) {
-    await p.click(await p.at('.labs-bar button[aria-label="Общий таймер"]'));
+    await p.click(await p.at('.labs-rail button[aria-label="Общий таймер"]'));
     await p.click(await p.at('.timer-presets .btn'));
     expect(await p.ev(`document.querySelector('.timer-clock')?.textContent`), 'a minute').toBe('1:00');
     await p.click(await p.at('.timer-pill button[aria-label="Пауза"]'));
@@ -100,5 +101,30 @@ export const checks = {
     await p.drag(at, [at[0] + 200, at[1] + 100]);
     expect(await p.ev(`planx.board.get('${ids.a}').x`), 'the sticker stays').toBe(x);
     expect(await p.ev(`planx.board.list().length`), 'nothing drawn on the board').toBe(2);
+  },
+
+  async 'their rail is the tool rail\'s kind: same buttons, rearranged by holding, moved by its top edge'(p) {
+    const size = (q) => p.ev(`(() => { const e = document.querySelector('${q}'); const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })()`);
+    expect((await size('.labs-rail .fb')).join(), 'a button as big as the tool rail\'s').toBe((await size('.tools:not(.labs-rail) .fb')).join());
+    expect((await size('.labs-rail'))[0], 'as wide').toBe((await size('.tools:not(.labs-rail)'))[0]);
+    expect((await p.rect('.labs-rail')).r, 'at the right edge').toBe(1200 - 12);
+    const keys = () => p.ev(`[...document.querySelectorAll('.labs-rail > [data-key]')].map((e) => { const r = e.getBoundingClientRect(); return [e.dataset.key, Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)]; })`);
+    const k0 = await keys();
+    expect(k0.map((k) => k[0]).join(), 'in order').toBe('export,search,timer,laser,follow,keys');
+    // Brought to the laser's middle, it passes the two before it, as on the tool rail.
+    await carry(p, k0[0].slice(1), [k0[3].slice(1)]);
+    const k1 = (await keys()).map((k) => k[0]);
+    expect(k1.indexOf('export'), 'export moved down two places').toBe(2);
+    expect(await p.ev(`!!document.querySelector('.export-pop')`), 'and that was no click').toBeFalsy();
+    const r0 = await p.rect('.labs-rail');
+    await p.dragEdge('.labs-rail', 'top', 0, -120);
+    const r1 = await p.rect('.labs-rail');
+    expect(r1.t, 'moved up').toBeNear(r0.t - 120, 2);
+    expect(r1.r, 'still at the right edge').toBe(1200 - 12);
+    // The tool rail doesn't go over it.
+    await p.dragEdge('.tools', 'top', 1000, 0);
+    expect((await p.rect('.tools')).l, 'the tool rail stays at the left').toBe(12);
+    await p.reload();
+    expect((await keys()).map((k) => k[0]).join(), 'its order kept after a reload').toBe(k1.join());
   },
 };
