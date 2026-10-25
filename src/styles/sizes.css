@@ -68,6 +68,7 @@
   --e316: round(calc(316px * var(--k)), 2px);
   --e340: round(calc(340px * var(--k)), 2px);
   --e380: round(calc(380px * var(--k)), 2px);
+  --e392: round(calc(392px * var(--k)), 2px);
   --bar: calc(var(--s6) * 2 + var(--e40));
   --rail-w: calc(var(--e30) + var(--s15) * 2);
 }

@@ -87,11 +87,13 @@
 .pick-tabs button.on { background: var(--fmt-on); color: var(--ink); }
 .muted { color: var(--muted); }
 
-.help { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(20px + var(--bar) + env(safe-area-inset-bottom, 0px)); width: var(--e380); max-width: calc(100vw - var(--e24)); box-sizing: border-box; }
-.help h3 { margin: 0 0 var(--s8); font-size: var(--s13); font-weight: 600; }
-.help dl { display: grid; grid-template-columns: auto 1fr; gap: var(--s4) var(--s12); margin: 0; }
-.help dt { font-weight: 600; white-space: nowrap; }
-.help dd { margin: 0; color: var(--muted); }
+/* The controls: what's done on the left, the keys or moves for it on the right; 6px more room round
+   it than other popups and between its rows. */
+.help { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(20px + var(--bar) + env(safe-area-inset-bottom, 0px)); width: var(--e392); max-width: calc(100vw - var(--e24)); box-sizing: border-box; padding: var(--s26); }
+.help h3 { margin: 0 0 var(--s10); font-size: var(--s13); font-weight: 600; }
+.help dl { display: grid; grid-template-columns: 1fr auto; gap: var(--s6) var(--s12); margin: 0; }
+.help dt { color: var(--muted); }
+.help dd { margin: 0; font-weight: 600; white-space: nowrap; text-align: right; }
 kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); border-radius: 4px; padding: 1px 5px; }
 
 .text-edit { position: fixed; z-index: 4; margin: 0; border: 0; outline: none; resize: none; overflow: hidden; background: transparent; font-family: var(--ui); transform-origin: 0 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
