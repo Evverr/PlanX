@@ -13,10 +13,10 @@ export interface Me { name: string; color: string }
 const PEER_COLORS = ['#E5484D', '#F76B15', '#2F9E44', '#1C7ED6', '#7048E8', '#D6409F', '#0C8599', '#AD7F00'];
 const ANIMALS = ['Ёж', 'Лис', 'Барсук', 'Сова', 'Енот', 'Бобр', 'Кит', 'Рысь', 'Выдра', 'Лось', 'Тюлень', 'Сокол'];
 
-/** Board id from the address (?board=…), "demo" when there is none. */
-export function boardIdFromUrl(): string {
-  const id = new URLSearchParams(location.search).get('board') ?? 'demo';
-  return /^[A-Za-z0-9_-]{1,64}$/.test(id) ? id : 'demo';
+/** Board id from the address (?board=…); null when there is none, and the shelf of boards opens instead. */
+export function boardIdFromUrl(): string | null {
+  const id = new URLSearchParams(location.search).get('board');
+  return id && /^[A-Za-z0-9_-]{1,64}$/.test(id) ? id : null;
 }
 
 export function newBoardId(): string {
@@ -103,7 +103,7 @@ export class Connection implements Presence {
   }
 }
 
-function defaultServerUrl(): string {
+export function defaultServerUrl(): string {
   const env = import.meta.env.VITE_SYNC_URL as string | undefined;
   if (env) return env;
   return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
