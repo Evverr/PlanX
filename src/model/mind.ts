@@ -440,11 +440,12 @@ export function mindButtons(it: Item, get: Get, zoom: number, ways: Way[] = [], 
 }
 
 /** The count of what a node's folding hides that way, always in sight: a pill as tall as a button and as
- *  wide as the number needs, its near end where the chevron was (so a click there again unfolds it), a
- *  stub of branch leading to it (its middle, width and height, in screen pixels whatever the zoom). */
-export function foldBadge(it: Item, way: Way, zoom: number, count: number): Point & { w: number; h: number } {
+ *  wide as the number needs, its near end where the "+" for a branch is, or, as far as `out` (0…1) while
+ *  the node's buttons show, where the chevron was (so a click there again unfolds it), a stub of branch
+ *  leading to it (its middle, width and height, in screen pixels whatever the zoom). */
+export function foldBadge(it: Item, way: Way, zoom: number, count: number, out = 0): Point & { w: number; h: number } {
   const w = Math.max(18, String(count).length * 6 + 10), h = 18, along = upright(way) ? h : w;
-  return { ...spot(it, way, BUTTON_OFF + FOLD_OFF + (along - h) / 2, zoom), w: w / zoom, h: h / zoom };
+  return { ...spot(it, way, BUTTON_OFF + FOLD_OFF * out + (along - h) / 2, zoom), w: w / zoom, h: h / zoom };
 }
 
 /** The connecting branch from a parent to a child: from the parent's facing side to the child's,

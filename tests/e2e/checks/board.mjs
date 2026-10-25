@@ -98,6 +98,22 @@ export const checks = {
     expect(outside, 'all of them inside it').toBe(0);
   },
 
+  async 'Tab while typing in a table cell goes on to the next cell, Shift+Tab back'(p) {
+    const id = await put(p, `const t = e.newItem('table', X, Y, { cols: [120, 120], rows: [40, 40], cells: Array(4).fill(''), w: 240, h: 80 }); b.add(t); return t.id;`);
+    await p.ev(`planx.editor.startEditing('${id}', 0)`);
+    await sleep(200);
+    await p.cdp('Input.insertText', { text: 'a' });
+    await p.key('Tab', 'Tab', 9);
+    expect(await p.ev('planx.editor.editingCell'), 'the next cell').toBe(1);
+    await p.cdp('Input.insertText', { text: 'b' });
+    await p.key('Tab', 'Tab', 9);
+    expect(await p.ev('planx.editor.editingCell'), 'on to the next row').toBe(2);
+    await p.key('Tab', 'Tab', 9, 8);
+    expect(await p.ev('planx.editor.editingCell'), 'back').toBe(1);
+    await p.escape();
+    expect((await p.ev(`planx.board.get('${id}').cells`)).join(','), 'what was typed kept').toBe('a,b,,');
+  },
+
   async 'a table line takes hold only after the mouse rests on it'(p) {
     const id = await put(p, `const t = e.newItem('table', X, Y, { cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill(''), w: 360, h: 120 }); b.add(t); return t.id;`);
     await sleep(200);

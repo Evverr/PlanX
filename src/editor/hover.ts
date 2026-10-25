@@ -40,7 +40,7 @@ export function foldBadgeAt(ed: Editor, w: Point): { id: string; way: Way } | nu
     const it = ed.board.get(id);
     if (!it || ed.hidden().has(id)) continue;
     for (const [way, n] of ways) {
-      const b = foldBadge(it, way, ed.cam.z, n);
+      const b = foldBadge(it, way, ed.cam.z, n, ed.slid.get(`${id}:${way}`) ?? 0);
       if (Math.abs(w.x - b.x) <= b.w / 2 + pad && Math.abs(w.y - b.y) <= b.h / 2 + pad) return { id, way };
     }
   }
