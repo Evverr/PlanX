@@ -15,7 +15,7 @@ export const checks = {
     const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Нововведения')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
     await sleep(250);
-    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(10);
+    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(11);
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.labs-menu .menu-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`document.querySelector('.labs-menu [aria-checked="false"]')?.textContent`), 'switched off').toBe('Общий таймер');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
@@ -35,6 +35,25 @@ export const checks = {
     const f = await p.ev(`(async () => { const b = window.saved; if (!b) return null; const t = new TextDecoder('latin1').decode(await b.arrayBuffer()); return { type: b.type, size: b.size, head: t.slice(0, 8), tail: t.slice(-6), jpeg: t.includes('/DCTDecode') }; })()`);
     expect(f?.type, 'a PDF').toBe('application/pdf');
     expect(f.head === '%PDF-1.4' && f.tail === '%%EOF\n' && f.jpeg, 'whole, with the picture in it').toBe(true);
+  },
+
+  async '"Файл доски" saves the board as a .jjvg file, and that file opens as a new board just like it'(p) {
+    await stickers(p);
+    await p.ev(`planx.board.setTitle('Доска для файла'); window.saved = null; URL.createObjectURL = (b) => { window.saved = b; return 'blob:x'; }`);
+    await p.click(await p.at('.labs-rail button[aria-label="Файл доски"]'));
+    await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.file-pop button')].find((b) => b.textContent === 'Сохранить в файл'); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(200);
+    const head = await p.ev(`(async () => new TextDecoder().decode(new Uint8Array(await window.saved.arrayBuffer()).subarray(0, 8)))()`);
+    expect(head, 'a board file').toBe('PLANJJVG');
+    const was = await p.ev('location.search');
+    await p.ev(`(async () => { const m = await import('/src/labs/boardFile.ts'); const f = new File([await window.saved.arrayBuffer()], 'x.jjvg'); setTimeout(() => m.openBoardFile(f), 0); })()`);
+    await sleep(1500);
+    await p.ev('1').catch(() => {});
+    const now = await p.ev('location.search');
+    expect(now !== was && now.startsWith('?board='), 'a new board opened').toBe(true);
+    await sleep(800);
+    expect(await p.ev(`planx.board.list().filter((i) => i.type === 'sticky').map((i) => i.text).sort().join()`), 'just like it').toBe('Купить молоко,Позвонить Ёжику');
+    expect(await p.ev('planx.board.title'), 'its name too').toBe('Доска для файла');
   },
 
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {
@@ -124,7 +143,7 @@ export const checks = {
     expect((await p.rect('.labs-rail')).r, 'at the right edge').toBe(1200 - 12);
     const keys = () => p.ev(`[...document.querySelectorAll('.labs-rail > [data-key]')].map((e) => { const r = e.getBoundingClientRect(); return [e.dataset.key, Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)]; })`);
     const k0 = await keys();
-    expect(k0.map((k) => k[0]).join(), 'in order').toBe('export,pdf,search,timer,laser,follow,keys');
+    expect(k0.map((k) => k[0]).join(), 'in order').toBe('export,pdf,file,search,timer,laser,follow,keys');
     // Brought to the fourth one's middle, it passes the two before that, as on the tool rail.
     await carry(p, k0[0].slice(1), [k0[3].slice(1)]);
     const k1 = (await keys()).map((k) => k[0]);
