@@ -11,6 +11,7 @@ import { cameraFor, flyTo, stopFlight } from './camera';
 import { downloadPicture, pictureSize, renderPicture, type Background, type ExportOptions } from './exportPng';
 import { downloadPdf } from './exportPdf';
 import { openBoardFile, saveBoardFile } from './boardFile';
+import { drawTidy, gapAt, setGaps, setHotGap, tidyNow } from './tidy';
 import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
 import './labs.css';
@@ -45,7 +46,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
   // Their drawing over the board, redrawn whenever one is switched on or off (the editor asks about
   // locks as it goes, so its handles change too).
   useEffect(() => {
-    const draw = (ctx: CanvasRenderingContext2D) => drawLabs(ctx, editor);
+    const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) drawTidy(ctx, editor); return more; };
     editor.overlays.add(draw);
     editor.requestRender();
     const off = subscribeLabs(() => { editor.emit(); editor.requestRender(); });
@@ -88,6 +89,8 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
   // press draws its trail instead of doing what it would. Taking the board yourself stops following.
   useEffect(() => {
     let drawing = false;
+    // A gap of the grid being dragged ("Авторасположение"): which, from where, the gaps then.
+    let gap: { axis: 'col' | 'row'; from: number; gx: number; gy: number } | null = null;
     const canvas = () => editor.canvas;
     const local = (e: PointerEvent) => { const r = canvas()!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
     const addPoint = (e: PointerEvent) => {
@@ -103,6 +106,15 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       }
       setPop(null);
       if (presence.followingId !== null) { presence.stopFollowing(); stopFlight(); }
+      const along = e.button === 0 && labOn('tidy') ? gapAt(editor, local(e)) : null, t = tidyNow();
+      if (along && t) {
+        e.stopPropagation();
+        canvas()!.setPointerCapture(e.pointerId);
+        gap = { axis: along, from: along === 'col' ? e.clientX : e.clientY, gx: t.gx, gy: t.gy };
+        setHotGap(along);
+        editor.board.beginGesture();
+        return;
+      }
       const pill = e.button === 0 && labOn('reactions') ? pillAt(local(e)) : undefined;
       if (pill) {
         e.stopPropagation();
@@ -116,8 +128,25 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
         addPoint(e);
       }
     };
-    const onMove = (e: PointerEvent) => { if (drawing) addPoint(e); };
-    const onUp = () => { if (drawing) { drawing = false; presence.shareLaser(); } };
+    const onMove = (e: PointerEvent) => {
+      if (drawing) addPoint(e);
+      if (gap) {
+        const d = ((gap.axis === 'col' ? e.clientX : e.clientY) - gap.from) / editor.cam.z;
+        setGaps(editor, gap.axis === 'col' ? Math.max(0, Math.round(gap.gx + d)) : gap.gx, gap.axis === 'row' ? Math.max(0, Math.round(gap.gy + d)) : gap.gy);
+        return;
+      }
+      // Over a gap's line: it lights up, the pointer says which way it moves.
+      if (e.target === canvas() && labOn('tidy') && tidyNow()) {
+        const along = gapAt(editor, local(e));
+        setHotGap(along);
+        editor.requestRender();
+        if (along) canvas()!.style.cursor = along === 'col' ? 'col-resize' : 'row-resize';
+      }
+    };
+    const onUp = () => {
+      if (drawing) { drawing = false; presence.shareLaser(); }
+      if (gap) { gap = null; setHotGap(null); editor.board.endGesture(); editor.requestRender(); }
+    };
     const onWheel = (e: WheelEvent) => { if (e.target === canvas() && presence.followingId !== null) { presence.stopFollowing(); stopFlight(); } };
     window.addEventListener('pointerdown', onDown, true);
     window.addEventListener('pointermove', onMove);

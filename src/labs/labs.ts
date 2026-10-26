@@ -7,7 +7,7 @@ import { readJSON, readText, writeJSON, writeText } from '../storage';
  * browser. Everything they need lives in this folder; the app only asks labOn() where a feature
  * changes what it does, so one that isn't kept comes out by deleting its file and those few lines.
  */
-export type LabId = 'export' | 'pdf' | 'file' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys';
+export type LabId = 'export' | 'pdf' | 'file' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys';
 
 export interface Lab { id: LabId; label: string; icon: string; hint: string }
 
@@ -16,6 +16,7 @@ export const LABS: Lab[] = [
   { id: 'export', label: 'Экспорт в PNG', icon: 'download', hint: 'Скачать доску или выделенное картинкой' },
   { id: 'pdf', label: 'Экспорт в PDF', icon: 'file', hint: 'Скачать доску или выделенное PDF-файлом' },
   { id: 'file', label: 'Файл доски (.plnt)', icon: 'folder', hint: 'Сохранить всю доску в файл и открыть такой файл новой доской' },
+  { id: 'tidy', label: 'Авторасположение', icon: 'apps', hint: 'Выделенное ровной сеткой; отступы между рядами и столбцами тянутся' },
   { id: 'lock', label: 'Замок', icon: 'lock-l', hint: 'Закреплённое не сдвинуть и не удалить' },
   { id: 'search', label: 'Поиск по доске', icon: 'search', hint: 'Ctrl+F: найти текст на доске' },
   { id: 'timer', label: 'Общий таймер', icon: 'timer', hint: 'Отсчёт, который видят все на доске' },
