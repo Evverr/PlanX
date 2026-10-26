@@ -23,7 +23,7 @@ export type Gesture =
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' }
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
-  | { type: 'relink'; id: string; to: Point; target: string | null }
+  | { type: 'relink'; id: string; from: Point; to: Point; target: string | null; away?: boolean }
   | { type: 'mindMove'; id: string; from: Point; to: Point; target: string | null }
   | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
   | { type: 'draw'; tool: PenTool; pts: Point[] }
@@ -153,9 +153,11 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       return;
     }
     case 'relink': {
-      const t = hitItem(ed.shown(), w, ed.cam.z), from = board.getLink(g.id)?.from;
+      // Over the item it went to, nothing's lit until it's been taken off it once (more than a twitch).
+      const l = board.getLink(g.id), t = hitItem(ed.shown(), w, ed.cam.z);
+      if (t?.id !== l?.to && Math.hypot(w.x - g.from.x, w.y - g.from.y) * ed.cam.z > 12) g.away = true;
       g.to = w;
-      g.target = t && t.id !== from ? t.id : null;
+      g.target = t && t.id !== l?.from && g.away ? t.id : null;
       ed.requestRender();
       return;
     }
@@ -268,9 +270,13 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       ed.requestRender();
       return;
     case 'relink': {
-      // Let go on another item, the arrow goes to it; anywhere else, it stays where it was.
+      // Let go on another item, the arrow goes to it; taken off its item and let go on none, it's gone.
       const l = board.getLink(g.id), target = g.target ? board.get(g.target) : undefined;
       if (l && target && target.id !== l.to && !board.hasLink(l.from, target.id)) board.retarget(l.id, target.id, nearestSide(target, g.to));
+      else if (l && g.away && !target) {
+        board.remove([l.id]);
+        ed.setSelection([]);
+      }
       ed.requestRender();
       return;
     }

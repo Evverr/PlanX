@@ -192,10 +192,19 @@ export const checks = {
     const d = await p.ev(`planx.board.get('${ids.d}')`);
     await p.drag(pts[pts.length - 1], await screen(p, d.x + 60, d.y + 60));
     expect(await p.ev(`planx.board.getLink('L1').to`), 'led to the third').toBe(ids.d);
-    // Let go nowhere, it stays.
     const tip = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'); const sh = g.linkShape(planx.board.getLink('L1'), (k) => planx.board.get(k)).pts; const s = planx.editor.toScreen(sh[sh.length - 1]), c = planx.editor.canvas.getBoundingClientRect(); return [s.x + c.left, s.y + c.top]; })()`);
+    // Taken hold of, the item it goes to isn't lit.
+    await p.mouse('mouseMoved', ...tip);
+    await p.mouse('mousePressed', ...tip);
+    await p.mouse('mouseMoved', tip[0] + 2, tip[1] + 6);
+    expect(await p.ev('planx.editor.gesture?.target ?? null'), 'nothing lit at first').toBe(null);
+    await p.mouse('mouseReleased', tip[0] + 2, tip[1] + 6);
+    expect(await p.ev(`planx.board.getLink('L1')?.to`), 'let go there, it stays').toBe(ids.d);
+    // Taken off and let go on nothing, it's gone.
     await p.drag(tip, [tip[0] + 200, tip[1] + 150]);
-    expect(await p.ev(`planx.board.getLink('L1').to`), 'still there').toBe(ids.d);
+    expect(await p.ev(`!!planx.board.getLink('L1')`), 'gone').toBe(false);
+    await p.key('z', 'KeyZ', 90, 4);
+    expect(await p.ev(`planx.board.getLink('L1')?.to`), 'and back on undo').toBe(ids.d);
   },
 
   async 'a table line takes hold only after the mouse rests on it'(p) {

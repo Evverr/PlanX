@@ -39,7 +39,7 @@ export function press(ed: Editor, e: PointerEvent): void {
   const end = ed.tool === 'select' && e.button === 0 && !e.shiftKey && !ed.spaceDown && !ed.editingId ? linkEndAt(ed, w) : null;
   if (end) {
     ed.setSelection([end.id]);
-    ed.gesture = { type: 'relink', id: end.id, to: w, target: end.to };
+    ed.gesture = { type: 'relink', id: end.id, from: w, to: w, target: null };
     // Held: the open hand closes.
     ed.canvas!.style.cursor = 'grabbing';
     return;
