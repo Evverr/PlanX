@@ -15,6 +15,7 @@ import { cameraFor, clamp, fittedTo, flyTo, freeArea, wheelMove, zoomedAt } from
 import { copiesOf } from './copies';
 import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked } from './frames';
 import { hasComponents, syncOps } from '../model/components';
+import { shapePatch, shapeStyle } from './shapeStyle';
 import { endGesture, moveGesture, type Gesture } from './gestures';
 import { updateCursor } from './hover';
 import { onKeyDown } from './keys';
@@ -506,7 +507,9 @@ export class Editor {
     this.needsFit = false;
     const d = DEFAULTS[type];
     const z = type === 'frame' ? this.board.minZ() - 1 : this.board.maxZ() + 1;
-    return { ...d, id: uid(), type, x: Math.round(x), y: Math.round(y), z, ...extra } as Item;
+    // Shapes come out as set under the gear of their panel.
+    const shape = type === 'rect' || type === 'ellipse' || type === 'polygon' ? shapePatch(type, shapeStyle()) : {};
+    return { ...d, ...shape, id: uid(), type, x: Math.round(x), y: Math.round(y), z, ...extra } as Item;
   }
 
   /** Puts an icon in the middle of the screen (fanned out a little so several don't stack),

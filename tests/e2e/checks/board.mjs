@@ -267,6 +267,20 @@ export const checks = {
     expect(await p.ev('planx.board.title'), 'its name too').toBe('Доска для файла');
   },
 
+  async 'the shapes\' gear sets how new shapes come out, and the selected ones too: their corners\' rounding'(p) {
+    await put(p, `b.add(e.newItem('polygon', X, Y, { shape: 'hexagon' })); b.add(e.newItem('rect', X + 220, Y));`);
+    const ids = await p.ev(`planx.board.list().map((i) => i.id)`);
+    expect(await p.ev(`planx.board.list().map((i) => [i.rad, i.sc]).join(';')`), 'round 4, no outline').toBe('4,none;4,none');
+    await p.ev(`planx.editor.setSelection(${JSON.stringify(ids)})`);
+    const a = await p.at('.tools [data-key="oval"]');
+    await p.mouse('mouseMoved', ...a); await p.mouse('mousePressed', ...a); await sleep(400); await p.mouse('mouseReleased', ...a); await sleep(200);
+    expect(await p.ev(`document.querySelectorAll('.shape-panel > [data-key]').length`), 'eleven shapes').toBe(11);
+    await p.click(await p.at('.shape-panel button[aria-label="Настройки фигур"]'));
+    await p.ev(`(() => { const i = document.querySelector('.shape-menu input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, '12'); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    expect(await p.ev(`planx.board.list().map((i) => i.rad).join()`), 'the selected rounder').toBe('12,12');
+    expect(await p.ev(`JSON.parse(localStorage.getItem('planx-shape-style')).rad`), 'and new ones too').toBe(12);
+  },
+
   async 'a table line takes hold only after the mouse rests on it'(p) {
     const id = await put(p, `const t = e.newItem('table', X, Y, { cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill(''), w: 360, h: 120 }); b.add(t); return t.id;`);
     await sleep(200);

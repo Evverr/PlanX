@@ -5,6 +5,7 @@ import { angleOf, boxOf, hitItem, nearestSide, nearInk, normRect, pointInRect, r
 import { fitHeight, itemTextHeight, mindSize } from '../canvas/text';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, newTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
+import { shapeStyle } from './shapeStyle';
 import { branchCrosses, canMoveTo, foldedWays, folding, mindWay, moveBranch } from '../model/mind';
 import { clamp, MAX_Z, MIN_Z } from './camera';
 import { rotateCursor } from './cursors';
@@ -134,7 +135,9 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
     }
     case 'create': {
       let r = normRect(g.origin, w);
-      if (e.shiftKey) { const s = Math.max(r.w, r.h); r = { ...r, w: s, h: s }; }
+      // Square with Shift, or, shapes set to come out square, free with it.
+      const it = board.get(g.id), square = !!it && ['rect', 'ellipse', 'polygon'].includes(it.type) && shapeStyle().square;
+      if (e.shiftKey !== square) { const s = Math.max(r.w, r.h); r = { ...r, w: s, h: s }; }
       board.update(g.id, { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.w), h: Math.round(r.h) });
       return;
     }
@@ -246,8 +249,9 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
     case 'create': {
       const it = board.get(g.id);
       if (it) {
-        const d = DEFAULTS[it.type];
-        if (it.w < 10 && it.h < 10) board.update(it.id, { w: d.w, h: d.h, x: Math.round(g.origin.x - d.w / 2), y: Math.round(g.origin.y - d.h / 2) });
+        const d = DEFAULTS[it.type], side = ['rect', 'ellipse', 'polygon'].includes(it.type) && shapeStyle().square ? Math.max(d.w, d.h) : 0;
+        const dw = side || d.w, dh = side || d.h;
+        if (it.w < 10 && it.h < 10) board.update(it.id, { w: dw, h: dh, x: Math.round(g.origin.x - dw / 2), y: Math.round(g.origin.y - dh / 2) });
         else board.update(it.id, { w: Math.max(it.w, 30), h: Math.max(it.h, 30) });
         ed.settleNew(it.id);
       }

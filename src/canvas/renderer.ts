@@ -98,7 +98,7 @@ export interface InkStroke { pts: Point[]; color: string; width: number; hl: boo
 
 /** Corner radius of everything with corners except stickers, in board units. */
 const CORNER = 8;
-const corner = (it: Item) => (it.type === 'rect' || it.type === 'frame' || it.type === 'task' ? CORNER
+const corner = (it: Item) => (it.type === 'rect' ? it.rad ?? CORNER : it.type === 'frame' || it.type === 'task' ? CORNER
   // A mind map node's: the central topic's rounder.
   : it.type === 'mind' ? Math.min(it.h / 2, it.parent ? 10 : 14) : 0);
 /** A ticked task's checkbox. */
@@ -289,7 +289,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'polygon': {
       const none = it.color === 'none';
       ctx.beginPath();
-      if (it.type === 'rect') ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(CORNER, it.w / 2, it.h / 2));
+      if (it.type === 'rect') ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.rad ?? CORNER, it.w / 2, it.h / 2));
       else if (it.type === 'ellipse') ctx.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
       else outlinePolygon(ctx, it);
       if (!none) {
@@ -429,9 +429,23 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
 
 /** Adds a polygon item's outline to the current path. */
 function outlinePolygon(ctx: CanvasRenderingContext2D, it: Item) {
-  const pts = polyPoints(it);
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (const p of pts.slice(1)) ctx.lineTo(p.x, p.y);
+  const pts = polyPoints(it), n = pts.length, rad = it.rad ?? 0;
+  if (!rad) {
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (const p of pts.slice(1)) ctx.lineTo(p.x, p.y);
+    ctx.closePath();
+    return;
+  }
+  // Each corner rounded, its curve reaching no further than halfway along either side of it (how far it
+  // reaches for a radius depends on the corner's angle); from the middle of the last side.
+  const mid = { x: (pts[n - 1].x + pts[0].x) / 2, y: (pts[n - 1].y + pts[0].y) / 2 };
+  ctx.moveTo(mid.x, mid.y);
+  for (let i = 0; i < n; i++) {
+    const p = pts[i], a = pts[(i + n - 1) % n], b = pts[(i + 1) % n];
+    const la = Math.hypot(a.x - p.x, a.y - p.y), lb = Math.hypot(b.x - p.x, b.y - p.y);
+    const cos = ((a.x - p.x) * (b.x - p.x) + (a.y - p.y) * (b.y - p.y)) / (la * lb), half = Math.acos(Math.max(-1, Math.min(1, cos))) / 2;
+    ctx.arcTo(p.x, p.y, b.x, b.y, Math.max(0, Math.min(rad, (Math.min(la, lb) / 2) * Math.tan(half))));
+  }
   ctx.closePath();
 }
 
