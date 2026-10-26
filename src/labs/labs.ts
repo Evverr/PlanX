@@ -15,7 +15,7 @@ export interface Lab { id: LabId; label: string; icon: string; hint: string }
 export const LABS: Lab[] = [
   { id: 'export', label: 'Экспорт в PNG', icon: 'download', hint: 'Скачать доску или выделенное картинкой' },
   { id: 'pdf', label: 'Экспорт в PDF', icon: 'file', hint: 'Скачать доску или выделенное PDF-файлом' },
-  { id: 'file', label: 'Файл доски (.jjvg)', icon: 'folder', hint: 'Сохранить всю доску в файл и открыть такой файл новой доской' },
+  { id: 'file', label: 'Файл доски (.plnt)', icon: 'folder', hint: 'Сохранить всю доску в файл и открыть такой файл новой доской' },
   { id: 'lock', label: 'Замок', icon: 'lock-l', hint: 'Закреплённое не сдвинуть и не удалить' },
   { id: 'search', label: 'Поиск по доске', icon: 'search', hint: 'Ctrl+F: найти текст на доске' },
   { id: 'timer', label: 'Общий таймер', icon: 'timer', hint: 'Отсчёт, который видят все на доске' },
