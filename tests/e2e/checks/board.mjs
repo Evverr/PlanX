@@ -251,6 +251,22 @@ export const checks = {
     expect(await p.ev(`(async () => { const m = await import('/src/model/color.ts'); return m.autoInk(planx.board.get('${id}')); })()`), 'not by itself any more').toBe(null);
   },
 
+  async '"Сохранить доску" in the menu saves it in a file, which "Загрузить доску" opens as a new board just like it'(p) {
+    await put(p, `const a = e.newItem('sticky', X, Y, { text: 'Купить молоко' }), c = e.newItem('sticky', X + 260, Y, { text: 'Позвонить Ёжику' }); b.add(a); b.add(c);`);
+    await p.ev(`planx.board.setTitle('Доска для файла'); window.saved = null; URL.createObjectURL = (b) => { window.saved = b; return 'blob:x'; }`);
+    await p.menu('Сохранить доску');
+    await sleep(200);
+    expect(await p.ev(`(async () => new TextDecoder().decode(new Uint8Array(await window.saved.arrayBuffer()).subarray(0, 8)))()`), 'a board file').toBe('PLANPLNT');
+    const was = await p.ev('location.search');
+    await p.ev(`(async () => { const m = await import('/src/collab/boardFile.ts'); const f = new File([await window.saved.arrayBuffer()], 'x.plnt'); setTimeout(() => m.openBoardFile(f), 0); })()`);
+    await sleep(1500);
+    const now = await p.ev('location.search');
+    expect(now !== was && now.startsWith('?board='), 'a new board opened').toBe(true);
+    await sleep(800);
+    expect(await p.ev(`planx.board.list().filter((i) => i.type === 'sticky').map((i) => i.text).sort().join()`), 'just like it').toBe('Купить молоко,Позвонить Ёжику');
+    expect(await p.ev('planx.board.title'), 'its name too').toBe('Доска для файла');
+  },
+
   async 'a table line takes hold only after the mouse rests on it'(p) {
     const id = await put(p, `const t = e.newItem('table', X, Y, { cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill(''), w: 360, h: 120 }); b.add(t); return t.id;`);
     await sleep(200);

@@ -5,13 +5,15 @@ import { usePanelSize, type PanelSize } from './panels/size';
 import { LabsMenu } from '../labs/LabsMenu';
 
 /**
- * The board's menu, opened from the button after its name (Figma "Mol / Menu right"): first keeping
- * the panels as they've been put (or putting them back as by default), then the profile and the
+ * The board's menu, opened from the button after its name (Figma "Mol / Menu right"): first the board
+ * saved in a file and such a file loaded as a new board, then keeping the panels as they've been put (or putting them back as by default), then the profile and the
  * settings (not there yet), then for now the mockup's items as they are: a row can end in a switch (two states, flipped by a click) or an
  * arrow for a further level, and a line splits the groups. Icons come from the set (picked at
  * random for now). The first rows' text is a shade lighter, as in the mockup.
  */
-export function BoardMenu({ level = 0, onSave, onReset }: { level?: number; onSave?: () => void; onReset?: () => void }) {
+export function BoardMenu({ level = 0, onSave, onReset, onSaveBoard, onLoadBoard }: {
+  level?: number; onSave?: () => void; onReset?: () => void; onSaveBoard?: () => void; onLoadBoard?: () => void;
+}) {
   const [on, setOn] = useState(false);
   const [panelSize, setPanelSize] = usePanelSize();
   // A row with an arrow opens a further level beside it (the same menu again, or the one it brings)
@@ -48,6 +50,9 @@ export function BoardMenu({ level = 0, onSave, onReset }: { level?: number; onSa
   return (
     <div ref={ref} className={`board-menu ${level ? 'sub' : ''} ${leftward ? 'leftward' : ''} ${anyIcon ? '' : 'plain'}`} role="menu" data-nosort>
       {level === 0 && <>
+        {row('download', 'Сохранить доску', { onClick: onSaveBoard })}
+        {row('upload', 'Загрузить доску', { onClick: onLoadBoard })}
+        <div className="menu-line" />
         {row('save-template', 'Сохранить панели', { onClick: onSave })}
         {row('refresh-l', 'Сбросить панели', { onClick: onReset })}
         {row('collapse-l', 'Размер панелей', { end: <SizeDots size={panelSize} onPick={setPanelSize} /> })}

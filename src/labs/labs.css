@@ -114,5 +114,3 @@
 
 /* The menu level with the switches. */
 .labs-menu .menu-row { padding-right: var(--s32); }
-/* Why a board file wouldn't open. */
-.labs-error { color: var(--danger); margin: 0 0 var(--s10); }
