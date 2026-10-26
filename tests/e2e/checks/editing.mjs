@@ -233,6 +233,19 @@ export const checks = {
     expect(await p.ev('planx.editor.selection.size'), 'nothing picked').toBe(0);
   },
 
+  async 'Tab while typing in a central topic goes on in a new branch of it, to the right'(p) {
+    await p.make('mind', [400, 400]);
+    const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
+    await p.ev(`planx.editor.setSelection(['${root}']); planx.editor.startEditing('${root}')`);
+    await sleep(200);
+    await p.cdp('Input.insertText', { text: 'План' });
+    await p.key('Tab', 'Tab', 9);
+    const kid = await p.ev(`planx.board.list().find((i) => i.parent === '${root}')`);
+    expect(!!kid && kid.x > (await p.ev(`planx.board.get('${root}').x`)), 'a branch on the right').toBe(true);
+    expect(await p.ev('planx.editor.editingId'), 'typed in at once').toBe(kid.id);
+    expect(await p.ev(`planx.board.get('${root}').text`), 'the topic kept its name').toBe('План');
+  },
+
   async 'the hand pans the board and the wheel zooms it'(p) {
     const cam0 = await p.ev('planx.editor.cam');
     await p.key('h', 'KeyH', 72);
