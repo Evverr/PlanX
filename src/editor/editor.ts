@@ -29,6 +29,8 @@ export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
 
 /** Whether dragged items line up with others along guides, kept per browser. */
 const GUIDES_KEY = 'planx-guides';
+/** How the last link was made to run, kept per browser: new links run the same way. */
+const LINK_STYLE_KEY = 'planx-link-style';
 /** How big a finger's target is, in screen pixels. */
 const FINGER = 40;
 /** The mind map "+" buttons' wait after a node is picked, and their fade in, in ms. */
@@ -120,6 +122,8 @@ export class Editor {
    *  (till then a press there takes the table), which is when it lights up. */
   lineRest: { line: TableLine; armed: boolean; timer: number } | null = null;
   guides = readJSON<boolean>(GUIDES_KEY) ?? false;
+  /** Shared: how new links run (see LINK_STYLE_KEY). */
+  linkStyle = readJSON<LinkStyle | null>(LINK_STYLE_KEY) ?? undefined;
   /** Cells picked in the selected table: a click on a cell of a table already selected picks it,
    *  Shift-click picks the box from there to another, Cmd-click adds or drops one. */
   cells: number[] = [];
@@ -752,6 +756,8 @@ export class Editor {
 
   /** How the selected links run: straight, in right angles, or (undefined) in a smooth curve. */
   setLinkStyle(style: LinkStyle | undefined): void {
+    this.linkStyle = style;
+    writeJSON(LINK_STYLE_KEY, style ?? null);
     this.board.beginGesture();
     for (const l of this.selectedLinks()) this.board.setLinkStyle(l.id, style);
     this.board.endGesture();

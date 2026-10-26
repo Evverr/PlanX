@@ -179,6 +179,15 @@ export const checks = {
     expect(await p.ev(`[...planx.editor.selection].join()`), 'picked on its corner').toBe('L1');
     await p.click(await p.at('.bar.panel button[aria-label="Прямая линия"]'));
     expect(await p.ev(`planx.board.getLink('L1').style`), 'straight').toBe('straight');
+    // A link drawn next, from a sticky's blue dot, runs the same way.
+    const a = await p.ev(`planx.board.getLink('L1').from`), d = await p.ev(`(() => { const e = planx.editor, { x: X, y: Y } = e.toWorld(300, 560); const d = e.newItem('sticky', X, Y); planx.board.add(d); return d; })()`);
+    await p.ev(`planx.editor.setSelection(['${a}'])`);
+    await sleep(300);
+    const dot = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'), e = planx.editor; const q = g.sidePoint(planx.board.get('${a}'), 'bottom', 16 / e.cam.z); const s = e.toScreen(q), c = e.canvas.getBoundingClientRect(); return [s.x + c.left, s.y + c.top]; })()`);
+    await p.drag(dot, await screen(p, d.x + 80, d.y + 80));
+    expect(await p.ev(`planx.board.linkList().find((l) => l.to === '${d.id}')?.style`), 'the new one straight too').toBe('straight');
+    await p.ev(`planx.editor.setSelection(['L1'])`);
+    await sleep(300);
     await p.click(await p.at('.bar.panel button[aria-label="Плавная линия"]'));
     expect(await p.ev(`planx.board.getLink('L1').style ?? null`), 'smooth again').toBe(null);
   },

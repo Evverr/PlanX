@@ -118,7 +118,8 @@ export function press(ed: Editor, e: PointerEvent): void {
   const plus = single && plusAt(ed, single, w);
   if (single && plus) {
     if (plus.kind === 'move') ed.gesture = { type: 'mindMove', id: single.id, from: w, to: w, target: null };
-    else if (plus.kind === 'fold') ed.setCollapsed(single.id, plus.way!, true);
+    // Folded by its chevron, nothing's left picked: the map to look at.
+    else if (plus.kind === 'fold') { ed.setCollapsed(single.id, plus.way!, true); ed.setSelection([]); }
     else ed.addMindNode(single.id, plus.kind, true);
     return;
   }
