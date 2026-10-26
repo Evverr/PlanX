@@ -229,6 +229,18 @@ export function spreadElbows(shapes: LinkShape[], step: number): void {
   }
 }
 
+/** Whether a line through points runs into the rectangle anywhere (each stretch tried at 12 points along it). */
+export function pathCrosses(pts: Point[], r: Rect): boolean {
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i];
+    for (let k = 0; k <= 12; k++) {
+      const x = a.x + ((b.x - a.x) * k) / 12, y = a.y + ((b.y - a.y) * k) / 12;
+      if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return true;
+    }
+  }
+  return false;
+}
+
 /** How far a point is from a line through points. */
 export function distToPath(p: Point, pts: Point[]): number {
   let d = Infinity;

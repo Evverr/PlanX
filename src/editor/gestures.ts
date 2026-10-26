@@ -1,7 +1,7 @@
 import type { Item, Link, Side } from '../model/types';
 import { DEFAULTS, ROTATABLE, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
-import { angleOf, boxOf, hitItem, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedAt, toLocal, turn } from '../canvas/geometry';
+import { angleOf, boxOf, hitItem, linkShape, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedAt, toLocal, turn } from '../canvas/geometry';
 import { fitHeight, itemTextHeight, mindSize } from '../canvas/text';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, newTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
@@ -185,6 +185,11 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         // A mind map branch the box takes in picks the node it leads to.
         const up = it.type === 'mind' && it.parent ? board.get(it.parent) : undefined;
         if (inside || (up && branchCrosses(up, it, g.rect))) next.add(it.id);
+      }
+      // And the links it runs into.
+      for (const l of ed.shownLinks()) {
+        const shape = linkShape(l, (id) => board.get(id));
+        if (shape && pathCrosses(shape.pts, g.rect)) next.add(l.id);
       }
       ed.setSelection(next);
       return;
