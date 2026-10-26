@@ -21,6 +21,8 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
       case 'KeyD': e.preventDefault(); ed.duplicate(); return;
       case 'KeyA': e.preventDefault(); ed.setSelection(ed.shown().map((i) => i.id)); return;
       case 'KeyG': e.preventDefault(); ed.frameSelection(); return;
+      // Ctrl+Alt+B, as in Figma: the selected instances cut loose from their components.
+      case 'KeyB': if (e.altKey) { e.preventDefault(); ed.detachInstances(); } return;
     }
     return;
   }

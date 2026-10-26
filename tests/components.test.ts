@@ -77,4 +77,11 @@ describe('components and their instances', () => {
     const folded = { ...comp, w: 200, h: 72, fold: { w: 300, h: 200 } };
     expect(apply([folded, a, b, inst]).by.get('i')).toMatchObject({ w: 300, h: 200 });
   });
+
+  it('a detached instance\'s copies of links stay, its own now', () => {
+    const r = item('r', 20, 20), k = item('k', 150, 20), c2 = { ...comp, members: ['r', 'k'] }, l: Link = { id: 'L', from: 'r', to: 'k' };
+    const { by, ops } = apply([c2, r, k, inst], [l]);
+    const loose = [...by.values()].map((i) => (i.id === 'i' ? { ...i, inst: undefined } : i.host ? { ...i, host: undefined, from: undefined } : i));
+    expect(syncOps(loose, [l, ...ops.addLinks]).removeLinks).toEqual([]);
+  });
 });

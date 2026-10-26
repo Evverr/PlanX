@@ -4,7 +4,8 @@ import { alignOf, TEXT_COLORS, textPad, textPadY, type Item } from '../model/typ
 import { fontOf, FONTS, LINE_HEIGHT, textBlockHeight } from '../canvas/text';
 import { FOLD_FS, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP } from '../model/frame';
 import { center, TASK_INSET } from '../canvas/geometry';
-import { addChild, siblingOf } from '../model/mind';
+import { addChild, siblingOf, siblingTints } from '../model/mind';
+import { autoInk } from '../model/color';
 import { colsOf, rowsOf } from '../model/table';
 
 /**
@@ -86,7 +87,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           fontStyle: item.fi ? 'italic' : undefined,
           textAlign: alignOf(item),
           textDecoration: [item.fu && 'underline', item.fx && 'line-through'].filter(Boolean).join(' ') || undefined,
-          color: item.tc && (item.tc.startsWith('#') ? item.tc : TEXT_COLORS[item.tc]) || undefined,
+          color: item.tc && (item.tc.startsWith('#') ? item.tc : TEXT_COLORS[item.tc]) || autoInk(item, siblingTints(editor.board.list())) || undefined,
         }),
         padding: isFrame ? '0 4px' : 0,
       }}

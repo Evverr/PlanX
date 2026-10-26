@@ -11,6 +11,7 @@ import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
 import { COMPONENT_COLOR, instancePlus } from '../model/components';
+import { autoInk } from '../model/color';
 import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, inkPoints, polyPoints, linkShape, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
@@ -168,8 +169,9 @@ function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: s
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = align;
   const fm = ctx.measureText('Hg'), ascent = fm.fontBoundingBoxAscent, descent = fm.fontBoundingBoxDescent;
+  // Its own text colour; with none, white on a dark fill, else the usual.
   const tc = it.tc && (it.tc.startsWith('#') ? it.tc : TEXT_COLORS[it.tc]);
-  const ink = tc ? shade(tc, s.theme.dim) : color;
+  const ink = tc ? shade(tc, s.theme.dim) : autoInk(it, tints) ?? color;
   const mark = it.mk && (it.mk.startsWith('#') ? it.mk : MARK_COLORS[it.mk]);
   const rule = Math.max(1, l.size / 14);
   const total = l.lines.length * l.lineHeight;
@@ -325,14 +327,11 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
         ctx.setLineDash([]);
       }
       if (!it.inst) {
-        ctx.fillStyle = theme.frame;
+        // A component is only its red edge, with nothing filled in.
         ctx.beginPath();
         ctx.roundRect(it.x, it.y, it.w, it.h, CORNER);
-        ctx.fill();
+        if (!it.comp) { ctx.fillStyle = theme.frame; ctx.fill(); }
         if (it.comp) {
-          ctx.fillStyle = COMPONENT_COLOR;
-          ctx.globalAlpha = 0.05;
-          ctx.fill();
           ctx.globalAlpha = 0.75;
           ctx.strokeStyle = COMPONENT_COLOR;
           ctx.lineWidth = 1.5 / cam.z;
@@ -579,11 +578,8 @@ function drawFolded(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: 
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, 16);
   ctx.fill();
-  // A folded component is a bar in the same red tints.
+  // A folded component is a bar edged in the same red.
   if (it.comp) {
-    ctx.fillStyle = COMPONENT_COLOR;
-    ctx.globalAlpha = 0.05;
-    ctx.fill();
     ctx.globalAlpha = 0.75;
     ctx.strokeStyle = COMPONENT_COLOR;
     ctx.lineWidth = 1.5 / cam.z;
