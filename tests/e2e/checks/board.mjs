@@ -207,6 +207,41 @@ export const checks = {
     expect(await p.ev(`planx.board.getLink('L1')?.to`), 'and back on undo').toBe(ids.d);
   },
 
+  async 'an instance detached from its component is an ordinary frame, as it was, and stays so'(p) {
+    const ids = await put(p, `const a = e.newItem('sticky', X, Y, { text: 'Привет' }); b.add(a); e.setSelection([a.id]); return { a: a.id };`);
+    await p.click(await p.at('.tools [data-key="component"]'));
+    await p.escape();
+    const comp = await p.ev(`planx.board.list().find((i) => i.comp)`);
+    await p.ev(`planx.editor.addInstance('${comp.id}')`);
+    await sleep(200);
+    const inst = await p.ev(`planx.board.list().find((i) => i.inst)`), A = `${inst.id}~${ids.a}`;
+    await p.ev(`planx.board.update('${A}', { color: 'pink' }); planx.editor.setSelection(['${inst.id}'])`);
+    await sleep(300);
+    await p.click(await p.at('.bar.panel button[aria-label^="Отвязать от компонента"]'));
+    await p.ev(`planx.board.update('${ids.a}', { text: 'Новое' })`);
+    await sleep(200);
+    const c = await p.ev(`planx.board.get('${A}')`);
+    expect(await p.ev(`planx.board.get('${inst.id}').inst ?? null`), 'an ordinary frame').toBe(null);
+    expect(c.text + ' ' + c.color + ' ' + (c.host ?? 'free'), 'as it was, not following the component').toBe('Привет pink free');
+    await p.key('z', 'KeyZ', 90, 4);
+    await p.key('z', 'KeyZ', 90, 4);
+    await sleep(200);
+    expect(await p.ev(`planx.board.get('${inst.id}').inst`), 'undone, an instance again').toBe(comp.id);
+  },
+
+  async 'text on a dark fill is white by itself; a text colour given stays'(p) {
+    await put(p, `const a = e.newItem('sticky', X, Y, { text: 'Тёмный', color: '#1C1F26' }); b.add(a); e.setSelection([a.id]);`);
+    const id = await p.ev(`planx.board.list().find((i) => i.type === 'sticky').id`);
+    const ink = await p.ev(`(async () => { const m = await import('/src/model/color.ts'); return m.autoInk(planx.board.get('${id}')); })()`);
+    expect(ink, 'white on it').toBe('#FFFFFF');
+    await sleep(300);
+    await p.click(await p.at('.bar.panel [data-key="colors"] button, .bar.panel button[aria-label="Цвет"]'));
+    await p.click(await p.at('.palette-pop button[aria-label="Цвет текста"]'));
+    await p.click(await p.at('.palette-pop button[aria-label="Цвет текста orange"]'));
+    expect(await p.ev(`planx.board.get('${id}').tc`), 'its own').toBe('orange');
+    expect(await p.ev(`(async () => { const m = await import('/src/model/color.ts'); return m.autoInk(planx.board.get('${id}')); })()`), 'not by itself any more').toBe(null);
+  },
+
   async 'a table line takes hold only after the mouse rests on it'(p) {
     const id = await put(p, `const t = e.newItem('table', X, Y, { cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill(''), w: 360, h: 120 }); b.add(t); return t.id;`);
     await sleep(200);

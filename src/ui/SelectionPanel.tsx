@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
-import { COLORABLE, FILLS, ICON_COLORS, STROKABLE, STROKE_COLORS } from '../model/types';
+import { COLORABLE, FILLS, ICON_COLORS, STROKABLE, STROKE_COLORS, TEXT_COLORS } from '../model/types';
 import { MIND_PALETTE, mindDepth } from '../model/mind';
 import { colsOf, rowsOf } from '../model/table';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
@@ -14,7 +14,7 @@ import { LockButton, ReactButton } from '../labs/SelectionLabs';
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['colors', 'rows', 'cols', 'lines', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+const ORDER = ['colors', 'rows', 'cols', 'lines', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -48,21 +48,27 @@ function Palette({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-type Paint = 'fill' | 'stroke';
+type Paint = 'fill' | 'stroke' | 'text';
 
-/** Which colours the circles set, fill or outline (a table's lines); Shift-click picks both. */
+/** Which colours the circles set, fill or outline (a table's lines), or the text's; Shift-click picks
+ *  fill and outline both (the text's goes on its own). */
 function usePaint(): [Paint[], (which: Paint, shift: boolean) => void] {
   const [paint, setPaint] = useState<Paint[]>(['fill']);
   return [paint, (which, shift) => {
-    if (!shift) setPaint([which]);
+    if (!shift || which === 'text' || paint.includes('text')) setPaint([which]);
     else if (!paint.includes(which)) setPaint([...paint, which]);
     else if (paint.length > 1) setPaint(paint.filter((p) => p !== which));
   }];
 }
 
-/** The fill/outline switch, each showing its colour now, and a line after it. */
-function PaintSwitch({ paint, pick, fill, stroke, fillLabel, strokeLabel }: {
-  paint: Paint[]; pick: (which: Paint, shift: boolean) => void; fill: string | null; stroke: string | null; fillLabel: string; strokeLabel: string;
+/** The text colours to pick: by itself (white on a dark fill, else the usual; half and half), or one. */
+const TEXT_SWATCHES: Array<[string, string]> = Object.entries(TEXT_COLORS).map(([k, v]) => [k, k === 'ink' ? 'linear-gradient(135deg, #1C1F26 50%, #FFFFFF 50%)' : v]);
+const textLook = (tc: string | null) => (!tc || tc === 'ink' ? 'var(--ink)' : tc.startsWith('#') ? tc : TEXT_COLORS[tc] || 'var(--ink)');
+
+/** The fill/outline/text switch, each showing its colour now (outline and text where there are), and a
+ *  line after it. */
+function PaintSwitch({ paint, pick, fill, stroke, fillLabel, strokeLabel, text }: {
+  paint: Paint[]; pick: (which: Paint, shift: boolean) => void; fill: string | null; stroke?: string | null; fillLabel: string; strokeLabel?: string; text?: string | null;
 }) {
   const fillLook = !fill ? 'var(--line)' : fill.startsWith('#') ? fill : fill === 'none' ? 'transparent' : FILLS[fill] ?? FILLS.blue;
   const strokeLook = !stroke ? 'var(--line)' : stroke.startsWith('#') ? stroke : stroke === 'none' ? 'transparent'
@@ -74,10 +80,18 @@ function PaintSwitch({ paint, pick, fill, stroke, fillLabel, strokeLabel }: {
           aria-pressed={paint.includes('fill')} onClick={(e) => pick('fill', e.shiftKey)}>
           <span className={`paint-fill ${fill === 'none' ? 'none' : ''}`} style={{ background: fillLook }} />
         </button>
-        <button className={`ib ${paint.includes('stroke') ? 'on' : ''}`} title={`${strokeLabel} (с Shift — вместе)`} aria-label={strokeLabel}
-          aria-pressed={paint.includes('stroke')} onClick={(e) => pick('stroke', e.shiftKey)}>
-          <span className={`paint-stroke ${stroke === 'none' ? 'none' : ''}`} style={{ borderColor: strokeLook }} />
-        </button>
+        {stroke !== undefined && (
+          <button className={`ib ${paint.includes('stroke') ? 'on' : ''}`} title={`${strokeLabel} (с Shift — вместе)`} aria-label={strokeLabel}
+            aria-pressed={paint.includes('stroke')} onClick={(e) => pick('stroke', e.shiftKey)}>
+            <span className={`paint-stroke ${stroke === 'none' ? 'none' : ''}`} style={{ borderColor: strokeLook }} />
+          </button>
+        )}
+        {text !== undefined && (
+          <button className={`ib ${paint.includes('text') ? 'on' : ''}`} title="Цвет текста" aria-label="Цвет текста"
+            aria-pressed={paint.includes('text')} onClick={(e) => pick('text', e.shiftKey)}>
+            <span className="paint-text" style={{ borderColor: textLook(text) }}>A</span>
+          </button>
+        )}
       </div>
       <div className="sep" />
     </>
@@ -138,18 +152,21 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
   const fill = same(colorable.map((i) => i.color)), stroke = same(strokable.map((i) => i.sc ?? 'gray'));
   // Outlines are set only while shapes or tasks are among the selected; with both picked, colour and
   // opacity go to both, the outline taking the fill's colour itself.
-  const targets: Paint[] = strokable.length ? paint : ['fill'];
-  const target = targets.includes('fill') ? 'fill' : 'stroke', both = targets.length > 1;
+  const text = same(colorable.map((i) => i.tc ?? 'ink'));
+  const shown = paint.filter((p) => p !== 'stroke' || strokable.length), targets: Paint[] = shown.length ? shown : ['fill'];
+  const target = targets.includes('fill') ? 'fill' : targets.includes('stroke') ? 'stroke' : 'text', both = targets.length > 1;
   const setColor = (c: string) => {
     editor.beginChange();
     if (targets.includes('fill')) editor.setColor(c);
     if (targets.includes('stroke')) editor.setStroke(both && c !== 'none' && FILLS[c] ? FILLS[c] : c);
+    // A text colour given turns the one by itself off; "by itself" back on.
+    if (targets.includes('text')) editor.setTextStyle({ tc: c === 'ink' ? undefined : c });
     editor.endChange();
   };
   // Mind map nodes on their own get their strong colours instead of the pale fills.
   const mind = colorable.length > 0 && colorable.every((i) => i.type === 'mind');
   const allowNone = colorable.every((i) => i.type !== 'sticky');
-  const swatches: Array<[string, string]> = mind ? MIND_PALETTE.map((c) => [c, c]) : target === 'fill'
+  const swatches: Array<[string, string]> = target === 'text' ? TEXT_SWATCHES : mind ? MIND_PALETTE.map((c) => [c, c]) : target === 'fill'
     ? Object.entries(FILLS).filter(([k]) => k !== 'none' || allowNone)
     : [...Object.entries(STROKE_COLORS).map(([k, v]): [string, string] => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--shape-stroke)')]), ['none', '']];
   const opacity = Number(same(target === 'fill' ? colorable.map((i) => String(i.fo ?? 1)) : strokable.map((i) => String(i.so ?? 1))) ?? 1);
@@ -157,10 +174,10 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
   return (
     <Palette label="Цвет">
       {colorable.length > 0 && <>
-        {strokable.length > 0 && <PaintSwitch paint={targets} pick={pick} fill={fill} stroke={stroke} fillLabel="Заливка" strokeLabel="Обводка" />}
-        <Swatches editor={editor} swatches={swatches} current={target === 'fill' ? fill : stroke} onPick={setColor}
-          label={target === 'fill' ? 'Цвет' : 'Цвет обводки'} noneLabel={target === 'fill' ? 'Без заливки' : 'Без обводки'} />
-        <OpacitySlider editor={editor} value={opacity} onChange={(v) => targets.forEach((t) => editor.setOpacity(t, v))} />
+        <PaintSwitch paint={targets} pick={pick} fill={fill} stroke={strokable.length ? stroke : undefined} fillLabel="Заливка" strokeLabel="Обводка" text={text} />
+        <Swatches editor={editor} swatches={swatches} current={target === 'fill' ? fill : target === 'stroke' ? stroke : text} onPick={setColor}
+          label={target === 'fill' ? 'Цвет' : target === 'stroke' ? 'Цвет обводки' : 'Цвет текста'} noneLabel={target === 'fill' ? 'Без заливки' : 'Без обводки'} />
+        {target !== 'text' && <OpacitySlider editor={editor} value={opacity} onChange={(v) => targets.forEach((t) => t !== 'text' && editor.setOpacity(t, v))} />}
       </>}
       {colorable.length > 0 && icons.length > 0 && <div className="sep" />}
       {icons.length > 0 && Object.entries(ICON_COLORS).map(([k, v]) => (
@@ -175,23 +192,24 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
  *  and branch (the strong ones), with opacity for either; Shift picks both. */
 function MindColors({ editor, nodes }: { editor: Editor; nodes: Item[] }) {
   const [paint, pick] = usePaint();
-  const fill = same(nodes.map((i) => i.fc ?? 'none')), stroke = same(nodes.map((i) => i.color));
-  const target = paint.includes('fill') ? 'fill' : 'stroke';
-  const swatches: Array<[string, string]> = target === 'fill' ? Object.entries(FILLS) : MIND_PALETTE.map((c) => [c, c]);
+  const fill = same(nodes.map((i) => i.fc ?? 'none')), stroke = same(nodes.map((i) => i.color)), text = same(nodes.map((i) => i.tc ?? 'ink'));
+  const target = paint.includes('fill') ? 'fill' : paint.includes('stroke') ? 'stroke' : 'text';
+  const swatches: Array<[string, string]> = target === 'text' ? TEXT_SWATCHES : target === 'fill' ? Object.entries(FILLS) : MIND_PALETTE.map((c) => [c, c]);
   const setColor = (c: string) => {
     editor.beginChange();
     if (paint.includes('fill')) editor.setMindFill(c);
     // Together, the edge takes the fill's colour itself (as long as it's a colour).
     if (paint.includes('stroke') && c !== 'none') editor.setColor(c.startsWith('#') ? c : FILLS[c] ?? c);
+    if (paint.includes('text')) editor.setTextStyle({ tc: c === 'ink' ? undefined : c });
     editor.endChange();
   };
   const opacity = Number(same(nodes.map((i) => String((target === 'fill' ? i.fo : i.so) ?? 1))) ?? 1);
   return (
     <Palette label="Цвет">
-      <PaintSwitch paint={paint} pick={pick} fill={fill} stroke={stroke ?? MIND_PALETTE[0]} fillLabel="Заливка" strokeLabel="Обводка" />
-      <Swatches editor={editor} swatches={swatches} current={target === 'fill' ? fill : stroke} onPick={setColor}
-        label={target === 'fill' ? 'Цвет' : 'Цвет обводки'} noneLabel="Без заливки" />
-      <OpacitySlider editor={editor} value={opacity} onChange={(v) => paint.forEach((t) => editor.setOpacity(t, v))} />
+      <PaintSwitch paint={paint} pick={pick} fill={fill} stroke={stroke ?? MIND_PALETTE[0]} fillLabel="Заливка" strokeLabel="Обводка" text={text} />
+      <Swatches editor={editor} swatches={swatches} current={target === 'fill' ? fill : target === 'stroke' ? stroke : text} onPick={setColor}
+        label={target === 'fill' ? 'Цвет' : target === 'stroke' ? 'Цвет обводки' : 'Цвет текста'} noneLabel="Без заливки" />
+      {target !== 'text' && <OpacitySlider editor={editor} value={opacity} onChange={(v) => paint.forEach((t) => t !== 'text' && editor.setOpacity(t, v))} />}
     </Palette>
   );
 }
@@ -324,6 +342,8 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
             ))}
           </div>
         ) : undefined,
+        // An instance can be cut loose from its component.
+        detach: items.some((i) => i.inst) ? btn('detach', 'Отвязать от компонента (Ctrl+Alt+B)', () => editor.detachInstances()) : undefined,
         front: items.length > 0 ? btn('to-front', 'На передний план', () => editor.bringToFront()) : undefined,
         back: items.length > 0 ? btn('to-back', 'На задний план', () => editor.sendToBack()) : undefined,
         duplicate: items.length > 0 ? btn('duplicate', 'Дублировать (Ctrl+D)', () => editor.duplicate()) : undefined,

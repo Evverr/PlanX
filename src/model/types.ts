@@ -116,6 +116,8 @@ export const TEXT_COLORS: Record<string, string> = {
   blue: '#3E7BFA',
   purple: '#8E4EC6',
   pink: '#D6409F',
+  black: '#1C1F26',
+  white: '#FFFFFF',
 };
 
 /** Highlights behind the text, drawn at 45% so they work on any background. */

@@ -105,7 +105,8 @@ export function syncOps(items: Item[], links: Link[]): SyncOps {
   }
   // Copies of what's no longer in a component, or in an instance that's gone.
   for (const i of items) if (i.host && !wanted.has(i.id)) ops.remove.push(i.id);
-  for (const l of links) if (l.id.includes('~') && !wantedLinks.has(l.id)) ops.removeLinks.push(l.id);
+  // Copies of links no longer wanted in an instance (those of one detached stay, as its own).
+  for (const l of links) if (l.id.includes('~') && byId.get(l.id.split('~')[0])?.inst && !wantedLinks.has(l.id)) ops.removeLinks.push(l.id);
   return ops;
 }
 

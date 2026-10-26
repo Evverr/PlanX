@@ -715,6 +715,21 @@ export class Editor {
     this.setSelection([id]);
   }
 
+  /** Detaches the selected instances from their components: each an ordinary frame of ordinary items,
+   *  as it is, its own text and colours too. */
+  detachInstances(): void {
+    const insts = this.selectedItems().filter((i) => i.inst);
+    if (!insts.length) return;
+    this.board.transact(() => {
+      for (const inst of insts) {
+        this.board.update(inst.id, { inst: undefined });
+        for (const c of this.board.list().filter((i) => i.host === inst.id)) this.board.update(c.id, { from: undefined, host: undefined, ovr: undefined });
+      }
+    });
+    this.emit();
+    this.requestRender();
+  }
+
   /** Picks instance `id`'s component and brings it into view, gliding there. */
   goToComponent(id: string): void {
     const comp = this.board.get(this.board.get(id)?.inst ?? '');
