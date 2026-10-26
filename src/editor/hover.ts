@@ -37,7 +37,7 @@ export function plusAt(ed: Editor, it: Item, w: Point): MindButtonAt | null {
 
 /** Whether the point is on a picked component's "+" for a new instance. */
 export function onInstancePlus(ed: Editor, it: Item, w: Point): boolean {
-  if (!it.comp || it.fold || ed.editingId === it.id) return false;
+  if (!it.comp || ed.editingId === it.id) return false;
   const p = instancePlus(it, ed.cam.z);
   return Math.hypot(w.x - p.x, w.y - p.y) <= Math.max(p.r * 1.3, ed.reach(0));
 }

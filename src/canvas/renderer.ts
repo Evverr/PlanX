@@ -309,28 +309,28 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       break;
     case 'frame': {
       if (it.fold) { drawFolded(ctx, it, s, editing); break; }
-      // A component and its instances in red tints: the component edged solid, an instance dashed, each
-      // titled after a diamond (filled, hollow).
+      // A component in red tints, titled after a filled diamond; an instance of it has no frame at all,
+      // only its title after a hollow one.
       const kin = it.comp || it.inst;
-      ctx.fillStyle = theme.frame;
-      ctx.beginPath();
-      ctx.roundRect(it.x, it.y, it.w, it.h, CORNER);
-      ctx.fill();
-      if (kin) {
-        ctx.fillStyle = COMPONENT_COLOR;
-        ctx.globalAlpha = 0.05;
+      if (!it.inst) {
+        ctx.fillStyle = theme.frame;
+        ctx.beginPath();
+        ctx.roundRect(it.x, it.y, it.w, it.h, CORNER);
         ctx.fill();
-        ctx.globalAlpha = it.comp ? 0.75 : 0.55;
-        ctx.strokeStyle = COMPONENT_COLOR;
-        ctx.lineWidth = 1.5 / cam.z;
-        if (it.inst) ctx.setLineDash([6 / cam.z, 4 / cam.z]);
-      } else {
-        ctx.strokeStyle = theme.line;
-        ctx.lineWidth = 1 / cam.z;
+        if (it.comp) {
+          ctx.fillStyle = COMPONENT_COLOR;
+          ctx.globalAlpha = 0.05;
+          ctx.fill();
+          ctx.globalAlpha = 0.75;
+          ctx.strokeStyle = COMPONENT_COLOR;
+          ctx.lineWidth = 1.5 / cam.z;
+        } else {
+          ctx.strokeStyle = theme.line;
+          ctx.lineWidth = 1 / cam.z;
+        }
+        ctx.stroke();
+        ctx.globalAlpha = 1;
       }
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 1;
       if (!editing && (it.text || kin)) {
         ctx.font = font(15, 600);
         ctx.fillStyle = kin ? COMPONENT_COLOR : theme.muted;
@@ -567,7 +567,17 @@ function drawFolded(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: 
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, 16);
   ctx.fill();
+  // A folded component is a bar in the same red tints.
+  if (it.comp) {
+    ctx.fillStyle = COMPONENT_COLOR;
+    ctx.globalAlpha = 0.05;
+    ctx.fill();
+    ctx.globalAlpha = 0.75;
+    ctx.strokeStyle = COMPONENT_COLOR;
+    ctx.lineWidth = 1.5 / cam.z;
+  }
   ctx.stroke();
+  ctx.globalAlpha = 1;
   if (!editing && it.text) {
     ctx.font = font(FOLD_FS, 600);
     ctx.fillStyle = theme.ink;

@@ -127,6 +127,14 @@ export const checks = {
     await sleep(200);
     const inst = await p.ev(`planx.board.list().find((i) => i.inst === '${comp.id}')`);
     const copy = (k) => p.ev(`planx.board.get('${inst.id}~${k}')`);
+    // The first instance folds the component; its "+" by the bar makes another.
+    const bar = await p.ev(`planx.board.get('${comp.id}')`);
+    expect(!!bar.fold, 'the component folded').toBe(true);
+    await sleep(200);
+    await p.click(await screen(p, bar.x + bar.w + 40, bar.y + bar.h / 2));
+    await sleep(200);
+    expect(await p.ev(`planx.board.list().filter((i) => i.inst === '${comp.id}').length`), 'a second instance').toBe(2);
+    expect(await p.ev(`planx.board.list().filter((i) => i.inst === '${comp.id}').every((i) => i.w === ${comp.w})`), 'as big as the component unfolded').toBe(true);
     expect((await copy(ids.a))?.text, 'a copy of the sticky in the instance').toBe('Привет');
     // Changed in the component, changed in the instance; a change undone, undone there too.
     await p.ev(`planx.editor.setSelection([]); planx.board.update('${ids.a}', { text: 'Новое', color: 'pink' })`);
