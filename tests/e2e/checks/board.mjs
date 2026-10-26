@@ -156,6 +156,25 @@ export const checks = {
     expect(await p.ev(`[...planx.editor.selection].join()`), 'the instance picked').toBe(inst.id);
   },
 
+  async 'a picked link\'s panel has its three ways of running: smooth, right angles, straight'(p) {
+    await put(p, `const a = e.newItem('sticky', X, Y), c = e.newItem('sticky', X + 420, Y + 260); b.add(a); b.add(c);
+      b.addLink({ id: 'L1', from: a.id, to: c.id, fromSide: 'right', toSide: 'left' });`);
+    await p.ev(`planx.editor.setSelection(['L1'])`);
+    await sleep(300);
+    expect(await p.ev(`document.querySelector('.bar.panel button[aria-label="Плавная линия"]')?.getAttribute('aria-pressed')`), 'smooth at first').toBe('true');
+    await p.click(await p.at('.bar.panel button[aria-label="Линия с прямыми углами"]'));
+    expect(await p.ev(`planx.board.getLink('L1').style`), 'right angles').toBe('elbow');
+    // Picked by a click on its corner, where only a right-angled line runs.
+    const corner = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'); const sh = g.linkShape(planx.board.getLink('L1'), (k) => planx.board.get(k)); const s = planx.editor.toScreen(sh.pts[1]), c = planx.editor.canvas.getBoundingClientRect(); return [s.x + c.left, s.y + c.top]; })()`);
+    await p.ev(`planx.editor.setSelection([])`);
+    await p.click(corner);
+    expect(await p.ev(`[...planx.editor.selection].join()`), 'picked on its corner').toBe('L1');
+    await p.click(await p.at('.bar.panel button[aria-label="Прямая линия"]'));
+    expect(await p.ev(`planx.board.getLink('L1').style`), 'straight').toBe('straight');
+    await p.click(await p.at('.bar.panel button[aria-label="Плавная линия"]'));
+    expect(await p.ev(`planx.board.getLink('L1').style ?? null`), 'smooth again').toBe(null);
+  },
+
   async 'a table line takes hold only after the mouse rests on it'(p) {
     const id = await put(p, `const t = e.newItem('table', X, Y, { cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill(''), w: 360, h: 120 }); b.add(t); return t.id;`);
     await sleep(200);

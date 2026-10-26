@@ -158,6 +158,54 @@ export function linkCurve(link: Link, get: (id: string) => Item | undefined): Be
   return [p, p, q, q];
 }
 
+/** How a link runs: through these points, and, a smooth one, as this curve (its points then along it). */
+export interface LinkShape { pts: Point[]; curve?: Bezier }
+
+/**
+ * A link's shape by its style: a smooth curve out of its sides and into them; a straight line between
+ * them; or right angles, out of its side a little way, turning halfway (or once, from a side across to a
+ * side along) and into the other side. One without sides goes from the sides facing each other.
+ */
+export function linkShape(link: Link, get: (id: string) => Item | undefined): LinkShape | null {
+  const a = get(link.from), b = get(link.to);
+  if (!a || !b) return null;
+  if (!link.style) {
+    const curve = linkCurve(link, get)!;
+    return { curve, pts: Array.from({ length: 25 }, (_, i) => bezierPoint(curve, i / 24)) };
+  }
+  const ps = link.fromSide ?? nearestSide(a, center(b)), qs = link.toSide ?? nearestSide(b, center(a));
+  const p = link.fromSide || link.style === 'elbow' ? sidePoint(a, ps) : linkEnds(link, get)![0];
+  const q = link.toSide || link.style === 'elbow' ? sidePoint(b, qs) : linkEnds(link, get)![1];
+  return { pts: link.style === 'straight' ? [p, q] : elbowRoute(p, ps, q, qs) };
+}
+
+/** Right angles from p out of side `ps` to q into side `qs`, without points in line between others. */
+export function elbowRoute(p: Point, ps: Side, q: Point, qs: Side): Point[] {
+  const S = 24, n1 = NORMAL[ps], n2 = NORMAL[qs];
+  const a = { x: p.x + n1.x * S, y: p.y + n1.y * S }, b = { x: q.x + n2.x * S, y: q.y + n2.y * S };
+  const across1 = n1.y === 0, across2 = n2.y === 0;
+  const mid = across1 && across2 ? [{ x: (a.x + b.x) / 2, y: a.y }, { x: (a.x + b.x) / 2, y: b.y }]
+    : !across1 && !across2 ? [{ x: a.x, y: (a.y + b.y) / 2 }, { x: b.x, y: (a.y + b.y) / 2 }]
+    : across1 ? [{ x: b.x, y: a.y }] : [{ x: a.x, y: b.y }];
+  const all = [p, a, ...mid, b, q], out: Point[] = [];
+  for (const pt of all) {
+    const last = out[out.length - 1];
+    if (last && Math.abs(last.x - pt.x) < 0.01 && Math.abs(last.y - pt.y) < 0.01) continue;
+    const prev = out[out.length - 2];
+    // In line with the two before it: the one between goes.
+    if (prev && ((Math.abs(prev.x - last.x) < 0.01 && Math.abs(last.x - pt.x) < 0.01) || (Math.abs(prev.y - last.y) < 0.01 && Math.abs(last.y - pt.y) < 0.01))) out.pop();
+    out.push(pt);
+  }
+  return out;
+}
+
+/** How far a point is from a line through points. */
+export function distToPath(p: Point, pts: Point[]): number {
+  let d = Infinity;
+  for (let i = 1; i < pts.length; i++) d = Math.min(d, distToSegment(p, pts[i - 1], pts[i]));
+  return d;
+}
+
 export function bezierPoint([a, b, c, d]: Bezier, t: number): Point {
   const u = 1 - t;
   return {
@@ -266,8 +314,8 @@ export function hitItem(items: Item[], p: Point, zoom: number): Item | null {
 export function hitLink(links: Link[], get: (id: string) => Item | undefined, p: Point, zoom: number): Link | null {
   const tol = 7 / zoom;
   for (let i = links.length - 1; i >= 0; i--) {
-    const curve = linkCurve(links[i], get);
-    if (curve && distToBezier(p, curve) <= tol) return links[i];
+    const shape = linkShape(links[i], get);
+    if (shape && distToPath(p, shape.pts) <= tol) return links[i];
   }
   return null;
 }
