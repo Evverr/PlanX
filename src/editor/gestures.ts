@@ -260,9 +260,11 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
     case 'link':
       if (g.target && !board.hasLink(g.from, g.target)) {
         const target = board.get(g.target)!;
+        // Running the way the last one was made to.
         const l: Link = g.fromSide
           ? { id: uid(), from: g.from, to: g.target, fromSide: g.fromSide, toSide: nearestSide(target, g.to) }
           : { id: uid(), from: g.from, to: g.target };
+        if (ed.linkStyle) l.style = ed.linkStyle;
         board.addLink(l);
         ed.setTool('select');
         ed.setSelection([l.id]);

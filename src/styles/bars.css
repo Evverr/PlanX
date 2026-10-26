@@ -88,10 +88,10 @@
 /* On a board, the logo is the way back to the shelf. */
 .logo.to-shelf { border: 0; background: none; padding: 0; color: inherit; cursor: pointer; }
 .logo.to-shelf:hover { color: var(--accent); }
-/* A blue dot by the top right of "Plan", 5px across, 4px off it and its top 2px over the letters':
+/* A blue dot by the top right of "Plan", 5px across, 2px off it and its top 1px over the letters':
    every 20 seconds it comes for 2, fading in and out. */
 .logo { position: relative; }
-.logo::after { content: ""; position: absolute; left: calc(100% + var(--s4)); top: calc(0.3em - var(--s2)); width: var(--s5); height: var(--s5);
+.logo::after { content: ""; position: absolute; left: calc(100% + var(--s2)); top: calc(0.3em - 1px); width: var(--s5); height: var(--s5);
   border-radius: 50%; background: #4DA3FF; opacity: 0; pointer-events: none; animation: logo-dot 20s ease-in-out infinite; }
 @keyframes logo-dot { 0% { opacity: 0; } 2.4% { opacity: 1; } 7.5% { opacity: 1; } 10% { opacity: 0; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .logo::after { animation: none; } }
