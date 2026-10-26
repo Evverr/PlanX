@@ -151,6 +151,12 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
             if (editor.editingId) editor.glide(addChild(editor.editingId, editor.board.list()));
             return;
           }
+          // Typing in a central topic, Tab goes on in a new branch of it, to the right.
+          if (!item.parent) {
+            commit();
+            editor.addMindNode(id, 'child');
+            return;
+          }
           if (!next) return;
           commit();
           editor.setSelection([next]);
