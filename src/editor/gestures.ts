@@ -202,9 +202,9 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         if (inner) {
           ed.setSelection([inner.id]);
           ed.startEditing(inner.id, inner.type === 'table' ? cellAt(inner, g.start) : null);
-        // A frame folds on a double click, and unfolds; on its title over it, that opens for typing (a
-        // component's, and an instance's, don't fold).
-        } else if (it?.type === 'frame' && !it.comp && !it.inst && (it.fold || toLocal(it, g.start).y >= it.y)) ed.setFolded(it.id, !it.fold);
+        // A frame folds on a double click, and unfolds (a component too, not an instance); on its title
+        // over it, that opens for typing.
+        } else if (it?.type === 'frame' && !it.inst && (it.fold || toLocal(it, g.start).y >= it.y)) ed.setFolded(it.id, !it.fold);
         else if (!it?.inst) ed.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
       } else if (g.cell) {
         const it = board.get(g.id), i = it ? cellAt(it, g.start) : null;

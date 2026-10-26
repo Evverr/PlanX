@@ -72,4 +72,9 @@ describe('components and their instances', () => {
     const { by } = apply([c2, a, inst]);
     expect([...by.keys()].filter((k) => k.includes('~'))).toEqual([]);
   });
+
+  it('a folded component\'s instances keep its size unfolded', () => {
+    const folded = { ...comp, w: 200, h: 72, fold: { w: 300, h: 200 } };
+    expect(apply([folded, a, b, inst]).by.get('i')).toMatchObject({ w: 300, h: 200 });
+  });
 });

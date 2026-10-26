@@ -74,9 +74,10 @@ export function syncOps(items: Item[], links: Link[]): SyncOps {
     // An instance put inside its own component (or copies of copies of copies) would never end.
     const inside = contents(comp, byId, items).filter((i) => i.id.split('~').length < 4), ids = new Set(inside.map((i) => i.id));
     if (ids.has(inst.id)) continue;
-    const dx = inst.x - comp.x, dy = inst.y - comp.y;
+    // A folded component keeps where it was and its size unfolded.
+    const dx = inst.x - comp.x, dy = inst.y - comp.y, cw = comp.fold?.w ?? comp.w, ch = comp.fold?.h ?? comp.h;
     const map = (id: string) => copyId(inst.id, id);
-    patch(inst.id, { w: comp.w, h: comp.h, text: comp.text, members: (comp.members ?? []).filter((m) => ids.has(m)).map(map), fold: undefined });
+    patch(inst.id, { w: cw, h: ch, text: comp.text, members: (comp.members ?? []).filter((m) => ids.has(m)).map(map), fold: undefined });
     for (const src of inside) {
       const id = map(src.id), old = byId.get(id);
       const want: Item = { ...src, id, x: src.x + dx, y: src.y + dy, from: src.id, host: inst.id, comp: undefined, inst: undefined, rx: old?.rx };

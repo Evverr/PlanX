@@ -692,13 +692,18 @@ export class Editor {
   }
 
   /** A new instance of component `id`, right of it (or of its last instance), the component staying picked
-   *  so its "+" makes another. */
+   *  so its "+" makes another; the first one folds the component, out of the way. */
   addInstance(id: string): void {
     const comp = this.board.get(id);
     if (!comp?.comp) return;
-    const right = Math.max(comp.x + comp.w, ...this.board.list().filter((i) => i.inst === id).map((i) => i.x + i.w));
-    const it = this.newItem('frame', right + 60, comp.y, { w: comp.w, h: comp.h, inst: id, text: comp.text, members: [], z: this.board.minZ() - 1 });
+    const others = this.board.list().filter((i) => i.inst === id);
+    const right = Math.max(comp.x + (comp.fold?.w ?? comp.w), ...others.map((i) => i.x + i.w));
+    const it = this.newItem('frame', right + 60, comp.y, { w: comp.fold?.w ?? comp.w, h: comp.fold?.h ?? comp.h, inst: id, text: comp.text, members: [], z: this.board.minZ() - 1 });
+    this.board.beginGesture();
     this.board.add(it);
+    if (!others.length) this.setFolded(id, true);
+    this.board.endGesture();
+    this.setSelection([id]);
   }
 
   /** Adds (+1) or removes (-1) the last column or row of the selected tables. */
