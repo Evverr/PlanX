@@ -1,5 +1,6 @@
 import type { Editor } from '../editor/editor';
-import { fileName, renderPicture, saveFile, type ExportOptions } from './exportPng';
+import { renderPicture, type ExportOptions } from './exportPng';
+import { fileName, saveFile } from '../files';
 
 /**
  * "Экспорт в PDF": the same picture as "Экспорт в PNG" (on white or the board's background, as there's

@@ -19,6 +19,7 @@ import { Tooltips } from './ui/Tooltips';
 import { FramePeek } from './ui/FramePeek';
 import { ClearFx } from './ui/ClearFx';
 import { BoardMenu } from './ui/BoardMenu';
+import { openBoardFile, saveBoardFile } from './collab/boardFile';
 import { resetPanels, savePanels } from './ui/panels/store';
 import { useBar } from './ui/panels/bar';
 import type { Item, Link } from './model/types';
@@ -137,6 +138,8 @@ export function App({ boardId }: { boardId: string }) {
 
   const [title, setTitle] = useState(board.title);
   const [menuOpen, setMenuOpen] = useState(false);
+  // "Загрузить доску": a board file picked opens as a new board.
+  const boardFileInput = useRef<HTMLInputElement>(null);
   // The menu closes on a press anywhere else, and on Escape.
   useEffect(() => {
     if (!menuOpen) return;
@@ -214,6 +217,8 @@ export function App({ boardId }: { boardId: string }) {
                 <PanelIcon name="burger" />
               </button>
               {menuOpen && <BoardMenu
+                onSaveBoard={() => { saveBoardFile(editor); setMenuOpen(false); setToast('Доска сохранена в файл'); }}
+                onLoadBoard={() => { setMenuOpen(false); boardFileInput.current?.click(); }}
                 onSave={() => { savePanels(); setMenuOpen(false); setToast('Панели сохранены'); }}
                 onReset={() => { editor.addOutsideStep(resetPanels()); setMenuOpen(false); setToast('Панели сброшены. Вернуть: Ctrl+Z'); }} />}
             </div>
@@ -327,6 +332,11 @@ export function App({ boardId }: { boardId: string }) {
       )}
 
       {toast && <div className="pop toast" role="status">{toast}</div>}
+      <input ref={boardFileInput} type="file" accept=".plnt" hidden onChange={(e) => {
+        const f = e.target.files?.[0];
+        e.target.value = '';
+        if (f) void openBoardFile(f).then((why) => { if (why) setToast(why); });
+      }} />
       {bare && (
         <button className="cat-corner" title="Вернуть панели" aria-label="Вернуть панели" onClick={() => setBare(false)}>
           <img src={catFor()} alt="" draggable={false} />

@@ -1,4 +1,5 @@
 import type { Editor } from '../editor/editor';
+import { fileName, saveFile } from '../files';
 import type { Item, Link } from '../model/types';
 import { boundsOf } from '../canvas/geometry';
 import { drawScene, readTheme, type Theme } from '../canvas/renderer';
@@ -63,20 +64,6 @@ export function pictureSize(ed: Editor, opts: ExportOptions): { w: number; h: nu
   const bw = b.w + PAD * 2, bh = b.h + PAD * 2;
   const z = Math.min(opts.scale, MAX_SIDE / bw, MAX_SIDE / bh, Math.sqrt(MAX_PIXELS / (bw * bh)));
   return { w: Math.round(bw * z), h: Math.round(bh * z) };
-}
-
-/** A file name after the board's title, with this ending. */
-export const fileName = (ed: Editor, ext: string) => `${(ed.board.title.trim() || 'Доска').replace(/[\\/:*?"<>|]+/g, ' ')}.${ext}`;
-
-/** Hands the browser a file to save. */
-export function saveFile(blob: Blob, name: string): void {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
 /** Saves the picture as a PNG file named after the board. */

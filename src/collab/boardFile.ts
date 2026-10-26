@@ -2,12 +2,13 @@ import * as Y from 'yjs';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import type { Editor } from '../editor/editor';
 import { Board } from '../model/board';
-import { newBoardId } from '../collab/connection';
+import { newBoardId } from './connection';
 import { boardUrl, updateEntry } from '../shelf/boards';
-import { fileName, saveFile } from './exportPng';
+import { fileName, saveFile } from '../files';
 
 /**
- * "Файл доски": the whole board in a file of its own (.plnt), and such a file opened as a new board.
+ * The board saved in a file of its own (.plnt) and such a file opened as a new board: "Сохранить доску"
+ * and "Загрузить доску" in the board's menu.
  *
  * The file: "PLANPLNT" (8 bytes), the format's version (1 byte), flags (1 byte, none yet), the length
  * of what follows (4 bytes, little-endian), and that: the board's Yjs document as one update

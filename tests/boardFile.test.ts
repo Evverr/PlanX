@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 import { Board } from '../src/model/board';
-import { decodeBoardFile, encodeBoardFile } from '../src/labs/boardFile';
+import { decodeBoardFile, encodeBoardFile } from '../src/collab/boardFile';
 
 describe('a board file (.plnt)', () => {
   const doc = new Y.Doc(), board = new Board(doc);
