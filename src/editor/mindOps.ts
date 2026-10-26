@@ -51,11 +51,14 @@ export function addMindNode(ed: Editor, fromId: string, kind: MindAdd, byPlus = 
   const moves = beside ? insertBeside(it.id, from.id, kind, board.list()) : addChild(it.id, board.list());
   board.transact(() => moves.forEach((pt, k) => board.update(k, pt)));
   board.endGesture();
-  // From a "+", the node it was added from stays picked with its buttons under the pointer, so more
-  // can be added one click after another; they're typed in later.
-  if (byPlus) return;
+  // From a "+" before or after, the node it was added from stays picked with its buttons under the
+  // pointer, so more can be added one click after another; they're typed in later. A branch of its own
+  // opens for typing at once (and Tab there makes the next, see TextEditor).
+  if (byPlus && beside) return;
   ed.setSelection([it.id]);
-  ed.startEditing(it.id);
+  // From a "+", once the press is over, or the browser's focus moving on press closes it again.
+  if (byPlus) setTimeout(() => ed.startEditing(it.id), 0);
+  else ed.startEditing(it.id);
 }
 
 /** Takes away a mind map node being typed in once it's emptied and Delete or Backspace is pressed
