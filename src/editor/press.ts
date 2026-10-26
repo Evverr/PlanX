@@ -132,10 +132,11 @@ export function press(ed: Editor, e: PointerEvent): void {
     ed.addInstance(single.id);
     return;
   }
-  // A folded mind map node's count unfolds it (that way).
+  // A folded mind map node's count unfolds it (that way), and leaves nothing picked: the map to look at.
   const unfold = e.shiftKey ? null : foldBadgeAt(ed, w);
   if (unfold) {
     ed.setCollapsed(unfold.id, unfold.way, false);
+    ed.setSelection([]);
     return;
   }
   const dot = single && !ed.editingId && !isLocked(single) ? dotAt(ed, single, w) : null;

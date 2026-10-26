@@ -215,6 +215,24 @@ export const checks = {
     expect(await p.ev('planx.editor.selection.size'), 'nothing picked').toBe(0);
   },
 
+  async 'a click on a folded mind map node\'s count unfolds it and leaves nothing picked'(p) {
+    await p.make('mind', [400, 400]);
+    await p.escape();
+    const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
+    await p.ev(`(() => { const e = planx.editor; e.addMindNode('${root}', 'child'); })()`);
+    await p.escape();
+    const a = await p.ev(`planx.board.list().find((i) => i.parent === '${root}').id`);
+    await p.ev(`(() => { const e = planx.editor; e.addMindNode('${a}', 'child', true); e.addMindNode('${a}', 'child', true); })()`);
+    await p.escape();
+    await p.ev(`planx.editor.setCollapsed('${a}', 'right', true); planx.editor.setSelection(['${a}'])`);
+    await sleep(800);
+    const at = await p.ev(`(async () => { const m = await import('/src/model/mind.ts'), e = planx.editor; const b = m.foldBadge(planx.board.get('${a}'), 'right', e.cam.z, 2, e.slid.get('${a}:right') ?? 0);
+      const s = e.toScreen(b), c = e.canvas.getBoundingClientRect(); return [s.x + c.left, s.y + c.top]; })()`);
+    await p.click(at);
+    expect(await p.ev(`!!planx.board.get('${a}').collapsed`), 'unfolded').toBe(false);
+    expect(await p.ev('planx.editor.selection.size'), 'nothing picked').toBe(0);
+  },
+
   async 'the hand pans the board and the wheel zooms it'(p) {
     const cam0 = await p.ev('planx.editor.cam');
     await p.key('h', 'KeyH', 72);
