@@ -293,6 +293,22 @@ export const checks = {
     expect(await p.ev(`planx.board.list().filter((i) => i.shape === 'cross').length`), 'a cross dropped').toBe(1);
   },
 
+  async 'a box picks the links it runs into; their different ways are all lit, and one pressed sends them all that way'(p) {
+    await put(p, `const a = e.newItem('sticky', X, Y), c = e.newItem('sticky', X + 460, Y), d = e.newItem('sticky', X + 460, Y + 260); b.add(a); b.add(c); b.add(d);
+      b.addLink({ id: 'L1', from: a.id, to: c.id, fromSide: 'right', toSide: 'left', style: 'straight' });
+      b.addLink({ id: 'L2', from: a.id, to: d.id, fromSide: 'bottom', toSide: 'left', style: 'elbow' });`);
+    // A box between the stickers, touching only the links.
+    const o = await origin(p);
+    await p.drag(await screen(p, o.x + 200, o.y - 40), await screen(p, o.x + 300, o.y + 400));
+    const picked = await p.ev(`[...planx.editor.selection].sort().join()`);
+    expect(picked, 'both links').toBe('L1,L2');
+    await sleep(300);
+    const lit = await p.ev(`[...document.querySelectorAll('.bar.panel button[aria-pressed="true"]')].map((b) => b.getAttribute('aria-label')).join()`);
+    expect(lit, 'both their ways lit').toBe('Линия с прямыми углами,Прямая линия');
+    await p.click(await p.at('.bar.panel button[aria-label="Плавная линия"]'));
+    expect(await p.ev(`planx.board.linkList().filter((l) => l.style).length`), 'all smooth now').toBe(0);
+  },
+
   async 'a table line takes hold only after the mouse rests on it'(p) {
     const id = await put(p, `const t = e.newItem('table', X, Y, { cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill(''), w: 360, h: 120 }); b.add(t); return t.id;`);
     await sleep(200);

@@ -333,12 +333,13 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
             {btn('plus-s', 'Добавить столбец', () => editor.changeTable('col', 1))}
           </div>
         ) : undefined,
-        // How the selected links run: straight, in right angles, smooth.
+        // How the selected links run: straight, in right angles, smooth; each way any of them runs lit,
+        // a press sending all of them that way.
         lines: links.length > 0 ? (
           <div className="sw-group">
             {([[undefined, 'line-curve', 'Плавная линия'], ['elbow', 'line-elbow', 'Линия с прямыми углами'], ['straight', 'line-straight', 'Прямая линия']] as const).map(([style, icon, title]) => (
-              <button key={icon} className={`ib ${links.every((l) => l.style === style) ? 'on' : ''}`} title={title} aria-label={title}
-                aria-pressed={links.every((l) => l.style === style)} onClick={() => editor.setLinkStyle(style)}><PanelIcon name={icon} /></button>
+              <button key={icon} className={`ib ${links.some((l) => l.style === style) ? 'on' : ''}`} title={title} aria-label={title}
+                aria-pressed={links.some((l) => l.style === style)} onClick={() => editor.setLinkStyle(style)}><PanelIcon name={icon} /></button>
             ))}
           </div>
         ) : undefined,
