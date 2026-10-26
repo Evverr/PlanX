@@ -12,8 +12,9 @@ export function luminance(hex: string): number {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-/** Whether text on this colour reads better white than dark (past where both read alike). */
-export const isDark = (hex: string): boolean => luminance(hex) < 0.179;
+/** Whether text on this colour is white: on all but light ones (mid tones too, where white reads
+ *  as well as dark does). */
+export const isDark = (hex: string): boolean => luminance(hex) < 0.4;
 
 /** The colour an item's text sits on: its fill, when it has one solid enough to matter. */
 export function fillUnder(it: Item, tints: Map<string, { color?: string; fill?: string }> = new Map()): string | null {

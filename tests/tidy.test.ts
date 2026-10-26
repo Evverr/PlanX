@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Item } from '../src/model/types';
-import { gapLines, gridOrder, gridPlaces } from '../src/labs/tidy';
+import { dropSlot, gapLines, gridOrder, gridPlaces } from '../src/labs/tidy';
 
 const s = (id: string, x: number, y: number, w = 100, h = 100): Item => ({ id, type: 'sticky', x, y, w, h, z: 0 });
 
@@ -22,5 +22,17 @@ describe('laying out in a grid', () => {
       { axis: 'col', at: 112, from: 0, to: 224 },
       { axis: 'row', at: 112, from: 0, to: 224 },
     ]);
+  });
+
+  it('an item dragged right of the last column makes another; below the rows, a row of its own', () => {
+    const a = s('a', 0, 0), b = s('b', 124, 0), c = s('c', 0, 124);
+    // Two over one: C taken right of B puts all three in a row.
+    const right = dropSlot([a, b], c, 2, 24, 24, { x: 0, y: 0 }, { x: 300, y: 50 });
+    expect([right.order.map((i) => i.id).join(''), right.cols]).toEqual(['abc', 3]);
+    // Three in a row: C taken below them starts a row, the grid two across.
+    const below = dropSlot([a, b], c, 3, 24, 24, { x: 0, y: 0 }, { x: 50, y: 160 });
+    expect([below.order.map((i) => i.id).join(''), below.cols]).toEqual(['abc', 2]);
+    // Taken to the front.
+    expect(dropSlot([a, b], c, 2, 24, 24, { x: 0, y: 0 }, { x: 10, y: 10 }).order.map((i) => i.id).join('')).toBe('cab');
   });
 });

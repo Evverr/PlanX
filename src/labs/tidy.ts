@@ -11,10 +11,16 @@ import type { Point } from '../canvas/geometry';
 /** The grid now: what's in it in order (row by row), how many columns, the gaps across and down. */
 export interface Tidy { ids: string[]; cols: number; gx: number; gy: number }
 let tidy: Tidy | null = null;
+/** The last grid laid out, and where each of it was then: picked again untouched, it's taken up as it is. */
+let last: (Tidy & { at: Map<string, Point> }) | null = null;
 const listeners = new Set<() => void>();
 export const tidyNow = () => tidy;
 export const subscribeTidy = (fn: () => void) => { listeners.add(fn); return () => listeners.delete(fn); };
 const set = (t: Tidy | null) => { tidy = t; listeners.forEach((fn) => fn()); };
+/** Notes the grid as it's laid out now, to be taken up again (see startTidy). */
+function remember(ed: Editor, t: Tidy): void {
+  last = { ...t, at: new Map(tidyItems(ed, t).map((i) => [i.id, { x: i.x, y: i.y }])) };
+}
 
 /** The gap a grid starts with. */
 export const TIDY_GAP = 24;
@@ -73,12 +79,18 @@ function place(ed: Editor, items: Item[], places: Map<string, Point>): void {
 export function startTidy(ed: Editor): void {
   const sel = ed.selectedItems().filter((i) => !i.lock && !i.host);
   if (sel.length < 2) return;
+  // The last grid, picked again with nothing in it moved since: its handles back, as it is.
+  if (last && last.ids.length === sel.length && sel.every((i) => { const p = last!.at.get(i.id); return p && p.x === i.x && p.y === i.y; })) {
+    set({ ids: last.ids, cols: last.cols, gx: last.gx, gy: last.gy });
+    return;
+  }
   const cols = Math.ceil(Math.sqrt(sel.length)), items = gridOrder(sel, cols);
   const origin = { x: Math.min(...sel.map((i) => i.x)), y: Math.min(...sel.map((i) => i.y)) };
   ed.board.beginGesture();
   place(ed, items, gridPlaces(items, cols, TIDY_GAP, TIDY_GAP, origin));
   ed.board.endGesture();
   set({ ids: items.map((i) => i.id), cols, gx: TIDY_GAP, gy: TIDY_GAP });
+  remember(ed, tidy!);
 }
 
 /** The gaps changed: the grid laid out again from where its top left is now. */
@@ -89,6 +101,68 @@ export function setGaps(ed: Editor, gx: number, gy: number): void {
   const origin = { x: Math.min(...items.map((i) => i.x)), y: Math.min(...items.map((i) => i.y)) };
   set({ ...tidy, gx, gy });
   place(ed, items, gridPlaces(items, tidy.cols, gx, gy, origin));
+  remember(ed, tidy!);
+}
+
+/**
+ * Where a dragged item of the grid goes, by the cell the board point is in (cells as big as the
+ * biggest, the gaps between, from `origin`): its order among the others and the columns then. Right
+ * of the last column, the grid takes another; below the rows the others fill, it takes fewer, so the
+ * item starts a row of its own.
+ */
+export function dropSlot(others: Item[], dragged: Item, cols: number, gx: number, gy: number, origin: Point, at: Point): { order: Item[]; cols: number } {
+  const all = [...others, dragged], cw = Math.max(...all.map((i) => i.w)) + gx, ch = Math.max(...all.map((i) => i.h)) + gy;
+  const m = others.length, rows = Math.max(1, Math.ceil(m / cols));
+  const col = Math.max(0, Math.min(cols, Math.floor((at.x - origin.x) / cw))), row = Math.max(0, Math.min(rows, Math.floor((at.y - origin.y) / ch)));
+  let n = cols;
+  if (col >= cols) n = cols + 1;
+  else if (row >= rows && m) n = Math.max(1, Math.ceil(m / row));
+  const index = Math.min(row * n + Math.min(col, n - 1), m);
+  return { order: [...others.slice(0, index), dragged, ...others.slice(index)], cols: n };
+}
+
+/** Dragging one of the grid's items: from where it was taken (its offset from the pointer), the
+ *  grid's top left and the item's place in it as it's dragged. */
+let drag: { id: string; dx: number; dy: number; origin: Point } | null = null;
+export const tidyDragging = () => !!drag;
+
+/** Whether an item of the grid is at this board point (picked up, it's dragged within the grid). */
+export function tidyItemAt(ed: Editor, w: Point): Item | null {
+  if (!tidy || !tidyHolds(ed)) return null;
+  return [...tidyItems(ed, tidy)].reverse().find((i) => w.x >= i.x && w.x <= i.x + i.w && w.y >= i.y && w.y <= i.y + i.h) ?? null;
+}
+
+export function startTidyDrag(ed: Editor, it: Item, w: Point): void {
+  if (!tidy) return;
+  const items = tidyItems(ed, tidy);
+  drag = { id: it.id, dx: w.x - it.x, dy: w.y - it.y, origin: { x: Math.min(...items.map((i) => i.x)), y: Math.min(...items.map((i) => i.y)) } };
+  ed.board.beginGesture();
+}
+
+/** The dragged item follows the pointer; the others make room for it where it would go. */
+export function moveTidyDrag(ed: Editor, w: Point): void {
+  if (!tidy || !drag) return;
+  const it = ed.board.get(drag.id);
+  if (!it) return;
+  const others = tidyItems(ed, tidy).filter((i) => i.id !== it.id);
+  const slot = dropSlot(others, it, tidy.cols, tidy.gx, tidy.gy, drag.origin, w);
+  const places = gridPlaces(slot.order, slot.cols, tidy.gx, tidy.gy, drag.origin);
+  places.set(it.id, { x: Math.round(w.x - drag.dx), y: Math.round(w.y - drag.dy) });
+  place(ed, slot.order, places);
+}
+
+/** Let go: it takes its place in the grid, the grid kept so. */
+export function endTidyDrag(ed: Editor, w: Point): void {
+  if (!tidy || !drag) return;
+  const it = ed.board.get(drag.id), origin = drag.origin;
+  drag = null;
+  if (it) {
+    const others = tidyItems(ed, tidy).filter((i) => i.id !== it.id), slot = dropSlot(others, it, tidy.cols, tidy.gx, tidy.gy, origin, w);
+    place(ed, slot.order, gridPlaces(slot.order, slot.cols, tidy.gx, tidy.gy, origin));
+    set({ ...tidy, ids: slot.order.map((i) => i.id), cols: slot.cols });
+    remember(ed, tidy!);
+  }
+  ed.board.endGesture();
 }
 
 export const stopTidy = () => set(null);
