@@ -10,6 +10,7 @@ import { branchColor, branchCurve, branchWays, buttonKey, foldBadge, foldedWays,
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
+import { COMPONENT_COLOR, instancePlus } from '../model/components';
 import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
@@ -308,19 +309,34 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       break;
     case 'frame': {
       if (it.fold) { drawFolded(ctx, it, s, editing); break; }
+      // A component and its instances in red tints: the component edged solid, an instance dashed, each
+      // titled after a diamond (filled, hollow).
+      const kin = it.comp || it.inst;
       ctx.fillStyle = theme.frame;
-      ctx.strokeStyle = theme.line;
-      ctx.lineWidth = 1 / cam.z;
       ctx.beginPath();
       ctx.roundRect(it.x, it.y, it.w, it.h, CORNER);
       ctx.fill();
+      if (kin) {
+        ctx.fillStyle = COMPONENT_COLOR;
+        ctx.globalAlpha = 0.05;
+        ctx.fill();
+        ctx.globalAlpha = it.comp ? 0.75 : 0.55;
+        ctx.strokeStyle = COMPONENT_COLOR;
+        ctx.lineWidth = 1.5 / cam.z;
+        if (it.inst) ctx.setLineDash([6 / cam.z, 4 / cam.z]);
+      } else {
+        ctx.strokeStyle = theme.line;
+        ctx.lineWidth = 1 / cam.z;
+      }
       ctx.stroke();
-      if (!editing && it.text) {
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+      if (!editing && (it.text || kin)) {
         ctx.font = font(15, 600);
-        ctx.fillStyle = theme.muted;
+        ctx.fillStyle = kin ? COMPONENT_COLOR : theme.muted;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(it.text, it.x + 2, it.y - 8, it.w);
+        ctx.fillText(kin ? `${it.comp ? '◆' : '◇'} ${it.text ?? ''}` : it.text!, it.x + 2, it.y - 8, it.w);
       }
       break;
     }
@@ -877,7 +893,26 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
         }
         ctx.globalAlpha = 1;
       }
+    } else if (s.showHandle && s.editingId !== id && (it.inst || it.host)) {
+      // An instance is as big as its component, and what's in it stays where the component has it.
     } else if (s.showHandle && s.editingId !== id) {
+      if (it.comp) {
+        // A picked component's "+" for a new instance of it, right of it.
+        const p = instancePlus(it, cam.z);
+        ctx.fillStyle = COMPONENT_COLOR;
+        ctx.globalAlpha = s.hotPlus === 'instance' ? 1 : 0.75;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2 / cam.z;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p.x - p.r * 0.45, p.y); ctx.lineTo(p.x + p.r * 0.45, p.y);
+        ctx.moveTo(p.x, p.y - p.r * 0.45); ctx.lineTo(p.x, p.y + p.r * 0.45);
+        ctx.stroke();
+      }
       const hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z;
       ctx.fillStyle = theme.surface;
       ctx.strokeStyle = SELECT_COLOR;

@@ -122,12 +122,12 @@ export function settled(board: Board, ids: Iterable<string>, fresh?: string): Ma
   const changed = new Set<string>();
   for (const id of ids) {
     const it = board.get(id);
-    // Mind map branches go wherever their node goes.
-    if (!it || (it.type === 'mind' && it.parent)) continue;
+    // Mind map branches go wherever their node goes, what's in an instance where its component has it.
+    if (!it || it.host || (it.type === 'mind' && it.parent)) continue;
     const c = center(it);
     const inside = it.type === 'frame' ? new Set(carried(board, [it], items).keys()) : new Set([id]);
     const home = frames
-      .filter((f) => !f.fold && !inside.has(f.id) && pointInRect(toLocal(f, c), f) && (it.type !== 'frame' || f.w * f.h > it.w * it.h))
+      .filter((f) => !f.fold && !f.inst && !inside.has(f.id) && pointInRect(toLocal(f, c), f) && (it.type !== 'frame' || f.w * f.h > it.w * it.h))
       .sort((a, b) => a.w * a.h - b.w * b.h)[0];
     for (const f of frames) {
       const list = held.get(f.id)!, has = list.includes(id);

@@ -1,8 +1,11 @@
 import * as Y from 'yjs';
 import type { Item, Link, Side } from './types';
+import { OVERRIDES, type SyncOps } from './components';
 
 /** Transaction origin for changes made by this client. Only these are undoable. */
 export const LOCAL = { local: true };
+/** Transaction origin for instances kept in step with their components: never undone themselves. */
+const SYNC = { sync: true };
 
 type YItem = Y.Map<unknown>;
 
@@ -129,7 +132,36 @@ export class Board {
         if (v === undefined) m.delete(k);
         else if (m.get(k) !== v) m.set(k, v);
       }
+      // A copy in an instance keeps what's changed on it (see model/components.ts).
+      if (m.get('host')) {
+        const was = (m.get('ovr') as string[] | undefined) ?? [], now = [...new Set([...was, ...Object.keys(patch).filter((k) => OVERRIDES.has(k))])];
+        if (now.length > was.length) m.set('ovr', now);
+      }
     });
+  }
+
+  /** Brings instances in step with their components (see model/components.ts), outside the undo history. */
+  sync(ops: SyncOps): void {
+    this.doc.transact(() => {
+      for (const it of ops.add) {
+        const m = new Y.Map<unknown>();
+        for (const [k, v] of Object.entries(it)) if (k !== 'id' && v !== undefined) m.set(k, v);
+        this.items.set(it.id, m);
+      }
+      ops.change.forEach((p, id) => {
+        const m = this.items.get(id);
+        if (m) for (const [k, v] of Object.entries(p)) if (k !== 'id') { if (v === undefined) m.delete(k); else m.set(k, v); }
+      });
+      ops.remove.forEach((id) => this.items.delete(id));
+      for (const l of ops.addLinks) {
+        const m = new Y.Map<unknown>();
+        m.set('from', l.from);
+        m.set('to', l.to);
+        if (l.fromSide && l.toSide) { m.set('fromSide', l.fromSide); m.set('toSide', l.toSide); }
+        this.links.set(l.id, m);
+      }
+      ops.removeLinks.forEach((id) => this.links.delete(id));
+    }, SYNC);
   }
 
   /** Removes items and links by id, plus any link left without an end. */

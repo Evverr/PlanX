@@ -17,7 +17,6 @@ const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
   sticky: ['sticky', 'sticker', 'Стикер (N)'],
   text: ['text', 'text', 'Текст (T)'],
   task: ['task', 'circle-check', 'Задача'],
-  link: ['link', 'maximize', 'Стрелка (C)'],
   table: ['table', 'columns', 'Таблица'],
   mind: ['mind', 'branch', 'Майнд-карта'],
 };
@@ -26,7 +25,7 @@ const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
 const LATER: Partial<Record<string, [PanelIconName, string]>> = {};
 
 /** Everything on the rail, top to bottom, until someone rearranges it. */
-const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'link', 'table', 'mind', 'frames', 'draw', 'image', 'audio', 'smile', 'paint'];
+const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'component', 'table', 'mind', 'frames', 'draw', 'image', 'audio', 'smile', 'paint'];
 
 /** Rail buttons that make something on the board when dragged off the rail, and their icons. */
 const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape', paint: 'node-pool' };
@@ -99,7 +98,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
   // Hold a button to lift it, then drag it up or down the rail; the others make way.
   // The circle-check and columns buttons were the ellipse's and the frame's; they now make tasks and
   // tables, so saved orders keep them in place.
-  const sort = useSortable('planx-tools-order', DEFAULT_ORDER, 'y', { ellipse: 'task', frame: 'table' }, dropOut);
+  const sort = useSortable('planx-tools-order', DEFAULT_ORDER, 'y', { ellipse: 'task', frame: 'table', link: 'component' }, dropOut);
 
   // On a screen too short for the whole rail, the buttons that don't fit go under a "more" button
   // at its end, which opens them in a row beside it.
@@ -155,6 +154,9 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
     // With two or more items selected, the frame button puts a frame around them instead.
     if (key === 'frames') return button(key, tool === 'frame', 'Фрейм (F; вокруг выделенного — Ctrl+G)', 'frame',
       () => { if (!editor.frameSelection()) editor.setTool('frame'); }, { 'aria-pressed': tool === 'frame' });
+    // The arrow's button (arrows are drawn from an item's blue dots, or with C): makes a component of
+    // what's selected.
+    if (key === 'component') return button(key, false, 'Компонент из выделенного', 'maximize', () => editor.makeComponent());
     if (key === 'oval') return button(key, shaping, 'Фигуры', shapeIcon, () => editor.setTool(shaping ? 'select' : lastShape.current), { 'aria-pressed': shaping });
     if (key === 'draw') return button(key, drawing, 'Рисование (P)', 'marker', () => editor.setTool(drawing ? 'select' : lastDraw.current), { 'aria-pressed': drawing });
     if (key === 'image') return button(key, false, 'Картинка', 'image', () => { pictureAt.current = undefined; filePicker.current?.click(); });

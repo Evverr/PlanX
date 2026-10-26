@@ -76,6 +76,14 @@ export interface Item {
   foldedWays?: Array<'right' | 'left' | 'down' | 'up'>;
   /** A folded frame's unfolded size (see model/frame.ts). */
   fold?: { w: number; h: number };
+  /** Components (see model/components.ts): a frame that's a component; a frame that's an instance of
+   *  one (its id); an instance's copy of a component's item: what it's a copy of, the instance it's in,
+   *  and the fields changed on it there, kept whatever the component does. */
+  comp?: boolean;
+  inst?: string;
+  from?: string;
+  host?: string;
+  ovr?: string[];
   sw?: number;
   hl?: boolean;
   /** Locked in place: not moved, resized, typed in or deleted (src/labs, "Замок"). */

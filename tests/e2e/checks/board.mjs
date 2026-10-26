@@ -114,6 +114,40 @@ export const checks = {
     expect((await p.ev(`planx.board.get('${id}').cells`)).join(','), 'what was typed kept').toBe('a,b,,');
   },
 
+  async 'a component made of what\'s picked, its "+" makes instances that follow it, but for what was changed in them'(p) {
+    const ids = await put(p, `const a = e.newItem('sticky', X, Y, { text: 'Привет' }), c = e.newItem('rect', X + 200, Y, { text: 'Кнопка' });
+      b.add(a); b.add(c); e.setSelection([a.id, c.id]); return { a: a.id, c: c.id };`);
+    await p.click(await p.at('.tools [data-key="component"]'));
+    await p.escape();
+    const comp = await p.ev(`planx.board.list().find((i) => i.comp)`);
+    expect(comp?.members?.length, 'a component round both').toBe(2);
+    await p.ev(`planx.editor.setSelection(['${comp.id}'])`);
+    await sleep(200);
+    await p.click(await screen(p, comp.x + comp.w + 40, comp.y + comp.h / 2));
+    await sleep(200);
+    const inst = await p.ev(`planx.board.list().find((i) => i.inst === '${comp.id}')`);
+    const copy = (k) => p.ev(`planx.board.get('${inst.id}~${k}')`);
+    expect((await copy(ids.a))?.text, 'a copy of the sticky in the instance').toBe('Привет');
+    // Changed in the component, changed in the instance; a change undone, undone there too.
+    await p.ev(`planx.editor.setSelection([]); planx.board.update('${ids.a}', { text: 'Новое', color: 'pink' })`);
+    await sleep(100);
+    expect((await copy(ids.a)).color, 'its colour followed').toBe('pink');
+    await p.key('z', 'KeyZ', 90, 4);
+    await sleep(100);
+    expect((await copy(ids.a)).text, 'and was undone with it').toBe('Привет');
+    // Its own text, typed into the copy, stays; its colour still follows.
+    await p.ev(`planx.board.update('${inst.id}~${ids.a}', { text: 'Своё' })`);
+    await p.ev(`planx.board.update('${ids.a}', { text: 'Ещё', color: 'blue' })`);
+    await sleep(100);
+    const c = await copy(ids.a);
+    expect(c.text + ' ' + c.color, 'its own text kept, the colour followed').toBe('Своё blue');
+    // A click on a copy picks the whole instance.
+    const at = await screen(p, c.x + 50, c.y + 50);
+    await p.ev(`planx.editor.setSelection([])`);
+    await p.click(at);
+    expect(await p.ev(`[...planx.editor.selection].join()`), 'the instance picked').toBe(inst.id);
+  },
+
   async 'a table line takes hold only after the mouse rests on it'(p) {
     const id = await put(p, `const t = e.newItem('table', X, Y, { cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill(''), w: 360, h: 120 }); b.add(t); return t.id;`);
     await sleep(200);

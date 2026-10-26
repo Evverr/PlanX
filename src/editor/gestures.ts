@@ -197,9 +197,15 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         board.endGesture();
       } else if (g.dbl) {
         const it = board.get(g.id);
-        // A frame folds on a double click, and unfolds; on its title over it, that opens for typing.
-        if (it?.type === 'frame' && (it.fold || toLocal(it, g.start).y >= it.y)) ed.setFolded(it.id, !it.fold);
-        else ed.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
+        // In an instance, a double click picks what's under it there, and opens its text for typing.
+        const inner = it?.inst ? hitItem(ed.shown().filter((i) => i.host === it.id), g.start, ed.cam.z) : null;
+        if (inner) {
+          ed.setSelection([inner.id]);
+          ed.startEditing(inner.id, inner.type === 'table' ? cellAt(inner, g.start) : null);
+        // A frame folds on a double click, and unfolds; on its title over it, that opens for typing (a
+        // component's, and an instance's, don't fold).
+        } else if (it?.type === 'frame' && !it.comp && !it.inst && (it.fold || toLocal(it, g.start).y >= it.y)) ed.setFolded(it.id, !it.fold);
+        else if (!it?.inst) ed.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
       } else if (g.cell) {
         const it = board.get(g.id), i = it ? cellAt(it, g.start) : null;
         if (i !== null) ed.pickCell(i, e.shiftKey ? 'range' : e.metaKey || e.ctrlKey ? 'toggle' : 'one');

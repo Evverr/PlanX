@@ -14,6 +14,7 @@ import { readJSON, writeJSON } from '../storage';
 import { clamp, fittedTo, freeArea, wheelMove, zoomedAt } from './camera';
 import { copiesOf } from './copies';
 import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked } from './frames';
+import { hasComponents, syncOps } from '../model/components';
 import { endGesture, moveGesture, type Gesture } from './gestures';
 import { updateCursor } from './hover';
 import { onKeyDown } from './keys';
@@ -261,8 +262,19 @@ export class Editor {
     if (this.editingId && !this.board.get(this.editingId)) { this.editingId = null; changed = true; }
     if (changed) { this.presence?.setSelection([...this.selection]); this.emit(); }
     if (this.needsFit && this.board.list().length && this.width) { this.needsFit = false; this.fit(); }
+    // Instances follow their components, whoever changed them (see model/components.ts).
+    if (!this.syncing && hasComponents(this.board.list())) {
+      this.syncing = true;
+      queueMicrotask(() => {
+        this.syncing = false;
+        const ops = syncOps(this.board.list(), this.board.linkList());
+        if (ops.add.length || ops.change.size || ops.remove.length || ops.addLinks.length || ops.removeLinks.length) this.board.sync(ops);
+      });
+    }
     this.requestRender();
   }
+
+  private syncing = false;
 
   requestRender(): void {
     if (this.raf || !this.ctx) return;
@@ -542,8 +554,8 @@ export class Editor {
   }
 
   deleteSelection(): void {
-    // Locked items stay (and stay selected).
-    const ids = new Set([...this.selection].filter((id) => !isLocked(this.board.get(id))));
+    // Locked items stay (and stay selected), and what's in an instance goes only with it.
+    const ids = new Set([...this.selection].filter((id) => !isLocked(this.board.get(id)) && !this.board.get(id)?.host));
     if (!ids.size) return;
     // A mind map node goes with everything branching from it, a folded frame with all it holds.
     const items = this.board.list(), folded = items.filter((i) => i.fold && ids.has(i.id));
@@ -650,13 +662,13 @@ export class Editor {
   /** Puts a frame around the selected items (one is enough) with all that goes with them (a mind map
    *  node's branches, what a frame holds), 40 units clear of them, and opens its title for typing as a
    *  new frame's is. Returns whether there was anything to frame. */
-  frameSelection(): boolean {
+  frameSelection(extra: Partial<Item> = {}): boolean {
     const held = [...this.carried(this.selectedItems()).keys()].map((id) => this.board.get(id)).filter((i): i is Item => !!i);
     const b = boundsOf(held);
     if (!held.length || !b) return false;
     // Just under the lowest of them, not under everything: a frame they already sit in stays below.
     const pad = 40, z = Math.min(...held.map((i) => i.z)) - 0.5;
-    const it = this.newItem('frame', b.x - pad, b.y - pad, { w: Math.round(b.w + pad * 2), h: Math.round(b.h + pad * 2), z, members: [] });
+    const it = this.newItem('frame', b.x - pad, b.y - pad, { w: Math.round(b.w + pad * 2), h: Math.round(b.h + pad * 2), z, members: [], ...extra });
     // Only these go in: whatever else lies under the new frame stays out of it.
     this.board.beginGesture();
     this.board.add(it);
@@ -666,6 +678,27 @@ export class Editor {
     this.setSelection([it.id]);
     this.startEditing(it.id);
     return true;
+  }
+
+  /** Makes a component of what's selected: a frame picked on its own becomes one; anything else gets a
+   *  component round it, as a frame would be put round it. */
+  makeComponent(): boolean {
+    const sel = this.selectedItems();
+    if (sel.length === 1 && sel[0].type === 'frame' && !sel[0].inst && !sel[0].host) {
+      this.board.update(sel[0].id, { comp: true, fold: undefined, ...(sel[0].fold && { w: sel[0].fold.w, h: sel[0].fold.h }) });
+      return true;
+    }
+    return this.frameSelection({ comp: true, text: 'Компонент' });
+  }
+
+  /** A new instance of component `id`, right of it (or of its last instance), the component staying picked
+   *  so its "+" makes another. */
+  addInstance(id: string): void {
+    const comp = this.board.get(id);
+    if (!comp?.comp) return;
+    const right = Math.max(comp.x + comp.w, ...this.board.list().filter((i) => i.inst === id).map((i) => i.x + i.w));
+    const it = this.newItem('frame', right + 60, comp.y, { w: comp.w, h: comp.h, inst: id, text: comp.text, members: [], z: this.board.minZ() - 1 });
+    this.board.add(it);
   }
 
   /** Adds (+1) or removes (-1) the last column or row of the selected tables. */
@@ -934,7 +967,8 @@ export class Editor {
 
   /** Shared: the selected items plus what the selected frames hold (but those locked in place). */
   dragSet(items: Item[]): Map<string, Point> {
-    return carried(this.board, items.filter((i) => this.selection.has(i.id) && !isLocked(i)), items);
+    // What's in an instance moves only with it.
+    return carried(this.board, items.filter((i) => this.selection.has(i.id) && !isLocked(i) && !i.host), items);
   }
 
   /** Shared: puts each of these items in the frame it lies in, or out of frames (see settled). */

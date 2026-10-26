@@ -3,6 +3,7 @@ import { ROTATABLE } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { hitItem, hitLink, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, HANDLE } from '../canvas/renderer';
+import { instancePlus } from '../model/components';
 import { branchWays, buttonKey, foldBadge, mindButtons, type MindButtonAt, type Way } from '../model/mind';
 import { frameButtonAt } from './frames';
 import { rotateCursor } from './cursors';
@@ -15,14 +16,15 @@ const ROTATE_ZONE = 18;
 
 /** Whether the point is on the item's resize handle, at its lower right corner. */
 export function onHandle(ed: Editor, it: Item, w: Point): boolean {
-  if (it.type === 'mind' || it.fold) return false;
+  // An instance is as big as its component, what's in it as big as what's in that.
+  if (it.type === 'mind' || it.fold || it.inst || it.host) return false;
   const hs = ed.reach((HANDLE + 6) / 2) * 2, off = 3 / ed.cam.z;
   return pointInRect(toLocal(it, w), { x: it.x + it.w + off - hs / 2, y: it.y + it.h + off - hs / 2, w: hs, h: hs });
 }
 
 /** Which of a mind map node's buttons is under the point, once they're showing. */
 export function plusAt(ed: Editor, it: Item, w: Point): MindButtonAt | null {
-  if (it.type !== 'mind' || ed.plusFade() === 0) return null;
+  if (it.type !== 'mind' || it.host || ed.plusFade() === 0) return null;
   // The nearest within reach: the "+" for a branch and the chevron past it are close.
   let best: MindButtonAt | null = null, near = Infinity;
   const fresh = ed.chevronless?.startsWith(`${it.id}:`) ? ed.chevronless.slice(it.id.length + 1) as Way : undefined;
@@ -31,6 +33,13 @@ export function plusAt(ed: Editor, it: Item, w: Point): MindButtonAt | null {
     if (d <= Math.max(b.r * 1.5, ed.reach(0)) && d < near) { best = b; near = d; }
   }
   return best;
+}
+
+/** Whether the point is on a picked component's "+" for a new instance. */
+export function onInstancePlus(ed: Editor, it: Item, w: Point): boolean {
+  if (!it.comp || it.fold || ed.editingId === it.id) return false;
+  const p = instancePlus(it, ed.cam.z);
+  return Math.hypot(w.x - p.x, w.y - p.y) <= Math.max(p.r * 1.3, ed.reach(0));
 }
 
 /** The folded mind map node whose count is under the point, picked or not, and the way it's on. */
@@ -49,7 +58,7 @@ export function foldBadgeAt(ed: Editor, w: Point): { id: string; way: Way } | nu
 
 /** Whether the point is just outside the item's top right corner, where it is turned. */
 export function onRotate(ed: Editor, it: Item, w: Point): boolean {
-  if (!ROTATABLE.includes(it.type) || it.fold) return false;
+  if (!ROTATABLE.includes(it.type) || it.fold || it.host) return false;
   const p = toLocal(it, w);
   return !pointInRect(p, it) && Math.hypot(p.x - (it.x + it.w), p.y - it.y) <= ed.reach(ROTATE_ZONE);
 }
@@ -82,9 +91,9 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   restOn(ed, near);
   const line = ed.lineRest?.armed ? ed.lineRest.line : null;
   if (!sameLine(line, ed.hotLine)) { ed.hotLine = line; ed.requestRender(); }
-  const plus = picked ? plusAt(ed, picked, w) : null, hot = plus && buttonKey(plus);
+  const plus = picked ? plusAt(ed, picked, w) : null, hot = plus ? buttonKey(plus) : picked && onInstancePlus(ed, picked, w) ? 'instance' : null;
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
-  if (plus || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
+  if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (dot) cursor = 'crosshair';
   else if (single && onHandle(ed, single, w)) cursor = 'nwse-resize';
   else if (single && onRotate(ed, single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);
