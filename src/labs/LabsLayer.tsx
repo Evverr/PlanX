@@ -138,7 +138,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
   const all: Record<'export' | 'pdf' | 'file' | 'search' | 'timer' | 'laser' | 'follow' | 'keys', RailButton> = {
     export: { icon: 'download', title: 'Экспорт в PNG', on: pop === 'export', onClick: () => toggle('export') },
     pdf: { icon: 'file', title: 'Экспорт в PDF', on: pop === 'pdf', onClick: () => toggle('pdf') },
-    file: { icon: 'folder', title: 'Файл доски (.jjvg)', on: pop === 'file', onClick: () => toggle('file') },
+    file: { icon: 'folder', title: 'Файл доски (.plnt)', on: pop === 'file', onClick: () => toggle('file') },
     search: { icon: 'search', title: 'Поиск по доске (Ctrl+F)', on: pop === 'search', onClick: () => toggle('search') },
     timer: { icon: 'timer', title: 'Общий таймер', on: pop === 'timer', onClick: () => toggle('timer') },
     laser: { icon: 'magic-wand', title: 'Лазерная указка (K)', on: laserOn, onClick: () => setLaserOn(!laserOn) },
@@ -275,16 +275,16 @@ function SearchPop({ editor }: { editor: Editor }) {
   );
 }
 
-/** The whole board in a .jjvg file, and such a file opened as a new board. */
+/** The whole board in a .plnt file, and such a file opened as a new board. */
 function FilePop({ editor, onDone }: { editor: Editor; onDone: (toast: string) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   return (
     <div className="pop labs-pop file-pop" role="dialog" aria-label="Файл доски">
       <h3>Файл доски</h3>
-      <p className="muted">Вся доска в одном файле .jjvg: всё, что на ней, как есть. Такой файл открывается новой доской.</p>
+      <p className="muted">Вся доска в одном файле .plnt: всё, что на ней, как есть. Такой файл открывается новой доской.</p>
       {error && <p className="labs-error">{error}</p>}
-      <input ref={input} type="file" accept=".jjvg" hidden onChange={(e) => {
+      <input ref={input} type="file" accept=".plnt" hidden onChange={(e) => {
         const f = e.target.files?.[0];
         e.target.value = '';
         if (f) void openBoardFile(f).then((why) => setError(why));

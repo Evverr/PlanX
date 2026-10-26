@@ -37,16 +37,16 @@ export const checks = {
     expect(f.head === '%PDF-1.4' && f.tail === '%%EOF\n' && f.jpeg, 'whole, with the picture in it').toBe(true);
   },
 
-  async '"Файл доски" saves the board as a .jjvg file, and that file opens as a new board just like it'(p) {
+  async '"Файл доски" saves the board as a .plnt file, and that file opens as a new board just like it'(p) {
     await stickers(p);
     await p.ev(`planx.board.setTitle('Доска для файла'); window.saved = null; URL.createObjectURL = (b) => { window.saved = b; return 'blob:x'; }`);
     await p.click(await p.at('.labs-rail button[aria-label="Файл доски"]'));
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.file-pop button')].find((b) => b.textContent === 'Сохранить в файл'); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     await sleep(200);
     const head = await p.ev(`(async () => new TextDecoder().decode(new Uint8Array(await window.saved.arrayBuffer()).subarray(0, 8)))()`);
-    expect(head, 'a board file').toBe('PLANJJVG');
+    expect(head, 'a board file').toBe('PLANPLNT');
     const was = await p.ev('location.search');
-    await p.ev(`(async () => { const m = await import('/src/labs/boardFile.ts'); const f = new File([await window.saved.arrayBuffer()], 'x.jjvg'); setTimeout(() => m.openBoardFile(f), 0); })()`);
+    await p.ev(`(async () => { const m = await import('/src/labs/boardFile.ts'); const f = new File([await window.saved.arrayBuffer()], 'x.plnt'); setTimeout(() => m.openBoardFile(f), 0); })()`);
     await sleep(1500);
     await p.ev('1').catch(() => {});
     const now = await p.ev('location.search');

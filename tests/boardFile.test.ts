@@ -3,14 +3,14 @@ import * as Y from 'yjs';
 import { Board } from '../src/model/board';
 import { decodeBoardFile, encodeBoardFile } from '../src/labs/boardFile';
 
-describe('a board file (.jjvg)', () => {
+describe('a board file (.plnt)', () => {
   const doc = new Y.Doc(), board = new Board(doc);
   board.add({ id: 's', type: 'sticky', x: 10, y: 20, w: 160, h: 160, z: 1, text: 'Привет' });
   board.setTitle('Моя доска');
   const bytes = encodeBoardFile(doc);
 
-  it('begins with PLANJJVG, the version and the length of the board in it', () => {
-    expect(new TextDecoder().decode(bytes.subarray(0, 8))).toBe('PLANJJVG');
+  it('begins with PLANPLNT, the version and the length of the board in it', () => {
+    expect(new TextDecoder().decode(bytes.subarray(0, 8))).toBe('PLANPLNT');
     expect(bytes[8]).toBe(1);
     expect(new DataView(bytes.buffer).getUint32(10, true)).toBe(bytes.length - 14);
   });
