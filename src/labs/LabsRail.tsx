@@ -8,7 +8,7 @@ import { useSortable } from '../ui/sortable';
 export interface RailButton { icon: PanelIconName; title: string; on?: boolean; onClick: () => void }
 
 /** Their order on the rail, top to bottom, until someone rearranges it. */
-const ORDER = ['export', 'pdf', 'search', 'timer', 'laser', 'follow', 'keys'];
+const ORDER = ['export', 'pdf', 'file', 'search', 'timer', 'laser', 'follow', 'keys'];
 
 /**
  * The trial features' buttons, on a rail like the tool rail at the right edge: its buttons

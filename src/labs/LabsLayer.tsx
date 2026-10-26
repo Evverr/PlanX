@@ -10,11 +10,12 @@ import { LabsPresence, useFollowing } from './presence';
 import { cameraFor, flyTo, stopFlight } from './camera';
 import { downloadPicture, pictureSize, renderPicture, type Background, type ExportOptions } from './exportPng';
 import { downloadPdf } from './exportPdf';
+import { openBoardFile, saveBoardFile } from './boardFile';
 import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
 import './labs.css';
 
-type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'keys';
+type LabPop = 'export' | 'pdf' | 'file' | 'search' | 'timer' | 'keys';
 
 /** Popups that close on a press anywhere but in them (the cheat sheet has its own backdrop). */
 const AWAY = '.labs-pop, .labs-rail, .labs-more';
@@ -134,9 +135,10 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
 
   const toggle = (p: LabPop) => setPop((cur) => (cur === p ? null : p));
   const summon = () => setToast(presence.summon() ? 'Все участники перенесены к вам' : 'На доске пока никого нет. Откройте ссылку на доску во втором окне');
-  const all: Record<'export' | 'pdf' | 'search' | 'timer' | 'laser' | 'follow' | 'keys', RailButton> = {
+  const all: Record<'export' | 'pdf' | 'file' | 'search' | 'timer' | 'laser' | 'follow' | 'keys', RailButton> = {
     export: { icon: 'download', title: 'Экспорт в PNG', on: pop === 'export', onClick: () => toggle('export') },
     pdf: { icon: 'file', title: 'Экспорт в PDF', on: pop === 'pdf', onClick: () => toggle('pdf') },
+    file: { icon: 'folder', title: 'Файл доски (.jjvg)', on: pop === 'file', onClick: () => toggle('file') },
     search: { icon: 'search', title: 'Поиск по доске (Ctrl+F)', on: pop === 'search', onClick: () => toggle('search') },
     timer: { icon: 'timer', title: 'Общий таймер', on: pop === 'timer', onClick: () => toggle('timer') },
     laser: { icon: 'magic-wand', title: 'Лазерная указка (K)', on: laserOn, onClick: () => setLaserOn(!laserOn) },
@@ -150,6 +152,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       <LabsRail buttons={buttons} docked={docked} />
       {pop === 'export' && <ExportPop editor={editor} format="png" onCancel={() => setPop(null)} onDone={(ok) => { setPop(null); setToast(ok ? 'Картинка сохранена' : 'На доске пока пусто'); }} />}
       {pop === 'pdf' && <ExportPop editor={editor} format="pdf" onCancel={() => setPop(null)} onDone={(ok) => { setPop(null); setToast(ok ? 'PDF сохранён' : 'На доске пока пусто'); }} />}
+      {pop === 'file' && <FilePop editor={editor} onDone={(text) => { setPop(null); setToast(text); }} />}
       {pop === 'search' && <SearchPop editor={editor} />}
       {pop === 'timer' && <TimerPop onStart={(min) => { startTimer(editor.board.doc, min * 60000, conn.me.name); setPop(null); }} />}
       {pop === 'keys' && <KeysSheet onClose={() => setPop(null)} />}
@@ -268,6 +271,28 @@ function SearchPop({ editor }: { editor: Editor }) {
           })}
         </ul>
       </>}
+    </div>
+  );
+}
+
+/** The whole board in a .jjvg file, and such a file opened as a new board. */
+function FilePop({ editor, onDone }: { editor: Editor; onDone: (toast: string) => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <div className="pop labs-pop file-pop" role="dialog" aria-label="Файл доски">
+      <h3>Файл доски</h3>
+      <p className="muted">Вся доска в одном файле .jjvg: всё, что на ней, как есть. Такой файл открывается новой доской.</p>
+      {error && <p className="labs-error">{error}</p>}
+      <input ref={input} type="file" accept=".jjvg" hidden onChange={(e) => {
+        const f = e.target.files?.[0];
+        e.target.value = '';
+        if (f) void openBoardFile(f).then((why) => setError(why));
+      }} />
+      <div className="row">
+        <button className="btn" onClick={() => input.current?.click()}>Открыть файл</button>
+        <button className="btn primary" onClick={() => { saveBoardFile(editor); onDone('Файл доски сохранён'); }}>Сохранить в файл</button>
+      </div>
     </div>
   );
 }
