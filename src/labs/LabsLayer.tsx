@@ -10,7 +10,7 @@ import { LabsPresence, useFollowing } from './presence';
 import { cameraFor, flyTo, stopFlight } from './camera';
 import { downloadPicture, pictureSize, renderPicture, type Background, type ExportOptions } from './exportPng';
 import { downloadPdf } from './exportPdf';
-import { drawTidy, gapAt, setGaps, setHotGap, tidyNow } from './tidy';
+import { drawTidy, endTidyDrag, gapAt, moveTidyDrag, setGaps, setHotGap, startTidyDrag, tidyDragging, tidyItemAt, tidyNow } from './tidy';
 import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
 import './labs.css';
@@ -114,6 +114,14 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
         editor.board.beginGesture();
         return;
       }
+      // One of the grid's items taken up: dragged within it, the others making room.
+      const w = editor.toWorld(local(e).x, local(e).y), held = e.button === 0 && !e.shiftKey && labOn('tidy') ? tidyItemAt(editor, w) : null;
+      if (held) {
+        e.stopPropagation();
+        canvas()!.setPointerCapture(e.pointerId);
+        startTidyDrag(editor, held, w);
+        return;
+      }
       const pill = e.button === 0 && labOn('reactions') ? pillAt(local(e)) : undefined;
       if (pill) {
         e.stopPropagation();
@@ -129,6 +137,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     };
     const onMove = (e: PointerEvent) => {
       if (drawing) addPoint(e);
+      if (tidyDragging()) { const p = local(e); moveTidyDrag(editor, editor.toWorld(p.x, p.y)); return; }
       if (gap) {
         const d = ((gap.axis === 'col' ? e.clientX : e.clientY) - gap.from) / editor.cam.z;
         setGaps(editor, gap.axis === 'col' ? Math.max(0, Math.round(gap.gx + d)) : gap.gx, gap.axis === 'row' ? Math.max(0, Math.round(gap.gy + d)) : gap.gy);
@@ -142,7 +151,8 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
         if (along) canvas()!.style.cursor = along === 'col' ? 'col-resize' : 'row-resize';
       }
     };
-    const onUp = () => {
+    const onUp = (e: PointerEvent) => {
+      if (tidyDragging()) { const p = local(e); endTidyDrag(editor, editor.toWorld(p.x, p.y)); }
       if (drawing) { drawing = false; presence.shareLaser(); }
       if (gap) { gap = null; setHotGap(null); editor.board.endGesture(); editor.requestRender(); }
     };
