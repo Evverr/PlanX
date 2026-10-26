@@ -2,7 +2,7 @@ import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
 import { center, hitItem, hitLink, onAudioButton, onTaskBox } from '../canvas/geometry';
 import { toggleAudio } from '../canvas/audio';
-import { dotAt, foldBadgeAt, frameButtonUnder, onHandle, onRotate, plusAt } from './hover';
+import { dotAt, foldBadgeAt, frameButtonUnder, onHandle, onInstancePlus, onRotate, plusAt } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -35,12 +35,15 @@ export function press(ed: Editor, e: PointerEvent): void {
   let hit = hitItem(ed.shown(), w, ed.cam.z);
   const link = hit && hit.type !== 'frame' ? null : hitLink(ed.shownLinks(), (id) => board.get(id), w, ed.cam.z);
   if (link) hit = null;
+  // What's in an instance is picked with it, as a whole; it's picked itself by a double click (see
+  // endGesture), once picked it stays so.
+  if (hit?.host && !ed.selection.has(hit.id)) hit = board.get(hit.host) ?? hit;
 
   // A finger on the empty board moves the board, but not on the controls of what's selected (its
   // resize handle, link dots, turning corner, mind map buttons), on a folded mind map node's count
   // or on a table's line.
   const picked = ed.selection.size === 1 ? board.get([...ed.selection][0]) : undefined;
-  const onControl = (!!picked && !ed.editingId && !isLocked(picked) && (onHandle(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!plusAt(ed, picked, w)))
+  const onControl = (!!picked && !ed.editingId && !isLocked(picked) && (onHandle(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!plusAt(ed, picked, w) || onInstancePlus(ed, picked, w)))
     || !!foldBadgeAt(ed, w);
   const empty = ed.tool === 'select' && e.button === 0 && !ed.spaceDown && !e.shiftKey && !hit && !link && !onControl
     && !grabbableLine(ed, w, hit, e.pointerType) && !ed.editingId;
@@ -108,6 +111,11 @@ export function press(ed: Editor, e: PointerEvent): void {
     if (plus.kind === 'move') ed.gesture = { type: 'mindMove', id: single.id, from: w, to: w, target: null };
     else if (plus.kind === 'fold') ed.setCollapsed(single.id, plus.way!, true);
     else ed.addMindNode(single.id, plus.kind, true);
+    return;
+  }
+  // A picked component's "+" makes an instance of it.
+  if (single && onInstancePlus(ed, single, w)) {
+    ed.addInstance(single.id);
     return;
   }
   // A folded mind map node's count unfolds it (that way).
