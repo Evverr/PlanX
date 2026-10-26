@@ -6,7 +6,7 @@ export type PenTool = 'pen' | 'marker';
 export const DRAW_TOOLS: Tool[] = ['pen', 'marker', 'eraser'];
 /** Tools that draw a figure by dragging out its box; the polygons are one item type with a `shape`. */
 export const SHAPE_TOOLS: Tool[] = ['rect', 'ellipse', 'triangle', 'rhombus', 'pentagon', 'star'];
-export const isPoly = (t: Tool): t is PolyShape => t === 'triangle' || t === 'rhombus' || t === 'pentagon' || t === 'star';
+export const isPoly = (t: Tool): t is PolyShape => ['triangle', 'rhombus', 'pentagon', 'star', 'hexagon', 'parallelogram', 'trapezoid', 'arrow', 'cross'].includes(t);
 
 /** What a new mind map's central topic says until it's typed over. */
 export const MIND_TOPIC = 'Центральная тема';

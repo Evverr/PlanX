@@ -1,5 +1,5 @@
 export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji' | 'ink' | 'image' | 'task' | 'table' | 'audio' | 'polygon' | 'mind';
-export type PolyShape = 'triangle' | 'rhombus' | 'pentagon' | 'star';
+export type PolyShape = 'triangle' | 'rhombus' | 'pentagon' | 'star' | 'hexagon' | 'parallelogram' | 'trapezoid' | 'arrow' | 'cross';
 
 export interface Item {
   id: string;
@@ -42,6 +42,8 @@ export interface Item {
   parent?: string;
   /** Which figure a polygon item is. */
   shape?: PolyShape;
+  /** How round a rectangle's or a polygon's corners are, in board units (a rectangle without it: 8). */
+  rad?: number;
   /** Outline colour of shapes and tasks: a key of STROKE_COLORS, '#rrggbb', or 'none' for no outline;
    *  unset is the usual grey (see strokeOf in the renderer). */
   sc?: string;

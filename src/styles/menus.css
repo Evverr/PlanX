@@ -48,3 +48,12 @@
 .menu-row::before { content: ""; position: absolute; inset: 0 round(calc(-18px * var(--k)), 1px) 0 round(calc(-14px * var(--k)), 1px); z-index: -1; transition: background-color .12s ease-out; }
 .board-menu.plain > .menu-item > .menu-row::before { left: round(calc(-18px * var(--k)), 1px); }
 .menu-row:hover::before, .menu-row[aria-expanded="true"]::before { background: var(--fmt-hover); }
+
+/* The shapes' gear menu: beside their panel, its foot level with the panel's. A row can end in a
+   number to type (the corners' rounding), in px. */
+.board-menu.shape-menu { top: auto; bottom: 0; left: calc(100% + var(--s12)); }
+.board-menu.shape-menu .menu-row { cursor: default; }
+.menu-input { margin-left: auto; display: flex; align-items: center; gap: var(--s4); color: var(--muted); }
+.menu-input input { width: var(--e40); padding: var(--s3) var(--s6); border: 1px solid var(--btn-line); border-radius: var(--s6); background: var(--surface);
+  color: var(--ink); font: inherit; text-align: right; }
+.menu-input i { font-style: normal; }
