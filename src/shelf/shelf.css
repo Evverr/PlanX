@@ -22,7 +22,6 @@
   padding: 18px max(16px, calc((100% - 1160px) / 2)); background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
 .shelf-brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
-.shelf-logo { border: 0; background: none; padding: 0; cursor: pointer; font-family: "Inter", var(--ui); font-weight: 700; font-size: 18px; letter-spacing: -0.01em; color: var(--accent); }
 .shelf-brand h1 { margin: 0; font: 600 22px/1.2 var(--display); letter-spacing: -0.01em; }
 .shelf-page .narrow-only { display: none; }
 @media (max-width: 560px) { .shelf-page .narrow-only { display: inline; } }
@@ -39,7 +38,6 @@
 .shelf-search:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
 .shelf-search .pi { width: 24px; height: 24px; background: var(--muted); }
 .shelf-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; color: var(--ink); }
-.shelf-search kbd { font: 12px/1 var(--ui); color: var(--muted); padding: 3px 6px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--btn-line); }
 .shelf-sort { height: 34px; padding: 0 8px; border: 0; border-radius: 8px; font: inherit; color: var(--ink); background: var(--surface); box-shadow: inset 0 0 0 1px var(--btn-line); cursor: pointer; }
 @media (max-width: 560px) {
   .shelf-head { position: static; padding-top: 14px; padding-bottom: 14px; }

@@ -4,7 +4,7 @@ import { PanelIcon } from '../ui/PanelIcon';
 import { readText, writeText } from '../storage';
 import { Folder } from './Folder';
 import {
-  FOLDER_COLORS, SORTS, addFolder, ago, arrange, boardUrl, boardsInside, folderUrl, idFromLink, nameOf, pathTo, placeOf, plural,
+  FOLDER_COLORS, SORTS, addFolder, ago, arrange, boardUrl, boardsInside, folderUrl, nameOf, pathTo, placeOf, plural,
   randomColor, readFolders, readShelf, readThumb, removeEntry, removeFolder, updateEntry, updateFolder, withInside, writeFolders, writeShelf,
   type BoardEntry, type FolderEntry, type SortBy,
 } from './boards';
@@ -16,7 +16,6 @@ type Thing = { kind: 'board'; id: string } | { kind: 'folder'; id: string };
 type Dialog =
   | { kind: 'new-board' }
   | { kind: 'folder'; folder?: FolderEntry }
-  | { kind: 'link' }
   | { kind: 'rename'; board: BoardEntry }
   | { kind: 'move'; what: Thing }
   | { kind: 'remove'; board: BoardEntry }
@@ -291,21 +290,18 @@ export function ShelfPage() {
     <div className="shelf-page">
       <header className="shelf-head">
         <div className="shelf-brand">
-          <button className="shelf-logo" onClick={() => go(null)} title="Мои доски">Plan</button>
           <h1>Мои доски</h1>
         </div>
         <div className="shelf-tools">
           <label className="shelf-search">
             <PanelIcon name="search" />
             <input ref={search} type="search" placeholder="Найти доску или папку" aria-label="Найти доску или папку" value={query} onChange={(e) => setQuery(e.target.value)} />
-            {!query && <kbd>/</kbd>}
           </label>
           <select className="shelf-sort" aria-label="Порядок" value={sort} onChange={(e) => setSort(e.target.value as SortBy)}>
             {SORTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
           <button className="ib" title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'} aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
             onClick={toggleTheme}><PanelIcon name={theme === 'dark' ? 'sun' : 'moon'} /></button>
-          <button className="btn wide-only" onClick={() => setDialog({ kind: 'link' })}>Открыть по ссылке</button>
           {/* On a phone they're just "+ Папка" and "+ Доска". */}
           <button className="btn" onClick={() => setDialog({ kind: 'folder' })}><span className="wide-only">Новая папка</span><span className="narrow-only">+ Папка</span></button>
           <button className="btn primary" onClick={() => setDialog({ kind: 'new-board' })}><span className="wide-only">Новая доска</span><span className="narrow-only">+ Доска</span></button>
@@ -384,11 +380,6 @@ export function ShelfPage() {
         else addFolder(newBoardId(), { title, color, parent: current?.id ?? null });
         reread();
         setDialog(null);
-      }} />}
-      {dialog?.kind === 'link' && <LinkDialog onClose={() => setDialog(null)} onOpen={(id) => {
-        // A board new to the shelf lands in the folder that's open.
-        if (!all.some((b) => b.id === id)) updateEntry(id, { folder: current?.id ?? null });
-        location.href = boardUrl(id);
       }} />}
       {dialog?.kind === 'rename' && <NameDialog heading="Переименовать доску" initial={dialog.board.title} placeholder="Без названия" action="Сохранить"
         onClose={() => setDialog(null)} onSave={(title) => {
@@ -517,22 +508,3 @@ function MoveDialog({ what, folders, from, onClose, onMove }:
   );
 }
 
-/** A board someone shared: its link (or id) puts it on the shelf and opens it. */
-function LinkDialog({ onClose, onOpen }: { onClose: () => void; onOpen: (id: string) => void }) {
-  const [text, setText] = useState('');
-  const id = idFromLink(text);
-  return (
-    <Modal label="Открыть по ссылке" onClose={onClose}>
-      <form onSubmit={(e) => { e.preventDefault(); if (id) onOpen(id); }}>
-        <h3>Открыть по ссылке</h3>
-        <p>Вставьте ссылку на доску, которой с вами поделились. Она откроется и встанет на полку.</p>
-        <input className="shelf-input" autoFocus placeholder="https://…?board=…" aria-label="Ссылка на доску" value={text} onChange={(e) => setText(e.target.value)} />
-        {text.trim() && !id && <div className="shelf-error">Это не похоже на ссылку на доску</div>}
-        <div className="row">
-          <button type="button" className="btn" onClick={onClose}>Отмена</button>
-          <button type="submit" className="btn primary" disabled={!id}>Открыть</button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
