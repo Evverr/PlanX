@@ -11,7 +11,7 @@ import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
 import { COMPONENT_COLOR, instancePlus } from '../model/components';
-import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, inkPoints, polyPoints, linkCurve, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier } from './geometry';
+import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, inkPoints, polyPoints, linkShape, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -721,6 +721,34 @@ function arrow(ctx: CanvasRenderingContext2D, [a, c1, c2, b]: Bezier, color: str
   ctx.stroke();
 }
 
+/** A link drawn by its shape: a smooth one as its curve; a straight or right-angled one through its
+ *  points, its corners rounded, the head along its last stretch. */
+function linkArrow(ctx: CanvasRenderingContext2D, shape: LinkShape, color: string, z: number) {
+  if (shape.curve) { arrow(ctx, shape.curve, color, z); return; }
+  const pts = shape.pts, b = pts[pts.length - 1], from = pts[pts.length - 2];
+  const ang = Math.atan2(b.y - from.y, b.x - from.x), px = linkWidth(z), width = px / z, arm = px * 3.8 / z;
+  const tip = { x: b.x - Math.cos(ang) * width / 2, y: b.y - Math.sin(ang) * width / 2 };
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length - 1; i++) {
+    // Corners rounded, but never past halfway along either side of them.
+    const p = pts[i], n = pts[i + 1], l = pts[i - 1];
+    const r = Math.min(10, Math.hypot(p.x - l.x, p.y - l.y) / 2, Math.hypot(n.x - p.x, n.y - p.y) / 2);
+    ctx.arcTo(p.x, p.y, n.x, n.y, r);
+  }
+  ctx.lineTo(tip.x, tip.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(tip.x - arm * Math.cos(ang - Math.PI / 4), tip.y - arm * Math.sin(ang - Math.PI / 4));
+  ctx.lineTo(tip.x, tip.y);
+  ctx.lineTo(tip.x - arm * Math.cos(ang + Math.PI / 4), tip.y - arm * Math.sin(ang + Math.PI / 4));
+  ctx.stroke();
+}
+
 function outline(ctx: CanvasRenderingContext2D, it: Item, z: number, color: string, dash: number[] = []) {
   const off = 3 / z;
   ctx.strokeStyle = color;
@@ -787,8 +815,8 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
   lc.clearRect(0, 0, W, H);
   lc.setTransform(dpr * cam.z, 0, 0, dpr * cam.z, dpr * cam.x, dpr * cam.y);
   for (const l of s.links) {
-    const curve = linkCurve(l, s.get);
-    if (curve) arrow(lc, curve, s.selection.has(l.id) ? SELECT_COLOR : theme.link, cam.z);
+    const shape = linkShape(l, s.get);
+    if (shape) linkArrow(lc, shape, s.selection.has(l.id) ? SELECT_COLOR : theme.link, cam.z);
   }
   lc.globalCompositeOperation = 'destination-out';
   lc.globalAlpha = 0.85;

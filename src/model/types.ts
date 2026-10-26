@@ -135,7 +135,11 @@ export interface Link {
   /** Sides the link is pinned to. Links drawn from the selection dots have them and are drawn as curves. */
   fromSide?: Side;
   toSide?: Side;
+  /** How it runs: straight, in right angles, or (unset) in a smooth curve (see linkShape in canvas/geometry.ts). */
+  style?: LinkStyle;
 }
+
+export type LinkStyle = 'straight' | 'elbow';
 
 /** Fills for stickers and shapes, by name; an item's colour can also be any '#rrggbb' picked by hand. */
 export const FILLS: Record<string, string> = {

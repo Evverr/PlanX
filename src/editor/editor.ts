@@ -1,5 +1,5 @@
 import type { Board } from '../model/board';
-import type { Item, ItemType, Link, Side } from '../model/types';
+import type { Item, ItemType, Link, LinkStyle, Side } from '../model/types';
 import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, STROKABLE, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
 import { boundsOf, center, pointInRect, resizedAt } from '../canvas/geometry';
@@ -711,6 +711,20 @@ export class Editor {
     this.board.transact(() => {
       for (const it of this.selectedItems()) if (it.type === 'table') this.board.update(it.id, withCount(it, axis, delta));
     });
+  }
+
+  /** The links selected. */
+  selectedLinks(): Link[] {
+    return [...this.selection].map((id) => this.board.getLink(id)).filter((l): l is Link => !!l);
+  }
+
+  /** How the selected links run: straight, in right angles, or (undefined) in a smooth curve. */
+  setLinkStyle(style: LinkStyle | undefined): void {
+    this.board.beginGesture();
+    for (const l of this.selectedLinks()) this.board.setLinkStyle(l.id, style);
+    this.board.endGesture();
+    this.emit();
+    this.requestRender();
   }
 
   bringToFront(): void {

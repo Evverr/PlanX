@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boxOf, distToSegment, edgePoint, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, onTaskBox, rectContains, resizedAt, sidePoint, taskBox } from '../src/canvas/geometry';
+import { boxOf, distToSegment, edgePoint, elbowRoute, linkShape, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, onTaskBox, rectContains, resizedAt, sidePoint, taskBox } from '../src/canvas/geometry';
 import { withList, wrapText } from '../src/canvas/text';
 import type { Item } from '../src/model/types';
 
@@ -138,3 +138,19 @@ describe('turned items', () => {
   });
 });
 
+
+describe('link shapes', () => {
+  it('right angles: out of a side, turning halfway, into the other side', () => {
+    expect(elbowRoute({ x: 0, y: 0 }, 'right', { x: 200, y: 100 }, 'left')).toEqual([{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 200, y: 100 }]);
+  });
+  it('from a side across to a side along, one turn', () => {
+    expect(elbowRoute({ x: 0, y: 0 }, 'right', { x: 200, y: 100 }, 'top')).toEqual([{ x: 0, y: 0 }, { x: 200, y: 0 }, { x: 200, y: 100 }]);
+  });
+  it('a straight link runs from side to side, a smooth one along its curve', () => {
+    const a = { id: 'a', type: 'sticky', x: 0, y: 0, w: 100, h: 100, z: 0 } as const, b = { ...a, id: 'b', x: 300, y: 200 };
+    const get = (id: string) => (id === 'a' ? a : b);
+    expect(linkShape({ id: 'l', from: 'a', to: 'b', fromSide: 'right', toSide: 'left', style: 'straight' }, get)?.pts).toEqual([{ x: 100, y: 50 }, { x: 300, y: 250 }]);
+    const smooth = linkShape({ id: 'l', from: 'a', to: 'b', fromSide: 'right', toSide: 'left' }, get)!;
+    expect(smooth.curve && smooth.pts.length).toBe(25);
+  });
+});

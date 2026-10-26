@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import type { Item, Link, Side } from './types';
+import type { Item, Link, LinkStyle, Side } from './types';
 import { OVERRIDES, type SyncOps } from './components';
 
 /** Transaction origin for changes made by this client. Only these are undoable. */
@@ -81,8 +81,8 @@ export class Board {
       this.links.forEach((m, id) => {
         const from = m.get('from') as string, to = m.get('to') as string;
         if (!this.items.has(from) || !this.items.has(to)) return;
-        const fromSide = m.get('fromSide') as Side | undefined, toSide = m.get('toSide') as Side | undefined;
-        out.push(fromSide && toSide ? { id, from, to, fromSide, toSide } : { id, from, to });
+        const fromSide = m.get('fromSide') as Side | undefined, toSide = m.get('toSide') as Side | undefined, style = m.get('style') as LinkStyle | undefined;
+        out.push({ id, from, to, ...(fromSide && toSide && { fromSide, toSide }), ...(style && { style }) });
       });
       this.linkCache = out;
     }
@@ -158,6 +158,7 @@ export class Board {
         m.set('from', l.from);
         m.set('to', l.to);
         if (l.fromSide && l.toSide) { m.set('fromSide', l.fromSide); m.set('toSide', l.toSide); }
+        if (l.style) m.set('style', l.style);
         this.links.set(l.id, m);
       }
       ops.removeLinks.forEach((id) => this.links.delete(id));
@@ -184,8 +185,16 @@ export class Board {
       m.set('from', link.from);
       m.set('to', link.to);
       if (link.fromSide && link.toSide) { m.set('fromSide', link.fromSide); m.set('toSide', link.toSide); }
+      if (link.style) m.set('style', link.style);
       this.links.set(link.id, m);
     });
+  }
+
+  /** Changes how a link runs (see LinkStyle); unset is a smooth curve. */
+  setLinkStyle(id: string, style: LinkStyle | undefined): void {
+    const m = this.links.get(id);
+    if (!m) return;
+    this.transact(() => { if (style) m.set('style', style); else m.delete('style'); });
   }
 
   hasLink(from: string, to: string): boolean {

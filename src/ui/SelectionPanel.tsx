@@ -14,7 +14,7 @@ import { LockButton, ReactButton } from '../labs/SelectionLabs';
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['colors', 'rows', 'cols', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+const ORDER = ['colors', 'rows', 'cols', 'lines', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -286,7 +286,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
     if (next.left !== place.left || next.bottom !== place.bottom) setPlace(next);
   });
   if (!items.length && !linkCount) return null;
-  const tables = items.filter((i) => i.type === 'table');
+  const tables = items.filter((i) => i.type === 'table'), links = editor.selectedLinks();
   const colored = items.some((i) => COLORABLE.includes(i.type) || i.type === 'icon');
   const btn = (icon: PanelIconName, title: string, fn: () => void) => (
     <button className="ib" title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
@@ -313,6 +313,15 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
             <span>Столбцы</span>
             {btn('minus-s', 'Убрать столбец', () => editor.changeTable('col', -1))}
             {btn('plus-s', 'Добавить столбец', () => editor.changeTable('col', 1))}
+          </div>
+        ) : undefined,
+        // How the selected links run: straight, in right angles, smooth.
+        lines: links.length > 0 ? (
+          <div className="sw-group">
+            {([[undefined, 'line-curve', 'Плавная линия'], ['elbow', 'line-elbow', 'Линия с прямыми углами'], ['straight', 'line-straight', 'Прямая линия']] as const).map(([style, icon, title]) => (
+              <button key={icon} className={`ib ${links.every((l) => l.style === style) ? 'on' : ''}`} title={title} aria-label={title}
+                aria-pressed={links.every((l) => l.style === style)} onClick={() => editor.setLinkStyle(style)}><PanelIcon name={icon} /></button>
+            ))}
           </div>
         ) : undefined,
         front: items.length > 0 ? btn('to-front', 'На передний план', () => editor.bringToFront()) : undefined,
