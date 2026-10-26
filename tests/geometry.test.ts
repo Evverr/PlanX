@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boxOf, distToSegment, edgePoint, elbowRoute, linkShape, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, onTaskBox, rectContains, resizedAt, sidePoint, taskBox } from '../src/canvas/geometry';
+import { boxOf, distToSegment, edgePoint, elbowRoute, linkShape, spreadElbows, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, onTaskBox, rectContains, resizedAt, sidePoint, taskBox } from '../src/canvas/geometry';
 import { withList, wrapText } from '../src/canvas/text';
 import type { Item } from '../src/model/types';
 
@@ -152,5 +152,21 @@ describe('link shapes', () => {
     expect(linkShape({ id: 'l', from: 'a', to: 'b', fromSide: 'right', toSide: 'left', style: 'straight' }, get)?.pts).toEqual([{ x: 100, y: 50 }, { x: 300, y: 250 }]);
     const smooth = linkShape({ id: 'l', from: 'a', to: 'b', fromSide: 'right', toSide: 'left' }, get)!;
     expect(smooth.curve && smooth.pts.length).toBe(25);
+  });
+});
+
+describe('right-angled links kept apart', () => {
+  it('a stretch lying on another moves across by the step, the ones either side following', () => {
+    const a = { pts: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 200, y: 100 }] };
+    const b = { pts: [{ x: 0, y: 50 }, { x: 100, y: 50 }, { x: 100, y: 150 }, { x: 200, y: 150 }] };
+    spreadElbows([a, b], 3);
+    expect(a.pts[1].x).toBe(100);
+    // b's upright stretch overlapped a's (y 50…100 on x 100): it moves to x 103.
+    expect(b.pts.map((p) => [p.x, p.y])).toEqual([[0, 50], [103, 50], [103, 150], [200, 150]]);
+  });
+  it('apart already, nothing moves', () => {
+    const a = { pts: [{ x: 0, y: 0 }, { x: 100, y: 0 }] }, b = { pts: [{ x: 0, y: 20 }, { x: 100, y: 20 }] };
+    spreadElbows([a, b], 3);
+    expect(b.pts[0].y).toBe(20);
   });
 });

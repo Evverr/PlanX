@@ -22,7 +22,7 @@ import { addMindNode, mindFit, refitMind, removeMindNode, type MindAdd } from '.
 import { press } from './press';
 import { formatCells, pickCell, restOn, setTableLines } from './tables';
 import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, type Pens, type PenTool, type Tool } from './tools';
-import { isLocked } from '../labs/labs';
+import { isLocked, labOn, subscribeLabs } from '../labs/labs';
 
 export { DRAW_TOOLS, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -233,6 +233,7 @@ export class Editor {
     offs.push(() => themeObs.disconnect());
     offs.push(this.board.subscribe(() => this.onBoardChange()));
     offs.push(onEmojiLoad(() => this.requestRender()));
+    offs.push(subscribeLabs(() => this.requestRender()));
     offs.push(onPictureLoad(() => this.requestRender()));
     if (this.presence) offs.push(this.presence.subscribe(() => this.requestRender()));
     document.fonts?.ready.then(() => { clearTextCache(); this.requestRender(); });
@@ -297,13 +298,13 @@ export class Editor {
     let linkPreview = null;
     if (g?.type === 'link') {
       const from = this.board.get(g.from);
-      if (from) linkPreview = { from, fromSide: g.fromSide, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null };
+      if (from) linkPreview = { from, fromSide: g.fromSide, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null, style: this.linkStyle };
     }
     // An arrow being led to another item is drawn from its start to the pointer (or the item under it).
     const relinked = g?.type === 'relink' ? this.board.getLink(g.id) : undefined;
     if (g?.type === 'relink' && relinked) {
       const from = this.board.get(relinked.from);
-      if (from) linkPreview = { from, fromSide: relinked.fromSide ?? null, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null };
+      if (from) linkPreview = { from, fromSide: relinked.fromSide ?? null, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null, style: relinked.style };
     }
     // A mind map node's buttons stay while its text is being typed (one click opens it for typing).
     const plusKey = `${[...this.selection].join()}|${this.moving}|${this.editingId && this.board.get(this.editingId)?.type !== 'mind' ? this.editingId : ''}`;
@@ -331,7 +332,8 @@ export class Editor {
       editingId: this.editingId,
       marquee: g?.type === 'marquee' ? g.rect : null,
       linkPreview,
-      peers: this.presence?.peers() ?? [],
+      // Other people's cursors, unless switched off ("Нововведения").
+      peers: labOn('cursors') ? this.presence?.peers() ?? [] : (this.presence?.peers() ?? []).map((p) => ({ ...p, cursor: null })),
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]) && !isLocked(this.board.get([...this.selection][0])),
       byFinger: this.byFinger,
       hotDot: this.hotDot,

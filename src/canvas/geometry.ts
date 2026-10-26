@@ -199,6 +199,30 @@ export function elbowRoute(p: Point, ps: Side, q: Point, qs: Side): Point[] {
   return out;
 }
 
+/**
+ * Right-angled links kept from lying on one another: a stretch of one along a stretch already there
+ * (the same way, as good as on the same line, overlapping) moves across by `step` till it's clear,
+ * the stretches either side of it following, so it stays in right angles. Changes the points in place.
+ */
+export function spreadElbows(shapes: LinkShape[], step: number): void {
+  const taken: Array<{ upright: boolean; at: number; from: number; to: number }> = [];
+  for (const sh of shapes) {
+    if (sh.curve || sh.pts.length < 2) continue;
+    const pts = sh.pts.map((p) => ({ ...p }));
+    for (let i = 1; i < pts.length; i++) {
+      const p = pts[i - 1], q = pts[i], upright = Math.abs(p.x - q.x) < 0.01;
+      if (!upright && Math.abs(p.y - q.y) >= 0.01) continue;
+      const from = Math.min(upright ? p.y : p.x, upright ? q.y : q.x), to = Math.max(upright ? p.y : p.x, upright ? q.y : q.x);
+      const was = upright ? p.x : p.y;
+      let at = was;
+      for (let n = 0; n < 8 && taken.some((t) => t.upright === upright && Math.abs(t.at - at) < step * 0.9 && t.from < to - 0.5 && t.to > from + 0.5); n++) at += step;
+      if (at !== was) { if (upright) { p.x = at; q.x = at; } else { p.y = at; q.y = at; } }
+      taken.push({ upright, at, from, to });
+    }
+    sh.pts = pts;
+  }
+}
+
 /** How far a point is from a line through points. */
 export function distToPath(p: Point, pts: Point[]): number {
   let d = Infinity;
