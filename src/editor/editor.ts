@@ -91,6 +91,8 @@ export class Editor {
   lastEmpty = { t: 0, x: 0, y: 0 };
   needsFit: boolean;
   hotDot: Side | null = null;
+  /** Shared: the link under the pointer, faintly lit. */
+  hotLink: string | null = null;
   /** The mind map node button under the pointer (see buttonKey). */
   hotPlus: string | null = null;
   /** How far each folded mind map node's count (by `id:way`) has moved out from the "+" to the chevron's
@@ -293,6 +295,12 @@ export class Editor {
       const from = this.board.get(g.from);
       if (from) linkPreview = { from, fromSide: g.fromSide, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null };
     }
+    // An arrow being led to another item is drawn from its start to the pointer (or the item under it).
+    const relinked = g?.type === 'relink' ? this.board.getLink(g.id) : undefined;
+    if (g?.type === 'relink' && relinked) {
+      const from = this.board.get(relinked.from);
+      if (from) linkPreview = { from, fromSide: relinked.fromSide ?? null, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null };
+    }
     // A mind map node's buttons stay while its text is being typed (one click opens it for typing).
     const plusKey = `${[...this.selection].join()}|${this.moving}|${this.editingId && this.board.get(this.editingId)?.type !== 'mind' ? this.editingId : ''}`;
     if (plusKey !== this.plusKey) {
@@ -307,7 +315,8 @@ export class Editor {
     const glide = this.gliding();
     drawScene(this.ctx, {
       items: glide ? this.shown().map(glide) : this.shown(),
-      links: this.shownLinks(),
+      links: relinked ? this.shownLinks().filter((l) => l.id !== relinked.id) : this.shownLinks(),
+      hotLink: g ? null : this.hotLink,
       get: glide ? (id) => { const it = this.board.get(id); return it && glide(it); } : (id) => this.board.get(id),
       cam: this.cam,
       theme: this.theme,

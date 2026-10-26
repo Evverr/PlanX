@@ -23,6 +23,7 @@ export type Gesture =
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' }
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
+  | { type: 'relink'; id: string; to: Point; target: string | null }
   | { type: 'mindMove'; id: string; from: Point; to: Point; target: string | null }
   | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
   | { type: 'draw'; tool: PenTool; pts: Point[] }
@@ -60,10 +61,11 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         board.beginGesture();
         if (e.altKey) g.orig = ed.dragCopies(g.orig);
       }
-      // With guides on, what's dragged lines up with what's on screen around it when near.
+      // With guides on (or Shift held as it's dragged), what's dragged lines up with what's on screen
+      // around it when near.
       let sx = 0, sy = 0;
       g.guides = undefined;
-      if (ed.guides) {
+      if (ed.guides || e.shiftKey) {
         const moving = [...g.orig].map(([id, o]) => { const it = board.get(id); return it && { ...it, x: o.x + dx, y: o.y + dy }; }).filter((i): i is Item => !!i);
         const bs = moving.map(boxOf), view = ed.viewRect();
         const x = Math.min(...bs.map((b) => b.x)), y = Math.min(...bs.map((b) => b.y));
@@ -147,6 +149,13 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       const t = hitItem(ed.shown(), w, ed.cam.z);
       g.to = w;
       g.target = t && t.id !== g.from ? t.id : null;
+      ed.requestRender();
+      return;
+    }
+    case 'relink': {
+      const t = hitItem(ed.shown(), w, ed.cam.z), from = board.getLink(g.id)?.from;
+      g.to = w;
+      g.target = t && t.id !== from ? t.id : null;
       ed.requestRender();
       return;
     }
@@ -258,6 +267,13 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       }
       ed.requestRender();
       return;
+    case 'relink': {
+      // Let go on another item, the arrow goes to it; anywhere else, it stays where it was.
+      const l = board.getLink(g.id), target = g.target ? board.get(g.target) : undefined;
+      if (l && target && target.id !== l.to && !board.hasLink(l.from, target.id)) board.retarget(l.id, target.id, nearestSide(target, g.to));
+      ed.requestRender();
+      return;
+    }
     case 'mindMove':
       // The branch hangs from the node it's dropped on now, on a central topic the way of the side it's
       // let go nearest to: right, left, down or up. A folded node unfolds to show it.

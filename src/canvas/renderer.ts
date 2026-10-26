@@ -70,6 +70,8 @@ export interface Scene {
   plusFade: number;
   /** How many nodes each folded mind map node hides, each way, shown by it. */
   folded?: Map<string, Map<Way, number>>;
+  /** The link under the pointer, faintly lit. */
+  hotLink?: string | null;
   /** How far out from the "+" to the chevron's place each folded node's count is, 0…1, by `id:way`. */
   slide?: Map<string, number>;
   /** The node and way (`id:way`) a "+" has just given its first branches, with no chevron there yet. */
@@ -816,7 +818,14 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
   lc.setTransform(dpr * cam.z, 0, 0, dpr * cam.z, dpr * cam.x, dpr * cam.y);
   for (const l of s.links) {
     const shape = linkShape(l, s.get);
-    if (shape) linkArrow(lc, shape, s.selection.has(l.id) ? SELECT_COLOR : theme.link, cam.z);
+    if (!shape) continue;
+    linkArrow(lc, shape, s.selection.has(l.id) ? SELECT_COLOR : theme.link, cam.z);
+    // The one under the pointer a little bluer.
+    if (l.id === s.hotLink && !s.selection.has(l.id)) {
+      lc.globalAlpha = 0.4;
+      linkArrow(lc, shape, SELECT_COLOR, cam.z);
+      lc.globalAlpha = 1;
+    }
   }
   lc.globalCompositeOperation = 'destination-out';
   lc.globalAlpha = 0.85;

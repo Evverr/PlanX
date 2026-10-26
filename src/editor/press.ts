@@ -2,7 +2,7 @@ import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
 import { center, hitItem, hitLink, onAudioButton, onTaskBox } from '../canvas/geometry';
 import { toggleAudio } from '../canvas/audio';
-import { dotAt, foldBadgeAt, frameButtonUnder, onHandle, onInstancePlus, onRotate, plusAt } from './hover';
+import { dotAt, foldBadgeAt, frameButtonUnder, linkEndAt, onHandle, onInstancePlus, onRotate, plusAt } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -35,6 +35,13 @@ export function press(ed: Editor, e: PointerEvent): void {
   let hit = hitItem(ed.shown(), w, ed.cam.z);
   const link = hit && hit.type !== 'frame' ? null : hitLink(ed.shownLinks(), (id) => board.get(id), w, ed.cam.z);
   if (link) hit = null;
+  // An arrowhead taken hold of leads its arrow to another item, let go on it.
+  const end = ed.tool === 'select' && e.button === 0 && !e.shiftKey && !ed.spaceDown && !ed.editingId ? linkEndAt(ed, w) : null;
+  if (end) {
+    ed.setSelection([end.id]);
+    ed.gesture = { type: 'relink', id: end.id, to: w, target: end.to };
+    return;
+  }
   // What's in an instance is picked with it, as a whole; it's picked itself by a double click (see
   // endGesture), once picked it stays so.
   if (hit?.host && !ed.selection.has(hit.id)) hit = board.get(hit.host) ?? hit;
