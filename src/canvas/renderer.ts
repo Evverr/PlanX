@@ -1,5 +1,5 @@
 import './compat';
-import type { Item, Link, Side } from '../model/types';
+import type { Item, Link, LinkStyle, Side } from '../model/types';
 import { alignOf, FILLS, textPad, textPadY, ICON_COLORS, INK_COLORS, MARK_COLORS, STROKE_COLORS, TEXT_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
@@ -12,7 +12,7 @@ import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
 import { COMPONENT_COLOR, instancePlus } from '../model/components';
 import { autoInk } from '../model/color';
-import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, inkPoints, polyPoints, linkShape, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
+import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, spreadElbows, polyPoints, linkShape, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -58,7 +58,7 @@ export interface Scene {
   selection: Set<string>;
   editingId: string | null;
   marquee: Rect | null;
-  linkPreview: { from: Item; fromSide: Side | null; to: Point; target: Item | null } | null;
+  linkPreview: { from: Item; fromSide: Side | null; to: Point; target: Item | null; style?: LinkStyle } | null;
   peers: Peer[];
   showHandle: boolean;
   /** The last press was a finger's: the resize handle is drawn bigger, to be seen under it. */
@@ -729,10 +729,16 @@ function arrow(ctx: CanvasRenderingContext2D, [a, c1, c2, b]: Bezier, color: str
   ctx.stroke();
 }
 
+/** The side of a target at `to` a link from `from` comes into: the one facing back along its way. */
+function facing(from: Point, to: Point): Side {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'left' : 'right') : dy > 0 ? 'top' : 'bottom';
+}
+
 /** A link drawn by its shape: a smooth one as its curve; a straight or right-angled one through its
  *  points, its corners rounded, the head along its last stretch. */
-function linkArrow(ctx: CanvasRenderingContext2D, shape: LinkShape, color: string, z: number) {
-  if (shape.curve) { arrow(ctx, shape.curve, color, z); return; }
+function linkArrow(ctx: CanvasRenderingContext2D, shape: LinkShape, color: string, z: number, dash: number[] = []) {
+  if (shape.curve) { arrow(ctx, shape.curve, color, z, dash); return; }
   const pts = shape.pts, b = pts[pts.length - 1], from = pts[pts.length - 2];
   const ang = Math.atan2(b.y - from.y, b.x - from.x), px = linkWidth(z), width = px / z, arm = px * 3.8 / z;
   const tip = { x: b.x - Math.cos(ang) * width / 2, y: b.y - Math.sin(ang) * width / 2 };
@@ -740,6 +746,7 @@ function linkArrow(ctx: CanvasRenderingContext2D, shape: LinkShape, color: strin
   ctx.lineWidth = width;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
+  ctx.setLineDash(dash.map((d) => d / z));
   ctx.beginPath();
   ctx.moveTo(pts[0].x, pts[0].y);
   for (let i = 1; i < pts.length - 1; i++) {
@@ -750,6 +757,7 @@ function linkArrow(ctx: CanvasRenderingContext2D, shape: LinkShape, color: strin
   }
   ctx.lineTo(tip.x, tip.y);
   ctx.stroke();
+  ctx.setLineDash([]);
   ctx.beginPath();
   ctx.moveTo(tip.x - arm * Math.cos(ang - Math.PI / 4), tip.y - arm * Math.sin(ang - Math.PI / 4));
   ctx.lineTo(tip.x, tip.y);
@@ -822,8 +830,11 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
   lc.globalAlpha = 1;
   lc.clearRect(0, 0, W, H);
   lc.setTransform(dpr * cam.z, 0, 0, dpr * cam.z, dpr * cam.x, dpr * cam.y);
-  for (const l of s.links) {
-    const shape = linkShape(l, s.get);
+  // Right-angled ones kept off one another, a line's width apart.
+  const shapes = s.links.map((l) => linkShape(l, s.get));
+  spreadElbows(shapes.filter((sh): sh is LinkShape => !!sh), (linkWidth(cam.z) * 2) / cam.z);
+  for (const [k, l] of s.links.entries()) {
+    const shape = shapes[k];
     if (!shape) continue;
     linkArrow(lc, shape, s.selection.has(l.id) ? SELECT_COLOR : theme.link, cam.z);
     // The one under the pointer a little bluer.
@@ -995,17 +1006,23 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   }
 
   if (s.linkPreview) {
-    const { from, fromSide, to, target } = s.linkPreview;
+    const { from, fromSide, to, target, style } = s.linkPreview;
     if (target) outline(ctx, target, cam.z, SELECT_COLOR, [4, 4]);
     let curve: Bezier;
-    if (fromSide) {
+    // Drawn the way it will run: straight or in right angles, as the last one was made to.
+    if (style) {
+      const ps = fromSide ?? nearestSide(from, target ? center(target) : to);
+      const qs = target ? nearestSide(target, to) : facing(sidePoint(from, ps), to);
+      const p = sidePoint(from, ps), q = target ? sidePoint(target, qs) : to;
+      linkArrow(ctx, { pts: style === 'straight' ? [p, q] : elbowRoute(p, ps, q, qs) }, SELECT_COLOR, cam.z, [6, 6]);
+    } else if (fromSide) {
       const toSide = target ? nearestSide(target, to) : null;
       curve = curveBetween(sidePoint(from, fromSide), fromSide, target && toSide ? sidePoint(target, toSide) : to, toSide, angleOf(from), target ? angleOf(target) : 0);
     } else {
       const end = target ? edgePoint(target, center(from)) : to, start = edgePoint(from, end);
       curve = [start, start, end, end];
     }
-    arrow(ctx, curve, SELECT_COLOR, cam.z, [6, 6]);
+    if (!style) arrow(ctx, curve!, SELECT_COLOR, cam.z, [6, 6]);
   }
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
