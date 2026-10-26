@@ -127,7 +127,9 @@ export const checks = {
       return { id: u.id, up: u.up, over: u.y + u.h < r.y, centred: Math.abs(u.x + u.w / 2 - (r.x + r.w / 2)) < 1, bottom: u.y + u.h, h: u.h }; })()`);
     expect(u.up, 'led up').toBe(true);
     expect(u.over && u.centred, 'over the topic, centred').toBe(true);
-    expect(await p.ev(`[...planx.editor.selection].join()`), 'the topic still picked, for another click').toBe(root);
+    await sleep(100);
+    expect(await p.ev('planx.editor.editingId'), 'it opens for typing').toBe(u.id);
+    await p.escape();
     await p.ev(`planx.editor.previewText('${u.id}', 'one\\ntwo')`);
     const after = await p.ev(`planx.board.get('${u.id}')`);
     expect(after.h > u.h, 'a line taller').toBe(true);
