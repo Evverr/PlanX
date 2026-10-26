@@ -12,6 +12,7 @@ import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
 import { COMPONENT_COLOR, instancePlus } from '../model/components';
 import { autoInk } from '../model/color';
+import cursorUrl from './cursor.svg';
 import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, spreadElbows, polyPoints, linkShape, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
@@ -1036,30 +1037,58 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     ctx.strokeRect(x + 0.5, y + 0.5, m.w * cam.z, m.h * cam.z);
   }
 
-  // Other people's cursors, drawn at screen size.
+  // Other people's cursors, drawn at screen size (Figma "Component 6"): the arrow in their colour,
+  // turned 4.22°, and their name on a pill of it below and right, both at 90%.
   for (const p of s.peers) {
     if (!p.cursor) continue;
     const x = p.cursor.x * cam.z + cam.x, y = p.cursor.y * cam.z + cam.y;
     if (x < -20 || y < -20 || x > s.width + 20 || y > s.height + 20) continue;
-    ctx.fillStyle = p.color;
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x, y + 17);
-    ctx.lineTo(x + 4.5, y + 12.5);
-    ctx.lineTo(x + 11.5, y + 12.5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.font = font(12, 600);
+    ctx.globalAlpha = 0.9;
+    const arrow = tintedCursor(p.color);
+    if (arrow) {
+      ctx.save();
+      ctx.translate(x + 2 + CURSOR_W / 2, y + 1 + CURSOR_H / 2);
+      ctx.rotate((4.22 * Math.PI) / 180);
+      ctx.drawImage(arrow, -CURSOR_W / 2, -CURSOR_H / 2, CURSOR_W, CURSOR_H);
+      ctx.restore();
+    }
+    ctx.font = font(10, 500, 'inter');
     const tw = ctx.measureText(p.name).width;
+    ctx.fillStyle = p.color;
     ctx.beginPath();
-    ctx.roundRect(x + 10, y + 16, tw + 14, 20, 6);
+    ctx.roundRect(x + 17, y + 16, tw + 14, 22, 7);
     ctx.fill();
     ctx.fillStyle = '#fff';
     ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(p.name, x + 17, y + 26.5);
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(p.name, x + 24, y + 29.7);
+    ctx.globalAlpha = 1;
   }
+}
+
+/** The cursor's arrow from Figma (src/canvas/cursor.svg), and its size there. */
+const CURSOR_W = 17.9245, CURSOR_H = 17.4262;
+let cursorImg: HTMLImageElement | null = null;
+const tintedCursors = new Map<string, HTMLCanvasElement>();
+/** The arrow in this colour, drawn three times over for sharp screens; null till it's loaded. */
+function tintedCursor(color: string): HTMLCanvasElement | null {
+  if (!cursorImg) {
+    cursorImg = new Image();
+    cursorImg.onload = () => tintedCursors.clear();
+    cursorImg.src = cursorUrl;
+  }
+  if (!cursorImg.complete || !cursorImg.naturalWidth) return null;
+  let c = tintedCursors.get(color);
+  if (!c) {
+    c = document.createElement('canvas');
+    c.width = Math.ceil(CURSOR_W * 3);
+    c.height = Math.ceil(CURSOR_H * 3);
+    const g = c.getContext('2d')!;
+    g.drawImage(cursorImg, 0, 0, CURSOR_W * 3, CURSOR_H * 3);
+    g.globalCompositeOperation = 'source-in';
+    g.fillStyle = color;
+    g.fillRect(0, 0, c.width, c.height);
+    tintedCursors.set(color, c);
+  }
+  return c;
 }
