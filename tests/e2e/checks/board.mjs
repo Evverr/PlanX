@@ -86,9 +86,11 @@ export const checks = {
     await p.make('mind', await screen(p, (await origin(p)).x + 150, (await origin(p)).y + 150));
     await p.escape();
     const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
-    await p.ev(`(() => { const e = planx.editor; e.addMindNode('${root}', 'child', true); e.addMindNode('${root}', 'child', true); })()`);
+    await p.ev(`(() => { const e = planx.editor; e.addMindNode('${root}', 'child'); e.addMindNode('${root}', 'child'); })()`);
     const kid = await p.ev(`planx.board.list().find((i) => i.parent === '${root}').id`);
-    await p.ev(`planx.editor.addMindNode('${kid}', 'child', true); planx.editor.setSelection(['${root}'])`);
+    await p.ev(`planx.editor.addMindNode('${kid}', 'child')`);
+    await p.escape();
+    await p.ev(`planx.editor.setSelection(['${root}'])`);
     await p.click(await p.at('.tools [data-key="frames"]'));
     await p.escape();
     const f = await p.ev(`planx.board.list().find((i) => i.type === 'frame')`);
@@ -154,6 +156,12 @@ export const checks = {
     await p.ev(`planx.editor.setSelection([])`);
     await p.click(at);
     expect(await p.ev(`[...planx.editor.selection].join()`), 'the instance picked').toBe(inst.id);
+    // Deleted and the deleting undone, it's back with its own text.
+    await p.key('Delete', 'Delete', 46);
+    expect(await copy(ids.a), 'gone with it').toBe(undefined);
+    await p.key('z', 'KeyZ', 90, 4);
+    await sleep(100);
+    expect((await copy(ids.a))?.text, 'back, its own text too').toBe('Своё');
   },
 
   async 'a picked link\'s panel has its three ways of running: smooth, right angles, straight'(p) {
@@ -173,6 +181,21 @@ export const checks = {
     expect(await p.ev(`planx.board.getLink('L1').style`), 'straight').toBe('straight');
     await p.click(await p.at('.bar.panel button[aria-label="Плавная линия"]'));
     expect(await p.ev(`planx.board.getLink('L1').style ?? null`), 'smooth again').toBe(null);
+  },
+
+  async 'a link is faintly lit under the pointer, and its arrowhead dragged onto another item leads it there'(p) {
+    const ids = await put(p, `const a = e.newItem('sticky', X, Y), c = e.newItem('sticky', X + 420, Y), d = e.newItem('sticky', X + 420, Y + 280); b.add(a); b.add(c); b.add(d);
+      b.addLink({ id: 'L1', from: a.id, to: c.id, fromSide: 'right', toSide: 'left' }); return { d: d.id };`);
+    const pts = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'); return g.linkShape(planx.board.getLink('L1'), (k) => planx.board.get(k)).pts.map((q) => { const s = planx.editor.toScreen(q), c = planx.editor.canvas.getBoundingClientRect(); return [s.x + c.left, s.y + c.top]; }); })()`);
+    await p.mouse('mouseMoved', ...pts[12]);
+    expect(await p.ev('planx.editor.hotLink'), 'lit').toBe('L1');
+    const d = await p.ev(`planx.board.get('${ids.d}')`);
+    await p.drag(pts[pts.length - 1], await screen(p, d.x + 60, d.y + 60));
+    expect(await p.ev(`planx.board.getLink('L1').to`), 'led to the third').toBe(ids.d);
+    // Let go nowhere, it stays.
+    const tip = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'); const sh = g.linkShape(planx.board.getLink('L1'), (k) => planx.board.get(k)).pts; const s = planx.editor.toScreen(sh[sh.length - 1]), c = planx.editor.canvas.getBoundingClientRect(); return [s.x + c.left, s.y + c.top]; })()`);
+    await p.drag(tip, [tip[0] + 200, tip[1] + 150]);
+    expect(await p.ev(`planx.board.getLink('L1').to`), 'still there').toBe(ids.d);
   },
 
   async 'a table line takes hold only after the mouse rests on it'(p) {

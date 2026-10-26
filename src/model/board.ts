@@ -102,8 +102,12 @@ export class Board {
   }
 
   transact(fn: () => void): void {
+    this.lastLocal = Date.now();
     this.doc.transact(fn, LOCAL);
   }
+
+  /** When this client last changed the board (see sync). */
+  private lastLocal = 0;
 
   maxZ(): number {
     const l = this.list();
@@ -140,8 +144,16 @@ export class Board {
     });
   }
 
-  /** Brings instances in step with their components (see model/components.ts), outside the undo history. */
+  /**
+   * Brings instances in step with their components (see model/components.ts). After a change made here a
+   * moment ago, as part of its undo step (so undoing it brings back what that took from the instances,
+   * their copies as they were); after anyone else's, or an undo, outside the undo history.
+   */
   sync(ops: SyncOps): void {
+    const um = this.undoManager as unknown as { lastChange: number };
+    const along = um.lastChange > 0 && Date.now() - this.lastLocal < 250;
+    const was = this.undoManager.captureTimeout;
+    if (along) this.undoManager.captureTimeout = Number.MAX_SAFE_INTEGER;
     this.doc.transact(() => {
       for (const it of ops.add) {
         const m = new Y.Map<unknown>();
@@ -162,7 +174,8 @@ export class Board {
         this.links.set(l.id, m);
       }
       ops.removeLinks.forEach((id) => this.links.delete(id));
-    }, SYNC);
+    }, along ? LOCAL : SYNC);
+    this.undoManager.captureTimeout = was;
   }
 
   /** Removes items and links by id, plus any link left without an end. */
@@ -187,6 +200,16 @@ export class Board {
       if (link.fromSide && link.toSide) { m.set('fromSide', link.fromSide); m.set('toSide', link.toSide); }
       if (link.style) m.set('style', link.style);
       this.links.set(link.id, m);
+    });
+  }
+
+  /** Leads a link to another item, by the side it now meets it at (none for a straight one). */
+  retarget(id: string, to: string, toSide: Side | undefined): void {
+    const m = this.links.get(id);
+    if (!m) return;
+    this.transact(() => {
+      m.set('to', to);
+      if (toSide && m.get('fromSide')) m.set('toSide', toSide);
     });
   }
 

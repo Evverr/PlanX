@@ -1,7 +1,7 @@
-import type { Item, Side } from '../model/types';
+import type { Item, Link, Side } from '../model/types';
 import { ROTATABLE } from '../model/types';
 import type { Point } from '../canvas/geometry';
-import { hitItem, hitLink, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
+import { hitItem, hitLink, linkShape, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, HANDLE } from '../canvas/renderer';
 import { instancePlus } from '../model/components';
 import { branchWays, buttonKey, foldBadge, mindButtons, type MindButtonAt, type Way } from '../model/mind';
@@ -33,6 +33,16 @@ export function plusAt(ed: Editor, it: Item, w: Point): MindButtonAt | null {
     if (d <= Math.max(b.r * 1.5, ed.reach(0)) && d < near) { best = b; near = d; }
   }
   return best;
+}
+
+/** The link whose arrowhead is under the point: taken hold of there, it's led to another item. */
+export function linkEndAt(ed: Editor, w: Point): Link | null {
+  const links = ed.shownLinks(), reach = Math.max(9 / ed.cam.z, ed.reach(0));
+  for (let i = links.length - 1; i >= 0; i--) {
+    const shape = linkShape(links[i], (id) => ed.board.get(id)), tip = shape?.pts[shape.pts.length - 1];
+    if (tip && Math.hypot(w.x - tip.x, w.y - tip.y) <= reach) return links[i];
+  }
+  return null;
 }
 
 /** Whether the point is on a picked component's "+" for a new instance. */
@@ -91,6 +101,10 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   restOn(ed, near);
   const line = ed.lineRest?.armed ? ed.lineRest.line : null;
   if (!sameLine(line, ed.hotLine)) { ed.hotLine = line; ed.requestRender(); }
+  // A link the pointer is on (where no item is over it, as a press would find it) is faintly lit.
+  const under = hitItem(ed.shown(), w, ed.cam.z);
+  const link = under && under.type !== 'frame' ? null : hitLink(ed.shownLinks(), (id) => ed.board.get(id), w, ed.cam.z);
+  if ((link?.id ?? null) !== ed.hotLink) { ed.hotLink = link?.id ?? null; ed.requestRender(); }
   const plus = picked ? plusAt(ed, picked, w) : null, hot = plus ? buttonKey(plus) : picked && onInstancePlus(ed, picked, w) ? 'instance' : null;
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
@@ -98,7 +112,8 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   else if (single && onHandle(ed, single, w)) cursor = 'nwse-resize';
   else if (single && onRotate(ed, single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);
   else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
-  else if (hitLink(ed.shownLinks(), (id) => ed.board.get(id), w, ed.cam.z)) cursor = 'pointer';
+  else if (linkEndAt(ed, w)) cursor = 'grab';
+  else if (link) cursor = 'pointer';
   else {
     const hit = hitItem(ed.shown(), w, ed.cam.z);
     if ((hit?.type === 'task' && onTaskBox(hit, w, ed.cam.z)) || (hit?.type === 'audio' && onAudioButton(hit, w))) cursor = 'pointer';
