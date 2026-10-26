@@ -197,7 +197,7 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   ellipse: { w: 170, h: 110, color: 'green', fs: 16, text: '', ta: 'left', va: 'top' },
   frame: { w: 520, h: 380, text: 'Фрейм' },
   icon: { w: 64, h: 64, color: 'ink' },
-  emoji: { w: 64, h: 64 },
+  emoji: { w: 27, h: 27 },
   ink: { w: 1, h: 1 },
   image: { w: 200, h: 150 },
   task: { w: 180, h: 110, color: 'blue', fs: 16, text: '' },

@@ -89,6 +89,11 @@ export function press(ed: Editor, e: PointerEvent): void {
     case 'rhombus':
     case 'pentagon':
     case 'star':
+    case 'hexagon':
+    case 'parallelogram':
+    case 'trapezoid':
+    case 'arrow':
+    case 'cross':
     case 'frame': {
       board.beginGesture();
       const t = ed.tool;
