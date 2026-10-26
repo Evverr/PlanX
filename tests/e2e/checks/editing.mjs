@@ -187,6 +187,8 @@ export const checks = {
     const going = await kids();
     expect(going.map((k) => k.text ?? '').join(), 'made one after another, going down').toBe('один,два,три,');
     expect(await p.ev('planx.editor.editingId'), 'the last typed in').toBe(going[3].id);
+    const r0 = await p.ev(`planx.board.get('${root}')`);
+    expect((going[0].y + going[3].y + going[3].h) / 2, 'centred on the topic as they come').toBeNear(r0.y + r0.h / 2, 1);
     // Done typing: they glide to stand centred on the topic.
     await p.escape();
     await sleep(500);

@@ -311,9 +311,19 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       break;
     case 'frame': {
       if (it.fold) { drawFolded(ctx, it, s, editing); break; }
-      // A component in red tints, titled after a filled diamond; an instance of it has no frame at all,
-      // only its title after a hollow one.
+      // A component in red tints, titled after a filled diamond; an instance of it shows no frame or
+      // title until picked, then a dashed red edge and its title after a hollow diamond.
+      if (it.inst && !s.selection.has(it.id)) break;
       const kin = it.comp || it.inst;
+      if (it.inst) {
+        ctx.strokeStyle = COMPONENT_COLOR;
+        ctx.lineWidth = 1.5 / cam.z;
+        ctx.setLineDash([6 / cam.z, 4 / cam.z]);
+        ctx.beginPath();
+        ctx.roundRect(it.x, it.y, it.w, it.h, CORNER);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
       if (!it.inst) {
         ctx.fillStyle = theme.frame;
         ctx.beginPath();
@@ -890,7 +900,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     const it = s.get(id);
     if (!it) continue;
     // A mind map node shows it's picked by its "+" buttons alone, which a few picked together don't get.
-    if (it.type !== 'mind' || s.selection.size > 1) outline(ctx, it, cam.z, SELECT_COLOR);
+    // A picked instance shows it by its own dashed red edge.
+    if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) outline(ctx, it, cam.z, SELECT_COLOR);
     // A mind map node sizes itself and links by its branches: instead of the handle and dots it
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && it.type === 'mind') {
