@@ -4,7 +4,7 @@ import { alignOf, TEXT_COLORS, textPad, textPadY, type Item } from '../model/typ
 import { fontOf, FONTS, LINE_HEIGHT, textBlockHeight } from '../canvas/text';
 import { FOLD_FS, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP } from '../model/frame';
 import { center, TASK_INSET } from '../canvas/geometry';
-import { siblingOf } from '../model/mind';
+import { addChild, siblingOf } from '../model/mind';
 import { colsOf, rowsOf } from '../model/table';
 
 /**
@@ -146,6 +146,8 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
             editor.tabStep = true;
             commit();
             editor.addMindNode(id, e.shiftKey ? 'above' : 'below');
+            // They stand centred on their node as they come, gliding there.
+            if (editor.editingId) editor.glide(addChild(editor.editingId, editor.board.list()));
             return;
           }
           if (!next) return;

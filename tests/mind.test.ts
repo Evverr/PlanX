@@ -194,16 +194,16 @@ describe('mind map: folding a node\'s branches away', () => {
     expect(folding(a, 'right', true)).toEqual({ collapsed: true });
   });
 
-  it('a folded node\'s count sits where its "+" for a branch is, out in the chevron\'s place while its buttons show', () => {
-    expect(foldBadge(a, 'right', 1, 3)).toEqual({ x: 271, y: 20, w: 18, h: 18 });
-    expect(foldBadge(l, 'left', 1, 3)).toEqual({ x: -171, y: 20, w: 18, h: 18 });
-    expect(foldBadge(d, 'down', 1, 3)).toEqual({ x: 50, y: 139, w: 18, h: 18 });
+  it('a folded node\'s count sits 4 off it where its "+" for a branch is, out in the chevron\'s place while its buttons show', () => {
+    expect(foldBadge(a, 'right', 1, 3)).toEqual({ x: 273, y: 20, w: 18, h: 18 });
+    expect(foldBadge(l, 'left', 1, 3)).toEqual({ x: -173, y: 20, w: 18, h: 18 });
+    expect(foldBadge(d, 'down', 1, 3)).toEqual({ x: 50, y: 141, w: 18, h: 18 });
     expect(foldBadge(a, 'right', 1, 3, 1)).toEqual({ x: 293, y: 20, w: 18, h: 18 });
     // A wider one keeps its near end there.
-    expect(foldBadge(a, 'right', 1, 120)).toEqual({ x: 276, y: 20, w: 28, h: 18 });
-    expect(foldBadge(d, 'down', 1, 120)).toEqual({ x: 50, y: 139, w: 28, h: 18 });
+    expect(foldBadge(a, 'right', 1, 120)).toEqual({ x: 278, y: 20, w: 28, h: 18 });
+    expect(foldBadge(d, 'down', 1, 120)).toEqual({ x: 50, y: 141, w: 28, h: 18 });
     // In screen pixels whatever the zoom.
-    expect(foldBadge(a, 'right', 2, 3)).toEqual({ x: 265.5, y: 20, w: 9, h: 9 });
+    expect(foldBadge(a, 'right', 2, 3)).toEqual({ x: 266.5, y: 20, w: 9, h: 9 });
   });
 });
 

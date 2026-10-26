@@ -206,11 +206,11 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         board.endGesture();
       } else if (g.dbl) {
         const it = board.get(g.id);
-        // In an instance, a double click picks what's under it there, and opens its text for typing.
+        // In an instance, a double click picks what's under it there (its colours to change); another
+        // opens its text for typing.
         const inner = it?.inst ? hitItem(ed.shown().filter((i) => i.host === it.id), g.start, ed.cam.z) : null;
         if (inner) {
           ed.setSelection([inner.id]);
-          ed.startEditing(inner.id, inner.type === 'table' ? cellAt(inner, g.start) : null);
         // A frame folds on a double click, and unfolds (a component too, not an instance); on its title
         // over it, that opens for typing.
         } else if (it?.type === 'frame' && !it.inst && (it.fold || toLocal(it, g.start).y >= it.y)) ed.setFolded(it.id, !it.fold);

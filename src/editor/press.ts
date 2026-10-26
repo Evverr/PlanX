@@ -2,7 +2,7 @@ import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
 import { center, hitItem, hitLink, onAudioButton, onTaskBox } from '../canvas/geometry';
 import { toggleAudio } from '../canvas/audio';
-import { dotAt, foldBadgeAt, frameButtonUnder, linkEndAt, onHandle, onInstancePlus, onRotate, plusAt } from './hover';
+import { dotAt, foldBadgeAt, frameButtonUnder, linkEndAt, onHandle, onInstanceGlyph, onInstancePlus, onRotate, plusAt } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -40,6 +40,8 @@ export function press(ed: Editor, e: PointerEvent): void {
   if (end) {
     ed.setSelection([end.id]);
     ed.gesture = { type: 'relink', id: end.id, to: w, target: end.to };
+    // Held: the open hand closes.
+    ed.canvas!.style.cursor = 'grabbing';
     return;
   }
   // What's in an instance is picked with it, as a whole; it's picked itself by a double click (see
@@ -118,6 +120,11 @@ export function press(ed: Editor, e: PointerEvent): void {
     if (plus.kind === 'move') ed.gesture = { type: 'mindMove', id: single.id, from: w, to: w, target: null };
     else if (plus.kind === 'fold') ed.setCollapsed(single.id, plus.way!, true);
     else ed.addMindNode(single.id, plus.kind, true);
+    return;
+  }
+  // A picked instance's diamond goes to its component.
+  if (single && onInstanceGlyph(single, w)) {
+    ed.goToComponent(single.id);
     return;
   }
   // A picked component's "+" makes an instance of it.

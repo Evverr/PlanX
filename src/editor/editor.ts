@@ -2,7 +2,7 @@ import type { Board } from '../model/board';
 import type { Item, ItemType, Link, LinkStyle, Side } from '../model/types';
 import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, STROKABLE, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
-import { boundsOf, center, pointInRect, resizedAt } from '../canvas/geometry';
+import { boundsOf, boxOf, center, pointInRect, resizedAt } from '../canvas/geometry';
 import { clearTextCache, drawScene, readTheme, type Camera, type Peer, type Scene, type Theme } from '../canvas/renderer';
 import { fitHeight, foldedSize, font, itemTextHeight, mindSize } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
@@ -11,7 +11,7 @@ import { newTable, withCellFormat, withCount, withTableFormat, type TableLine } 
 import type { AudioNote } from '../canvas/audio';
 import { addChild, descendants, foldedAway, folding, makeRoom, mindDepth, type Way } from '../model/mind';
 import { readJSON, writeJSON } from '../storage';
-import { clamp, fittedTo, freeArea, wheelMove, zoomedAt } from './camera';
+import { cameraFor, clamp, fittedTo, flyTo, freeArea, wheelMove, zoomedAt } from './camera';
 import { copiesOf } from './copies';
 import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked } from './frames';
 import { hasComponents, syncOps } from '../model/components';
@@ -715,6 +715,14 @@ export class Editor {
     this.setSelection([id]);
   }
 
+  /** Picks instance `id`'s component and brings it into view, gliding there. */
+  goToComponent(id: string): void {
+    const comp = this.board.get(this.board.get(id)?.inst ?? '');
+    if (!comp) return;
+    this.setSelection([comp.id]);
+    flyTo(this, cameraFor(this, boxOf(comp), 0.5, Math.max(this.cam.z, 1)));
+  }
+
   /** Adds (+1) or removes (-1) the last column or row of the selected tables. */
   changeTable(axis: 'col' | 'row', delta: 1 | -1): void {
     this.board.transact(() => {
@@ -869,8 +877,8 @@ export class Editor {
         }
       }
     }
-    // Branches made one after another by Tab: once the typing ends there (and doesn't go on in the
-    // next one), they glide to stand centred on their node.
+    // Branches made one after another by Tab (centred on their node as they come): once the typing
+    // ends there (and doesn't go on in the next one), Tab goes round them again.
     if (this.tabRun) {
       queueMicrotask(() => {
         if (this.tabStep) { this.tabStep = false; return; }
