@@ -9,12 +9,12 @@ import { useSortable } from './sortable';
 import { ColorPicker } from './ColorPicker';
 import { crowds, EDGE, shownRects } from '../layout';
 import { useLabs } from '../labs/labs';
-import { LockButton, ReactButton } from '../labs/SelectionLabs';
+import { LockButton, ReactButton, TidyButton } from '../labs/SelectionLabs';
 
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['colors', 'rows', 'cols', 'lines', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+const ORDER = ['colors', 'tidy', 'rows', 'cols', 'lines', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -348,6 +348,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
         back: items.length > 0 ? btn('to-back', 'На задний план', () => editor.sendToBack()) : undefined,
         duplicate: items.length > 0 ? btn('duplicate', 'Дублировать (Ctrl+D)', () => editor.duplicate()) : undefined,
         // Features on trial (src/labs), while they're switched on.
+        tidy: labs.tidy && items.length > 1 ? <TidyButton editor={editor} /> : undefined,
         lock: labs.lock && items.length > 0 ? <LockButton editor={editor} items={items} /> : undefined,
         react: labs.reactions && items.length > 0 ? <ReactButton editor={editor} items={items} /> : undefined,
         trash: btn('trashcan', 'Удалить (Del)', () => editor.deleteSelection()),

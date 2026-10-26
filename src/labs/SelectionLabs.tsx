@@ -1,10 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { emojiSrc } from '../emoji/emoji';
 import { PanelIcon } from '../ui/PanelIcon';
 import { myId } from './labs';
 import { REACTIONS, toggleReaction } from './overlays';
+import { startTidy, stopTidy, subscribeTidy, tidyMatches, tidyNow } from './tidy';
+
+/** "Авторасположение" on the selection panel: lays what's selected out in a grid, and stays lit (the
+ *  gaps' handles showing) while that's what's selected; pressed again, it's off. */
+export function TidyButton({ editor }: { editor: Editor }) {
+  const t = useSyncExternalStore(subscribeTidy, tidyNow), on = !!t && tidyMatches(editor);
+  return (
+    <button className={`ib ${on ? 'on' : ''}`} title="Авторасположение" aria-label="Авторасположение" aria-pressed={on}
+      onClick={() => { if (on) stopTidy(); else startTidy(editor); editor.requestRender(); }}>
+      <PanelIcon name="apps" />
+    </button>
+  );
+}
 
 /** "Замок" on the selection panel: locks what's selected in place, or unlocks it if it all is. */
 export function LockButton({ editor, items }: { editor: Editor; items: Item[] }) {
