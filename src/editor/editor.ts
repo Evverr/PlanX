@@ -565,7 +565,8 @@ export class Editor {
   addEmoji(emoji: string, at?: Point): void {
     const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
     const n = at ? 0 : this.board.list().filter((i) => i.type === 'emoji').length % 6;
-    const it = this.newItem('emoji', c.x - 32 + n * 12, c.y - 32 + n * 12, { emoji });
+    // As big as in the picker, centred where it goes.
+    const half = DEFAULTS.emoji.w / 2, it = this.newItem('emoji', c.x - half + n * 6, c.y - half + n * 6, { emoji });
     this.addItem(it);
     this.setTool('select');
     this.setSelection([it.id]);

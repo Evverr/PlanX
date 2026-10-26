@@ -5,6 +5,7 @@ import { Glyph } from './glyphs';
 import { Switch } from './BoardMenu';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
+import { ToolPreview } from './ToolPreview';
 
 export const SHAPES: Array<[Tool, PanelIconName, string]> = [
   ['rect', 'landscape', 'Прямоугольник (R)'],
@@ -21,9 +22,13 @@ export const SHAPES: Array<[Tool, PanelIconName, string]> = [
 ];
 
 /** Figures next to the tool rail, opened by holding its shapes button; pick one, then drag out its box
- *  on the board. Under them a gear: how they come out (see ShapeMenu). */
-export function ShapePanel({ editor, tool, onPick }: { editor: Editor; tool: Tool; onPick: () => void }) {
-  const sort = useSortable('planx-order-shapes', SHAPES.map(([t]) => t), 'y');
+ *  on the board, or drag it off the panel onto the board. Under them a gear: how they come out (see
+ *  ShapeMenu). */
+export function ShapePanel({ editor, tool, zoom, onPick }: { editor: Editor; tool: Tool; zoom: number; onPick: () => void }) {
+  const sort = useSortable('planx-order-shapes', SHAPES.map(([t]) => t), 'y', {}, {
+    preview: (key) => <ToolPreview tool={key as Tool} zoom={zoom} />,
+    drop: (key, at) => { editor.dropItem(key as Tool, at); onPick(); },
+  });
   const [menu, setMenu] = useState(false);
   return (
     <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`draw-panel shape-panel sortable ${sort.sorting ? 'sorting' : ''}`} role="toolbar" aria-label="Фигуры"
@@ -39,6 +44,7 @@ export function ShapePanel({ editor, tool, onPick }: { editor: Editor; tool: Too
         <PanelIcon name="settings" />
       </button>
       {menu && <ShapeMenu editor={editor} onClose={() => setMenu(false)} />}
+      {sort.ghost}
     </div>
   );
 }

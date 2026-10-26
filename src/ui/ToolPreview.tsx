@@ -1,16 +1,15 @@
 import type { Tool } from '../editor/editor';
+import { isPoly } from '../editor/tools';
 import { polyPoints } from '../canvas/geometry';
 import { DEFAULTS, FILLS, type Item, type PolyShape } from '../model/types';
 import { colsOf, newTable, rowsOf } from '../model/table';
 
 /** Longest side of a preview on screen: what it makes at the current zoom, but never bigger than this. */
 const MAX_PX = 180;
-const POLYS = ['triangle', 'rhombus', 'pentagon', 'star'];
-
 /** What a rail tool would put on the board, drawn small: shown under the pointer while the tool is
  *  dragged off the rail. Null for tools that make nothing to preview. */
 export function ToolPreview({ tool, zoom }: { tool: Tool; zoom: number }) {
-  const type = POLYS.includes(tool) ? 'polygon' : tool;
+  const type = isPoly(tool) ? 'polygon' : tool;
   const d = DEFAULTS[type as Item['type']] as Partial<Item> | undefined;
   if (!d || !['sticky', 'text', 'task', 'table', 'frame', 'rect', 'ellipse', 'polygon', 'mind'].includes(type)) return null;
   const k = Math.min(zoom, MAX_PX / Math.max(d.w!, d.h!)), w = d.w! * k, h = d.h! * k;

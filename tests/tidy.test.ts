@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Item } from '../src/model/types';
-import { dropSlot, gapLines, gridOrder, gridPlaces } from '../src/labs/tidy';
+import { dropSlot, gapLines, gridCols, gridOrder, gridPlaces } from '../src/labs/tidy';
 
 const s = (id: string, x: number, y: number, w = 100, h = 100): Item => ({ id, type: 'sticky', x, y, w, h, z: 0 });
 
@@ -34,5 +34,11 @@ describe('laying out in a grid', () => {
     expect([below.order.map((i) => i.id).join(''), below.cols]).toEqual(['abc', 2]);
     // Taken to the front.
     expect(dropSlot([a, b], c, 2, 24, 24, { x: 0, y: 0 }, { x: 10, y: 10 }).order.map((i) => i.id).join('')).toBe('cab');
+  });
+
+  it('things roughly in a row stay one row; roughly in a column, one column; a heap, near square', () => {
+    expect(gridCols([s('a', 0, 0), s('b', 150, 30), s('c', 320, -20), s('d', 500, 10)])).toBe(4);
+    expect(gridCols([s('a', 0, 0), s('b', 30, 150), s('c', -20, 320)])).toBe(1);
+    expect(gridCols([s('a', 0, 0), s('b', 200, 40), s('c', 40, 200), s('d', 220, 180), s('e', 100, 400)])).toBe(3);
   });
 });

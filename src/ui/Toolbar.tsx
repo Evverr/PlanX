@@ -192,7 +192,7 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
       </div>
     )}
     {variants === 'draw' && <DrawPanel editor={editor} tool={tool} pens={pens} />}
-    {variants === 'oval' && <ShapePanel editor={editor} tool={tool} onPick={() => setVariants(null)} />}
+    {variants === 'oval' && <ShapePanel editor={editor} tool={tool} zoom={zoom} onPick={() => setVariants(null)} />}
     <input ref={filePicker} type="file" accept="image/*" multiple hidden
       onChange={(e) => { const at = pictureAt.current; void readPictures(e.target.files ?? []).then((pics) => editor.addPictures(pics, at)); e.target.value = ''; }} />
     {sort.ghost}

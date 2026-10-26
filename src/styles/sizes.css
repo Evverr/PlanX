@@ -1,7 +1,9 @@
 /* The panels' sizes, all scaled by --k (1 as by default; less for the board menu's medium and
    small panels), each rounded to whole pixels: --sN is N px scaled, --eN the same to an even number
-   (for what has an icon centred in it). The bars' height and the rail's width are made of them. */
-:root {
+   (for what has an icon centred in it). The bars' height and the rail's width are made of them.
+   Menus and popovers keep their own size whatever the panels' is: in them --k is 1 again (but for the
+   bars' height and the rail's width, which they stand by). */
+:root, .board-menu, .pop, .op-pop, .tf-menu, .more-pop, .tools-more, .peek {
   --k: 1;
   --s2: round(calc(2px * var(--k)), 1px);
   --s3: round(calc(3px * var(--k)), 1px);
@@ -69,6 +71,8 @@
   --e340: round(calc(340px * var(--k)), 2px);
   --e380: round(calc(380px * var(--k)), 2px);
   --e392: round(calc(392px * var(--k)), 2px);
+}
+:root {
   --bar: calc(var(--s6) * 2 + var(--e40));
   --rail-w: calc(var(--e30) + var(--s15) * 2);
 }

@@ -281,6 +281,18 @@ export const checks = {
     expect(await p.ev(`JSON.parse(localStorage.getItem('planx-shape-style')).rad`), 'and new ones too').toBe(12);
   },
 
+  async 'a new shape is drawn by dragging out its box, or dragged off the shapes\' panel onto the board'(p) {
+    const hold = async () => { const a = await p.at('.tools [data-key="oval"]'); await p.mouse('mouseMoved', ...a); await p.mouse('mousePressed', ...a); await sleep(400); await p.mouse('mouseReleased', ...a); await sleep(200); };
+    await hold();
+    await p.click(await p.at('.shape-panel button[aria-label="Шестиугольник"]'));
+    await p.drag([500, 300], [640, 420]);
+    expect(await p.ev(`planx.board.list().filter((i) => i.shape === 'hexagon').length`), 'a hexagon drawn').toBe(1);
+    await hold();
+    const from = await p.at('.shape-panel button[aria-label="Крест"]');
+    await p.drag(from, [800, 500], { rest: 0, hold: 450, steps: 16 });
+    expect(await p.ev(`planx.board.list().filter((i) => i.shape === 'cross').length`), 'a cross dropped').toBe(1);
+  },
+
   async 'a table line takes hold only after the mouse rests on it'(p) {
     const id = await put(p, `const t = e.newItem('table', X, Y, { cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill(''), w: 360, h: 120 }); b.add(t); return t.id;`);
     await sleep(200);

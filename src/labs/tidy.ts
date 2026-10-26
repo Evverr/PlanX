@@ -25,6 +25,18 @@ function remember(ed: Editor, t: Tidy): void {
 /** The gap a grid starts with. */
 export const TIDY_GAP = 24;
 
+/** How many columns a heap is laid out in: roughly in a row already (their middles less than 0.8 of
+ *  their height apart up and down), one row; roughly in a column, one column; else as near square as
+ *  they come. */
+export function gridCols(items: Item[]): number {
+  const n = items.length, mx = items.map((i) => i.x + i.w / 2), my = items.map((i) => i.y + i.h / 2);
+  const h = items.reduce((s, i) => s + i.h, 0) / n, w = items.reduce((s, i) => s + i.w, 0) / n;
+  const spreadX = Math.max(...mx) - Math.min(...mx), spreadY = Math.max(...my) - Math.min(...my);
+  if (spreadY < h * 0.8 && spreadX >= spreadY) return n;
+  if (spreadX < w * 0.8) return 1;
+  return Math.ceil(Math.sqrt(n));
+}
+
 /** These items in reading order: by rows of `cols` top to bottom, each left to right. */
 export function gridOrder(items: Item[], cols: number): Item[] {
   const byY = [...items].sort((a, b) => a.y + a.h / 2 - (b.y + b.h / 2) || a.x - b.x), out: Item[] = [];
@@ -84,7 +96,7 @@ export function startTidy(ed: Editor): void {
     set({ ids: last.ids, cols: last.cols, gx: last.gx, gy: last.gy });
     return;
   }
-  const cols = Math.ceil(Math.sqrt(sel.length)), items = gridOrder(sel, cols);
+  const cols = gridCols(sel), items = gridOrder(sel, cols);
   const origin = { x: Math.min(...sel.map((i) => i.x)), y: Math.min(...sel.map((i) => i.y)) };
   ed.board.beginGesture();
   place(ed, items, gridPlaces(items, cols, TIDY_GAP, TIDY_GAP, origin));
