@@ -141,7 +141,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       if (tidyDragging()) { const p = local(e); moveTidyDrag(editor, editor.toWorld(p.x, p.y)); return; }
       if (gap) {
         const d = ((gap.axis === 'col' ? e.clientX : e.clientY) - gap.from) / editor.cam.z;
-        setGaps(editor, gap.axis === 'col' ? Math.max(0, Math.round(gap.gx + d)) : gap.gx, gap.axis === 'row' ? Math.max(0, Math.round(gap.gy + d)) : gap.gy);
+        setGaps(editor, gap.axis === 'col' ? Math.round(gap.gx + d) : gap.gx, gap.axis === 'row' ? Math.round(gap.gy + d) : gap.gy);
         return;
       }
       // Over a gap's line: it lights up, the pointer says which way it moves.

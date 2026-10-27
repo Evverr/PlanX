@@ -190,4 +190,26 @@ export const checks = {
     expect((await p.ev(`planx.board.get('instance~t2').y`)) - y0, 'pushed as far after the component changed').toBe(grew);
     expect(await p.ev(`planx.board.get('t2').y`), 'the component itself not pushed').toBe(s0);
   },
+
+  async '"Авторасположение" of instances picked by a box: laid out by what they show, its handles there, a gap that can go below nothing'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board, { x: X, y: Y } = e.toWorld(300, 250);
+      b.transact(() => {
+        b.add(e.newItem('frame', X - 1500, Y, { id: 'source', comp: true, text: 'К', w: 200, h: 200, members: ['a'], z: 0 }));
+        b.add(e.newItem('sticky', X - 1460, Y + 40, { id: 'a', w: 120, h: 120, z: 1 }));
+        b.add(e.newItem('frame', X, Y, { id: 'i1', inst: 'source', w: 200, h: 200, members: [], z: 0 }));
+        b.add(e.newItem('frame', X + 300, Y + 30, { id: 'i2', inst: 'source', w: 200, h: 200, members: [], z: 0 }));
+      }); e.setSelection([]); })()`);
+    await sleep(300);
+    await p.drag([250, 200], [800, 560]);
+    expect((await p.ev(`[...planx.editor.selection].filter((id) => !id.includes('~')).sort().join()`)), 'both picked').toBe('i1,i2');
+    await p.click(await p.at('.bar.panel button[aria-label="Авторасположение"]'));
+    await sleep(200);
+    const gap = () => p.ev(`planx.board.get('i2~a').x - (planx.board.get('i1~a').x + planx.board.get('i1~a').w)`);
+    expect(await gap(), 'what they show 24 apart').toBe(24);
+    const line = await p.ev(`(() => { const a = planx.board.get('i1~a'), s = planx.editor.toScreen({ x: a.x + a.w + 12, y: a.y + a.h / 2 }); return [s.x, s.y]; })()`);
+    const before = await p.ev(`(() => { const c = document.querySelector('canvas'), x = c.getContext('2d').getImageData(${line[0]} * devicePixelRatio, ${line[1]} * devicePixelRatio, 1, 1).data; return [...x].join(); })()`);
+    expect(before !== '240,240,240,255', 'its handle drawn').toBe(true);
+    await p.drag(line, [line[0] - 60, line[1]]);
+    expect(await gap(), 'overlapping now').toBe(-36);
+  },
 };
