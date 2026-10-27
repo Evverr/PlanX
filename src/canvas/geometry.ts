@@ -320,12 +320,13 @@ export function nearInk(it: Item, p: Point, tol: number): boolean {
   return false;
 }
 
+/** An instance hugs its visible contents, without the source frame's padding; empty ones keep a box. */
+export const instanceBounds = (it: Item, items: Item[]): Rect => boundsOf(items.filter((i) => i.host === it.id)) ?? boxOf(it);
+
 /**
  * Topmost item under the point. Ink counts only near its line. A frame counts on its label and
  * anywhere inside, so it can be grabbed by any empty spot (frames lie under everything else).
  */
-/** An instance hugs its visible contents, without the source frame's padding; empty ones keep a box. */
-export const instanceBounds = (it: Item, items: Item[]): Rect => boundsOf(items.filter((i) => i.host === it.id)) ?? boxOf(it);
 
 export function hitItem(items: Item[], p: Point, zoom: number): Item | null {
   const at = p;

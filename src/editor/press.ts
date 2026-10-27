@@ -2,7 +2,7 @@ import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
 import { center, hitItem, hitLink, onAudioButton, onTaskBox } from '../canvas/geometry';
 import { toggleAudio } from '../canvas/audio';
-import { dotAt, foldBadgeAt, frameButtonUnder, linkEndAt, onHandle, onInstancePlus, onRotate, plusAt } from './hover';
+import { dotAt, foldBadgeAt, frameButtonUnder, linkEndAt, onHandle, onInstanceGlyph, onInstancePlus, onRotate, plusAt } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -45,8 +45,9 @@ export function press(ed: Editor, e: PointerEvent): void {
     return;
   }
   // First pick the instance; the next press enters it, without depending on double-click timing.
-  // With a child picked, its siblings can be picked directly too. Shift keeps group selection.
-  const inside = !!hit?.host && !e.shiftKey && ed.selection.size === 1
+  // With a child picked, its siblings can be picked directly too. Shift keeps group selection, and
+  // Alt the whole instance, to drag a copy of it.
+  const inside = !!hit?.host && !e.shiftKey && !e.altKey && ed.selection.size === 1
     && (ed.selection.has(hit.host) || board.get([...ed.selection][0])?.host === hit.host);
   const entering = inside && !!hit && !ed.selection.has(hit.id);
   if (hit?.host && !ed.selection.has(hit.id) && !inside) hit = board.get(hit.host) ?? hit;
@@ -129,6 +130,11 @@ export function press(ed: Editor, e: PointerEvent): void {
     // Folded by its chevron, nothing's left picked: the map to look at.
     else if (plus.kind === 'fold') { ed.setCollapsed(single.id, plus.way!, true); ed.setSelection([]); }
     else ed.addMindNode(single.id, plus.kind, true);
+    return;
+  }
+  // The diamond before a picked instance's title goes to its component.
+  if (single && onInstanceGlyph(ed, single, w)) {
+    ed.goToComponent(single.inst ? single.id : single.host!);
     return;
   }
   // A picked component's "+" makes an instance of it.

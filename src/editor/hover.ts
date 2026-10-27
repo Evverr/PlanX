@@ -1,9 +1,9 @@
 import type { Item, Link, Side } from '../model/types';
 import { ROTATABLE } from '../model/types';
 import type { Point } from '../canvas/geometry';
-import { hitItem, hitLink, linkShape, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
+import { hitItem, hitLink, instanceBounds, linkShape, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, HANDLE } from '../canvas/renderer';
-import { instancePlus } from '../model/components';
+import { instanceGlyph, instancePlus } from '../model/components';
 import { branchWays, buttonKey, foldBadge, mindButtons, type MindButtonAt, type Way } from '../model/mind';
 import { frameButtonAt } from './frames';
 import { rotateCursor } from './cursors';
@@ -43,6 +43,13 @@ export function linkEndAt(ed: Editor, w: Point): Link | null {
     if (tip && Math.hypot(w.x - tip.x, w.y - tip.y) <= reach) return links[i];
   }
   return null;
+}
+
+/** Whether the point is on the diamond before the title of the instance picked (or holding what's
+ *  picked), the way to its component. */
+export function onInstanceGlyph(ed: Editor, it: Item, w: Point): boolean {
+  const inst = it.inst ? it : it.host ? ed.board.get(it.host) : undefined;
+  return !!inst?.inst && pointInRect(w, instanceGlyph(instanceBounds(inst, ed.board.list())));
 }
 
 /** Whether the point is on a picked component's "+" for a new instance. */
@@ -107,7 +114,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if ((link?.id ?? null) !== ed.hotLink) { ed.hotLink = link?.id ?? null; ed.requestRender(); }
   const plus = picked ? plusAt(ed, picked, w) : null, hot = plus ? buttonKey(plus) : picked && onInstancePlus(ed, picked, w) ? 'instance' : null;
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
-  if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
+  if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w) || (picked && onInstanceGlyph(ed, picked, w))) cursor = 'pointer';
   else if (dot) cursor = 'crosshair';
   else if (single && onHandle(ed, single, w)) cursor = 'nwse-resize';
   else if (single && onRotate(ed, single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);

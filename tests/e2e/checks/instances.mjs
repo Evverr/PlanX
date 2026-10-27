@@ -38,7 +38,7 @@ export const checks = {
     expect(await p.ev('planx.editor.editingId'), 'no accidental text editing').toBe(null);
   },
 
-  async 'the red title shows only while the instance (or something in it) is picked, hugging the contents, with no red frame'(p) {
+  async 'the red title (after a diamond) shows only while the instance (or something in it) is picked, hugging the contents, with no red frame'(p) {
     const at = await fixture(p);
     for (const selection of [[], ['instance'], ['instance~a']]) {
       const drawing = await p.ev(`(() => {
@@ -54,15 +54,44 @@ export const checks = {
         expect(drawing.text.length, 'no title while nothing is picked').toBe(0);
         continue;
       }
-      expect(drawing.text.length, 'one red title while picked').toBe(1);
-      expect(drawing.text[0].t, 'only the title, without a diamond').toBe('Карточка');
-      expect(drawing.text[0].x, 'title flush with the contents on the left').toBe(at.x + 40);
-      expect(drawing.text[0].y, 'title directly above the contents').toBe(at.y + 40);
+      expect(drawing.text.map((t) => t.t).join(' '), 'a diamond and the title while picked').toBe('◇ Карточка');
+      expect(drawing.text[0].x, 'diamond flush with the contents on the left').toBe(at.x + 40);
+      expect(drawing.text[1].y, 'title directly above the contents').toBe(at.y + 40);
       expect(drawing.strokes, 'no red instance frame').toBe(0);
     }
     await p.ev('planx.editor.setSelection([])');
     await p.click([390, 280]);
     expect(await selected(p), 'where its title shows picks the group').toBe('instance');
+  },
+
+  async 'the diamond before the title goes to the component, from the instance or a child in it'(p) {
+    for (const presses of [1, 2]) {
+      await p.ev('planx.editor.cam = { x: 0, y: 0, z: 1 }');
+      await fixture(p);
+      for (let i = 0; i < presses; i++) await p.click([390, 330]);
+      expect(await selected(p), 'picked first').toBe(presses === 1 ? 'instance' : 'instance~a');
+      await p.click([347, 280]);
+      await sleep(700);
+      expect(await selected(p), 'the diamond picks the component').toBe('source');
+      const seen = await p.ev(`(() => { const c = planx.board.get('source'), s = planx.editor.toScreen({ x: c.x + c.w / 2, y: c.y + c.h / 2 }); return s.x > 0 && s.x < innerWidth && s.y > 0 && s.y < innerHeight; })()`);
+      expect(seen, 'the component came into view').toBe(true);
+    }
+  },
+
+  async 'alt-dragging a picked instance copies the whole instance, not a child of it, with what was changed in it'(p) {
+    await fixture(p);
+    await p.ev(`planx.board.update('instance~a', { color: 'green' })`);
+    await p.click([390, 330]);
+    await p.drag([390, 330], [390, 530], { modifiers: 1 });
+    const state = await p.ev(`(() => {
+      const items = planx.board.list(), insts = items.filter((i) => i.inst === 'source');
+      const made = insts.find((i) => i.id !== 'instance');
+      return { insts: insts.length, copies: insts.map((i) => items.filter((c) => c.host === i.id).length), sel: [...planx.editor.selection], color: planx.board.get(made.id + '~a')?.color };
+    })()`);
+    expect(state.insts, 'two instances now').toBe(2);
+    expect(state.copies.join(','), 'each holds both items').toBe('2,2');
+    expect(state.sel.length === 1 && state.sel[0] !== 'instance' && !state.sel[0].includes('~'), 'the new instance is picked').toBe(true);
+    expect(state.color, 'the copy keeps its changed colour').toBe('green');
   },
 
   async 'dragging on the first press still moves the whole instance and keeps its source unchanged'(p) {

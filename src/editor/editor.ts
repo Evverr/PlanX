@@ -772,7 +772,7 @@ export class Editor {
   }
 
   copy(): boolean {
-    const items = this.selectedItems();
+    const items = this.withCopies(this.selectedItems());
     if (!items.length) return false;
     const ids = new Set(items.map((i) => i.id));
     const links = this.board.linkList().filter((l) => ids.has(l.from) && ids.has(l.to));
@@ -802,10 +802,17 @@ export class Editor {
     return made;
   }
 
+  /** Items with what the instances among them hold, so their copies keep what was changed in them. */
+  private withCopies(items: Item[]): Item[] {
+    const ids = new Set(items.map((i) => i.id));
+    return [...items, ...this.board.list().filter((i) => i.host && ids.has(i.host) && !ids.has(i.id))];
+  }
+
   /** Shared: Alt-drag leaves the dragged items where they are and drags copies of them instead. */
   dragCopies(orig: Map<string, Point>): Map<string, Point> {
-    const items = [...orig.keys()].map((id) => this.board.get(id)).filter((i): i is Item => !!i);
-    const links = this.board.linkList().filter((l) => orig.has(l.from) && orig.has(l.to));
+    const items = this.withCopies([...orig.keys()].map((id) => this.board.get(id)).filter((i): i is Item => !!i));
+    const ids = new Set(items.map((i) => i.id));
+    const links = this.board.linkList().filter((l) => ids.has(l.from) && ids.has(l.to));
     const { items: copies, map } = this.insertCopies(items, links, 0);
     this.setSelection([...this.selection].map((id) => map.get(id)).filter((id): id is string => !!id));
     return new Map(copies.map((c) => [c.id, { x: c.x, y: c.y }]));
