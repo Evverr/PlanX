@@ -5,13 +5,14 @@
   --row: calc(var(--nb-h) + 66px); --row-gap: 30px; --col-gap: 28px;
   --plank-top: #E2CDAE; --plank: #C9A97F; --plank-edge: #A7845B; --plank-shade: rgba(80, 50, 20, .18);
   position: fixed; inset: 0; overflow-y: auto; overflow-x: hidden;
-  background: radial-gradient(1200px 500px at 20% -10%, var(--grad-3), transparent), var(--bg);
+  --shelf-bg: #F0F0F0; background: var(--shelf-bg);
 }
 :root[data-theme="dark"] .shelf-page {
+  --shelf-bg: var(--bg);
   --plank-top: #4A3D30; --plank: #3A2F25; --plank-edge: #2A221B; --plank-shade: rgba(0, 0, 0, .4);
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .shelf-page { --plank-top: #4A3D30; --plank: #3A2F25; --plank-edge: #2A221B; --plank-shade: rgba(0, 0, 0, .4); }
+  :root:not([data-theme="light"]) .shelf-page { --shelf-bg: var(--bg); --plank-top: #4A3D30; --plank: #3A2F25; --plank-edge: #2A221B; --plank-shade: rgba(0, 0, 0, .4); }
 }
 @media (max-width: 560px) {
   .shelf-page { --nb-w: 136px; --card: 140px; --col-gap: 16px; --row-gap: 24px; }
@@ -19,7 +20,7 @@
 
 /* Header: name, search, order, theme, and the two ways to add a board. */
 .shelf-head { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 20px;
-  padding: 18px max(16px, calc((100% - 1160px) / 2)); background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  padding: 18px max(16px, calc((100% - 1160px) / 2)); background: color-mix(in srgb, var(--shelf-bg) 86%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
 .shelf-brand { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
 .shelf-brand h1 { margin: 0; font: 600 22px/1.2 var(--display); letter-spacing: -0.01em; }
@@ -38,7 +39,14 @@
 .shelf-search:focus-within { box-shadow: inset 0 0 0 2px var(--accent); }
 .shelf-search .pi { width: 24px; height: 24px; background: var(--muted); }
 .shelf-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; color: var(--ink); }
-.shelf-sort { height: 34px; padding: 0 8px; border: 0; border-radius: 8px; font: inherit; color: var(--ink); background: var(--surface); box-shadow: inset 0 0 0 1px var(--btn-line); cursor: pointer; }
+/* Its own arrow, 14px in from the right (the browser's sat at the edge). */
+.shelf-sort { height: 34px; padding: 0 34px 0 8px; border: 0; border-radius: 8px; font: inherit; color: var(--ink); box-shadow: inset 0 0 0 1px var(--btn-line); cursor: pointer;
+  appearance: none; -webkit-appearance: none; background: var(--surface) no-repeat right 14px center / 10px 6px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M.9 0 5 4.1 9.1 0 10 .9 5 5.9 0 .9z' fill='%231B2130'/%3E%3C/svg%3E"); }
+:root[data-theme="dark"] .shelf-sort { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M.9 0 5 4.1 9.1 0 10 .9 5 5.9 0 .9z' fill='%23E7EAF0'/%3E%3C/svg%3E"); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .shelf-sort { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M.9 0 5 4.1 9.1 0 10 .9 5 5.9 0 .9z' fill='%23E7EAF0'/%3E%3C/svg%3E"); }
+}
 @media (max-width: 560px) {
   .shelf-head { position: static; padding-top: 14px; padding-bottom: 14px; }
   .shelf-search { flex: 1 1 100%; min-width: 0; }
@@ -179,3 +187,32 @@
 
 .pop.toast.shelf-toast { position: fixed; left: 50%; top: auto; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; z-index: 11; }
 .toast-undo { border: 0; background: none; padding: 0; font: inherit; font-weight: 600; color: var(--accent); cursor: pointer; }
+
+/* "Wishlist" (src/labs): by "Мои доски", and its page. */
+.shelf-brand h1 a, .shelf-tab { color: inherit; text-decoration: none; }
+.shelf-tab { margin-left: 8px; font: 400 15px/1.2 "Inter", var(--ui); color: var(--muted); }
+.shelf-tab:hover, .shelf-brand h1 a:hover { color: var(--accent); }
+.shelf-brand.wish-on h1 a { color: var(--muted); }
+.shelf-brand.wish-on .shelf-tab { color: var(--ink); }
+.wishlist { max-width: 680px; margin: 12px auto 0; }
+.wish-form { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.wish-form textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 84px; padding: 12px 14px; border: 0; border-radius: 10px; font: inherit; color: var(--ink);
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--btn-line); outline: 0; }
+.wish-form textarea:focus { box-shadow: inset 0 0 0 2px var(--accent); }
+.wish-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 32px 0 12px; }
+.wish-head h2 { margin: 0; font: 600 18px/1.3 var(--display); }
+.wish-empty { color: var(--muted); }
+.wish-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.wish { display: flex; align-items: flex-start; gap: 12px; padding: 14px 14px 14px 16px; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
+.wish-body { flex: 1; min-width: 0; }
+.wish-body p { margin: 0 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.wish-meta { font-size: 12px; color: var(--muted); }
+.wish-like { display: flex; align-items: center; gap: 4px; height: 34px; padding: 0 10px 0 6px; border: 0; border-radius: 8px; background: none; cursor: pointer; color: var(--muted); font: 600 13px/1 "Inter", var(--ui); }
+.wish-like:hover { background: var(--fmt-hover); }
+.wish-like svg { width: 22px; height: 22px; }
+.wish-like.on { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.wish-pages { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 20px; }
+.wish-pages button { min-width: 34px; height: 34px; padding: 0 8px; border: 0; border-radius: 8px; background: none; cursor: pointer; font: 600 13px/1 "Inter", var(--ui); color: var(--muted); }
+.wish-pages button:hover:not(:disabled) { background: var(--fmt-hover); color: var(--ink); }
+.wish-pages button.on { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1px var(--btn-line); }
+.wish-pages button:disabled { opacity: .35; cursor: default; }
