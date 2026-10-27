@@ -1,6 +1,8 @@
 import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
-import { center, hitItem, hitLink, instanceBounds, onAudioButton, onTaskBox } from '../canvas/geometry';
+import { center, hitItem, hitLink, instanceBounds, onAudioButton, onTaskBox, pointInRect } from '../canvas/geometry';
+import { copyId } from '../model/components';
+import { TASK_STATES } from '../model/builtins';
 import { toggleAudio } from '../canvas/audio';
 import { dotAt, foldBadgeAt, frameButtonUnder, linkEndAt, onHandle, onInstanceGlyph, onInstancePlus, onRotate, plusAt } from './hover';
 import { grabbableLine } from './tables';
@@ -45,6 +47,11 @@ export function press(ed: Editor, e: PointerEvent): void {
     // Held: the open hand closes.
     ed.canvas!.style.cursor = 'grabbing';
     return;
+  }
+  // A task's ring ("Задача-компонент", src/labs) moves it on to its next state, picked or not.
+  if (ed.tool === 'select' && e.button === 0 && !e.shiftKey && !e.altKey && hit?.host) {
+    const task = board.get(hit.host), ring = task?.inst && TASK_STATES.includes(task.inst) ? board.get(copyId(task.id, '@task-ring')) : undefined;
+    if (task && ring && !isLocked(task) && pointInRect(w, ring)) { ed.nextTaskState(task.id); return; }
   }
   // First pick the instance; the next press enters it, without depending on double-click timing.
   // With a child picked, its siblings can be picked directly too. Shift keeps group selection, and

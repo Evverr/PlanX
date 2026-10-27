@@ -14,7 +14,8 @@ export type SwapKind = 'emoji' | 'icon' | 'shape';
 export const SWAP_EVENT = 'planx:swap';
 
 export function swapKind(it: Item | undefined): SwapKind | null {
-  if (!it || !labOn('swap') || isLocked(it)) return null;
+  // Not in a component that comes with PlanX (a task's ring is clicked through its states instead).
+  if (!it || !labOn('swap') || isLocked(it) || it.from?.startsWith('@')) return null;
   if (it.type === 'emoji') return 'emoji';
   if (it.type === 'icon') return 'icon';
   if (it.type === 'rect' || it.type === 'ellipse' || it.type === 'polygon') return 'shape';
