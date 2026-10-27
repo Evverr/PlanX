@@ -119,7 +119,7 @@ describe('a stretched instance', () => {
   const comp = item('c', 0, 0, { type: 'frame', w: 300, h: 200, comp: true, members: ['bg', 'badge', 'title', 'btn'] });
   const bg = item('bg', 0, 0, { type: 'rect', w: 300, h: 200 });
   const badge = item('badge', 260, 10, { type: 'emoji', w: 30, h: 30 });
-  const title = item('title', 100, 10, { type: 'text', w: 100, h: 30 });
+  const title = item('title', 100, 10, { type: 'text', w: 100, h: 30, ta: 'center' });
   const btn = item('btn', 10, 160, { type: 'rect', w: 80, h: 30 });
   const inst = item('i', 1000, 0, { type: 'frame', w: 300, h: 200, inst: 'c', members: [], grow: { w: 100, h: 60 } });
 
@@ -131,5 +131,14 @@ describe('a stretched instance', () => {
     expect(at('title')).toEqual([150, 10, 100, 30]);
     expect(at('btn')).toEqual([10, 220, 80, 30]);
     expect([by.get('i')!.w, by.get('i')!.h]).toEqual([400, 260]);
+  });
+
+  it('keeps wide text in the top left corner to its left, and stretches a wide bar across only', () => {
+    const note = item('note', 20, 20, { type: 'text', w: 220, h: 20 }), bar = item('bar', 10, 120, { type: 'rect', w: 280, h: 20 });
+    const c = { ...comp, members: ['bg', 'note', 'bar'] };
+    const { by } = apply([c, bg, note, bar, inst]);
+    const at = (id: string) => { const x = by.get(`i~${id}`)!; return [x.x - 1000, x.y, x.w, x.h]; };
+    expect(at('note')).toEqual([20, 20, 220, 20]);
+    expect(at('bar')).toEqual([10, 150, 380, 20]);
   });
 });

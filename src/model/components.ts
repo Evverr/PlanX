@@ -1,4 +1,5 @@
 import type { Item, Link } from './types';
+import { alignOf } from './types';
 import { descendants } from './mind';
 
 /**
@@ -38,17 +39,28 @@ const around = (rs: Item[]) => {
 
 /**
  * Where an item of a component goes in an instance stretched by `grow` beyond `box`, what the
- * component holds: one taking more than half of that stretches with it, keeping its distance to every
- * side (but tables and mind maps, laid out by what's in them); the others keep to the corner or side they're nearest to (by the thirds of the box), or to
- * its middle, keeping their size.
+ * component holds. One more than half as wide as that stretches across with it, keeping its distance
+ * to both sides; more than half as tall, up and down (but text, tasks, tables and mind maps, sized by
+ * what's in them). Otherwise it keeps its size and keeps to a side: text to the one it's aligned to,
+ * anything else to the side or middle it's nearest to (by the thirds of the box).
  */
 export function stretched(it: Item, box: { x: number; y: number; w: number; h: number }, grow: { w: number; h: number }): Pick<Item, 'x' | 'y' | 'w' | 'h'> {
-  if (it.w * it.h > box.w * box.h / 2 && it.type !== 'table' && it.type !== 'mind') return { x: it.x, y: it.y, w: Math.max(10, it.w + grow.w), h: Math.max(10, it.h + grow.h) };
+  const fixed = it.type === 'text' || it.type === 'task' || it.type === 'table' || it.type === 'mind';
   const along = (at: number, size: number, from: number, all: number, more: number) => {
     const c = at + size / 2 - from;
     return at + (c < all / 3 ? 0 : c > (all * 2) / 3 ? more : more / 2);
   };
-  return { x: along(it.x, it.w, box.x, box.w, grow.w), y: along(it.y, it.h, box.y, box.h, grow.h), w: it.w, h: it.h };
+  const across = (): { x: number; w: number } => {
+    if (!fixed && it.w > box.w / 2) return { x: it.x, w: Math.max(10, it.w + grow.w) };
+    if (it.type === 'text') {
+      const a = alignOf(it);
+      return { x: it.x + (a === 'left' ? 0 : a === 'right' ? grow.w : grow.w / 2), w: it.w };
+    }
+    return { x: along(it.x, it.w, box.x, box.w, grow.w), w: it.w };
+  };
+  const down = (): { y: number; h: number } =>
+    !fixed && it.h > box.h / 2 ? { y: it.y, h: Math.max(10, it.h + grow.h) } : { y: along(it.y, it.h, box.y, box.h, grow.h), h: it.h };
+  return { ...across(), ...down() };
 }
 
 /** Everything in a frame: what it holds, what frames in it hold, and mind map branches of all that. */
