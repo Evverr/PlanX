@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { Point } from '../canvas/geometry';
-import { ICONS, searchIcons } from '../icons/icons';
+import { ICONS, isSolid, searchIcons } from '../icons/icons';
 import { EMOJI, emojiRect, emojiSrc, onEmojiLoad } from '../emoji/emoji';
 import { DEFAULTS, FILLS } from '../model/types';
 import { Glyph } from './glyphs';
@@ -40,6 +40,20 @@ export function Tile({ kind, id, px }: { kind: PickKind; id: string; px?: number
   }
   if (kind === 'sticky') return <i className="pick-sticky" style={{ background: FILLS[id], ...size }} />;
   return <span className="pick-glyph" style={size}><Glyph id={id} /></span>;
+}
+
+/** The icons: the outline ones, and under them the filled ones. */
+export function IconSections({ ids, tile }: { ids: string[]; tile: (id: string) => ReactNode }) {
+  const solid = ids.filter(isSolid);
+  return (
+    <div className="icon-scroll">
+      <div className="icon-grid">{ids.filter((id) => !isSolid(id)).map(tile)}</div>
+      {solid.length > 0 && <>
+        <div className="icon-sub">Залитые</div>
+        <div className="icon-grid">{solid.map(tile)}</div>
+      </>}
+    </div>
+  );
 }
 
 /**
@@ -168,7 +182,7 @@ export function IconPicker({ zoom, onPick }: { zoom: number; onPick: (kind: Pick
         <>
           <input ref={input} id="icon-search" type="search" placeholder="Найти иконку" aria-label="Найти иконку"
             autoComplete="off" value={q} onChange={(e) => setQ(e.target.value)} />
-          <div className="icon-grid">{shown('icons').map((id) => tile('icons', id))}</div>
+          <IconSections ids={shown('icons')} tile={(id) => tile('icons', id)} />
           {!shown('icons').length && <p className="muted">Ничего не нашлось</p>}
         </>
       )}

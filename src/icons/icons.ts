@@ -1,11 +1,13 @@
 import data from './icons.json';
 
 export interface IconPath { d: string; fill: string; opacity?: number; evenodd?: boolean }
-/** `aliases` are the smaller sizes of the same icon, dropped from the set; boards that use them get this one. */
-export interface IconDef { id: string; en: string; ru: string; paths: IconPath[]; aliases?: string[] }
+/** `aliases` are the smaller sizes of the same icon, dropped from the set; boards that use them get this one.
+ *  `solid` marks the filled version of an outline icon (shown under the outline ones). */
+export interface IconDef { id: string; en: string; ru: string; paths: IconPath[]; aliases?: string[]; solid?: boolean }
 
 /** The icon set, generated from assets/icons by `npm run icons`. */
 export const ICONS = data as IconDef[];
+export const isSolid = (id: string): boolean => !!ICON_BY_ID.get(id)?.solid;
 export const ICON_BY_ID = new Map(ICONS.flatMap((i) => [i.id, ...(i.aliases ?? [])].map((id) => [id, i] as const)));
 
 /** Icons are drawn on a 24×24 grid. */

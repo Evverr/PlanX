@@ -3,7 +3,7 @@ import type { Editor } from '../editor/editor';
 import { boxOf } from '../canvas/geometry';
 import { searchIcons, ICONS } from '../icons/icons';
 import { onEmojiLoad } from '../emoji/emoji';
-import { pickerOrder, Tile } from '../ui/IconPicker';
+import { IconSections, pickerOrder, Tile } from '../ui/IconPicker';
 import { SHAPES } from '../ui/ShapePanel';
 import { PanelIcon } from '../ui/PanelIcon';
 import { shapeOf, SWAP_EVENT, swapKind, swapPatch } from './swap';
@@ -66,7 +66,7 @@ export function SwapPop({ editor }: { editor: Editor }) {
       {kind === 'icon' && (
         <>
           <input type="search" placeholder="Найти иконку" aria-label="Найти иконку" autoComplete="off" value={q} onChange={(e) => setQ(e.target.value)} />
-          <div className="icon-grid">{icons.map((i) => tile(i, ICONS.find((d) => d.id === i)?.ru ?? i, <Tile kind="icon" id={i} />))}</div>
+          <IconSections ids={icons} tile={(i) => tile(i, ICONS.find((d) => d.id === i)?.ru ?? i, <Tile kind="icon" id={i} />)} />
           {!icons.length && <p className="muted">Ничего не нашлось</p>}
         </>
       )}

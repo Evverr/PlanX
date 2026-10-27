@@ -17,6 +17,10 @@ Files are named by a slug of the icon's Figma name ("Add product" ->
 add-product.svg); scripts/icon-names-ru.json maps those names to Russian
 for search.
 
+Filled ("Solid") versions of icons are named after the outline one with
+"-solid" (add-product-solid.svg): they get its names and "solid": true,
+and the picker shows them under the outline ones.
+
 Usage: python3 scripts/gen_icons.py
 """
 import json
@@ -109,8 +113,12 @@ def main() -> None:
         if stroked:
             outlined.append(fname)
             continue
-        en, ru = NAMES.get(icon_id, (icon_id.replace("-", " ").capitalize(), icon_id.replace("-", " ")))
+        solid = icon_id.endswith("-solid")
+        base = icon_id[: -len("-solid")] if solid else icon_id
+        en, ru = NAMES.get(base, (base.replace("-", " ").capitalize(), base.replace("-", " ")))
         icon = {"id": icon_id, "en": en, "ru": ru, "paths": paths}
+        if solid:
+            icon["solid"] = True
         if len(group) > 1:
             # One size left, so the size letter in the name says nothing.
             icon["en"] = re.sub(r"\s+(L|M|S|XS)$", "", en)

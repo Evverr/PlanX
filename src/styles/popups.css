@@ -50,6 +50,10 @@
 
 .icon-pick { left: calc(24px + var(--rail-w) + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: var(--e316); max-width: calc(100vw - var(--e84)); padding: var(--s12); }
 .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--s44), 1fr)); gap: var(--s4); max-height: min(var(--e340), 55vh); overflow-y: auto; }
+/* Icons: outline and, under them, filled, scrolled together. */
+.icon-scroll { max-height: min(var(--e340), 55vh); overflow-y: auto; }
+.icon-scroll .icon-grid { max-height: none; overflow: visible; }
+.icon-sub { margin: var(--s12) 0 var(--s6); padding-top: var(--s10); border-top: 1px solid var(--line); font-size: var(--s12); font-weight: 600; color: var(--muted); }
 .icon-grid button { aspect-ratio: 1; border: 0; background: transparent; border-radius: var(--s6); cursor: pointer; color: var(--ink); display: grid; place-items: center; padding: 0; transition: background-color .12s ease-out; }
 .icon-grid button:hover { background: var(--fmt-hover); }
 .icon-grid svg { width: var(--e26); height: var(--e26); }
