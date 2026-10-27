@@ -13,6 +13,7 @@ import { MIND_TOPIC, type PenTool } from './tools';
 import type { Editor } from './editor';
 import { isLocked } from '../labs/labs';
 import { openSwap, swapKind } from '../labs/swap';
+import { pushedBelow } from '../labs/textPush';
 
 /** What a press on the board has started, followed till it's let go. */
 export type Gesture =
@@ -106,7 +107,12 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       if (it.type === 'text') nh = itemTextHeight(it, it.text, nw);
       // A task can be made taller by hand, never shorter than its text.
       if (it.type === 'task') nh = Math.max(nh, fitHeight(it, it.text, nw)!);
-      board.update(g.id, it.type === 'table' ? withScale(it, nw, nh) : g.orig.rot ? { w: nw, h: nh, ...resizedAt(g.orig, nw, nh) } : { w: nw, h: nh });
+      // Text wrapping onto more lines (or fewer) takes the text just under it along.
+      const moves = pushedBelow(it, nh - it.h, board.list());
+      board.transact(() => {
+        board.update(g.id, it.type === 'table' ? withScale(it, nw, nh) : g.orig.rot ? { w: nw, h: nh, ...resizedAt(g.orig, nw, nh) } : { w: nw, h: nh });
+        moves.forEach((pt, k) => board.update(k, pt));
+      });
       return;
     }
     case 'rotate': {

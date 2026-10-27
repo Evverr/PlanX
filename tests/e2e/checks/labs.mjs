@@ -15,7 +15,7 @@ export const checks = {
     const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Нововведения')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
     await sleep(250);
-    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(12);
+    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(13);
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.labs-menu .menu-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`document.querySelector('.labs-menu [aria-checked="false"]')?.textContent`), 'switched off').toBe('Общий таймер');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
@@ -140,5 +140,21 @@ export const checks = {
     expect((await p.rect('.tools')).l, 'the tool rail stays at the left').toBe(12);
     await p.reload();
     expect((await keys()).map((k) => k[0]).join(), 'its order kept after a reload').toBe(k1.join());
+  },
+
+  async '"Текст не слипается": text typed onto a second line pushes the text just under it'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board, { x, y } = e.toWorld(300, 250);
+      const t1 = e.newItem('text', x, y, { id: 't1', w: 160, text: 'Первая' }), t2 = e.newItem('text', x, y, { id: 't2', w: 160, text: 'Вторая' }), t3 = e.newItem('text', x + 400, y, { id: 't3', w: 160, text: 'Сбоку' });
+      b.add(t1); b.add({ ...t2, y: y + t1.h + 10 }); b.add({ ...t3, y: y + t1.h + 10 }); e.setSelection([]); })()`);
+    const before = await p.ev(`['t1', 't2', 't3'].map((id) => { const i = planx.board.get(id); return { y: i.y, h: i.h }; })`);
+    await p.ev(`planx.editor.startEditing('t1', null, 'end')`);
+    await sleep(200);
+    await p.cdp('Input.insertText', { text: ' и ещё много слов, чтобы перенестись' });
+    await sleep(300);
+    const after = await p.ev(`['t1', 't2', 't3'].map((id) => { const i = planx.board.get(id); return { y: i.y, h: i.h }; })`);
+    const grew = after[0].h - before[0].h;
+    expect(grew > 0, 'the first is taller').toBe(true);
+    expect(after[1].y - before[1].y, 'the one under it pushed as much').toBe(grew);
+    expect(after[2].y, 'the one off to the side stays').toBe(before[2].y);
   },
 };

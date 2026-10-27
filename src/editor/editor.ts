@@ -23,6 +23,7 @@ import { addMindNode, mindFit, refitMind, removeMindNode, type MindAdd } from '.
 import { press } from './press';
 import { formatCells, pickCell, restOn, setTableLines } from './tables';
 import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, type Pens, type PenTool, type Tool } from './tools';
+import { pushedBelow } from '../labs/textPush';
 import { isLocked, labOn, subscribeLabs } from '../labs/labs';
 
 export { DRAW_TOOLS, INK_SIZES, SHAPE_TOOLS } from './tools';
@@ -626,7 +627,7 @@ export class Editor {
       for (const it of items) {
         const now = this.board.get(it.id);
         const h = now && fitHeight(now);
-        if (h) this.board.update(it.id, { h });
+        if (now && h && h !== now.h) this.fitTo(now, h);
       }
     });
     this.board.transact(() => {
@@ -889,7 +890,11 @@ export class Editor {
         const patch: Partial<Item> = { text: value, ...mindFit(this, it, value), ...(it.fold && { w: foldedSize(value).w }) };
         const h = fitHeight(it, value);
         if (h) Object.assign(patch, { h }, it.rot && resizedAt(it, it.w, h));
-        this.board.update(id, patch);
+        const moves = h ? pushedBelow(it, h - it.h, this.board.list()) : new Map<string, Point>();
+        this.board.transact(() => {
+          this.board.update(id, patch);
+          moves.forEach((pt, k) => this.board.update(k, pt));
+        });
         // A mind map node that grew makes room among its neighbours, as while it was typed in (those
         // of its level only).
         const dw = (patch.w ?? it.w) - it.w, dh = (patch.h ?? it.h) - it.h;
@@ -933,11 +938,20 @@ export class Editor {
     };
   }
 
+  /** Makes the item `h` tall, the text just under it moving along (see pushedBelow). */
+  private fitTo(it: Item, h: number): void {
+    const moves = pushedBelow(it, h - it.h, this.board.list());
+    this.board.transact(() => {
+      this.board.update(it.id, { h, ...(it.rot && resizedAt(it, it.w, h)) });
+      moves.forEach((pt, k) => this.board.update(k, pt));
+    });
+  }
+
   /** Live text while typing, so a text item or a task grows (or shrinks back) as you type and others see it. */
   previewText(id: string, text: string): void {
     const it = this.board.get(id);
     const h = it && fitHeight(it, text);
-    if (it && h && h !== it.h) this.board.update(id, { h, ...(it.rot && resizedAt(it, it.w, h)) });
+    if (it && h && h !== it.h) this.fitTo(it, h);
     if (it?.type === 'mind') {
       // A node growing (a line taller, or wider under its parent) moves its neighbours along, so
       // nothing overlaps.
