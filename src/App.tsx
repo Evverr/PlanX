@@ -74,6 +74,18 @@ export function App({ boardId }: { boardId: string }) {
     };
   }, []);
 
+  // While the window is being resized, the panels don't glide (see moves.css).
+  useEffect(() => {
+    let t = 0;
+    const resizing = () => {
+      document.documentElement.dataset.resizing = '';
+      clearTimeout(t);
+      t = window.setTimeout(() => delete document.documentElement.dataset.resizing, 200);
+    };
+    window.addEventListener('resize', resizing);
+    return () => { window.removeEventListener('resize', resizing); clearTimeout(t); };
+  }, []);
+
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 2200);

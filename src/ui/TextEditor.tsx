@@ -7,6 +7,7 @@ import { center, TASK_INSET } from '../canvas/geometry';
 import { addChild, siblingOf, siblingTints } from '../model/mind';
 import { autoInk } from '../model/color';
 import { colsOf, rowsOf } from '../model/table';
+import { openSwap, swapKind } from '../labs/swap';
 
 /**
  * A textarea laid over the item being edited, scaled with the board so the
@@ -75,6 +76,8 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
       className={`text-edit ${item.type} ${folded ? 'folded' : ''} ${item.color === 'none' ? 'nofill' : ''}`}
       aria-label="Текст"
       spellCheck={false}
+      // "Замена двойным кликом": a shape typed in shows its neighbours on a double click on its text too.
+      onDoubleClick={() => { if (swapKind(item)) openSwap(item.id); }}
       style={{
         left: p.x, top: p.y, width,
         height: item.type === 'text' ? item.h : isFrame ? 26 : undefined,
