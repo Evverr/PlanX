@@ -15,7 +15,7 @@ export const checks = {
     const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Нововведения')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
     await sleep(250);
-    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(14);
+    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(15);
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.labs-menu .menu-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`document.querySelector('.labs-menu [aria-checked="false"]')?.textContent`), 'switched off').toBe('Общий таймер');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
@@ -211,5 +211,26 @@ export const checks = {
     expect(before !== '240,240,240,255', 'its handle drawn').toBe(true);
     await p.drag(line, [line[0] - 60, line[1]]);
     expect(await gap(), 'overlapping now').toBe(-36);
+  },
+
+  async '"Клик сквозь": slow clicks on the item picked go down through what lies there, round to the top again'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board, { x: X, y: Y } = e.toWorld(300, 250);
+      b.add(e.newItem('rect', X, Y, { id: 'low', w: 200, h: 200, z: 1 }));
+      b.add(e.newItem('sticky', X + 40, Y + 40, { id: 'top', w: 120, h: 120, z: 2 }));
+      e.setSelection([]); })()`);
+    const sel = () => p.ev(`[...planx.editor.selection].join()`);
+    await p.click([400, 350]);
+    expect(await sel(), 'the top one first').toBe('top');
+    await sleep(450);
+    await p.click([400, 350]);
+    expect(await sel(), 'a slow click: the one under it').toBe('low');
+    await sleep(450);
+    await p.click([400, 350]);
+    expect(await sel(), 'past the lowest, the top again').toBe('top');
+    // A drag of the one picked still moves it.
+    await sleep(450);
+    await p.drag([400, 350], [440, 350]);
+    expect(await sel(), 'dragged, still picked').toBe('top');
+    expect(await p.ev(`planx.board.get('top').x - planx.board.get('low').x`), 'moved').toBe(80);
   },
 };

@@ -216,6 +216,8 @@ export function press(ed: Editor, e: PointerEvent): void {
     const enter = entering && ed.lastTap.id === hit.host && !!swapKind(hit);
     const dbl = (ed.lastTap.id === hit.id || enter) && now - ed.lastTap.t < 380 && !e.shiftKey;
     ed.lastTap = { id: hit.id, t: now };
+    // A slow click on the one item picked: let go without dragging, it may pick what's under it.
+    const again = !dbl && !entering && !e.shiftKey && ed.selection.size === 1 && ed.selection.has(hit.id);
     // A click on a cell of the table already selected picks that cell (on letting go, if not dragged).
     const cell = hit.type === 'table' && ed.selection.size === 1 && ed.selection.has(hit.id);
     if (cell) { /* keeps the table selected */ }
@@ -224,7 +226,7 @@ export function press(ed: Editor, e: PointerEvent): void {
       if (next.has(hit.id)) next.delete(hit.id); else next.add(hit.id);
       ed.setSelection(next);
     } else if (!ed.selection.has(hit.id)) ed.setSelection([hit.id]);
-    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(items), moved: false, id: hit.id, dbl, cell, enter };
+    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(items), moved: false, id: hit.id, dbl, cell, enter, again };
     return;
   }
   ed.lastTap = { id: '', t: 0 };

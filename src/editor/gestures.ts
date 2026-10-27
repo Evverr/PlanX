@@ -14,12 +14,13 @@ import type { Editor } from './editor';
 import { isLocked } from '../labs/labs';
 import { openSwap, swapKind } from '../labs/swap';
 import { pushedBelow } from '../labs/textPush';
+import { under } from '../labs/clickThrough';
 
 /** What a press on the board has started, followed till it's let go. */
 export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean }
+  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean }
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point }
@@ -241,6 +242,9 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // over it, that opens for typing.
         if (it?.type === 'frame' && !it.inst && (it.fold || toLocal(it, g.start).y >= it.y)) ed.setFolded(it.id, !it.fold);
         else if (!it?.inst) ed.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
+      } else if (g.again && !g.cell && under(ed, g.id, g.start)) {
+        // "Клик сквозь": what's under it there is picked instead.
+        ed.setSelection([under(ed, g.id, g.start)!.id]);
       } else if (g.cell) {
         const it = board.get(g.id), i = it ? cellAt(it, g.start) : null;
         if (i !== null) ed.pickCell(i, e.shiftKey ? 'range' : e.metaKey || e.ctrlKey ? 'toggle' : 'one');
