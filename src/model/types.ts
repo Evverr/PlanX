@@ -88,11 +88,10 @@ export interface Item {
   ovr?: string[];
   /** An instance stretched: how much wider and taller its contents are than its component's. */
   grow?: { w: number; h: number };
-  /** A copy in an instance pushed down by this much from where its component has it, by text above it
-   *  that grew there. */
-  dy?: number;
   sw?: number;
   hl?: boolean;
+  /** The address the item leads to (src/labs, "Ссылка в тексте"). */
+  url?: string;
   /** Locked in place: not moved, resized, typed in or deleted (src/labs, "Замок"). */
   lock?: boolean;
   /** Reactions: for each emoji id, who put it, by their browser's id (src/labs, "Реакции"). */

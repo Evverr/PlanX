@@ -14,7 +14,7 @@ import { descendants } from './mind';
  */
 
 /** Fields a copy can have changed in its instance: its text and how it looks, not where it is. */
-export const OVERRIDES = new Set(['text', 'cells', 'cellFmt', 'color', 'fc', 'sc', 'fo', 'so', 'tc', 'mk', 'fs', 'fw', 'ff', 'fi', 'fu', 'fx', 'ta', 'va', 'ls', 'done', 'icon', 'emoji', 'type', 'shape', 'dy']);
+export const OVERRIDES = new Set(['text', 'cells', 'cellFmt', 'color', 'fc', 'sc', 'fo', 'so', 'tc', 'mk', 'fs', 'fw', 'ff', 'fi', 'fu', 'fx', 'ta', 'va', 'ls', 'done', 'icon', 'emoji', 'type', 'shape', 'url']);
 /** Items sized by their text: a copy with its own text keeps its own size. */
 const SIZED_BY_TEXT = new Set(['text', 'mind', 'task']);
 
@@ -40,12 +40,13 @@ const around = (rs: Item[]) => {
 /**
  * Where an item of a component goes in an instance stretched by `grow` beyond `box`, what the
  * component holds. One more than half as wide as that stretches across with it, keeping its distance
- * to both sides; more than half as tall, up and down (but text, tasks, tables and mind maps, sized by
- * what's in them). Otherwise it keeps its size and keeps to a side: text to the one it's aligned to,
- * anything else to the side or middle it's nearest to (by the thirds of the box).
+ * to both sides (text too, wrapping anew); more than half as tall, up and down (but text, tasks, tables
+ * and mind maps, sized by what's in them). Otherwise it keeps its size and keeps to a side: text to
+ * the one it's aligned to, anything else to the side or middle it's nearest to (by the thirds of the box).
  */
 export function stretched(it: Item, box: { x: number; y: number; w: number; h: number }, grow: { w: number; h: number }): Pick<Item, 'x' | 'y' | 'w' | 'h'> {
-  const fixed = it.type === 'text' || it.type === 'task' || it.type === 'table' || it.type === 'mind';
+  // Text stretches across (wrapping anew), not down.
+  const fixed = it.type === 'task' || it.type === 'table' || it.type === 'mind', fixedDown = fixed || it.type === 'text';
   const along = (at: number, size: number, from: number, all: number, more: number) => {
     const c = at + size / 2 - from;
     return at + (c < all / 3 ? 0 : c > (all * 2) / 3 ? more : more / 2);
@@ -59,8 +60,35 @@ export function stretched(it: Item, box: { x: number; y: number; w: number; h: n
     return { x: along(it.x, it.w, box.x, box.w, grow.w), w: it.w };
   };
   const down = (): { y: number; h: number } =>
-    !fixed && it.h > box.h / 2 ? { y: it.y, h: Math.max(10, it.h + grow.h) } : { y: along(it.y, it.h, box.y, box.h, grow.h), h: it.h };
+    !fixedDown && it.h > box.h / 2 ? { y: it.y, h: Math.max(10, it.h + grow.h) } : { y: along(it.y, it.h, box.y, box.h, grow.h), h: it.h };
   return { ...across(), ...down() };
+}
+
+/** How far apart text items may lie, one under the other, and still go together. */
+export const TEXT_NEAR = 16;
+
+/** The text items lying just under `top` (no more than TEXT_NEAR apart, side by side with it). */
+export const textsUnder = (top: Item, items: Item[]): Item[] => items.filter((t) => t.type === 'text' && !t.rot && t.id !== top.id
+  && t.x < top.x + top.w && top.x < t.x + t.w && t.y - (top.y + top.h) >= 0 && t.y - (top.y + top.h) <= TEXT_NEAR);
+
+/** How far each text item goes down for those over it that grew by so much (`grew`, by id): along
+ *  with the one just over it, and so on down. */
+export function textShifts(items: Item[], grew: Map<string, number>): Map<string, number> {
+  const shifts = new Map<string, number>();
+  for (const [id, dh] of grew) {
+    const from = items.find((i) => i.id === id);
+    if (!from || from.rot) continue;
+    const seen = new Set([id]), queue = [from];
+    while (queue.length) {
+      for (const t of textsUnder(queue.shift()!, items)) {
+        if (seen.has(t.id)) continue;
+        seen.add(t.id);
+        shifts.set(t.id, (shifts.get(t.id) ?? 0) + dh);
+        queue.push(t);
+      }
+    }
+  }
+  return shifts;
 }
 
 /** Everything in a frame: what it holds, what frames in it hold, and mind map branches of all that. */
@@ -91,7 +119,7 @@ export interface SyncOps {
 const same = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JSON.stringify(b);
 
 /** What it takes for every instance to be what its component is now; nothing when they are. */
-export function syncOps(items: Item[], links: Link[]): SyncOps {
+export function syncOps(items: Item[], links: Link[], fit?: (it: Item) => number | null, push = false): SyncOps {
   const ops: SyncOps = { add: [], change: new Map(), remove: [], addLinks: [], removeLinks: [] };
   const byId = new Map(items.map((i) => [i.id, i]));
   const patch = (id: string, p: Partial<Item>) => {
@@ -116,17 +144,33 @@ export function syncOps(items: Item[], links: Link[]): SyncOps {
     const map = (id: string) => copyId(inst.id, id);
     const grow = inst.grow ?? { w: 0, h: 0 }, box = inside.length ? around(inside) : null;
     patch(inst.id, { w: cw + grow.w, h: ch + grow.h, text: comp.text, members: (comp.members ?? []).filter((m) => ids.has(m)).map(map), fold: undefined });
+    const made: Array<{ src: Item; old: Item | undefined; want: Item }> = [];
     for (const src of inside) {
       const id = map(src.id), old = byId.get(id), at = box && (grow.w || grow.h) ? stretched(src, box, grow) : src;
       const want: Item = { ...src, id, x: at.x + dx, y: at.y + dy, w: at.w, h: at.h, from: src.id, host: inst.id, comp: undefined, inst: undefined, rx: old?.rx };
       if (src.parent) want.parent = ids.has(src.parent) ? map(src.parent) : undefined;
       if (src.members) want.members = src.members.filter((m) => ids.has(m)).map(map);
-      const kept = old?.ovr ?? [];
+      // (What's no longer kept, as boards from before may have, goes.)
+      const kept = (old?.ovr ?? []).filter((k) => OVERRIDES.has(k) || k === 'h');
       for (const k of kept) (want as unknown as Record<string, unknown>)[k] = (old as unknown as Record<string, unknown>)[k];
-      if (old && kept.includes('text') && SIZED_BY_TEXT.has(src.type)) { want.w = old.w; want.h = old.h; }
-      // Pushed down by text above it that grew in the instance (see labs/textPush.ts).
-      if (want.dy) want.y += want.dy;
+      // Text made wider or narrower (stretched with the instance) is measured again, by `fit` (the
+      // editor's, which knows the fonts), its own text if it has one.
+      if (old && kept.includes('text') && SIZED_BY_TEXT.has(src.type)) {
+        want.w = src.type === 'text' ? at.w : old.w;
+        want.h = want.w !== old.w ? fit?.(want) ?? old.h : old.h;
+      } else if (src.type === 'text' && at.w !== src.w) want.h = fit?.(want) ?? want.h;
       want.ovr = kept.length ? kept : undefined;
+      made.push({ src, old, want });
+    }
+    // Text grown or shrunk here (typed in, or wrapping anew as the instance is stretched) takes the
+    // text just under it (as it lies in the component) along ("Текст не слипается", src/labs).
+    if (push) {
+      const grew = new Map(made.filter(({ src, want }) => src.type === 'text' && want.h !== src.h).map(({ src, want }) => [src.id, want.h - src.h]));
+      const shifts = textShifts(inside, grew);
+      for (const m of made) m.want.y += shifts.get(m.src.id) ?? 0;
+    }
+    for (const { old, want } of made) {
+      const id = want.id;
       wanted.add(id);
       if (!old) { ops.add.push(Object.fromEntries(Object.entries(want).filter(([, v]) => v !== undefined)) as unknown as Item); continue; }
       // Fields it has that its original no longer does go too.

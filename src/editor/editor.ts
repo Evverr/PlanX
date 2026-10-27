@@ -271,7 +271,7 @@ export class Editor {
       this.syncing = true;
       queueMicrotask(() => {
         this.syncing = false;
-        const ops = syncOps(this.board.list(), this.board.linkList());
+        const ops = syncOps(this.board.list(), this.board.linkList(), (it) => fitHeight(it), labOn('textPush'));
         if (ops.add.length || ops.change.size || ops.remove.length || ops.addLinks.length || ops.removeLinks.length) this.board.sync(ops);
       });
     }
@@ -727,7 +727,7 @@ export class Editor {
     this.board.transact(() => {
       for (const inst of insts) {
         for (const c of this.board.list().filter((i) => i.host === inst.id)) {
-          this.board.update(c.id, { from: undefined, host: undefined, ovr: undefined, dy: undefined });
+          this.board.update(c.id, { from: undefined, host: undefined, ovr: undefined });
           freed.push(c.id);
         }
         this.board.remove([inst.id]);

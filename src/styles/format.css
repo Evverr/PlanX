@@ -38,3 +38,8 @@
 .fb.sw-btn > .pi { margin: 0 round(calc(-3px * var(--k)), 1px); }
 .fb .swatch { position: absolute; left: var(--s4); right: var(--s4); bottom: -1px; height: var(--e4); border-radius: var(--s2); }
 .fpick { position: relative; isolation: isolate; flex: none; height: var(--e30); border: 0; background: transparent; display: flex; align-items: center; gap: var(--s10); padding: 0; cursor: pointer; font: 500 var(--s15)/1 "Inter", var(--ui); color: var(--fmt-ink); white-space: nowrap; }
+/* The link's menu: its address, then what to do with it. */
+.tf-link { display: flex; flex-direction: column; gap: var(--s6); padding: var(--s8); width: var(--e260, 260px); }
+.tf-link input { width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: var(--s6); padding: var(--s6) var(--s8); font: inherit; outline: 0; }
+.tf-link input:focus { border-color: var(--accent); }
+.tf-link-row { display: flex; gap: var(--s4); }
