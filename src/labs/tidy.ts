@@ -1,6 +1,6 @@
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
-import type { Point } from '../canvas/geometry';
+import { instanceBounds, type Point } from '../canvas/geometry';
 
 /**
  * "Авторасположение": what's selected laid out in an even grid, a little apart, rows and columns as
@@ -73,8 +73,14 @@ export function gapLines(items: Item[], t: Tidy): Array<{ axis: 'col' | 'row'; a
   return out;
 }
 
-/** The grid's items as they are now, in its order. */
-export const tidyItems = (ed: Editor, t: Tidy) => t.ids.map((id) => ed.board.get(id)).filter((i): i is Item => !!i);
+/** An item as it's seen: an instance by its contents, without its component's empty margins. */
+const seen = (ed: Editor, it: Item): Item => (it.inst ? { ...it, ...instanceBounds(it, ed.board.list()) } : it);
+
+/** The grid's items as they are now (as they're seen), in its order. */
+export const tidyItems = (ed: Editor, t: Tidy) => t.ids.map((id) => ed.board.get(id)).filter((i): i is Item => !!i).map((i) => seen(ed, i));
+
+/** What's picked, but for what's in instances (taken along with them). */
+const picked = (ed: Editor) => [...ed.selection].filter((id) => !ed.board.get(id)?.host);
 
 /** Moves each to its place, with what goes with it (what a frame holds, a mind map node's branches). */
 function place(ed: Editor, items: Item[], places: Map<string, Point>): void {
@@ -82,14 +88,15 @@ function place(ed: Editor, items: Item[], places: Map<string, Point>): void {
   for (const it of items) {
     const to = places.get(it.id)!, dx = to.x - it.x, dy = to.y - it.y;
     if (!dx && !dy) continue;
-    for (const [id, o] of ed.carried([it])) moves.set(id, { x: o.x + dx, y: o.y + dy });
+    // Moved as it is on the board (an instance by its frame, not as it's seen).
+    for (const [id, o] of ed.carried([ed.board.get(it.id) ?? it])) moves.set(id, { x: o.x + dx, y: o.y + dy });
   }
   ed.board.transact(() => moves.forEach((p, id) => ed.board.update(id, p)));
 }
 
 /** Lays out the selected in a grid, a little apart, and turns the gap handles on. */
 export function startTidy(ed: Editor): void {
-  const sel = ed.selectedItems().filter((i) => !i.lock && !i.host);
+  const sel = ed.selectedItems().filter((i) => !i.lock && !i.host).map((i) => seen(ed, i));
   if (sel.length < 2) return;
   // The last grid, picked again with nothing in it moved since: its handles back, as it is.
   if (last && last.ids.length === sel.length && sel.every((i) => { const p = last!.at.get(i.id); return p && p.x === i.x && p.y === i.y; })) {
@@ -105,11 +112,15 @@ export function startTidy(ed: Editor): void {
   remember(ed, tidy!);
 }
 
-/** The gaps changed: the grid laid out again from where its top left is now. */
+/** The gaps changed: the grid laid out again from where its top left is now. A gap may go below
+ *  nothing, items overlapping (for those with empty margins of their own), but never more than the
+ *  smallest of them less 8. */
 export function setGaps(ed: Editor, gx: number, gy: number): void {
   if (!tidy) return;
   const items = tidyItems(ed, tidy);
   if (!items.length) return;
+  gx = Math.max(8 - Math.min(...items.map((i) => i.w)), gx);
+  gy = Math.max(8 - Math.min(...items.map((i) => i.h)), gy);
   const origin = { x: Math.min(...items.map((i) => i.x)), y: Math.min(...items.map((i) => i.y)) };
   set({ ...tidy, gx, gy });
   place(ed, items, gridPlaces(items, tidy.cols, gx, gy, origin));
@@ -154,7 +165,7 @@ export function startTidyDrag(ed: Editor, it: Item, w: Point): void {
 /** The dragged item follows the pointer; the others make room for it where it would go. */
 export function moveTidyDrag(ed: Editor, w: Point): void {
   if (!tidy || !drag) return;
-  const it = ed.board.get(drag.id);
+  const raw = ed.board.get(drag.id), it = raw && seen(ed, raw);
   if (!it) return;
   const others = tidyItems(ed, tidy).filter((i) => i.id !== it.id);
   const slot = dropSlot(others, it, tidy.cols, tidy.gx, tidy.gy, drag.origin, w);
@@ -166,7 +177,7 @@ export function moveTidyDrag(ed: Editor, w: Point): void {
 /** Let go: it takes its place in the grid, the grid kept so. */
 export function endTidyDrag(ed: Editor, w: Point): void {
   if (!tidy || !drag) return;
-  const it = ed.board.get(drag.id), origin = drag.origin;
+  const raw = ed.board.get(drag.id), it = raw && seen(ed, raw), origin = drag.origin;
   drag = null;
   if (it) {
     const others = tidyItems(ed, tidy).filter((i) => i.id !== it.id), slot = dropSlot(others, it, tidy.cols, tidy.gx, tidy.gy, origin, w);
@@ -180,7 +191,7 @@ export function endTidyDrag(ed: Editor, w: Point): void {
 export const stopTidy = () => set(null);
 
 /** Whether the grid is what's selected. */
-export const tidyMatches = (ed: Editor): boolean => !!tidy && tidy.ids.length === ed.selection.size && tidy.ids.every((id) => ed.selection.has(id));
+export const tidyMatches = (ed: Editor): boolean => !!tidy && tidy.ids.length === picked(ed).length && tidy.ids.every((id) => ed.selection.has(id));
 
 /** The same, the grid turned off when it isn't (anything else picked). */
 export function tidyHolds(ed: Editor): boolean {
