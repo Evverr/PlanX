@@ -15,7 +15,7 @@ export const checks = {
     const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Нововведения')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
     await sleep(250);
-    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(17);
+    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(18);
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.labs-menu .menu-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`document.querySelector('.labs-menu [aria-checked="false"]')?.textContent`), 'switched off').toBe('Общий таймер');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
@@ -277,5 +277,28 @@ export const checks = {
     await p.click(await p.at('.board-menu .menu-row'));
     await sleep(200);
     expect(await p.ev(`window.copied?.includes('?board=')`), 'the board\'s address copied').toBe(true);
+  },
+
+  async '"Задача-компонент": a task is the built-in component, its ring clicked through its states, its own text kept'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.addTask(e.toWorld(500, 400)); })()`);
+    await sleep(200);
+    const inst = await p.ev(`planx.board.list().find((i) => i.inst === '@task-open')?.id`);
+    expect(!!inst, 'a task to be done').toBe(true);
+    expect(await p.ev('planx.editor.editingId'), 'its title open for typing').toBe(`${inst}~@task-title`);
+    await p.cdp('Input.insertText', { text: 'Купить молоко' });
+    await p.ev('planx.editor.stopEditing()');
+    await sleep(200);
+    const ring = await p.ev(`(() => { const r = planx.board.get('${inst}~@task-ring'), s = planx.editor.toScreen({ x: r.x + r.w / 2, y: r.y + r.h / 2 }); return [s.x, s.y]; })()`);
+    const state = () => p.ev(`planx.board.get('${inst}').inst + ' ' + !!planx.board.get('${inst}~@task-check') + ' ' + planx.board.get('${inst}~@task-title').text`);
+    await p.click([900, 700]);
+    await p.click(ring);
+    expect(await state(), 'done: a tick, its text kept').toBe('@task-done true Купить молоко');
+    await sleep(450);
+    await p.click(ring);
+    expect(await state(), 'put off').toBe('@task-later false Купить молоко');
+    await sleep(450);
+    await p.click(ring);
+    expect(await state(), 'to be done again').toBe('@task-open false Купить молоко');
+    expect(await p.ev(`document.querySelectorAll('.swap-pop').length`), 'no neighbours to swap in a task').toBe(0);
   },
 };

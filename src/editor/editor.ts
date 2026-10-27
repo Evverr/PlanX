@@ -14,7 +14,8 @@ import { readJSON, writeJSON } from '../storage';
 import { cameraFor, clamp, fittedTo, flyTo, freeArea, wheelMove, zoomedAt } from './camera';
 import { copiesOf } from './copies';
 import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked } from './frames';
-import { hasComponents, syncOps } from '../model/components';
+import { copyId, hasComponents, syncOps } from '../model/components';
+import { BUILTINS, nextTaskState, TASK_STATES } from '../model/builtins';
 import { shapePatch, shapeStyle } from './shapeStyle';
 import { endGesture, moveGesture, type Gesture } from './gestures';
 import { updateCursor } from './hover';
@@ -271,14 +272,41 @@ export class Editor {
       this.syncing = true;
       queueMicrotask(() => {
         this.syncing = false;
-        const ops = syncOps(this.board.list(), this.board.linkList(), (it) => fitHeight(it), labOn('textPush'));
-        if (ops.add.length || ops.change.size || ops.remove.length || ops.addLinks.length || ops.removeLinks.length) this.board.sync(ops);
+        this.syncNow();
       });
     }
     this.requestRender();
   }
 
   private syncing = false;
+
+  /** Brings the instances in step with their components now (otherwise it's done just after a change). */
+  syncNow(): void {
+    const ops = syncOps(this.board.list(), this.board.linkList(), (it) => fitHeight(it), labOn('textPush'));
+    if (ops.add.length || ops.change.size || ops.remove.length || ops.addLinks.length || ops.removeLinks.length) this.board.sync(ops);
+  }
+
+  /** "Задача" as a component that comes with PlanX (src/labs, "Задача-компонент"): a task to be done,
+   *  its middle at `c`, its title open for typing. */
+  addTask(c: Point): void {
+    const f = BUILTINS.get('@task-open')!.frame;
+    const it = this.newItem('frame', Math.round(c.x - f.w / 2), Math.round(c.y - f.h / 2), { w: f.w, h: f.h, inst: '@task-open', members: [], text: f.text });
+    this.board.beginGesture();
+    this.addItem(it);
+    this.syncNow();
+    this.board.endGesture();
+    this.setTool('select');
+    const title = copyId(it.id, '@task-title');
+    this.setSelection([title]);
+    this.startEditing(title);
+  }
+
+  /** A task moved on to its next state (to be done, done, put off), by a click on its ring. */
+  nextTaskState(id: string): void {
+    const it = this.board.get(id);
+    if (!it?.inst || !TASK_STATES.includes(it.inst)) return;
+    this.board.update(id, { inst: nextTaskState(it.inst) });
+  }
 
   requestRender(): void {
     if (this.raf || !this.ctx) return;
@@ -655,6 +683,7 @@ export class Editor {
   /** Makes what a tool makes, at its usual size, centred on a screen point (a tool dragged off the
    *  rail onto the board). Text, tasks and frames open for typing, as when made with the tool. */
   dropItem(tool: Tool, at: Point): void {
+    if (tool === 'task' && labOn('taskComponent')) { this.addTask(this.toWorld(at.x, at.y)); return; }
     const type = (isPoly(tool) ? 'polygon' : tool) as ItemType;
     if (!DEFAULTS[type]) return;
     const extra: Partial<Item> = isPoly(tool) ? { shape: tool } : tool === 'table' ? newTable() : tool === 'mind' ? { text: MIND_TOPIC } : {};

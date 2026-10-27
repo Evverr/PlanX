@@ -11,6 +11,7 @@ import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
 import { COMPONENT_COLOR, instancePlus } from '../model/components';
+import { isBuiltin } from '../model/builtins';
 import { autoInk } from '../model/color';
 import cursorUrl from './cursor.svg';
 import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, spreadElbows, polyPoints, linkShape, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
@@ -318,6 +319,8 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       // An instance shows only its red title after a hollow diamond (to its component), flush with
       // its contents, and that only while it's picked (as a whole or something inside it).
       if (it.inst) {
+        // One of a component that comes with PlanX (a task) shows nothing of its own.
+        if (isBuiltin(it.inst)) break;
         if (!s.selection.has(it.id) && ![...s.selection].some((id) => s.get(id)?.host === it.id)) break;
         const b = instanceBounds(it, s.items);
         ctx.font = font(15, 600);

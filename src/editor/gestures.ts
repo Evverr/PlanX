@@ -11,7 +11,7 @@ import { clamp, MAX_Z, MIN_Z } from './camera';
 import { rotateCursor } from './cursors';
 import { MIND_TOPIC, type PenTool } from './tools';
 import type { Editor } from './editor';
-import { isLocked } from '../labs/labs';
+import { isLocked, labOn } from '../labs/labs';
 import { openSwap, swapKind } from '../labs/swap';
 import { pushedBelow } from '../labs/textPush';
 import { under } from '../labs/clickThrough';
@@ -259,6 +259,8 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       board.endGesture();
       return;
     case 'place': {
+      // "Задача-компонент" (src/labs): a task is the component that comes with PlanX.
+      if (g.tool === 'task' && labOn('taskComponent')) { ed.addTask(g.at); return; }
       const d = DEFAULTS[g.tool];
       const it = g.tool === 'text'
         ? ed.newItem('text', g.at.x - 4, g.at.y - 14)

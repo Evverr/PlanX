@@ -4,6 +4,7 @@ import type { Point } from '../canvas/geometry';
 import { hitItem, hitLink, instanceBounds, linkShape, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, HANDLE } from '../canvas/renderer';
 import { instanceGlyph, instancePlus } from '../model/components';
+import { isBuiltin } from '../model/builtins';
 import { branchWays, buttonKey, foldBadge, mindButtons, type MindButtonAt, type Way } from '../model/mind';
 import { frameButtonAt } from './frames';
 import { rotateCursor } from './cursors';
@@ -49,7 +50,7 @@ export function linkEndAt(ed: Editor, w: Point): Link | null {
  *  picked), the way to its component. */
 export function onInstanceGlyph(ed: Editor, it: Item, w: Point): boolean {
   const inst = it.inst ? it : it.host ? ed.board.get(it.host) : undefined;
-  return !!inst?.inst && pointInRect(w, instanceGlyph(instanceBounds(inst, ed.board.list())));
+  return !!inst?.inst && !isBuiltin(inst.inst) && pointInRect(w, instanceGlyph(instanceBounds(inst, ed.board.list())));
 }
 
 /** Whether the point is on a picked component's "+" for a new instance. */
@@ -125,7 +126,9 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   else if (link) cursor = 'pointer';
   else {
     const hit = hitItem(ed.shown(), w, ed.cam.z);
-    if ((hit?.type === 'task' && onTaskBox(hit, w, ed.cam.z)) || (hit?.type === 'audio' && onAudioButton(hit, w))) cursor = 'pointer';
+    // A task's ring (a component that comes with PlanX) is clicked through its states.
+    const ring = hit?.host && hit.from?.startsWith('@task-') ? ed.board.get(`${hit.host}~@task-ring`) : undefined;
+    if ((hit?.type === 'task' && onTaskBox(hit, w, ed.cam.z)) || (hit?.type === 'audio' && onAudioButton(hit, w)) || (ring && pointInRect(w, ring))) cursor = 'pointer';
     else if (hit && !isLocked(hit)) cursor = alt ? 'copy' : 'move';
   }
   ed.canvas.style.cursor = cursor;
