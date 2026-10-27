@@ -28,8 +28,6 @@ import { isLocked, labOn, subscribeLabs } from '../labs/labs';
 export { DRAW_TOOLS, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
 
-/** Whether dragged items line up with others along guides, kept per browser. */
-const GUIDES_KEY = 'planx-guides';
 /** How the last link was made to run, kept per browser: new links run the same way. */
 const LINK_STYLE_KEY = 'planx-link-style';
 /** How big a finger's target is, in screen pixels. */
@@ -55,8 +53,6 @@ export interface UIState {
   moving: boolean;
   cam: Camera;
   pens: Pens;
-  /** Whether dragged items line up with others along guides. */
-  guides: boolean;
   /** Cells picked in the one selected table (by index, row by row). */
   cells: number[];
   /** Whether there's anything of this person's to undo, or to redo. */
@@ -122,7 +118,6 @@ export class Editor {
   /** The table line the mouse rests on: it can be taken hold of once it's been there half a second
    *  (till then a press there takes the table), which is when it lights up. */
   lineRest: { line: TableLine; armed: boolean; timer: number } | null = null;
-  guides = readJSON<boolean>(GUIDES_KEY) ?? false;
   /** Shared: how new links run (see LINK_STYLE_KEY). */
   linkStyle = readJSON<LinkStyle | null>(LINK_STYLE_KEY) ?? undefined;
   /** Cells picked in the selected table: a click on a cell of a table already selected picks it,
@@ -184,7 +179,7 @@ export class Editor {
 
   private snapshot(): UIState {
     return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, editingCell: this.editingCell, moving: this.moving, cam: { ...this.cam }, pens: this.pens,
-      guides: this.guides, cells: this.cells, canUndo: this.board.undoManager.undoStack.length > 0 || this.outside.length > 0, canRedo: this.board.undoManager.redoStack.length > 0 };
+      cells: this.cells, canUndo: this.board.undoManager.undoStack.length > 0 || this.outside.length > 0, canRedo: this.board.undoManager.redoStack.length > 0 };
   }
 
   /** Shared: items are being moved or resized by hand, or no longer. */
@@ -459,13 +454,6 @@ export class Editor {
 
   /** The selected table's lines: their colour ('gray' the usual, 'none' none) and opacity. */
   setTableLines(patch: { sc?: string; so?: number }): void { setTableLines(this, patch); }
-
-  /** Turns lining up along guides on or off. */
-  toggleGuides(): void {
-    this.guides = !this.guides;
-    writeJSON(GUIDES_KEY, this.guides);
-    this.emit();
-  }
 
   /** Draws with one of the pen's presets from now on. */
   pickPen(tool: PenTool, active: number): void {
