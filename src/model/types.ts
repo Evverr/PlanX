@@ -88,6 +88,9 @@ export interface Item {
   ovr?: string[];
   /** An instance stretched: how much wider and taller its contents are than its component's. */
   grow?: { w: number; h: number };
+  /** A copy in an instance pushed down by this much from where its component has it, by text above it
+   *  that grew there. */
+  dy?: number;
   sw?: number;
   hl?: boolean;
   /** Locked in place: not moved, resized, typed in or deleted (src/labs, "Замок"). */

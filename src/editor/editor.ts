@@ -902,6 +902,9 @@ export class Editor {
           const moves = makeRoom(id, dw, dh, this.board.list());
           this.board.transact(() => moves.forEach((pt, k) => this.board.update(k, pt)));
         }
+      } else if (it.ovr?.includes('h') && !it.ovr.includes('text')) {
+        // A copy in an instance typed in and left as it was goes back to its component's height.
+        this.board.update(id, { ovr: it.ovr.filter((k) => k !== 'h') });
       }
     }
     // Branches made one after another by Tab (centred on their node as they come): once the typing
@@ -941,8 +944,11 @@ export class Editor {
   /** Makes the item `h` tall, the text just under it moving along (see pushedBelow). */
   private fitTo(it: Item, h: number): void {
     const moves = pushedBelow(it, h - it.h, this.board.list());
+    // A copy in an instance keeps the height it's typed to, as its component's sync would set it back
+    // until its new text is in (see commitText).
+    const own = it.host && !it.ovr?.includes('h') ? { ovr: [...(it.ovr ?? []), 'h'] } : {};
     this.board.transact(() => {
-      this.board.update(it.id, { h, ...(it.rot && resizedAt(it, it.w, h)) });
+      this.board.update(it.id, { h, ...(it.rot && resizedAt(it, it.w, h)), ...own });
       moves.forEach((pt, k) => this.board.update(k, pt));
     });
   }
