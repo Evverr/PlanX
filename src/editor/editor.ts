@@ -625,8 +625,9 @@ export class Editor {
     const items = this.selectedItems().filter((i) => HAS_FONT.includes(i.type));
     const refit = () => this.board.transact(() => {
       for (const it of items) {
-        const now = this.board.get(it.id);
-        const h = now && fitHeight(now);
+        // One being typed in is measured with what's typed, not yet in the board.
+        const now = this.board.get(it.id), typed = this.typed?.id === it.id ? this.typed.text : undefined;
+        const h = now && fitHeight(now, typed);
         if (now && h && h !== now.h) this.fitTo(now, h);
       }
     });
@@ -714,19 +715,27 @@ export class Editor {
     this.setSelection([id]);
   }
 
-  /** Detaches the selected instances from their components: each an ordinary frame of ordinary items,
-   *  as it is, its own text and colours too. */
+  /** Detaches the selected instances from their components: what's in each becomes ordinary items, as
+   *  they are, their own text and colours too, with no frame round them, and they're left picked. */
   detachInstances(): void {
     const insts = this.selectedItems().filter((i) => i.inst);
     if (!insts.length) return;
+    // What was in it stays where it is, its own now, without the instance's frame round it.
+    const freed: string[] = [];
+    // One step to undo, the items put in the frames they lie in included.
+    this.board.beginGesture();
     this.board.transact(() => {
       for (const inst of insts) {
-        this.board.update(inst.id, { inst: undefined });
-        for (const c of this.board.list().filter((i) => i.host === inst.id)) this.board.update(c.id, { from: undefined, host: undefined, ovr: undefined });
+        for (const c of this.board.list().filter((i) => i.host === inst.id)) {
+          this.board.update(c.id, { from: undefined, host: undefined, ovr: undefined, dy: undefined });
+          freed.push(c.id);
+        }
+        this.board.remove([inst.id]);
       }
     });
-    this.emit();
-    this.requestRender();
+    this.settle(freed);
+    this.board.endGesture();
+    this.setSelection(freed);
   }
 
   /** Picks instance `id`'s component and brings it into view, gliding there. */
@@ -870,8 +879,12 @@ export class Editor {
     this.requestRender();
   }
 
+  /** What's typed so far in the item being typed in (see previewText). */
+  private typed: { id: string; text: string } | null = null;
+
   /** Called by the text overlay with its final value. */
   commitText(id: string, text: string): void {
+    if (this.typed?.id === id) this.typed = null;
     const it = this.board.get(id);
     const cell = this.editingCell;
     if (this.editingId === id) { this.editingId = null; this.editingCell = null; }
@@ -955,6 +968,7 @@ export class Editor {
 
   /** Live text while typing, so a text item or a task grows (or shrinks back) as you type and others see it. */
   previewText(id: string, text: string): void {
+    this.typed = { id, text };
     const it = this.board.get(id);
     const h = it && fitHeight(it, text);
     if (it && h && h !== it.h) this.fitTo(it, h);

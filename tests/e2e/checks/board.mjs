@@ -216,7 +216,7 @@ export const checks = {
     expect(await p.ev(`planx.board.getLink('L1')?.to`), 'and back on undo').toBe(ids.d);
   },
 
-  async 'an instance detached from its component is an ordinary frame, as it was, and stays so'(p) {
+  async 'an instance detached from its component leaves its items, as they were, with no frame, and they stay so'(p) {
     const ids = await put(p, `const a = e.newItem('sticky', X, Y, { text: 'Привет' }); b.add(a); e.setSelection([a.id]); return { a: a.id };`);
     await p.click(await p.at('.tools [data-key="component"]'));
     await p.escape();
@@ -230,7 +230,8 @@ export const checks = {
     await p.ev(`planx.board.update('${ids.a}', { text: 'Новое' })`);
     await sleep(200);
     const c = await p.ev(`planx.board.get('${A}')`);
-    expect(await p.ev(`planx.board.get('${inst.id}').inst ?? null`), 'an ordinary frame').toBe(null);
+    expect(await p.ev(`planx.board.get('${inst.id}') ?? null`), 'no frame left').toBe(null);
+    expect(await p.ev(`[...planx.editor.selection].join()`), 'its items picked').toBe(A);
     expect(c.text + ' ' + c.color + ' ' + (c.host ?? 'free'), 'as it was, not following the component').toBe('Привет pink free');
     await p.key('z', 'KeyZ', 90, 4);
     await p.key('z', 'KeyZ', 90, 4);
@@ -356,5 +357,22 @@ export const checks = {
     expect(await p.ev('planx.board.list().length'), 'the board is empty').toBe(0);
     await sleep(2300);
     expect(!!(await p.rect('.clear-fx')), 'and goes').toBeFalsy();
+  },
+
+  async 'text typed onto three lines keeps them all in sight when made bold while typing'(p) {
+    await put(p, `const a = e.newItem('text', X, Y, { id: 'tx', w: 300, text: 'Один' }); b.add(a); e.setSelection([a.id]);`);
+    await p.ev(`planx.editor.startEditing('tx', null, 'end')`);
+    await sleep(200);
+    for (const line of ['Два', 'Три']) {
+      await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' });
+      await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+      await p.cdp('Input.insertText', { text: line });
+    }
+    await sleep(200);
+    const h = await p.ev(`planx.board.get('tx').h`);
+    await p.ev(`planx.editor.setTextStyle({ fw: 700 })`);
+    await sleep(200);
+    expect(await p.ev(`planx.board.get('tx').h`), 'still three lines tall').toBeNear(h, 2);
+    expect(await p.ev('planx.editor.editingId'), 'still typing').toBe('tx');
   },
 };

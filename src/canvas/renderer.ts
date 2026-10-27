@@ -240,22 +240,23 @@ function stickyGradient(color: string): [string, string] {
  * Sticker from the Figma mockup (drawn there at 108×108, scaled here to the item):
  * a diagonal gradient, a soft base shadow, and a separate blurred wedge under the
  * bottom edge, thicker to the right, so the bottom-right corner looks lifted.
- * `px` is device pixels per board unit; canvas shadows aren't scaled by the transform.
+ * The shadows keep their size on the screen whatever the zoom (as other marks over the board do):
+ * `dpr` is device pixels per screen pixel (canvas shadows aren't scaled by the transform), `z` the zoom.
  */
-function drawSticky(ctx: CanvasRenderingContext2D, it: Item, px: number, dim: number) {
-  const k = it.w / 108, { x, y, w, h } = it, a = angleOf(it);
+function drawSticky(ctx: CanvasRenderingContext2D, it: Item, z: number, dpr: number, dim: number) {
+  const k = it.w / 108, { x, y, w, h } = it, a = angleOf(it), px = z * dpr, t = k / z;
   // Corner shadow: draw the wedge far off to the side and throw only its shadow back into place
   // (shadow offsets are on the screen, so along the sticker's turn).
   const away = 100000;
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.13)';
-  ctx.shadowBlur = 4 * k * px;
+  ctx.shadowBlur = 4 * k * dpr;
   ctx.shadowOffsetX = away * px * Math.cos(a);
   ctx.shadowOffsetY = away * px * Math.sin(a);
   ctx.beginPath();
-  ctx.moveTo(x + 106 * k - away, y + h - 1 * k);
-  ctx.lineTo(x + 25 * k - away, y + h - 1 * k);
-  ctx.lineTo(x + 104 * k - away, y + h + 3 * k);
+  ctx.moveTo(x + 106 * k - away, y + h - 1 * t);
+  ctx.lineTo(x + 25 * k - away, y + h - 1 * t);
+  ctx.lineTo(x + 104 * k - away, y + h + 3 * t);
   ctx.closePath();
   ctx.fill();
   ctx.restore();
@@ -267,8 +268,8 @@ function drawSticky(ctx: CanvasRenderingContext2D, it: Item, px: number, dim: nu
   g.addColorStop(1, shade(to, dim));
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.14)';
-  ctx.shadowBlur = 3 * k * px;
-  ctx.shadowOffsetY = 2 * k * px;
+  ctx.shadowBlur = 3 * k * dpr;
+  ctx.shadowOffsetY = 2 * k * dpr;
   ctx.fillStyle = g;
   ctx.fillRect(x, y, w, h);
   ctx.restore();
@@ -280,7 +281,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
   switch (it.type) {
     case 'sticky':
       ctx.globalAlpha = it.fo ?? 1;
-      drawSticky(ctx, it, cam.z * s.dpr, theme.dim);
+      drawSticky(ctx, it, cam.z, s.dpr, theme.dim);
       ctx.globalAlpha = 1;
       if (!editing) drawText(ctx, it, 14, theme.stickyInk, true, s);
       break;
@@ -495,7 +496,7 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
 function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, way: Way, n: number) {
   const { theme, cam } = s, b = foldBadge(it, way, cam.z, n, s.slide?.get(`${it.id}:${way}`) ?? 0);
   ctx.strokeStyle = shade(levelColor(mindDepth(it, s.get) + 1), theme.dim);
-  ctx.lineWidth = it.parent ? 0.75 : 1.5;
+  ctx.lineWidth = it.parent ? 1.125 : 2.25;
   ctx.beginPath();
   if (way === 'up') { ctx.moveTo(b.x, it.y); ctx.lineTo(b.x, b.y + b.h / 2); }
   else if (way === 'down') { ctx.moveTo(b.x, it.y + it.h); ctx.lineTo(b.x, b.y - b.h / 2); }
@@ -525,7 +526,7 @@ function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
     const [a, c1, c2, b] = branchCurve(up, it);
     // In the colour of the node it leads to.
     ctx.strokeStyle = shade(branchColor(it, s.get), s.theme.dim);
-    ctx.lineWidth = up.parent ? 0.75 : 1.5;
+    ctx.lineWidth = up.parent ? 1.125 : 2.25;
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, b.x, b.y);
