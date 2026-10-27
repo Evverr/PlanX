@@ -7,6 +7,23 @@ const box = (type: Item['type'], extra: Partial<Item> = {}): Item =>
   ({ id: type, type, x: 0, y: 0, w: 100, h: 50, z: 0, ...extra });
 
 describe('geometry', () => {
+  it('an instance is picked by its contents and the title above them, without its component padding', () => {
+    const inst = box('frame', { id: 'instance', inst: 'source', w: 300, h: 200 });
+    const a = box('rect', { id: 'a', host: 'instance', x: 40, y: 40, w: 80, h: 80 });
+    const b = box('rect', { id: 'b', host: 'instance', x: 180, y: 40, w: 80, h: 80 });
+    const items = [inst, a, b];
+    expect(hitItem(items, { x: 20, y: 80 }, 1)).toBeNull();
+    expect(hitItem(items, { x: 60, y: 25 }, 1)?.id).toBe('instance');
+    expect(hitItem(items, { x: 140, y: 80 }, 1)?.id).toBe('instance');
+    expect(hitItem(items, { x: 60, y: 80 }, 1)?.id).toBe('a');
+  });
+
+  it('an empty instance still has a selectable area and title', () => {
+    const inst = box('frame', { inst: 'source' });
+    expect(hitItem([inst], { x: 20, y: 20 }, 1)?.id).toBe('frame');
+    expect(hitItem([inst], { x: 20, y: -10 }, 1)?.id).toBe('frame');
+  });
+
   it('ends arrows on the outline of a rectangle', () => {
     expect(edgePoint(box('rect'), { x: 500, y: 25 })).toEqual({ x: 100, y: 25 });
     expect(edgePoint(box('rect'), { x: 50, y: -500 })).toEqual({ x: 50, y: 0 });

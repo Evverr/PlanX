@@ -3,7 +3,7 @@ import { ROTATABLE } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { hitItem, hitLink, linkShape, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, HANDLE } from '../canvas/renderer';
-import { instanceGlyph, instancePlus } from '../model/components';
+import { instancePlus } from '../model/components';
 import { branchWays, buttonKey, foldBadge, mindButtons, type MindButtonAt, type Way } from '../model/mind';
 import { frameButtonAt } from './frames';
 import { rotateCursor } from './cursors';
@@ -45,11 +45,6 @@ export function linkEndAt(ed: Editor, w: Point): Link | null {
   return null;
 }
 
-/** Whether the point is on a picked instance's diamond, which goes to its component. */
-export function onInstanceGlyph(it: Item, w: Point): boolean {
-  return !!it.inst && pointInRect(w, instanceGlyph(it));
-}
-
 /** Whether the point is on a picked component's "+" for a new instance. */
 export function onInstancePlus(ed: Editor, it: Item, w: Point): boolean {
   if (!it.comp || ed.editingId === it.id) return false;
@@ -73,14 +68,14 @@ export function foldBadgeAt(ed: Editor, w: Point): { id: string; way: Way } | nu
 
 /** Whether the point is just outside the item's top right corner, where it is turned. */
 export function onRotate(ed: Editor, it: Item, w: Point): boolean {
-  if (!ROTATABLE.includes(it.type) || it.fold || it.host) return false;
+  if (!ROTATABLE.includes(it.type) || it.fold || it.inst || it.host) return false;
   const p = toLocal(it, w);
   return !pointInRect(p, it) && Math.hypot(p.x - (it.x + it.w), p.y - it.y) <= ed.reach(ROTATE_ZONE);
 }
 
 /** The link dot under the point, if any. */
 export function dotAt(ed: Editor, it: Item, w: Point): Side | null {
-  if (it.type === 'mind') return null;
+  if (it.type === 'mind' || it.inst || it.host) return null;
   const r = ed.reach(16.5);  // well beyond the dot itself, so it is easy to catch
   for (const side of SIDES) {
     const p = sidePoint(it, side, DOT_GAP / ed.cam.z);
@@ -112,7 +107,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if ((link?.id ?? null) !== ed.hotLink) { ed.hotLink = link?.id ?? null; ed.requestRender(); }
   const plus = picked ? plusAt(ed, picked, w) : null, hot = plus ? buttonKey(plus) : picked && onInstancePlus(ed, picked, w) ? 'instance' : null;
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
-  if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w) || (picked && onInstanceGlyph(picked, w))) cursor = 'pointer';
+  if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (dot) cursor = 'crosshair';
   else if (single && onHandle(ed, single, w)) cursor = 'nwse-resize';
   else if (single && onRotate(ed, single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);

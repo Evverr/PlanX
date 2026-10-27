@@ -13,7 +13,7 @@ import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame'
 import { COMPONENT_COLOR, instancePlus } from '../model/components';
 import { autoInk } from '../model/color';
 import cursorUrl from './cursor.svg';
-import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, spreadElbows, polyPoints, linkShape, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
+import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, spreadElbows, polyPoints, linkShape, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -314,19 +314,17 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       break;
     case 'frame': {
       if (it.fold) { drawFolded(ctx, it, s, editing); break; }
-      // A component in red tints, titled after a filled diamond; an instance of it shows no frame or
-      // title until picked, then a dashed red edge and its title after a hollow diamond.
-      if (it.inst && !s.selection.has(it.id)) break;
-      const kin = it.comp || it.inst;
+      // An instance keeps only its red title, flush with its contents, picked as a whole or inside.
       if (it.inst) {
-        ctx.strokeStyle = COMPONENT_COLOR;
-        ctx.lineWidth = 1.5 / cam.z;
-        ctx.setLineDash([6 / cam.z, 4 / cam.z]);
-        ctx.beginPath();
-        ctx.roundRect(it.x, it.y, it.w, it.h, CORNER);
-        ctx.stroke();
-        ctx.setLineDash([]);
+        const b = instanceBounds(it, s.items);
+        ctx.font = font(15, 600);
+        ctx.fillStyle = COMPONENT_COLOR;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(it.text ?? '', b.x, b.y, b.w);
+        break;
       }
+      const kin = it.comp;
       if (!it.inst) {
         // A component is only its red edge, with nothing filled in.
         ctx.beginPath();
@@ -348,7 +346,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
         ctx.fillStyle = kin ? COMPONENT_COLOR : theme.muted;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(kin ? `${it.comp ? '◆' : '◇'} ${it.text ?? ''}` : it.text!, it.x + 2, it.y - 8, it.w);
+        ctx.fillText(kin ? `◆ ${it.text ?? ''}` : it.text!, it.x + 2, it.y - 8, it.w);
       }
       break;
     }
@@ -893,8 +891,12 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
 
   drawBranches(ctx, s);
   for (const it of s.items) {
-    const b = boxOf(it), box = it.type === 'frame' ? { x: b.x - 40, y: b.y - 40, w: b.w + 80, h: b.h + 80 } : b;
-    if (rectsIntersect(box, view)) turned(ctx, it, () => drawItem(ctx, it, s));
+    const b = it.inst ? instanceBounds(it, s.items) : boxOf(it), box = it.type === 'frame' ? { x: b.x - 40, y: b.y - 40, w: b.w + 80, h: b.h + 80 } : b;
+    if (rectsIntersect(box, view)) {
+      // The instance title sits above its contents' board-aligned bounds, including turned copies.
+      if (it.inst) drawItem(ctx, it, s);
+      else turned(ctx, it, () => drawItem(ctx, it, s));
+    }
   }
 
   if (s.links.length) drawLinks(ctx, s, view);
@@ -922,7 +924,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     const it = s.get(id);
     if (!it) continue;
     // A mind map node shows it's picked by its "+" buttons alone, which a few picked together don't get.
-    // A picked instance shows it by its own dashed red edge.
+    // An instance keeps its red title alone, without a selection frame.
     if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) outline(ctx, it, cam.z, SELECT_COLOR);
     // A mind map node sizes itself and links by its branches: instead of the handle and dots it
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
