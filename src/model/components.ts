@@ -13,7 +13,7 @@ import { descendants } from './mind';
  */
 
 /** Fields a copy can have changed in its instance: its text and how it looks, not where it is. */
-export const OVERRIDES = new Set(['text', 'cells', 'cellFmt', 'color', 'fc', 'sc', 'fo', 'so', 'tc', 'mk', 'fs', 'fw', 'ff', 'fi', 'fu', 'fx', 'ta', 'va', 'ls', 'done', 'icon', 'emoji']);
+export const OVERRIDES = new Set(['text', 'cells', 'cellFmt', 'color', 'fc', 'sc', 'fo', 'so', 'tc', 'mk', 'fs', 'fw', 'ff', 'fi', 'fu', 'fx', 'ta', 'va', 'ls', 'done', 'icon', 'emoji', 'type', 'shape']);
 /** Items sized by their text: a copy with its own text keeps its own size. */
 const SIZED_BY_TEXT = new Set(['text', 'mind', 'task']);
 

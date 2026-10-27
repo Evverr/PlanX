@@ -17,12 +17,17 @@ const STICKY_COLORS = Object.keys(FILLS).filter((c) => c !== 'none');
 /** Every tile of a tab in its default order, and where each tab's own order is kept. */
 const ALL: Record<Tab, string[]> = { emoji: EMOJI.map((e) => e.id), stickers: STICKY_COLORS, icons: ICONS.map((i) => i.id) };
 const ORDER_KEY: Record<Tab, string> = { emoji: 'planx-pick-emoji', stickers: 'planx-pick-stickers', icons: 'planx-pick-icons' };
+/** The emoji or the icons in the order they have in the picker here. */
+export const pickerOrder = (kind: 'emoji' | 'icon'): string[] => {
+  const t: Tab = kind === 'emoji' ? 'emoji' : 'icons';
+  return readOrder(ORDER_KEY[t], ALL[t], {});
+};
 /** How far the pointer moves before a press on a tile becomes a drag. */
 const DRAG_SLOP = 4;
 
 /** Picture of a tile: in the grid, twice as big while dragged around the picker, and outside it
  *  at the size it will have on the board (`px` across). */
-function Tile({ kind, id, px }: { kind: PickKind; id: string; px?: number }): ReactNode {
+export function Tile({ kind, id, px }: { kind: PickKind; id: string; px?: number }): ReactNode {
   const size = px ? { width: px, height: px } : undefined;
   if (kind === 'emoji') {
     // Laid in its square as in the Figma set (in percent, so it holds at any size).

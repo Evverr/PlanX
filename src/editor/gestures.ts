@@ -12,12 +12,13 @@ import { rotateCursor } from './cursors';
 import { MIND_TOPIC, type PenTool } from './tools';
 import type { Editor } from './editor';
 import { isLocked } from '../labs/labs';
+import { openSwap, swapKind } from '../labs/swap';
 
 /** What a press on the board has started, followed till it's let go. */
 export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean }
+  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean }
   | { type: 'resize'; id: string; start: Point; orig: Item }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point }
@@ -215,6 +216,13 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         board.endGesture();
       } else if (g.dbl) {
         const it = board.get(g.id);
+        // "Замена двойным кликом": an emoji, an icon or a shape shows its neighbours, a shape opening for
+        // typing too (unless that was the instance it's in being entered).
+        if (swapKind(it)) {
+          openSwap(g.id);
+          if (it!.type !== 'emoji' && it!.type !== 'icon' && !g.enter) ed.startEditing(g.id, null);
+          return;
+        }
         // A frame folds on a double click, and unfolds (a component too, not an instance); on its title
         // over it, that opens for typing.
         if (it?.type === 'frame' && !it.inst && (it.fold || toLocal(it, g.start).y >= it.y)) ed.setFolded(it.id, !it.fold);
