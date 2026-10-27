@@ -13,7 +13,7 @@ import { descendants } from './mind';
  */
 
 /** Fields a copy can have changed in its instance: its text and how it looks, not where it is. */
-export const OVERRIDES = new Set(['text', 'cells', 'cellFmt', 'color', 'fc', 'sc', 'fo', 'so', 'tc', 'mk', 'fs', 'fw', 'ff', 'fi', 'fu', 'fx', 'ta', 'va', 'ls', 'done', 'icon', 'emoji', 'type', 'shape']);
+export const OVERRIDES = new Set(['text', 'cells', 'cellFmt', 'color', 'fc', 'sc', 'fo', 'so', 'tc', 'mk', 'fs', 'fw', 'ff', 'fi', 'fu', 'fx', 'ta', 'va', 'ls', 'done', 'icon', 'emoji', 'type', 'shape', 'dy']);
 /** Items sized by their text: a copy with its own text keeps its own size. */
 const SIZED_BY_TEXT = new Set(['text', 'mind', 'task']);
 
@@ -112,6 +112,8 @@ export function syncOps(items: Item[], links: Link[]): SyncOps {
       const kept = old?.ovr ?? [];
       for (const k of kept) (want as unknown as Record<string, unknown>)[k] = (old as unknown as Record<string, unknown>)[k];
       if (old && kept.includes('text') && SIZED_BY_TEXT.has(src.type)) { want.w = old.w; want.h = old.h; }
+      // Pushed down by text above it that grew in the instance (see labs/textPush.ts).
+      if (want.dy) want.y += want.dy;
       want.ovr = kept.length ? kept : undefined;
       wanted.add(id);
       if (!old) { ops.add.push(Object.fromEntries(Object.entries(want).filter(([, v]) => v !== undefined)) as unknown as Item); continue; }

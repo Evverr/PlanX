@@ -157,4 +157,37 @@ export const checks = {
     expect(after[1].y - before[1].y, 'the one under it pushed as much').toBe(grew);
     expect(after[2].y, 'the one off to the side stays').toBe(before[2].y);
   },
+
+  async '"Текст не слипается" in an instance: the copy grows as it is typed in and pushes the one under it there only'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board, { x: X, y: Y } = e.toWorld(300, 250);
+      b.transact(() => {
+        b.add(e.newItem('frame', X - 1500, Y, { id: 'source', comp: true, text: 'К', w: 300, h: 200, members: ['t1', 't2'], z: 0 }));
+        b.add(e.newItem('text', X - 1460, Y + 40, { id: 't1', w: 200, text: 'Заголовок' }));
+        b.add(e.newItem('text', X - 1460, Y + 76, { id: 't2', w: 200, text: 'Подпись' }));
+        b.add(e.newItem('frame', X, Y, { id: 'instance', inst: 'source', w: 300, h: 200, members: [], z: 0 }));
+      }); e.setSelection([]); })()`);
+    await sleep(300);
+    const y0 = await p.ev(`planx.board.get('instance~t2').y`), h0 = await p.ev(`planx.board.get('instance~t1').h`);
+    await p.ev(`planx.editor.startEditing('instance~t1', null, 'end')`);
+    await sleep(200);
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' });
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
+    await p.cdp('Input.insertText', { text: 'вторая строка' });
+    await sleep(300);
+    const grew = (await p.ev(`planx.board.get('instance~t1').h`)) - h0;
+    expect(grew > 0, 'taller while typing').toBe(true);
+    expect((await p.ev(`planx.board.get('instance~t2').y`)) - y0, 'the one under it pushed while typing').toBe(grew);
+    await p.ev('planx.editor.stopEditing()');
+    await sleep(300);
+    const end = await p.ev(`(() => { const b = planx.board; return { h: b.get('instance~t1').h, y: b.get('instance~t2').y, src: b.get('t2').y, text: b.get('instance~t1').text }; })()`);
+    expect(end.text, 'the new text kept').toBe('Заголовок\nвторая строка');
+    expect(end.h - h0, 'still taller').toBe(grew);
+    expect(end.y - y0, 'still pushed').toBe(grew);
+    // The component moved on: the copy goes along, still pushed as far.
+    const s0 = await p.ev(`planx.board.get('t2').y`);
+    await p.ev(`planx.board.update('t2', { text: 'Новая подпись' })`);
+    await sleep(300);
+    expect((await p.ev(`planx.board.get('instance~t2').y`)) - y0, 'pushed as far after the component changed').toBe(grew);
+    expect(await p.ev(`planx.board.get('t2').y`), 'the component itself not pushed').toBe(s0);
+  },
 };
