@@ -15,7 +15,7 @@ export const checks = {
     const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Нововведения')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
     await sleep(250);
-    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(16);
+    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(17);
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.labs-menu .menu-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`document.querySelector('.labs-menu [aria-checked="false"]')?.textContent`), 'switched off').toBe('Общий таймер');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
@@ -250,5 +250,32 @@ export const checks = {
     await p.key('z', 'KeyZ', 90, 4);
     await sleep(200);
     expect(await p.ev(`planx.board.get('s1').w`), 'undone in one step').toBe(100);
+  },
+
+  async '"Ссылка в тексте": the chain on the text panel sets an address, the text goes blue, Cmd+click opens it'(p) {
+    await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 250); planx.board.add(e.newItem('sticky', x, y, { id: 'st', w: 150, h: 150, text: 'Сайт' })); e.setSelection(['st']); })()`);
+    await sleep(900);
+    await p.click(await p.at('.tfmt button[aria-label="Ссылка"]'));
+    await sleep(200);
+    expect(await p.ev(`document.activeElement?.getAttribute('aria-label')`), 'its field ready').toBe('Адрес ссылки');
+    await p.cdp('Input.insertText', { text: 'example.com' });
+    await p.key('Enter', 'Enter', 13);
+    await sleep(200);
+    const st = await p.ev(`(() => { const s = planx.board.get('st'); return s.url + ' ' + s.tc; })()`);
+    expect(st, 'an address a browser opens, blue text').toBe('https://example.com blue');
+    await p.ev(`window.opened = null; window.open = (u) => { window.opened = u; return null; }`);
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: 375, y: 325, button: 'left', buttons: 1, clickCount: 1, modifiers: 4 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 375, y: 325, button: 'left', buttons: 0, clickCount: 1, modifiers: 4 });
+    await sleep(200);
+    expect(await p.ev('window.opened'), 'Cmd+click opens it').toBe('https://example.com');
+  },
+
+  async 'the board menu starts with "Поделиться", which copies the board\'s address'(p) {
+    await p.ev(`window.copied = null; navigator.clipboard.writeText = async (t) => { window.copied = t; }`);
+    await p.click(await p.at('.topbar button[aria-label="Меню"]'));
+    expect(await p.ev(`document.querySelector('.board-menu .menu-row span').textContent`), 'first in the menu').toBe('Поделиться');
+    await p.click(await p.at('.board-menu .menu-row'));
+    await sleep(200);
+    expect(await p.ev(`window.copied?.includes('?board=')`), 'the board\'s address copied').toBe(true);
   },
 };

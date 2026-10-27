@@ -133,12 +133,27 @@ describe('a stretched instance', () => {
     expect([by.get('i')!.w, by.get('i')!.h]).toEqual([400, 260]);
   });
 
-  it('keeps wide text in the top left corner to its left, and stretches a wide bar across only', () => {
+  it('stretches wide text and a wide bar across only, keeps narrow text to the side it is aligned to', () => {
     const note = item('note', 20, 20, { type: 'text', w: 220, h: 20 }), bar = item('bar', 10, 120, { type: 'rect', w: 280, h: 20 });
-    const c = { ...comp, members: ['bg', 'note', 'bar'] };
-    const { by } = apply([c, bg, note, bar, inst]);
-    const at = (id: string) => { const x = by.get(`i~${id}`)!; return [x.x - 1000, x.y, x.w, x.h]; };
-    expect(at('note')).toEqual([20, 20, 220, 20]);
+    const tag = item('tag', 150, 60, { type: 'text', w: 60, h: 20 });
+    const c = { ...comp, members: ['bg', 'note', 'bar', 'tag'] };
+    const ops = syncOps([c, bg, note, bar, tag, inst], [], (it) => (it.type === 'text' ? Math.ceil(4400 / it.w) : null));
+    const at = (id: string) => { const x = ops.add.find((i) => i.id === `i~${id}`)!; return [x.x - 1000, x.y, x.w, x.h]; };
+    expect(at('note')).toEqual([20, 20, 320, 14]);
     expect(at('bar')).toEqual([10, 150, 380, 20]);
+    expect(at('tag')).toEqual([150, 90, 60, 20]);
+  });
+
+  it('text that wraps anew as the instance is stretched takes the text just under it along', () => {
+    const head = item('head', 20, 20, { type: 'text', w: 220, h: 40 }), sub = item('sub', 20, 70, { type: 'text', w: 100, h: 20 });
+    const far = item('far', 20, 150, { type: 'text', w: 100, h: 20 });
+    const c = { ...comp, members: ['head', 'sub', 'far'] };
+    // Twice as wide as needed for two lines: one line, 20 tall.
+    const ops = syncOps([c, head, sub, far, inst], [], (it) => (it.id.endsWith('head') ? 20 : it.h), true);
+    const y = (id: string) => ops.add.find((i) => i.id === `i~${id}`)!.y;
+    // In the middle third: down by half the 60 grown, and up by the 20 the heading lost.
+    expect(y('sub')).toBe(70 + 30 - 20);
+    // Too far under to go along: just to the bottom with the instance.
+    expect(y('far')).toBe(150 + 60);
   });
 });

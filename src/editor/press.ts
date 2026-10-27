@@ -9,6 +9,7 @@ import { isPoly } from './tools';
 import type { Editor } from './editor';
 import { isLocked } from '../labs/labs';
 import { swapKind } from '../labs/swap';
+import { openLink } from '../labs/textLink';
 
 /** A press on the board: works out what it starts (a gesture followed till it's let go) or does at
  *  once, from the tool, what's under it and what's selected. */
@@ -209,6 +210,8 @@ export function press(ed: Editor, e: PointerEvent): void {
     toggleAudio(hit, () => ed.requestRender());
     return;
   }
+  // Cmd+click (Ctrl+click) on what leads somewhere opens it ("Ссылка в тексте", src/labs).
+  if ((e.metaKey || e.ctrlKey) && openLink(hit)) return;
   if (hit) {
     const now = performance.now();
     // Pressed twice: on the same item, or (an emoji, an icon, a shape) as the second press enters

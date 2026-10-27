@@ -11,8 +11,8 @@ import { LabsMenu } from '../labs/LabsMenu';
  * arrow for a further level, and a line splits the groups. Icons come from the set (picked at
  * random for now). The first rows' text is a shade lighter, as in the mockup.
  */
-export function BoardMenu({ level = 0, onSave, onReset, onSaveBoard, onLoadBoard }: {
-  level?: number; onSave?: () => void; onReset?: () => void; onSaveBoard?: () => void; onLoadBoard?: () => void;
+export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, onLoadBoard }: {
+  level?: number; onShare?: () => void; onSave?: () => void; onReset?: () => void; onSaveBoard?: () => void; onLoadBoard?: () => void;
 }) {
   const [on, setOn] = useState(false);
   const [panelSize, setPanelSize] = usePanelSize();
@@ -50,6 +50,8 @@ export function BoardMenu({ level = 0, onSave, onReset, onSaveBoard, onLoadBoard
   return (
     <div ref={ref} className={`board-menu ${level ? 'sub' : ''} ${leftward ? 'leftward' : ''} ${anyIcon ? '' : 'plain'}`} role="menu" data-nosort>
       {level === 0 && <>
+        {row('share', 'Поделиться', { onClick: onShare })}
+        <div className="menu-line" />
         {row('download', 'Сохранить доску', { onClick: onSaveBoard })}
         {row('upload', 'Загрузить доску', { onClick: onLoadBoard })}
         <div className="menu-line" />

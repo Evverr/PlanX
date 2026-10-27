@@ -10,6 +10,8 @@ import { FONTS } from '../canvas/text';
 import { PanelIcon as Icon, type PanelIconName as IconName } from './PanelIcon';
 import { useSortable } from './sortable';
 import { EDGE } from '../layout';
+import { useLabs } from '../labs/labs';
+import { linkPatch } from '../labs/textLink';
 
 function Btn({ icon, label, on, off, swatch, menu, onClick }: {
   icon: IconName; label: string; on?: boolean; off?: boolean; swatch?: string; menu?: boolean; onClick?: () => void;
@@ -41,6 +43,23 @@ function Drop({ open, menu, grid, children }: { open: boolean; menu: ReactNode; 
   );
 }
 
+/** The link's menu: its address to type (Enter sets it), and to open it or take it off. */
+function LinkMenu({ item, onSet }: { item: Item; onSet: (typed: string) => void }) {
+  const [typed, setTyped] = useState(item.url ?? '');
+  return (
+    <div className="tf-link">
+      <input autoFocus type="url" placeholder="Вставьте ссылку" aria-label="Адрес ссылки" value={typed}
+        onChange={(e) => setTyped(e.target.value)}
+        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') onSet(typed); }} />
+      <div className="tf-link-row">
+        <button className="tf-item" onClick={() => onSet(typed)}>Готово</button>
+        {item.url && <button className="tf-item" onClick={() => window.open(item.url, '_blank', 'noopener')}>Открыть</button>}
+        {item.url && <button className="tf-item" onClick={() => onSet('')}>Убрать</button>}
+      </div>
+    </div>
+  );
+}
+
 const SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72, 96];
 /** Text styles set size and weight together; "Обычный" is the type's own size and weight. */
 const HEADINGS: Array<[string, number]> = [['Заголовок 1', 40], ['Заголовок 2', 30], ['Заголовок 3', 22]];
@@ -50,9 +69,9 @@ const LISTS: Array<[ListKind, IconName, string]> = [['bullet', 'bulleted-list', 
 
 const hex = (c: string | undefined, table: Record<string, string>) => (c ? (c.startsWith('#') ? c : table[c]) : undefined);
 
-const ORDER = ['font', 'gap', 'style', 'gap2', 'size', 'gap3', 'bold', 'italic', 'underline', 'strike', 'sep', 'color', 'mark', 'sep2', 'align', 'sep3', 'list'];
+const ORDER = ['font', 'gap', 'style', 'gap2', 'size', 'gap3', 'bold', 'italic', 'underline', 'strike', 'sep', 'color', 'mark', 'sep2', 'align', 'sep3', 'list', 'link'];
 
-type Menu = 'font' | 'style' | 'size' | 'color' | 'mark' | 'align' | 'list';
+type Menu = 'font' | 'style' | 'size' | 'color' | 'mark' | 'align' | 'list' | 'link';
 
 /** Gap between the selected item's top dot and the text panel, and the panel's margin to the screen edge. */
 const GAP = 20;
@@ -66,6 +85,7 @@ function textRoom(): number {
 /** Hung 20px over the top dot of the selected text or sticker (under the bottom dot when there's no room above). */
 export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
   const sort = useSortable('planx-order-text', ORDER, 'x');
+  const labs = useLabs();
   const el = sort.ref;
   const [menu, setMenu] = useState<Menu | null>(null);
   useLayoutEffect(() => {
@@ -116,7 +136,7 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
     // Keep focus in the text being edited when a control is pressed. Controls can be rearranged by holding them;
     // components can't take the ref, so each sits in a wrapper.
     <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`tfmt sortable ${sort.sorting ? 'sorting' : ''}`} role="toolbar" aria-label="Форматирование текста"
-      {...sort.container} onPointerDown={(e) => { e.preventDefault(); sort.container.onPointerDown(e); }}>
+      {...sort.container} onPointerDown={(e) => { if (!(e.target as Element).closest('input')) e.preventDefault(); sort.container.onPointerDown(e); }}>
       {sort.renderFit({
         font: <span className="sort-wrap"><Drop open={menu === 'font'} menu={Object.entries(FONTS).map(([k, f]) => (
           <button key={k} className={`tf-item ${(item.ff ?? 'onest') === k ? 'on' : ''}`} style={{ fontFamily: f.css }}
@@ -177,6 +197,15 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
         </div>}>
           <Btn icon={item.ls === 'number' ? 'numbered-list' : 'list'} label="Список" menu on={!!item.ls || menu === 'list'} onClick={() => toggle('list')} />
         </Drop></span>,
+        // "Ссылка в тексте" (src/labs): an address for the item, typed in its menu.
+        link: labs.textLink ? <span className="sort-wrap"><Drop open={menu === 'link'} menu={<LinkMenu item={item} onSet={(typed) => {
+          editor.beginChange();
+          for (const it of editor.selectedItems()) editor.board.update(it.id, linkPatch(it, typed));
+          editor.endChange();
+          setMenu(null);
+        }} />}>
+          <Btn icon="link" label="Ссылка" on={!!item.url || menu === 'link'} onClick={() => toggle('link')} />
+        </Drop></span> : undefined,
       }, textRoom(), 'above')}
     </div>
   );

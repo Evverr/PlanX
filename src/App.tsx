@@ -231,6 +231,7 @@ export function App({ boardId }: { boardId: string }) {
                 <PanelIcon name="burger" />
               </button>
               {menuOpen && <BoardMenu
+                onShare={() => { setMenuOpen(false); void share(); }}
                 onSaveBoard={() => { saveBoardFile(editor); setMenuOpen(false); setToast('Доска сохранена в файл'); }}
                 onLoadBoard={() => { setMenuOpen(false); boardFileInput.current?.click(); }}
                 onSave={() => { savePanels(); setMenuOpen(false); setToast('Панели сохранены'); }}
