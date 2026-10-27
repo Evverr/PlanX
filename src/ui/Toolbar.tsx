@@ -25,10 +25,10 @@ const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
 const LATER: Partial<Record<string, [PanelIconName, string]>> = {};
 
 /** Everything on the rail, top to bottom, until someone rearranges it. */
-const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'component', 'table', 'mind', 'frames', 'draw', 'image', 'audio', 'smile', 'paint'];
+const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'component', 'table', 'mind', 'frames', 'draw', 'image', 'audio', 'smile'];
 
 /** Rail buttons that make something on the board when dragged off the rail, and their icons. */
-const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape', paint: 'node-pool' };
+const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape' };
 
 /** The "more" column at full size: its padding top and bottom, its buttons and the gap between them
  *  (scaled as the panels are, the way the styles round them). */
@@ -45,8 +45,8 @@ function savedShape(): Tool {
   return 'rect';
 }
 
-export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, onToggleIcons, recorderOpen, onToggleRecorder }: {
-  editor: Editor; tool: Tool; pens: Pens; zoom: number; guides: boolean; docked: boolean; iconsOpen: boolean; onToggleIcons: () => void;
+export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleIcons, recorderOpen, onToggleRecorder }: {
+  editor: Editor; tool: Tool; pens: Pens; zoom: number; docked: boolean; iconsOpen: boolean; onToggleIcons: () => void;
   recorderOpen: boolean; onToggleRecorder: () => void;
 }) {
   // The drawing button brings back whichever of pen, highlighter and eraser was used last.
@@ -162,8 +162,6 @@ export function Toolbar({ editor, tool, pens, zoom, guides, docked, iconsOpen, o
     if (key === 'image') return button(key, false, 'Картинка', 'image', () => { pictureAt.current = undefined; filePicker.current?.click(); });
     if (key === 'audio') return button(key, recorderOpen, 'Аудиозаметка', 'microphone', onToggleRecorder, { 'aria-expanded': recorderOpen });
     if (key === 'smile') return button(key, iconsOpen, 'Смайлы, стикеры и иконки (I)', 'smile', onToggleIcons, { 'aria-expanded': iconsOpen });
-    // The roller turns lining up along guides on and off while dragging.
-    if (key === 'paint') return button(key, guides, guides ? 'Направляющие включены' : 'Направляющие', 'node-pool', () => editor.toggleGuides(), { 'aria-pressed': guides });
     if (later) return button(key, false, `${later[1]} (скоро)`, later[0]);
     return null;
   };
