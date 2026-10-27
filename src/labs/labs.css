@@ -114,3 +114,11 @@
 
 /* The menu level with the switches. */
 .labs-menu .menu-row { padding-right: var(--s32); }
+
+/* Замена двойным кликом: the neighbours under the item, the one it is now picked out. */
+.swap-pop { width: var(--e316); max-width: calc(100vw - 16px); padding: var(--s12); box-sizing: border-box; }
+.swap-pop.shape { width: auto; }
+.swap-pop input { width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: var(--s8); padding: var(--s8) var(--s10); font: inherit; margin-bottom: var(--s10); }
+.swap-pop .icon-grid { max-height: min(var(--e340), 40vh); }
+.swap-pop .icon-grid button.on { background: var(--fmt-on); }
+.swap-pop .shape-grid { grid-template-columns: repeat(6, var(--s44)); }

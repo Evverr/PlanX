@@ -8,6 +8,7 @@ import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
 import type { Editor } from './editor';
 import { isLocked } from '../labs/labs';
+import { swapKind } from '../labs/swap';
 
 /** A press on the board: works out what it starts (a gesture followed till it's let go) or does at
  *  once, from the tool, what's under it and what's selected. */
@@ -210,7 +211,10 @@ export function press(ed: Editor, e: PointerEvent): void {
   }
   if (hit) {
     const now = performance.now();
-    const dbl = ed.lastTap.id === hit.id && now - ed.lastTap.t < 380 && !e.shiftKey;
+    // Pressed twice: on the same item, or (an emoji, an icon, a shape) as the second press enters
+    // the instance it's in.
+    const enter = entering && ed.lastTap.id === hit.host && !!swapKind(hit);
+    const dbl = (ed.lastTap.id === hit.id || enter) && now - ed.lastTap.t < 380 && !e.shiftKey;
     ed.lastTap = { id: hit.id, t: now };
     // A click on a cell of the table already selected picks that cell (on letting go, if not dragged).
     const cell = hit.type === 'table' && ed.selection.size === 1 && ed.selection.has(hit.id);
@@ -220,7 +224,7 @@ export function press(ed: Editor, e: PointerEvent): void {
       if (next.has(hit.id)) next.delete(hit.id); else next.add(hit.id);
       ed.setSelection(next);
     } else if (!ed.selection.has(hit.id)) ed.setSelection([hit.id]);
-    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(items), moved: false, id: hit.id, dbl, cell };
+    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(items), moved: false, id: hit.id, dbl, cell, enter };
     return;
   }
   ed.lastTap = { id: '', t: 0 };

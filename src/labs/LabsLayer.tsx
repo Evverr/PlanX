@@ -13,6 +13,7 @@ import { downloadPdf } from './exportPdf';
 import { drawTidy, endTidyDrag, gapAt, moveTidyDrag, setGaps, setHotGap, startTidyDrag, tidyDragging, tidyItemAt, tidyNow } from './tidy';
 import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
+import { SwapPop } from './SwapPop';
 import './labs.css';
 
 type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'keys';
@@ -192,6 +193,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       {pop === 'search' && <SearchPop editor={editor} />}
       {pop === 'timer' && <TimerPop onStart={(min) => { startTimer(editor.board.doc, min * 60000, conn.me.name); setPop(null); }} />}
       {pop === 'keys' && <KeysSheet onClose={() => setPop(null)} />}
+      {labs.swap && <SwapPop editor={editor} />}
       <div className="labs-top">
         {labs.timer && <TimerPill editor={editor} />}
         {following && labs.follow && (
