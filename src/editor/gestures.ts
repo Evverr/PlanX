@@ -62,11 +62,10 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         board.beginGesture();
         if (e.altKey) g.orig = ed.dragCopies(g.orig);
       }
-      // With guides on (or Shift held as it's dragged), what's dragged lines up with what's on screen
-      // around it when near.
+      // With Shift held as it's dragged, what's dragged lines up with what's on screen around it when near.
       let sx = 0, sy = 0;
       g.guides = undefined;
-      if (ed.guides || e.shiftKey) {
+      if (e.shiftKey) {
         const moving = [...g.orig].map(([id, o]) => { const it = board.get(id); return it && { ...it, x: o.x + dx, y: o.y + dy }; }).filter((i): i is Item => !!i);
         const bs = moving.map(boxOf), view = ed.viewRect();
         const x = Math.min(...bs.map((b) => b.x)), y = Math.min(...bs.map((b) => b.y));

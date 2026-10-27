@@ -314,8 +314,10 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       break;
     case 'frame': {
       if (it.fold) { drawFolded(ctx, it, s, editing); break; }
-      // An instance keeps only its red title, flush with its contents, picked as a whole or inside.
+      // An instance shows only its red title, flush with its contents, and that only while it's picked
+      // (as a whole or something inside it).
       if (it.inst) {
+        if (!s.selection.has(it.id) && ![...s.selection].some((id) => s.get(id)?.host === it.id)) break;
         const b = instanceBounds(it, s.items);
         ctx.font = font(15, 600);
         ctx.fillStyle = COMPONENT_COLOR;

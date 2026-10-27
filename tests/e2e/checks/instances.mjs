@@ -38,7 +38,7 @@ export const checks = {
     expect(await p.ev('planx.editor.editingId'), 'no accidental text editing').toBe(null);
   },
 
-  async 'the red title hugs the contents in every selection state, with no red frame'(p) {
+  async 'the red title shows only while the instance (or something in it) is picked, hugging the contents, with no red frame'(p) {
     const at = await fixture(p);
     for (const selection of [[], ['instance'], ['instance~a']]) {
       const drawing = await p.ev(`(() => {
@@ -50,14 +50,19 @@ export const checks = {
         try { e.render(); } finally { ctx.fillText = fillText; ctx.stroke = stroke; }
         return { text, strokes: strokes.length };
       })()`);
-      expect(drawing.text.length, 'one persistent red title').toBe(1);
+      if (!selection.length) {
+        expect(drawing.text.length, 'no title while nothing is picked').toBe(0);
+        continue;
+      }
+      expect(drawing.text.length, 'one red title while picked').toBe(1);
       expect(drawing.text[0].t, 'only the title, without a diamond').toBe('Карточка');
       expect(drawing.text[0].x, 'title flush with the contents on the left').toBe(at.x + 40);
       expect(drawing.text[0].y, 'title directly above the contents').toBe(at.y + 40);
       expect(drawing.strokes, 'no red instance frame').toBe(0);
     }
+    await p.ev('planx.editor.setSelection([])');
     await p.click([390, 280]);
-    expect(await selected(p), 'its visible title picks the group').toBe('instance');
+    expect(await selected(p), 'where its title shows picks the group').toBe('instance');
   },
 
   async 'dragging on the first press still moves the whole instance and keeps its source unchanged'(p) {
@@ -71,7 +76,7 @@ export const checks = {
     }
   },
 
-  async 'the title stays visible when a turned child extends into view from an offscreen instance'(p) {
+  async 'the title of a picked instance stays visible when a turned child extends into view from offscreen'(p) {
     const titleY = await p.ev(`(async () => {
       const e = planx.editor, b = planx.board;
       e.cam = { x: 0, y: 0, z: 1 }; e.needsFit = false;
@@ -81,7 +86,7 @@ export const checks = {
         b.add(e.newItem('frame', 200, 900, { id: 'instance', inst: 'source', w: 600, h: 80, members: [], z: 0 }));
       });
       await new Promise(requestAnimationFrame);
-      e.setSelection([]);
+      e.setSelection(['instance']);
       const ctx = e.canvas.getContext('2d'), fillText = ctx.fillText; let y = null;
       ctx.fillText = function(t, x, atY, ...rest) { if (t === 'Повернутый') y = atY; return fillText.call(this, t, x, atY, ...rest); };
       try { e.render(); } finally { ctx.fillText = fillText; }
