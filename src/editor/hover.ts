@@ -16,10 +16,10 @@ const ROTATE_ZONE = 18;
 
 /** Whether the point is on the item's resize handle, at its lower right corner. */
 export function onHandle(ed: Editor, it: Item, w: Point): boolean {
-  // An instance is as big as its component, what's in it as big as what's in that.
-  if (it.type === 'mind' || it.fold || it.inst || it.host) return false;
-  const hs = ed.reach((HANDLE + 6) / 2) * 2, off = 3 / ed.cam.z;
-  return pointInRect(toLocal(it, w), { x: it.x + it.w + off - hs / 2, y: it.y + it.h + off - hs / 2, w: hs, h: hs });
+  // What's in an instance is as big as the instance makes it; the instance's handle is at its contents' corner.
+  if (it.type === 'mind' || it.fold || it.host) return false;
+  const hs = ed.reach((HANDLE + 6) / 2) * 2, off = 3 / ed.cam.z, b = it.inst ? instanceBounds(it, ed.board.list()) : it;
+  return pointInRect(it.inst ? w : toLocal(it, w), { x: b.x + b.w + off - hs / 2, y: b.y + b.h + off - hs / 2, w: hs, h: hs });
 }
 
 /** Which of a mind map node's buttons is under the point, once they're showing. */

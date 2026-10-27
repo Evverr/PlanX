@@ -94,6 +94,35 @@ export const checks = {
     expect(state.color, 'the copy keeps its changed colour').toBe('green');
   },
 
+  async 'dragging a child picked in an instance moves the whole instance, keeping the child picked'(p) {
+    await fixture(p);
+    await p.click([390, 330]);
+    await p.click([390, 330]);
+    expect(await selected(p), 'the child picked').toBe('instance~a');
+    const before = await p.ev(`['instance', 'instance~a', 'instance~b'].map((id) => planx.board.get(id).x)`);
+    await p.drag([390, 330], [450, 330]);
+    const after = await p.ev(`['instance', 'instance~a', 'instance~b'].map((id) => planx.board.get(id).x)`);
+    for (let i = 0; i < 3; i++) expect(after[i] - before[i], 'all moved along').toBeNear(60);
+    expect(await selected(p), 'the child still picked').toBe('instance~a');
+  },
+
+  async 'a picked instance is stretched by its corner, its contents keeping to their sides'(p) {
+    const at = await fixture(p);
+    await p.click([390, 330]);
+    // The contents run from (340, 290) to (590, 370) on screen; the handle is just past that corner.
+    await p.drag([593, 373], [693, 433]);
+    const r = await p.ev(`['instance~a', 'instance~b', 'a'].map((id) => { const i = planx.board.get(id); return [i.x, i.y, i.w, i.h]; })`);
+    // Both as tall as the contents: in the middle of them up and down.
+    expect(r[0].join(), 'the left one stays at the left, halfway down').toBe([at.x + 40, at.y + 70, 100, 80].join());
+    expect(r[1][0] - (at.x + 190), 'the right one goes right with the corner').toBeNear(100);
+    expect(r[1][1] - (at.y + 40), 'and halfway down').toBeNear(30);
+    expect(r[2].join(), 'the component unchanged').toBe([at.x - 1460, at.y + 40, 100, 80].join());
+    expect(await p.ev(`JSON.stringify(planx.board.get('instance').grow)`), 'how much it grew').toBe('{"w":100,"h":60}');
+    await p.key('z', 'KeyZ', 90, 4);
+    await sleep(200);
+    expect(await p.ev(`planx.board.get('instance~b').x`), 'undone in one step').toBe(at.x + 190);
+  },
+
   async 'dragging on the first press still moves the whole instance and keeps its source unchanged'(p) {
     await fixture(p);
     const before = await p.ev(`['instance', 'instance~a', 'instance~b', 'a'].map((id) => { const i = planx.board.get(id); return { id, x: i.x, y: i.y }; })`);

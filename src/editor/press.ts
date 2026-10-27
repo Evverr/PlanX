@@ -1,6 +1,6 @@
 import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
-import { center, hitItem, hitLink, onAudioButton, onTaskBox } from '../canvas/geometry';
+import { center, hitItem, hitLink, instanceBounds, onAudioButton, onTaskBox } from '../canvas/geometry';
 import { toggleAudio } from '../canvas/audio';
 import { dotAt, foldBadgeAt, frameButtonUnder, linkEndAt, onHandle, onInstanceGlyph, onInstancePlus, onRotate, plusAt } from './hover';
 import { grabbableLine } from './tables';
@@ -157,7 +157,7 @@ export function press(ed: Editor, e: PointerEvent): void {
   }
   if (single && !isLocked(single) && onHandle(ed, single, w)) {
     board.beginGesture();
-    ed.gesture = { type: 'resize', id: single.id, start: w, orig: { ...single } };
+    ed.gesture = { type: 'resize', id: single.id, start: w, orig: { ...single }, box: single.inst ? instanceBounds(single, items) : undefined };
     ed.setMoving(true);
     return;
   }

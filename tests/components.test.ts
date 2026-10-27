@@ -112,3 +112,24 @@ describe('copies of instances', () => {
     expect(apply([comp, a, inst, copy, it]).ops.remove).toEqual([]);
   });
 });
+
+describe('a stretched instance', () => {
+  // A card 300×200 with a background over all of it, a badge in the top right corner, a title in the
+  // middle of the top and a button in the bottom left.
+  const comp = item('c', 0, 0, { type: 'frame', w: 300, h: 200, comp: true, members: ['bg', 'badge', 'title', 'btn'] });
+  const bg = item('bg', 0, 0, { type: 'rect', w: 300, h: 200 });
+  const badge = item('badge', 260, 10, { type: 'emoji', w: 30, h: 30 });
+  const title = item('title', 100, 10, { type: 'text', w: 100, h: 30 });
+  const btn = item('btn', 10, 160, { type: 'rect', w: 80, h: 30 });
+  const inst = item('i', 1000, 0, { type: 'frame', w: 300, h: 200, inst: 'c', members: [], grow: { w: 100, h: 60 } });
+
+  it('stretches what takes most of it, and keeps the rest to their corners and sides', () => {
+    const { by } = apply([comp, bg, badge, title, btn, inst]);
+    const at = (id: string) => { const c = by.get(`i~${id}`)!; return [c.x - 1000, c.y, c.w, c.h]; };
+    expect(at('bg')).toEqual([0, 0, 400, 260]);
+    expect(at('badge')).toEqual([360, 10, 30, 30]);
+    expect(at('title')).toEqual([150, 10, 100, 30]);
+    expect(at('btn')).toEqual([10, 220, 80, 30]);
+    expect([by.get('i')!.w, by.get('i')!.h]).toEqual([400, 260]);
+  });
+});

@@ -1025,8 +1025,10 @@ export class Editor {
 
   /** Shared: the selected items plus what the selected frames hold (but those locked in place). */
   dragSet(items: Item[]): Map<string, Point> {
-    // What's in an instance moves only with it.
-    return carried(this.board, items.filter((i) => this.selection.has(i.id) && !isLocked(i) && !i.host), items);
+    // What's in an instance moves only with it: one picked in it takes the whole instance along.
+    const sel = new Map(items.filter((i) => this.selection.has(i.id)).map((i) => i.host ? this.board.get(i.host) : i)
+      .filter((i): i is Item => !!i && !isLocked(i)).map((i) => [i.id, i]));
+    return carried(this.board, [...sel.values()], items);
   }
 
   /** Shared: puts each of these items in the frame it lies in, or out of frames (see settled). */

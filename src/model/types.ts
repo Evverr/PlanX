@@ -86,6 +86,8 @@ export interface Item {
   from?: string;
   host?: string;
   ovr?: string[];
+  /** An instance stretched: how much wider and taller its contents are than its component's. */
+  grow?: { w: number; h: number };
   sw?: number;
   hl?: boolean;
   /** Locked in place: not moved, resized, typed in or deleted (src/labs, "Замок"). */
