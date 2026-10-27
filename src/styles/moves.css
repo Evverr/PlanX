@@ -5,6 +5,8 @@
 :is(.tools, .panel) { transition-property: top, bottom, left, right, border-radius, transform; }
 /* The one being dragged follows the pointer at once; the others make way smoothly. */
 .gripped { transition: none !important; }
+/* While the window is being resized, panels keep to their edges at once instead of gliding after them. */
+:root[data-resizing] :is(.bar, .tools, .tools-more, .draw-panel, .panel) { transition: none !important; }
 
 /* Bars moved by hand to the other edge of the screen (see ui/panels/grip.ts): the top bar to the bottom, the
    zoom bar to the top, the tool rail to the right; what opens from them opens the other way. */

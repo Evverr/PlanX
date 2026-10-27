@@ -2,11 +2,12 @@
 // neighbours, one picked takes its place; in an instance, as a change of the copy.
 import { expect, sleep } from '../lib.mjs';
 
+/** A double click as the browser has it: the second press counted as such (for its dblclick). */
 const dbl = async (p, [x, y]) => {
-  for (let i = 0; i < 2; i++) {
-    await p.mouse('mouseMoved', x, y);
-    await p.mouse('mousePressed', x, y);
-    await p.mouse('mouseReleased', x, y);
+  await p.mouse('mouseMoved', x, y);
+  for (let i = 1; i <= 2; i++) {
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: i });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: i });
     await sleep(60);
   }
   await sleep(250);
@@ -82,5 +83,17 @@ export const checks = {
     const after = await p.ev(`(() => { const c = planx.board.get('instance~m'); return { emoji: c.emoji, w: c.w }; })()`);
     expect(after.emoji, 'its own emoji').toBe(state.copy);
     expect(after.w, 'its size follows').toBe(50);
+  },
+
+  async 'a shape being typed in shows its neighbours again on a double click on its text'(p) {
+    await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 250); planx.board.add(e.newItem('rect', x, y, { id: 'sh', w: 200, h: 120, text: 'Фигура' })); e.setSelection([]); })()`);
+    await dbl(p, [400, 360]);
+    expect(await p.ev('planx.editor.editingId'), 'typing').toBe('sh');
+    // A press in the text (as for the caret) puts the popup away; a double click there brings it back.
+    const t = await p.ev(`(() => { const r = document.querySelector('textarea.text-edit').getBoundingClientRect(); return [r.x + 20, r.y + r.height / 2]; })()`);
+    await p.click(t);
+    expect(await tiles(p), 'put away').toBe(0);
+    await dbl(p, t);
+    expect(await tiles(p), 'back on a double click in the text').toBe(11);
   },
 };

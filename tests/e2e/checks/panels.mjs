@@ -147,4 +147,16 @@ export const checks = {
     await p.reload();
     expect((await p.rect('.tools')).t, 'rail back where it was').toBe(t0);
   },
+
+  async 'as the window is resized, the zoom bar keeps to its corner at once, without gliding'(p) {
+    await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1000, height: 700, deviceScaleFactor: 1, mobile: false });
+    await sleep(30);
+    const z = await p.rect('.bar.zoom');
+    expect(await p.ev(`getComputedStyle(document.querySelector('.bar.zoom')).transitionDuration.split(',').every((d) => parseFloat(d) === 0)`), 'no gliding while resizing').toBe(true);
+    expect(z.r, 'right away at the right edge').toBeNear(1000 - 12, 2);
+    expect(z.b, 'and at the bottom').toBeNear(700 - 12, 2);
+    await sleep(400);
+    expect(await p.ev(`document.documentElement.dataset.resizing === undefined`), 'glides again after').toBe(true);
+    await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1200, height: 800, deviceScaleFactor: 1, mobile: false });
+  },
 };
