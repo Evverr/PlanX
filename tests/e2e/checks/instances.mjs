@@ -56,7 +56,7 @@ export const checks = {
       }
       expect(drawing.text.map((t) => t.t).join(' '), 'a diamond and the title while picked').toBe('◇ Карточка');
       expect(drawing.text[0].x, 'diamond flush with the contents on the left').toBe(at.x + 40);
-      expect(drawing.text[1].y, 'title directly above the contents').toBe(at.y + 40);
+      expect(drawing.text[1].y, 'title 2 above the contents').toBe(at.y + 38);
       expect(drawing.strokes, 'no red instance frame').toBe(0);
     }
     await p.ev('planx.editor.setSelection([])');
@@ -70,6 +70,12 @@ export const checks = {
       await fixture(p);
       for (let i = 0; i < presses; i++) await p.click([390, 330]);
       expect(await selected(p), 'picked first').toBe(presses === 1 ? 'instance' : 'instance~a');
+      // Under the pointer, a little off it, it's solid.
+      await p.mouse('mouseMoved', 337, 266);
+      await sleep(100);
+      const solid = await p.ev(`(() => { const e = planx.editor, ctx = e.canvas.getContext('2d'), f = ctx.fillText, seen = [];
+        ctx.fillText = function(t, ...r) { seen.push(t); return f.call(this, t, ...r); }; try { e.render(); } finally { ctx.fillText = f; } return seen.includes('◆'); })()`);
+      expect(solid, 'solid under the pointer').toBe(true);
       await p.click([347, 280]);
       await sleep(700);
       expect(await selected(p), 'the diamond picks the component').toBe('source');
@@ -150,6 +156,6 @@ export const checks = {
       try { e.render(); } finally { ctx.fillText = fillText; }
       return y;
     })()`);
-    expect(titleY, 'title above the visible rotated child').toBeNear(665);
+    expect(titleY, 'title above the visible rotated child').toBeNear(663);
   },
 };

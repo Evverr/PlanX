@@ -112,9 +112,11 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   const under = hitItem(ed.shown(), w, ed.cam.z);
   const link = under && under.type !== 'frame' ? null : hitLink(ed.shownLinks(), (id) => ed.board.get(id), w, ed.cam.z);
   if ((link?.id ?? null) !== ed.hotLink) { ed.hotLink = link?.id ?? null; ed.requestRender(); }
-  const plus = picked ? plusAt(ed, picked, w) : null, hot = plus ? buttonKey(plus) : picked && onInstancePlus(ed, picked, w) ? 'instance' : null;
+  // The picked instance's diamond (or that of the one holding what's picked) is lit as "glyph:<its id>".
+  const glyph = picked && onInstanceGlyph(ed, picked, w) ? `glyph:${picked.inst ? picked.id : picked.host}` : null;
+  const plus = picked ? plusAt(ed, picked, w) : null, hot = plus ? buttonKey(plus) : picked && onInstancePlus(ed, picked, w) ? 'instance' : glyph;
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
-  if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w) || (picked && onInstanceGlyph(ed, picked, w))) cursor = 'pointer';
+  if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (dot) cursor = 'crosshair';
   else if (single && onHandle(ed, single, w)) cursor = 'nwse-resize';
   else if (single && onRotate(ed, single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);

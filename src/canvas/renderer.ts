@@ -324,9 +324,10 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
         ctx.fillStyle = COMPONENT_COLOR;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'bottom';
-        ctx.fillText('◇', b.x, b.y);
-        const gap = ctx.measureText('◇ ').width;
-        ctx.fillText(it.text ?? '', b.x + gap, b.y, Math.max(0, b.w - gap));
+        // 2 above the contents; the diamond solid under the pointer.
+        const y = b.y - 2, gap = ctx.measureText('◇ ').width;
+        ctx.fillText(s.hotPlus === `glyph:${it.id}` ? '◆' : '◇', b.x, y);
+        ctx.fillText(it.text ?? '', b.x + gap, y, Math.max(0, b.w - gap));
         break;
       }
       const kin = it.comp;
