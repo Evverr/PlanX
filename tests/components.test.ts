@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Item, Link } from '../src/model/types';
 import { syncOps } from '../src/model/components';
+import { copiesOf } from '../src/editor/copies';
 
 const item = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item => ({ id, type: 'sticky', x, y, w: 100, h: 100, z: 1, ...extra });
 /** The board after the ops, as items by id. */
@@ -83,5 +84,31 @@ describe('components and their instances', () => {
     const { by, ops } = apply([c2, r, k, inst], [l]);
     const loose = [...by.values()].map((i) => (i.id === 'i' ? { ...i, inst: undefined } : i.host ? { ...i, host: undefined, from: undefined } : i));
     expect(syncOps(loose, [l, ...ops.addLinks]).removeLinks).toEqual([]);
+  });
+});
+
+describe('copies of instances', () => {
+  const comp = item('c', 0, 0, { type: 'frame', w: 300, h: 200, comp: true, members: ['a'], text: 'Кнопка' });
+  const a = item('a', 20, 20, { text: 'Привет', color: 'yellow' });
+  const inst = item('i', 500, 100, { type: 'frame', w: 300, h: 200, inst: 'c', members: ['i~a'] });
+  const copy = item('i~a', 520, 120, { text: 'Привет', color: 'blue', from: 'a', host: 'i', ovr: ['color'] });
+
+  it('a copied instance keeps what was changed in it, under its new id, and sync leaves it be', () => {
+    const { items, map } = copiesOf([inst, copy], [], 30, 5);
+    const ni = map.get('i')!, nc = items.find((x) => x.id !== ni)!;
+    expect(nc.id).toBe(`${ni}~a`);
+    expect(nc).toMatchObject({ host: ni, from: 'a', ovr: ['color'], color: 'blue', x: 550 });
+    expect(items.find((x) => x.id === ni)!.members).toEqual([`${ni}~a`]);
+    const { ops } = apply([comp, a, inst, copy, ...items]);
+    expect(ops.add).toEqual([]);
+    expect(ops.remove).toEqual([]);
+    expect(ops.change.get(nc.id)?.color).toBeUndefined();
+  });
+
+  it('a copy taken without its instance becomes an item of its own', () => {
+    const [it] = copiesOf([copy], [], 30, 5).items;
+    expect(it.id).not.toContain('~');
+    expect(it.host ?? it.from ?? it.ovr).toBeUndefined();
+    expect(apply([comp, a, inst, copy, it]).ops.remove).toEqual([]);
   });
 });

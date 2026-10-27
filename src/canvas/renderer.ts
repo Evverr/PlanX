@@ -314,8 +314,8 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       break;
     case 'frame': {
       if (it.fold) { drawFolded(ctx, it, s, editing); break; }
-      // An instance shows only its red title, flush with its contents, and that only while it's picked
-      // (as a whole or something inside it).
+      // An instance shows only its red title after a hollow diamond (to its component), flush with
+      // its contents, and that only while it's picked (as a whole or something inside it).
       if (it.inst) {
         if (!s.selection.has(it.id) && ![...s.selection].some((id) => s.get(id)?.host === it.id)) break;
         const b = instanceBounds(it, s.items);
@@ -323,7 +323,9 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
         ctx.fillStyle = COMPONENT_COLOR;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(it.text ?? '', b.x, b.y, b.w);
+        ctx.fillText('◇', b.x, b.y);
+        const gap = ctx.measureText('◇ ').width;
+        ctx.fillText(it.text ?? '', b.x + gap, b.y, Math.max(0, b.w - gap));
         break;
       }
       const kin = it.comp;

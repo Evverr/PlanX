@@ -79,11 +79,12 @@ async function openPage() {
       await until(() => p.ev(`!!document.querySelector('.topbar')`), 'the board after reload');
       await sleep(300);
     },
-    /** The mouse: moves without a button, presses and lets go of the left one. */
-    mouse(type, x, y) {
+    /** The mouse: moves without a button, presses and lets go of the left one; `modifiers` as in CDP
+     *  (1 Alt, 2 Ctrl, 4 Meta, 8 Shift). */
+    mouse(type, x, y, modifiers = 0) {
       if (type === 'mousePressed') down = true;
       if (type === 'mouseReleased') down = false;
-      return cdp('Input.dispatchMouseEvent', { type, x, y, button: type === 'mouseMoved' && !down ? 'none' : 'left', buttons: down ? 1 : 0, clickCount: 1 });
+      return cdp('Input.dispatchMouseEvent', { type, x, y, button: type === 'mouseMoved' && !down ? 'none' : 'left', buttons: down ? 1 : 0, clickCount: 1, modifiers });
     },
     async click([x, y]) {
       await p.mouse('mouseMoved', x, y);
@@ -92,16 +93,16 @@ async function openPage() {
       await sleep(250);
     },
     /** Presses at `a`, after resting there `rest` ms, drags to `b` in steps and lets go. */
-    async drag(a, b, { rest = 0, hold = 0, steps = 12 } = {}) {
-      await p.mouse('mouseMoved', a[0], a[1]);
+    async drag(a, b, { rest = 0, hold = 0, steps = 12, modifiers = 0 } = {}) {
+      await p.mouse('mouseMoved', a[0], a[1], modifiers);
       if (rest) await sleep(rest);
-      await p.mouse('mousePressed', a[0], a[1]);
+      await p.mouse('mousePressed', a[0], a[1], modifiers);
       if (hold) await sleep(hold);
       for (let i = 1; i <= steps; i++) {
-        await p.mouse('mouseMoved', a[0] + ((b[0] - a[0]) * i) / steps, a[1] + ((b[1] - a[1]) * i) / steps);
+        await p.mouse('mouseMoved', a[0] + ((b[0] - a[0]) * i) / steps, a[1] + ((b[1] - a[1]) * i) / steps, modifiers);
         await sleep(25);
       }
-      await p.mouse('mouseReleased', b[0], b[1]);
+      await p.mouse('mouseReleased', b[0], b[1], modifiers);
       await sleep(300);
     },
     async key(key, code, vk, modifiers = 0) {

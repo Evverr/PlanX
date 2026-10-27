@@ -22,6 +22,10 @@ export const copyId = (host: string, of: string) => `${host}~${of}`;
 /** The red of components and their instances. */
 export const COMPONENT_COLOR = '#E5484D';
 
+/** The hollow diamond before a picked instance's title, at the top left of its contents `b`, that
+ *  leads to its component. */
+export const instanceGlyph = (b: { x: number; y: number }) => ({ x: b.x - 2, y: b.y - 22, w: 18, h: 22 });
+
 /** The "+" right of a picked component that makes an instance of it, past its blue dot for links: its
  *  middle and radius, the same size on screen whatever the zoom. */
 export const instancePlus = (it: Item, zoom: number) => ({ x: it.x + it.w + 40 / zoom, y: it.y + it.h / 2, r: 10 / zoom });
