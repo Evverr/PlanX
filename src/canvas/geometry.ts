@@ -324,6 +324,9 @@ export function nearInk(it: Item, p: Point, tol: number): boolean {
  * Topmost item under the point. Ink counts only near its line. A frame counts on its label and
  * anywhere inside, so it can be grabbed by any empty spot (frames lie under everything else).
  */
+/** An instance hugs its visible contents, without the source frame's padding; empty ones keep a box. */
+export const instanceBounds = (it: Item, items: Item[]): Rect => boundsOf(items.filter((i) => i.host === it.id)) ?? boxOf(it);
+
 export function hitItem(items: Item[], p: Point, zoom: number): Item | null {
   const at = p;
   for (let i = items.length - 1; i >= 0; i--) {
@@ -331,8 +334,9 @@ export function hitItem(items: Item[], p: Point, zoom: number): Item | null {
     // A turned item is tested in its own frame, where it lies square.
     p = it.rot ? toLocal(it, at) : at;
     if (it.type === 'frame') {
-      const onLabel = !it.fold && p.x >= it.x && p.x <= it.x + it.w && p.y >= it.y - FRAME_LABEL && p.y < it.y;
-      if (onLabel || pointInRect(p, it)) return it;
+      const b = it.inst ? instanceBounds(it, items) : it, q = it.inst ? at : p;
+      const onLabel = !it.fold && q.x >= b.x && q.x <= b.x + b.w && q.y >= b.y - FRAME_LABEL && q.y < b.y;
+      if (onLabel || pointInRect(q, b)) return it;
       continue;
     }
     if (it.type === 'ink') {
