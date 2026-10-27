@@ -9,6 +9,8 @@ import {
   type BoardEntry, type FolderEntry, type SortBy,
 } from './boards';
 import { loadShelf, refreshPreviews, renameBoard } from './docs';
+import { labOn } from '../labs/labs';
+import { WishlistPage } from '../labs/WishlistPage';
 import './shelf.css';
 
 type Thing = { kind: 'board'; id: string } | { kind: 'folder'; id: string };
@@ -28,6 +30,8 @@ const SORT_KEY = 'planx-shelf-sort';
 const UNTITLED_FOLDER = 'Без названия';
 
 const folderFromUrl = () => new URLSearchParams(location.search).get('folder');
+/** "Wishlist" (src/labs) is open: ?wishlist in the address. */
+const wishFromUrl = () => labOn('wishlist') && new URLSearchParams(location.search).has('wishlist');
 
 /**
  * The start page. Folders stand on shelves; inside a folder are its boards, as square tiles showing
@@ -38,6 +42,7 @@ export function ShelfPage() {
   const [boards, setBoards] = useState<BoardEntry[] | null>(null);
   const [folders, setFolders] = useState<FolderEntry[]>(readFolders);
   const [here, setHere] = useState<string | null>(folderFromUrl);
+  const [wish, setWish] = useState(wishFromUrl);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortBy>(() => (SORTS.some((s) => s.id === readText(SORT_KEY)) ? readText(SORT_KEY) as SortBy : 'opened'));
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -57,7 +62,7 @@ export function ShelfPage() {
     });
     // Another tab (a board open next to this page) changes the shelf: show it here too.
     const storage = (e: StorageEvent) => { if (e.key === 'planx-boards' || e.key === 'planx-folders') reread(); };
-    const back = () => setHere(folderFromUrl());
+    const back = () => { setHere(folderFromUrl()); setWish(wishFromUrl()); };
     window.addEventListener('planx:shelf', reread);
     window.addEventListener('storage', storage);
     window.addEventListener('focus', reread);
@@ -106,7 +111,13 @@ export function ShelfPage() {
   // A folder that's gone (deleted in another tab) leaves you at the top.
   const current = folders.find((f) => f.id === here) ?? null;
   const path = useMemo(() => pathTo(current?.id ?? null, folders), [current, folders]);
-  useEffect(() => { document.title = current ? `${nameOf(current, UNTITLED_FOLDER)} · PlanX` : 'Мои доски · PlanX'; }, [current]);
+  useEffect(() => { document.title = wish ? 'Wishlist · PlanX' : current ? `${nameOf(current, UNTITLED_FOLDER)} · PlanX` : 'Мои доски · PlanX'; }, [current, wish]);
+  const openWish = () => {
+    setMenu(null);
+    history.pushState(null, '', `${location.pathname}?wishlist`);
+    setWish(true);
+    document.querySelector('.shelf-page')?.scrollTo(0, 0);
+  };
 
   const go = (id: string | null) => {
     setMenu(null);
@@ -114,6 +125,7 @@ export function ShelfPage() {
     if (id) updateFolder(id, { opened: Date.now() });
     history.pushState(null, '', folderUrl(id));
     setHere(id);
+    setWish(false);
     document.querySelector('.shelf-page')?.scrollTo(0, 0);
   };
 
@@ -289,17 +301,23 @@ export function ShelfPage() {
   return (
     <div className="shelf-page">
       <header className="shelf-head">
-        <div className="shelf-brand">
-          <h1>Мои доски</h1>
+        <div className={`shelf-brand ${wish ? 'wish-on' : ''}`}>
+          {/* From the wishlist, "Мои доски" leads back to the top of the shelf. */}
+          <h1><a href={folderUrl(null)} onClick={(e) => { e.preventDefault(); go(null); }}>Мои доски</a></h1>
+          {labOn('wishlist') && (
+            <a className="shelf-tab" href="?wishlist" aria-current={wish ? 'page' : undefined} onClick={(e) => { e.preventDefault(); openWish(); }}>Wishlist</a>
+          )}
         </div>
         <div className="shelf-tools">
-          <label className="shelf-search">
-            <PanelIcon name="search" />
-            <input ref={search} type="search" placeholder="Найти доску или папку" aria-label="Найти доску или папку" value={query} onChange={(e) => setQuery(e.target.value)} />
-          </label>
-          <select className="shelf-sort" aria-label="Порядок" value={sort} onChange={(e) => setSort(e.target.value as SortBy)}>
-            {SORTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
-          </select>
+          {!wish && <>
+            <label className="shelf-search">
+              <PanelIcon name="search" />
+              <input ref={search} type="search" placeholder="Найти доску или папку" aria-label="Найти доску или папку" value={query} onChange={(e) => setQuery(e.target.value)} />
+            </label>
+            <select className="shelf-sort" aria-label="Порядок" value={sort} onChange={(e) => setSort(e.target.value as SortBy)}>
+              {SORTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+            </select>
+          </>}
           <button className="ib" title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'} aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
             onClick={toggleTheme}><PanelIcon name={theme === 'dark' ? 'sun' : 'moon'} /></button>
           {/* On a phone they're just "+ Папка" and "+ Доска". */}
@@ -308,7 +326,7 @@ export function ShelfPage() {
         </div>
       </header>
 
-      <main className="shelf-main">
+      {wish ? <main className="shelf-main"><WishlistPage /></main> : <main className="shelf-main">
         {/* Where you are: each step leads back up, and takes what's dropped on it. */}
         {current && !searching && (
           <nav className="crumbs" aria-label="Путь">
@@ -371,7 +389,7 @@ export function ShelfPage() {
             </section>
           </>
         )}
-      </main>
+      </main>}
 
       {dialog?.kind === 'new-board' && <NameDialog heading={current ? `Новая доска в «${nameOf(current, UNTITLED_FOLDER)}»` : 'Новая доска'}
         placeholder="Название, например «План на неделю»" action="Создать" onClose={() => setDialog(null)} onSave={createBoard} />}

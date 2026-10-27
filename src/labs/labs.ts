@@ -7,7 +7,7 @@ import { readJSON, readText, writeJSON, writeText } from '../storage';
  * browser. Everything they need lives in this folder; the app only asks labOn() where a feature
  * changes what it does, so one that isn't kept comes out by deleting its file and those few lines.
  */
-export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys' | 'swap' | 'textPush';
+export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys' | 'swap' | 'textPush' | 'wishlist';
 
 export interface Lab { id: LabId; label: string; icon: string; hint: string }
 
@@ -25,6 +25,7 @@ export const LABS: Lab[] = [
   { id: 'cursors', label: 'Курсоры участников', icon: 'user-profile', hint: 'Видеть, где мышь у других на доске' },
   { id: 'keys', label: 'Шпаргалка по клавишам', icon: 'keyboard', hint: '?: все сочетания клавиш' },
   { id: 'textPush', label: 'Текст не слипается', icon: 'arrow-down-l', hint: 'Текст, ставший выше, отодвигает текст прямо под ним (до 16 px), и в инстансе тоже' },
+  { id: 'wishlist', label: 'Wishlist', icon: 'like', hint: 'На странице «Мои доски»: общий список пожеланий с лайками' },
   { id: 'swap', label: 'Замена двойным кликом', icon: 'refresh-l', hint: 'Двойной клик по смайлу, иконке или фигуре: выбрать другую на её место, и в инстансе тоже' },
 ];
 

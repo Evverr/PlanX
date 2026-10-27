@@ -86,9 +86,10 @@
   border-bottom: var(--s3) solid; font: 700 var(--s13)/1 "Inter", var(--ui); color: var(--menu-ink); }
 .paint-fill.none, .paint-stroke.none { background: linear-gradient(135deg, transparent 44%, var(--danger) 44%, var(--danger) 56%, transparent 56%) !important; box-shadow: inset 0 0 0 1px var(--line); border: 0; }
 /* On a board, the logo is the way back to the shelf: the whole piece of the bar up to its separator
-   takes the click, the logo staying where it was and looking the same under the pointer. */
+   takes the click, the logo staying where it was and looking the same under the pointer; but for the
+   bar's left end, held to move the bar (14px, as for a finger). */
 .logo.to-shelf { align-self: stretch; display: flex; align-items: center; border: 0; background: none; color: inherit; cursor: pointer;
-  margin: calc(-1 * var(--s6)) calc(-1 * var(--s8)) calc(-1 * var(--s6)) calc(-1 * var(--s20)); padding: 0 var(--s15) 0 var(--s20); }
+  margin: calc(-1 * var(--s6)) calc(-1 * var(--s8)) calc(-1 * var(--s6)) min(0px, calc(14px - var(--s20))); padding: 0 var(--s15) 0 max(0px, calc(var(--s20) - 14px)); }
 .topbar .logo.to-shelf + .sep { margin-left: 0; }
 .logo.to-shelf::after { left: auto; right: calc(var(--s15) - var(--s2) - var(--s5)); top: calc(50% - 0.4em - 1px); }
 /* A green dot by the top right of "Plan", 5px across, 2px off it and its top 1px over the letters':
