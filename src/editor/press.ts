@@ -2,7 +2,7 @@ import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
 import { center, hitItem, hitLink, onAudioButton, onTaskBox } from '../canvas/geometry';
 import { toggleAudio } from '../canvas/audio';
-import { dotAt, foldBadgeAt, frameButtonUnder, linkEndAt, onHandle, onInstanceGlyph, onInstancePlus, onRotate, plusAt } from './hover';
+import { dotAt, foldBadgeAt, frameButtonUnder, linkEndAt, onHandle, onInstancePlus, onRotate, plusAt } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -44,9 +44,12 @@ export function press(ed: Editor, e: PointerEvent): void {
     ed.canvas!.style.cursor = 'grabbing';
     return;
   }
-  // What's in an instance is picked with it, as a whole; it's picked itself by a double click (see
-  // endGesture), once picked it stays so.
-  if (hit?.host && !ed.selection.has(hit.id)) hit = board.get(hit.host) ?? hit;
+  // First pick the instance; the next press enters it, without depending on double-click timing.
+  // With a child picked, its siblings can be picked directly too. Shift keeps group selection.
+  const inside = !!hit?.host && !e.shiftKey && ed.selection.size === 1
+    && (ed.selection.has(hit.host) || board.get([...ed.selection][0])?.host === hit.host);
+  const entering = inside && !!hit && !ed.selection.has(hit.id);
+  if (hit?.host && !ed.selection.has(hit.id) && !inside) hit = board.get(hit.host) ?? hit;
 
   // A finger on the empty board moves the board, but not on the controls of what's selected (its
   // resize handle, link dots, turning corner, mind map buttons), on a folded mind map node's count
@@ -128,11 +131,6 @@ export function press(ed: Editor, e: PointerEvent): void {
     else ed.addMindNode(single.id, plus.kind, true);
     return;
   }
-  // A picked instance's diamond goes to its component.
-  if (single && onInstanceGlyph(single, w)) {
-    ed.goToComponent(single.id);
-    return;
-  }
   // A picked component's "+" makes an instance of it.
   if (single && onInstancePlus(ed, single, w)) {
     ed.addInstance(single.id);
@@ -171,7 +169,7 @@ export function press(ed: Editor, e: PointerEvent): void {
   }
   // A table's lines resize the column or row before them, the table selected or not. Shift-clicking
   // picks several lines (or drops one); dragging any picked line moves them all.
-  const tl = ed.editingId ? null : grabbableLine(ed, w, hit, e.pointerType);
+  const tl = ed.editingId || entering ? null : grabbableLine(ed, w, hit, e.pointerType);
   if (tl) {
     const same = (l: TableLine) => l.id === tl.id && l.axis === tl.axis && l.index === tl.index;
     const picked = ed.pickedLines.filter((l) => l.id === tl.id), was = picked.some(same);
@@ -195,12 +193,12 @@ export function press(ed: Editor, e: PointerEvent): void {
     return;
   }
   // A task's checkbox ticks it off (or back on) instead of picking the task up.
-  if (hit?.type === 'task' && !e.shiftKey && onTaskBox(hit, w, ed.cam.z)) {
+  if (hit?.type === 'task' && !entering && !e.shiftKey && onTaskBox(hit, w, ed.cam.z)) {
     board.update(hit.id, { done: hit.done ? undefined : true });
     return;
   }
   // An audio note's button plays it (or stops it) instead of picking it up.
-  if (hit?.type === 'audio' && !e.shiftKey && onAudioButton(hit, w)) {
+  if (hit?.type === 'audio' && !entering && !e.shiftKey && onAudioButton(hit, w)) {
     toggleAudio(hit, () => ed.requestRender());
     return;
   }
