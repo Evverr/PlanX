@@ -30,6 +30,27 @@ export const instanceGlyph = (b: { x: number; y: number }) => ({ x: b.x - 2, y: 
  *  middle and radius, the same size on screen whatever the zoom. */
 export const instancePlus = (it: Item, zoom: number) => ({ x: it.x + it.w + 40 / zoom, y: it.y + it.h / 2, r: 10 / zoom });
 
+/** Rectangles: the board-aligned box around them all. */
+const around = (rs: Item[]) => {
+  const x = Math.min(...rs.map((r) => r.x)), y = Math.min(...rs.map((r) => r.y));
+  return { x, y, w: Math.max(...rs.map((r) => r.x + r.w)) - x, h: Math.max(...rs.map((r) => r.y + r.h)) - y };
+};
+
+/**
+ * Where an item of a component goes in an instance stretched by `grow` beyond `box`, what the
+ * component holds: one taking more than half of that stretches with it, keeping its distance to every
+ * side (but tables and mind maps, laid out by what's in them); the others keep to the corner or side they're nearest to (by the thirds of the box), or to
+ * its middle, keeping their size.
+ */
+export function stretched(it: Item, box: { x: number; y: number; w: number; h: number }, grow: { w: number; h: number }): Pick<Item, 'x' | 'y' | 'w' | 'h'> {
+  if (it.w * it.h > box.w * box.h / 2 && it.type !== 'table' && it.type !== 'mind') return { x: it.x, y: it.y, w: Math.max(10, it.w + grow.w), h: Math.max(10, it.h + grow.h) };
+  const along = (at: number, size: number, from: number, all: number, more: number) => {
+    const c = at + size / 2 - from;
+    return at + (c < all / 3 ? 0 : c > (all * 2) / 3 ? more : more / 2);
+  };
+  return { x: along(it.x, it.w, box.x, box.w, grow.w), y: along(it.y, it.h, box.y, box.h, grow.h), w: it.w, h: it.h };
+}
+
 /** Everything in a frame: what it holds, what frames in it hold, and mind map branches of all that. */
 export function contents(f: Item, byId: Map<string, Item>, items: Item[]): Item[] {
   const out = new Map<string, Item>(), todo = [f];
@@ -81,10 +102,11 @@ export function syncOps(items: Item[], links: Link[]): SyncOps {
     // A folded component keeps where it was and its size unfolded.
     const dx = inst.x - comp.x, dy = inst.y - comp.y, cw = comp.fold?.w ?? comp.w, ch = comp.fold?.h ?? comp.h;
     const map = (id: string) => copyId(inst.id, id);
-    patch(inst.id, { w: cw, h: ch, text: comp.text, members: (comp.members ?? []).filter((m) => ids.has(m)).map(map), fold: undefined });
+    const grow = inst.grow ?? { w: 0, h: 0 }, box = inside.length ? around(inside) : null;
+    patch(inst.id, { w: cw + grow.w, h: ch + grow.h, text: comp.text, members: (comp.members ?? []).filter((m) => ids.has(m)).map(map), fold: undefined });
     for (const src of inside) {
-      const id = map(src.id), old = byId.get(id);
-      const want: Item = { ...src, id, x: src.x + dx, y: src.y + dy, from: src.id, host: inst.id, comp: undefined, inst: undefined, rx: old?.rx };
+      const id = map(src.id), old = byId.get(id), at = box && (grow.w || grow.h) ? stretched(src, box, grow) : src;
+      const want: Item = { ...src, id, x: at.x + dx, y: at.y + dy, w: at.w, h: at.h, from: src.id, host: inst.id, comp: undefined, inst: undefined, rx: old?.rx };
       if (src.parent) want.parent = ids.has(src.parent) ? map(src.parent) : undefined;
       if (src.members) want.members = src.members.filter((m) => ids.has(m)).map(map);
       const kept = old?.ovr ?? [];

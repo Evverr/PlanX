@@ -979,8 +979,18 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
         }
         ctx.globalAlpha = 1;
       }
-    } else if (s.showHandle && s.editingId !== id && (it.inst || it.host)) {
-      // An instance is as big as its component, and what's in it stays where the component has it.
+    } else if (s.showHandle && s.editingId !== id && it.host) {
+      // What's in an instance stays where the instance puts it.
+    } else if (s.showHandle && s.editingId !== id && it.inst) {
+      // An instance's handle at its contents' corner, to stretch them.
+      const b = instanceBounds(it, s.items), hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z;
+      ctx.fillStyle = theme.surface;
+      ctx.strokeStyle = SELECT_COLOR;
+      ctx.lineWidth = 2 / cam.z;
+      ctx.beginPath();
+      ctx.roundRect(b.x + b.w + off - hs / 2, b.y + b.h + off - hs / 2, hs, hs, 3 / cam.z);
+      ctx.fill();
+      ctx.stroke();
     } else if (s.showHandle && s.editingId !== id) {
       if (it.comp) {
         // A picked component's "+" for a new instance of it, right of it.
