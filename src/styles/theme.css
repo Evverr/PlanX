@@ -3,7 +3,7 @@
 :root {
   --bg: #ECEEF2; --link: #BEC4CE; --surface: #FFFFFF; --ink: #1B2130; --muted: #5D6575; --line: #D3D8E0;
   --accent: #0F7C8A; --accent-soft: rgba(15, 124, 138, .13); --frame: rgba(255, 255, 255, .6); --danger: #C2412D;
-  --grad-1: #F5F5F5; --grad-2: #E6E7EC; --grad-3: #DDE0E6; --grid: 0, 0, 0;
+  --grad-1: #FAFAFA; --grad-2: #FCF0FA; --grad-3: #ECF2FC; --grid: 0, 0, 0;
   /* Format panel (Figma "Mol / Bar") and how much board fills are dimmed. */
   --fmt-bg: rgba(255, 255, 255, .9); --fmt-ink: #454545; --fmt-line: rgba(0, 0, 0, .07); --fmt-hover: rgba(0, 0, 0, .05);
   --fmt-on: rgba(75, 145, 255, .14); --fmt-shadow: 0 2px 6px rgba(0, 0, 0, .18); --fmt-on-ink: #0080FF; --fmt-off-ink: #CDD0D5; --menu-ink: #292929; --btn-ink: #2F2F2F; --btn-line: rgba(0, 0, 0, .08); --op-track: #E2E4E9; --fmt-marker: #5A5A5A; --fill-dim: 1;
