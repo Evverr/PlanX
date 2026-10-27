@@ -138,7 +138,8 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
         size: <span className="sort-wrap"><Drop open={menu === 'size'} menu={SIZES.map((s) => (
           <button key={s} className={`tf-item num ${s === fs ? 'on' : ''}`} onClick={() => set({ fs: s })}>{s}</button>
         ))}>
-          <Pick value={String(fs)} label="Размер" onClick={() => toggle('size')} />
+          {/* Several picked of different sizes (fs 0): none to show. */}
+          <Pick value={fs ? String(fs) : '—'} label="Размер" onClick={() => toggle('size')} />
         </Drop></span>,
         gap3: <div className="fsep" />,
         bold: <span className="sort-wrap"><Btn icon="bold" label="Жирный" on={bold} onClick={() => set({ fw: bold ? 400 : 700 })} /></span>,
