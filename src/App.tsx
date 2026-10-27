@@ -8,6 +8,7 @@ import { SelectionPanel } from './ui/SelectionPanel';
 import { TextEditor } from './ui/TextEditor';
 import { TextPanel } from './ui/FormatPanel';
 import { PanelIcon } from './ui/PanelIcon';
+import { asOne } from './labs/multi';
 import { DockButton, useDock } from './ui/panels/dock';
 import { Minimap } from './ui/Minimap';
 import { AudioRecorder } from './ui/AudioRecorder';
@@ -168,7 +169,8 @@ export function App({ boardId }: { boardId: string }) {
   const selItems = ui.selection.map((id) => board.get(id)).filter((i) => !!i);
   const linkCount = ui.selection.filter((id) => board.getLink(id)).length;
   const editing = ui.editingId ? board.get(ui.editingId) : undefined;
-  const textItem = selItems.length === 1 && ['text', 'sticky', 'task', 'table'].includes(selItems[0].type) ? selItems[0] : undefined;
+  // Several picked with text ("Несколько сразу", src/labs): the panel takes them as one.
+  const textItem = selItems.length === 1 && ['text', 'sticky', 'task', 'table'].includes(selItems[0].type) ? selItems[0] : asOne(selItems) ?? undefined;
   // The text panel shows up 0.6 s after the item is picked, or after it's let go when moved;
   // it stays away while the item is being moved or resized.
   const [textShown, setTextShown] = useState<string | null>(null);

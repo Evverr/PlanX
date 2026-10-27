@@ -14,6 +14,7 @@ import { drawTidy, endTidyDrag, gapAt, moveTidyDrag, setGaps, setHotGap, startTi
 import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
 import { SwapPop } from './SwapPop';
+import { drawGroup, endGroupScale, groupScaling, moveGroupScale, onGroupHandle, startGroupScale } from './multi';
 import './labs.css';
 
 type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'keys';
@@ -46,7 +47,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
   // Their drawing over the board, redrawn whenever one is switched on or off (the editor asks about
   // locks as it goes, so its handles change too).
   useEffect(() => {
-    const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) drawTidy(ctx, editor); return more; };
+    const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) drawTidy(ctx, editor); drawGroup(ctx, editor); return more; };
     editor.overlays.add(draw);
     editor.requestRender();
     const off = subscribeLabs(() => { editor.emit(); editor.requestRender(); });
@@ -115,6 +116,14 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
         editor.board.beginGesture();
         return;
       }
+      // The handle of several picked: they're scaled together.
+      if (e.button === 0 && onGroupHandle(editor, local(e))) {
+        e.stopPropagation();
+        canvas()!.setPointerCapture(e.pointerId);
+        const p = local(e);
+        startGroupScale(editor, editor.toWorld(p.x, p.y));
+        return;
+      }
       // One of the grid's items taken up: dragged within it, the others making room.
       const w = editor.toWorld(local(e).x, local(e).y), held = e.button === 0 && !e.shiftKey && labOn('tidy') ? tidyItemAt(editor, w) : null;
       if (held) {
@@ -139,6 +148,8 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     const onMove = (e: PointerEvent) => {
       if (drawing) addPoint(e);
       if (tidyDragging()) { const p = local(e); moveTidyDrag(editor, editor.toWorld(p.x, p.y)); return; }
+      if (groupScaling()) { const p = local(e); moveGroupScale(editor, editor.toWorld(p.x, p.y)); return; }
+      if (e.target === canvas() && !e.buttons && onGroupHandle(editor, local(e))) canvas()!.style.cursor = 'nwse-resize';
       if (gap) {
         const d = ((gap.axis === 'col' ? e.clientX : e.clientY) - gap.from) / editor.cam.z;
         setGaps(editor, gap.axis === 'col' ? Math.round(gap.gx + d) : gap.gx, gap.axis === 'row' ? Math.round(gap.gy + d) : gap.gy);
@@ -154,6 +165,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     };
     const onUp = (e: PointerEvent) => {
       if (tidyDragging()) { const p = local(e); endTidyDrag(editor, editor.toWorld(p.x, p.y)); }
+      if (groupScaling()) endGroupScale(editor);
       if (drawing) { drawing = false; presence.shareLaser(); }
       if (gap) { gap = null; setHotGap(null); editor.board.endGesture(); editor.requestRender(); }
     };

@@ -15,7 +15,7 @@ export const checks = {
     const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Нововведения')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
     await sleep(250);
-    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(15);
+    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(16);
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.labs-menu .menu-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`document.querySelector('.labs-menu [aria-checked="false"]')?.textContent`), 'switched off').toBe('Общий таймер');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
@@ -232,5 +232,23 @@ export const checks = {
     await p.drag([400, 350], [440, 350]);
     expect(await sel(), 'dragged, still picked').toBe('top');
     expect(await p.ev(`planx.board.get('top').x - planx.board.get('low').x`), 'moved').toBe(80);
+  },
+
+  async '"Несколько сразу": two picked share the text panel, and one corner scales them both'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board, { x: X, y: Y } = e.toWorld(300, 250);
+      b.add(e.newItem('sticky', X, Y, { id: 's1', w: 100, h: 100, text: 'Один' }));
+      b.add(e.newItem('sticky', X + 150, Y, { id: 's2', w: 100, h: 100, text: 'Два' }));
+      e.setSelection(['s1', 's2']); })()`);
+    await sleep(900);
+    await p.click(await p.at('.tfmt button[aria-label="Жирный"]'));
+    expect(await p.ev(`[planx.board.get('s1').fw, planx.board.get('s2').fw].join()`), 'both bold').toBe('700,700');
+    // The corner: just past the lower right of the two (at 300 + 250, 250 + 100 on the screen).
+    await p.drag([553, 353], [803, 453]);
+    const r = await p.ev(`['s1', 's2'].map((id) => { const i = planx.board.get(id); return [i.w, i.fs]; }).join(' ')`);
+    expect(r, 'both twice as big, text too').toBe('200,32 200,32');
+    expect(await p.ev(`planx.board.get('s2').x - planx.board.get('s1').x`), 'twice as far apart').toBe(300);
+    await p.key('z', 'KeyZ', 90, 4);
+    await sleep(200);
+    expect(await p.ev(`planx.board.get('s1').w`), 'undone in one step').toBe(100);
   },
 };
