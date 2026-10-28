@@ -330,11 +330,11 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       ed.requestRender();
       return;
     case 'relink': {
-      // Let go on another item, the arrow goes to it; taken off its item by its head and let go on none,
-      // it's gone (taken by its line, it stays as it was).
+      // Let go on another item, the arrow goes to it; taken off its item (by its head or its line) and let
+      // go on none, it's gone. A click on its line just picks it.
       const l = board.getLink(g.id), target = g.target ? board.get(g.target) : undefined;
       if (l && target && target.id !== l.to && !board.hasLink(l.from, target.id)) board.retarget(l.id, target.id, nearestSide(target, g.to));
-      else if (l && g.away && !target && !g.body) {
+      else if (l && g.away && !target && (!g.body || g.going)) {
         board.remove([l.id]);
         ed.setSelection([]);
       }

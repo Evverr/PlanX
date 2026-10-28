@@ -424,9 +424,13 @@ export const checks = {
     // Dragged by its middle onto another.
     await p.drag([550, 350], [750, 600]);
     expect(await p.ev(`planx.board.getLink('${l.id}').to`), 'to the other now').toBe('c');
-    // Dragged by its middle onto nothing: it stays.
-    await p.drag([550, 420], [900, 200]);
-    expect(await p.ev(`planx.board.getLink('${l.id}')?.to ?? null`), 'kept as it was').toBe('c');
+    // Dragged by its middle onto nothing: it's gone, as by its head.
+    const mid = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'), sh = g.linkShape(planx.board.getLink('${l.id}'), (id) => planx.board.get(id));
+      const m = sh.pts[Math.floor(sh.pts.length / 2)], s = planx.editor.toScreen(m); return [s.x, s.y]; })()`);
+    await p.click(mid);
+    expect(await p.ev('[...planx.editor.selection].join()'), 'on its line').toBe(l.id);
+    await p.drag(mid, [1000, 150]);
+    expect(await p.ev(`planx.board.getLink('${l.id}') ?? null`), 'let go on nothing: gone').toBe(null);
   },
 
   async '"Меню по правому клику" on the board: zoom to 100%, paste there; on a rectangle, its parameters'(p) {
