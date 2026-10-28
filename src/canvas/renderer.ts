@@ -12,6 +12,7 @@ import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
 import { COMPONENT_COLOR, instancePlus } from '../model/components';
 import { isBuiltin } from '../model/builtins';
+import { drawnLinks } from '../model/textLinks';
 import { autoInk } from '../model/color';
 import cursorUrl from './cursor.svg';
 import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, spreadElbows, polyPoints, linkShape, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
@@ -179,6 +180,10 @@ function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: s
   const total = l.lines.length * l.lineHeight;
   const x = align === 'center' ? it.x + it.w / 2 : align === 'right' ? it.x + it.w - pad : it.x + pad;
   let y = shrink && it.va !== 'top' ? it.y + it.h / 2 - total / 2 : it.y + padY;
+  // Links on parts of it (see model/textLinks.ts): those parts blue; each line found in the text as
+  // drawn, to know which characters it holds.
+  const links = it.links?.length ? drawnLinks(it.text ?? '', it.ls, it.links) : null;
+  let from = 0;
   for (const line of l.lines) {
     const mid = y + l.lineHeight / 2;
     if (line && (mark || it.fu || it.fx)) {
@@ -195,10 +200,37 @@ function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: s
       if (it.fx) ctx.fillRect(left, mid + l.size * 0.04 - rule / 2, tw, rule);
     }
     ctx.fillStyle = ink;
-    ctx.fillText(line, x, y + (l.lineHeight - ascent - descent) / 2 + ascent);
+    const base = y + (l.lineHeight - ascent - descent) / 2 + ascent;
+    const at = text.indexOf(line, from), on = links?.filter((k) => k.s < at + line.length && k.e > at);
+    from = at + line.length;
+    if (!on?.length) ctx.fillText(line, x, base);
+    else {
+      // Piece by piece from its left end, each link's piece blue (and noted, to be Cmd+clicked).
+      const left = x - ctx.measureText(line).width * (align === 'center' ? 0.5 : align === 'right' ? 1 : 0);
+      const cuts = [...new Set([0, line.length, ...on.flatMap((k) => [k.s - at, k.e - at]).filter((c) => c > 0 && c < line.length)])].sort((a, b) => a - b);
+      ctx.textAlign = 'left';
+      for (let i = 0; i + 1 < cuts.length; i++) {
+        const piece = line.slice(cuts[i], cuts[i + 1]), px = left + ctx.measureText(line.slice(0, cuts[i])).width;
+        const link = on.find((k) => k.s - at <= cuts[i] && k.e - at >= cuts[i + 1]);
+        ctx.fillStyle = link ? shade(LINK_INK, s.theme.dim) : ink;
+        ctx.fillText(piece, px, base);
+        if (link && !it.rot) textLinkRects.push({ x: px, y, w: ctx.measureText(piece).width, h: l.lineHeight, url: link.url });
+      }
+      ctx.textAlign = align;
+    }
     y = mid + l.lineHeight / 2;
   }
 }
+
+/** Blue of links in text. */
+const LINK_INK = TEXT_COLORS.blue;
+
+/** Where the links in text were drawn last, on the board, to be Cmd+clicked (see linkInTextAt). */
+let textLinkRects: Array<{ x: number; y: number; w: number; h: number; url: string }> = [];
+
+/** The address of the link in text at a board point, as last drawn. */
+export const linkInTextAt = (p: Point): string | null =>
+  textLinkRects.find((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h)?.url ?? null;
 
 const shadeCache = new Map<string, string>();
 
@@ -892,6 +924,7 @@ let tints = new Map<string, { color?: string; fill?: string }>();
 export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   const { cam, theme, dpr } = s;
   tints = siblingTints(s.items);
+  if (!s.noBackground) textLinkRects = [];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   if (!s.noBackground) drawBackground(ctx, s);
 

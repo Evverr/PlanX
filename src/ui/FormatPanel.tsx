@@ -11,7 +11,7 @@ import { PanelIcon as Icon, type PanelIconName as IconName } from './PanelIcon';
 import { useSortable } from './sortable';
 import { EDGE } from '../layout';
 import { useLabs } from '../labs/labs';
-import { linkPatch } from '../labs/textLink';
+import { linkPartPatch, linkPatch } from '../labs/textLink';
 
 function Btn({ icon, label, on, off, swatch, menu, onClick }: {
   icon: IconName; label: string; on?: boolean; off?: boolean; swatch?: string; menu?: boolean; onClick?: () => void;
@@ -43,9 +43,21 @@ function Drop({ open, menu, grid, children }: { open: boolean; menu: ReactNode; 
   );
 }
 
-/** The link's menu: its address to type (Enter sets it), and to open it or take it off. */
-function LinkMenu({ item, onSet }: { item: Item; onSet: (typed: string) => void }) {
-  const [typed, setTyped] = useState(item.url ?? '');
+/** Part of the text being typed: where it starts and ends in it, and all of it as typed so far. */
+interface Part { s: number; e: number; text: string }
+
+/** What's picked in the text being typed in, if anything. */
+function pickedPart(editor: Editor, item: Item): Part | null {
+  const el = document.querySelector<HTMLTextAreaElement>('textarea.text-edit');
+  if (!el || editor.editingId !== item.id || el.selectionStart === el.selectionEnd) return null;
+  return { s: el.selectionStart, e: el.selectionEnd, text: el.value };
+}
+
+/** The link's menu: its address to type (Enter sets it), and to open it or take it off; for a part of
+ *  the text, that part's. */
+function LinkMenu({ item, part, onSet }: { item: Item; part: Part | null; onSet: (typed: string) => void }) {
+  const own = part ? item.links?.find((l) => l.s <= part.s && l.e >= part.e)?.url : item.url;
+  const [typed, setTyped] = useState(own ?? '');
   return (
     <div className="tf-link">
       <input autoFocus type="url" placeholder="Вставьте ссылку" aria-label="Адрес ссылки" value={typed}
@@ -53,8 +65,8 @@ function LinkMenu({ item, onSet }: { item: Item; onSet: (typed: string) => void 
         onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') onSet(typed); }} />
       <div className="tf-link-row">
         <button className="tf-item" onClick={() => onSet(typed)}>Готово</button>
-        {item.url && <button className="tf-item" onClick={() => window.open(item.url, '_blank', 'noopener')}>Открыть</button>}
-        {item.url && <button className="tf-item" onClick={() => onSet('')}>Убрать</button>}
+        {own && <button className="tf-item" onClick={() => window.open(own, '_blank', 'noopener')}>Открыть</button>}
+        {own && <button className="tf-item" onClick={() => onSet('')}>Убрать</button>}
       </div>
     </div>
   );
@@ -122,6 +134,8 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
   useEffect(() => setMenu(null), [item.id]);
 
   const toggle = (m: Menu) => setMenu(menu === m ? null : m);
+  // The part of the text picked as the link's menu opened, while typing in it.
+  const [part, setPart] = useState<Part | null>(null);
   /** Applies a change and closes the menu it came from. */
   const set = (patch: Partial<Item>, keepOpen = false) => { editor.setTextStyle(patch); if (!keepOpen) setMenu(null); };
 
@@ -198,13 +212,15 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
           <Btn icon={item.ls === 'number' ? 'numbered-list' : 'list'} label="Список" menu on={!!item.ls || menu === 'list'} onClick={() => toggle('list')} />
         </Drop></span>,
         // "Ссылка в тексте" (src/labs): an address for the item, typed in its menu.
-        link: labs.textLink ? <span className="sort-wrap"><Drop open={menu === 'link'} menu={<LinkMenu item={item} onSet={(typed) => {
+        // A part of the text picked while typing in it: just that part; else the whole item.
+        link: labs.textLink ? <span className="sort-wrap"><Drop open={menu === 'link'} menu={<LinkMenu item={item} part={part} onSet={(typed) => {
           editor.beginChange();
-          for (const it of editor.selectedItems()) editor.board.update(it.id, linkPatch(it, typed));
+          if (part) editor.board.update(item.id, linkPartPatch(item, part.text, part.s, part.e, typed));
+          else for (const it of editor.selectedItems()) editor.board.update(it.id, linkPatch(it, typed));
           editor.endChange();
           setMenu(null);
         }} />}>
-          <Btn icon="link" label="Ссылка" on={!!item.url || menu === 'link'} onClick={() => toggle('link')} />
+          <Btn icon="link" label="Ссылка" on={!!item.url || menu === 'link'} onClick={() => { setPart(pickedPart(editor, item)); toggle('link'); }} />
         </Drop></span> : undefined,
       }, textRoom(), 'above')}
     </div>

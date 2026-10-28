@@ -16,6 +16,7 @@ import { copiesOf } from './copies';
 import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked } from './frames';
 import { copyId, hasComponents, syncOps } from '../model/components';
 import { BUILTINS, nextTaskState, TASK_STATES } from '../model/builtins';
+import { remapLinks } from '../model/textLinks';
 import { shapePatch, shapeStyle } from './shapeStyle';
 import { endGesture, moveGesture, type Gesture } from './gestures';
 import { updateCursor } from './hover';
@@ -929,7 +930,8 @@ export class Editor {
         this.board.remove([id]);
         this.selection.delete(id);
       } else if (value !== (it.text ?? '')) {
-        const patch: Partial<Item> = { text: value, ...mindFit(this, it, value), ...(it.fold && { w: foldedSize(value).w }) };
+        // Links on parts of it move with what's typed (see model/textLinks.ts).
+        const patch: Partial<Item> = { text: value, ...mindFit(this, it, value), ...(it.fold && { w: foldedSize(value).w }), ...(it.links && { links: remapLinks(it.text ?? '', value, it.links) }) };
         const h = fitHeight(it, value);
         if (h) Object.assign(patch, { h }, it.rot && resizedAt(it, it.w, h));
         const moves = h ? pushedBelow(it, h - it.h, this.board.list()) : new Map<string, Point>();

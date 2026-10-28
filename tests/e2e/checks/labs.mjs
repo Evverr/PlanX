@@ -319,4 +319,33 @@ export const checks = {
     await p.key('Tab', 'Tab', 9, 8); await sleep(100);
     expect(await at(), 'Shift+Tab: back up round to the last').toBe('c');
   },
+
+  async '"Ссылка в тексте": a part picked while typing becomes the link, just it blue, Cmd+click on it opens it'(p) {
+    await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 250); planx.board.add(e.newItem('text', x, y, { id: 'tx', w: 400, h: 26, text: 'Смотри документацию тут' })); e.setSelection(['tx']); e.startEditing('tx', null, 'end'); })()`);
+    await sleep(900);
+    // "документацию" is 7…19.
+    await p.ev(`document.querySelector('textarea.text-edit').setSelectionRange(7, 19)`);
+    await p.click(await p.at('.tfmt button[aria-label="Ссылка"]'));
+    await sleep(200);
+    await p.cdp('Input.insertText', { text: 'docs.example.com' });
+    await p.key('Enter', 'Enter', 13);
+    await sleep(300);
+    expect(await p.ev(`JSON.stringify(planx.board.get('tx').links)`), 'just that part').toBe('[{"s":7,"e":19,"url":"https://docs.example.com"}]');
+    expect(await p.ev(`planx.board.get('tx').url ?? null`), 'not the whole item').toBe(null);
+    await p.ev(`planx.editor.stopEditing(); planx.editor.setSelection([]); window.opened = null; window.open = (u) => { window.opened = u; return null; }`);
+    await sleep(300);
+    // Typing before it moves it along.
+    await p.ev(`planx.editor.startEditing('tx', null, 'end')`);
+    await sleep(100);
+    await p.ev(`(() => { const t = document.querySelector('textarea.text-edit'); t.setSelectionRange(0, 0); })()`);
+    await p.cdp('Input.insertText', { text: 'Ну, ' });
+    await p.ev('planx.editor.stopEditing()');
+    await sleep(300);
+    expect(await p.ev(`JSON.stringify(planx.board.get('tx').links.map((l) => [l.s, l.e]))`), 'moved along').toBe('[[11,23]]');
+    const at = await p.ev(`(() => { const e = planx.editor, t = planx.board.get('tx'), c = e.canvas.getContext('2d'); c.font = '400 20px Onest'; const s = e.toScreen({ x: t.x + c.measureText('Ну, Смотри докум').width, y: t.y + 13 }); return [s.x, s.y]; })()`);
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: at[0], y: at[1], button: 'left', buttons: 1, clickCount: 1, modifiers: 4 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: at[0], y: at[1], button: 'left', buttons: 0, clickCount: 1, modifiers: 4 });
+    await sleep(200);
+    expect(await p.ev('window.opened'), 'Cmd+click on the blue part opens it').toBe('https://docs.example.com');
+  },
 };

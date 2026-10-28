@@ -220,7 +220,7 @@ export function press(ed: Editor, e: PointerEvent): void {
     return;
   }
   // Cmd+click (Ctrl+click) on what leads somewhere opens it ("Ссылка в тексте", src/labs).
-  if ((e.metaKey || e.ctrlKey) && openLink(hit)) return;
+  if ((e.metaKey || e.ctrlKey) && openLink(hit, w)) return;
   if (hit) {
     const now = performance.now();
     // Pressed twice: on the same item, or (an emoji, an icon, a shape) as the second press enters

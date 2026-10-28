@@ -1,9 +1,13 @@
 import type { Item } from '../model/types';
+import type { Point } from '../canvas/geometry';
+import { linkInTextAt } from '../canvas/renderer';
+import { remapLinks, setLink } from '../model/textLinks';
 import { labOn } from './labs';
 
 /**
  * "Ссылка в тексте": text, a sticker, a shape or a task can lead to an address. Its text turns blue;
- * Cmd+click (Ctrl+click) on it opens the address in a new tab.
+ * Cmd+click (Ctrl+click) on it opens the address in a new tab. Or a part of its text, picked while
+ * typing, can: just that part blue (see model/textLinks.ts).
  */
 
 /** An address as typed, made one a browser opens: "example.com" -> "https://example.com". */
@@ -21,9 +25,19 @@ export function linkPatch(it: Item, typed: string): Partial<Item> {
   return { url: undefined, ...(it.tc === 'blue' && { tc: undefined }) };
 }
 
-/** Opens the item's address, when it has one and the feature is on; whether it did. */
-export function openLink(it: Item | null | undefined): boolean {
-  if (!it?.url || !labOn('textLink')) return false;
-  window.open(it.url, '_blank', 'noopener');
+/** Opens the link in text at the board point, or else the item's address, when the feature is on;
+ *  whether it did. */
+export function openLink(it: Item | null | undefined, w: Point): boolean {
+  if (!labOn('textLink')) return false;
+  const url = linkInTextAt(w) ?? it?.url;
+  if (!url) return false;
+  window.open(url, '_blank', 'noopener');
   return true;
+}
+
+/** What linking the typed text's s…e to an address (or unlinking it, for '') does: the text as typed
+ *  so far goes in with it, the links there before moved along with it. */
+export function linkPartPatch(it: Item, typedText: string, s: number, e: number, typed: string): Partial<Item> {
+  const links = remapLinks(it.text ?? '', typedText, it.links);
+  return { text: typedText, links: setLink(links, s, e, normalUrl(typed)) };
 }
