@@ -175,6 +175,13 @@ export interface LinkShape { pts: Point[]; curve?: Bezier }
 export function linkShape(link: Link, get: (id: string) => Item | undefined): LinkShape | null {
   const a = get(link.from), b = get(link.to);
   if (!a || !b) return null;
+  // Through its nodes: from its item's edge (or side) toward the first, on through each, into the other's
+  // edge from the last; in a smooth curve through them, or straight from one to the next.
+  if (link.via?.length) {
+    const via = link.via, p = link.fromSide ? sidePoint(a, link.fromSide) : edgePoint(a, via[0]);
+    const q = link.toSide ? sidePoint(b, link.toSide) : edgePoint(b, via[via.length - 1]), all = [p, ...via, q];
+    return { pts: link.style ? all : throughSmoothly(all) };
+  }
   if (!link.style) {
     const curve = linkCurve(link, get)!;
     return { curve, pts: Array.from({ length: 25 }, (_, i) => bezierPoint(curve, i / 24)) };
@@ -183,6 +190,39 @@ export function linkShape(link: Link, get: (id: string) => Item | undefined): Li
   const p = link.fromSide || link.style === 'elbow' ? sidePoint(a, ps) : linkEnds(link, get)![0];
   const q = link.toSide || link.style === 'elbow' ? sidePoint(b, qs) : linkEnds(link, get)![1];
   return { pts: link.style === 'straight' ? [p, q] : elbowRoute(p, ps, q, qs) };
+}
+
+/** A smooth curve through the points (Catmull-Rom, as Béziers), as points close enough to draw it by. */
+export function throughSmoothly(pts: Point[], steps = 16): Point[] {
+  const out: Point[] = [pts[0]];
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const p0 = pts[i - 1] ?? pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] ?? p2;
+    const c1 = { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 }, c2 = { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 };
+    for (let k = 1; k <= steps; k++) out.push(bezierPoint([p1, c1, c2, p2], k / steps));
+  }
+  return out;
+}
+
+/** A picked link's handles: its nodes (on the board), and the middles of the stretches between its ends
+ *  and nodes, to make a new node at (`at` is where in `via` it would go). */
+export function linkHandles(link: Link, shape: LinkShape): { nodes: Point[]; middles: Array<{ p: Point; at: number }> } {
+  const via = link.via ?? [], all = [shape.pts[0], ...via, shape.pts[shape.pts.length - 1]];
+  // Without nodes yet, the middle is on the line as it's drawn (a curve's own, not its chord's).
+  // On a smooth one, halfway along each stretch of its curve (16 points each, see throughSmoothly).
+  const middles = !via.length ? [{ p: halfway(shape.pts), at: 0 }]
+    : all.slice(1).map((q, i) => ({ p: link.style ? { x: (all[i].x + q.x) / 2, y: (all[i].y + q.y) / 2 } : shape.pts[i * 16 + 8], at: i }));
+  return { nodes: via, middles };
+}
+
+/** The point halfway along a line through the points. */
+function halfway(pts: Point[]): Point {
+  const lengths = pts.slice(1).map((q, i) => Math.hypot(q.x - pts[i].x, q.y - pts[i].y));
+  let left = lengths.reduce((a, b) => a + b, 0) / 2;
+  for (let i = 0; i < lengths.length; i++) {
+    if (left <= lengths[i]) { const k = lengths[i] ? left / lengths[i] : 0; return { x: pts[i].x + (pts[i + 1].x - pts[i].x) * k, y: pts[i].y + (pts[i + 1].y - pts[i].y) * k }; }
+    left -= lengths[i];
+  }
+  return pts[pts.length - 1];
 }
 
 /** Right angles from p out of side `ps` to q into side `qs`, without points in line between others. */

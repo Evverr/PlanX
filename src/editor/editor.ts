@@ -864,6 +864,7 @@ export class Editor {
     if (at && b) {
       const dx = Math.round(at.x - b.x - b.w / 2), dy = Math.round(at.y - b.y - b.h / 2);
       data.items = data.items.map((i) => ({ ...i, x: i.x + dx, y: i.y + dy }));
+      data.links = data.links.map((l) => (l.via ? { ...l, via: l.via.map((p) => ({ x: p.x + dx, y: p.y + dy })) } : l));
       offset = 0;
     }
     const { items, links } = this.insertCopies(data.items, data.links, offset);

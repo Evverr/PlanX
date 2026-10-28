@@ -31,6 +31,6 @@ export function copiesOf(src: Item[], srcLinks: Link[], offset: number, maxZ: nu
     const inst = insts.find((i) => l.id.startsWith(`${i.id}~`));
     return inst ? `${map.get(inst.id)}~${l.id.slice(inst.id.length + 1)}` : uid();
   };
-  const links = srcLinks.map((l) => ({ ...l, id: linkId(l), from: map.get(l.from)!, to: map.get(l.to)! }));
+  const links = srcLinks.map((l) => ({ ...l, id: linkId(l), from: map.get(l.from)!, to: map.get(l.to)!, ...(l.via && { via: l.via.map((p) => ({ x: p.x + offset, y: p.y + offset })) }) }));
   return { items, links, map };
 }

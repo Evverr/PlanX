@@ -16,7 +16,7 @@ import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
 import { autoInk } from '../model/color';
 import cursorUrl from './cursor.svg';
-import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, spreadElbows, polyPoints, linkShape, nearestSide, pointInRect, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
+import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, linkHandles, spreadElbows, polyPoints, linkShape, nearestSide, pointInRect, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -1031,6 +1031,32 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   }
 
   if (s.links.length) drawLinks(ctx, s, view);
+  // A link picked alone: its nodes, and where new ones can be pulled out (the middles of its stretches).
+  const pickedLink = s.selection.size === 1 ? s.links.find((l) => s.selection.has(l.id)) : undefined, ps = pickedLink && linkShape(pickedLink, s.get);
+  if (pickedLink && ps) {
+    const { nodes, middles } = linkHandles(pickedLink, ps);
+    ctx.lineWidth = 1.5 / cam.z;
+    for (const m of middles) {
+      ctx.beginPath();
+      ctx.arc(m.p.x, m.p.y, 4 / cam.z, 0, Math.PI * 2);
+      ctx.fillStyle = theme.surface;
+      ctx.globalAlpha = 0.85;
+      ctx.fill();
+      ctx.globalAlpha = 0.6;
+      ctx.strokeStyle = SELECT_COLOR;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    for (const n of nodes) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 5 / cam.z, 0, Math.PI * 2);
+      ctx.fillStyle = theme.surface;
+      ctx.fill();
+      ctx.lineWidth = 2 / cam.z;
+      ctx.strokeStyle = SELECT_COLOR;
+      ctx.stroke();
+    }
+  }
   if (s.stroke) strokeInk(ctx, s.stroke, theme);
   if (s.guides.length) {
     ctx.strokeStyle = theme.muted;

@@ -158,6 +158,8 @@ export interface Link {
   lo?: number;
   dash?: boolean;
   heads?: 'start' | 'both' | 'none';
+  /** Points on the board it runs through on its way (its nodes, as in Miro), in order. */
+  via?: Array<{ x: number; y: number }>;
 }
 
 export type LinkStyle = 'straight' | 'elbow';
