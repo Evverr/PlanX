@@ -390,7 +390,7 @@ export class Editor {
       editingCell: this.editingCell,
       guides: g?.type === 'drag' ? g.guides ?? [] : [],
       pickedCells: this.cells.length && this.selection.size === 1 ? { id: [...this.selection][0], cells: this.cells } : null,
-      stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker' } : null,
+      stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker', op: this.penStyle(g.tool).op } : null,
     });
     let again = false;
     for (const draw of this.overlays) {
@@ -637,10 +637,13 @@ export class Editor {
 
   /** Opacity (0…1) of the selected items' fill or, for shapes and tasks, their outline. A run of
    *  calls between beginChange and endChange (a slider being dragged) is one undo step. */
-  setOpacity(of: 'fill' | 'stroke', value: number): void {
+  setOpacity(of: 'fill' | 'stroke' | 'text' | 'mark' | 'icon', value: number): void {
     const v = value >= 1 ? undefined : Math.max(0, Math.round(value * 100) / 100);
     this.board.transact(() => {
       for (const it of this.selectedItems()) {
+        if (of === 'text' && HAS_FONT.includes(it.type)) this.board.update(it.id, { to: v });
+        if (of === 'mark' && HAS_FONT.includes(it.type)) this.board.update(it.id, { mo: Math.max(0, Math.round(value * 100) / 100) });
+        if (of === 'icon' && (it.type === 'icon' || it.type === 'ink')) this.board.update(it.id, { fo: v });
         if (of === 'fill' && COLORABLE.includes(it.type)) this.board.update(it.id, { fo: v });
         if (of === 'stroke' && (STROKABLE.includes(it.type) || it.type === 'mind')) this.board.update(it.id, { so: v });
       }
@@ -662,6 +665,13 @@ export class Editor {
   setIconColor(color: string): void {
     this.board.transact(() => {
       for (const it of this.selectedItems()) if (it.type === 'icon') this.board.update(it.id, { color });
+    });
+  }
+
+  /** The colour of the selected drawings: one of the pens', or any ('#rrggbb'). */
+  setInkColor(color: string): void {
+    this.board.transact(() => {
+      for (const it of this.selectedItems()) if (it.type === 'ink') this.board.update(it.id, { color });
     });
   }
 

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
-import { COLORABLE, FILLS, ICON_COLORS, STROKABLE, STROKE_COLORS, TEXT_COLORS } from '../model/types';
+import { COLORABLE, FILLS, ICON_COLORS, INK_COLORS, STROKABLE, STROKE_COLORS, TEXT_COLORS } from '../model/types';
 import { MIND_PALETTE, mindDepth } from '../model/mind';
 import { colsOf, rowsOf } from '../model/table';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
@@ -173,21 +173,31 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
   const swatches: Array<[string, string]> = target === 'text' ? TEXT_SWATCHES : mind ? MIND_PALETTE.map((c) => [c, c]) : target === 'fill'
     ? Object.entries(FILLS).filter(([k]) => k !== 'none' || allowNone)
     : [...Object.entries(STROKE_COLORS).map(([k, v]): [string, string] => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--shape-stroke)')]), ['none', '']];
-  const opacity = Number(same(target === 'fill' ? colorable.map((i) => String(i.fo ?? 1)) : strokable.map((i) => String(i.so ?? 1))) ?? 1);
-  const iconColor = same(icons.map((i) => i.color));
+  const opacity = Number(same(target === 'fill' ? colorable.map((i) => String(i.fo ?? 1)) : target === 'text' ? colorable.map((i) => String(i.to ?? 1))
+    : strokable.map((i) => String(i.so ?? 1))) ?? 1);
+  const iconColor = same(icons.map((i) => i.color ?? 'ink')), inks = items.filter((i) => i.type === 'ink'), inkColor = same(inks.map((i) => i.color ?? 'ink'));
+  const seeThrough = (list: Item[]) => Number(same(list.map((i) => String(i.fo ?? 1))) ?? 1);
   return (
     <Palette label="Цвет">
       {colorable.length > 0 && <>
         <PaintSwitch paint={targets} pick={pick} fill={fill} stroke={strokable.length ? stroke : undefined} fillLabel="Заливка" strokeLabel="Обводка" text={text} />
         <Swatches editor={editor} swatches={swatches} current={target === 'fill' ? fill : target === 'stroke' ? stroke : text} onPick={setColor}
           label={target === 'fill' ? 'Цвет' : target === 'stroke' ? 'Цвет обводки' : 'Цвет текста'} noneLabel={target === 'fill' ? 'Без заливки' : 'Без обводки'} />
-        {target !== 'text' && <OpacitySlider editor={editor} value={opacity} onChange={(v) => targets.forEach((t) => t !== 'text' && editor.setOpacity(t, v))} />}
+        <OpacitySlider editor={editor} value={opacity} onChange={(v) => targets.forEach((t) => editor.setOpacity(t, v))} />
       </>}
+      {/* Icons and drawings: their colour, any too, and how see-through. */}
       {colorable.length > 0 && icons.length > 0 && <div className="sep" />}
-      {icons.length > 0 && Object.entries(ICON_COLORS).map(([k, v]) => (
-        <button key={k} className={`sw ${iconColor === k ? 'on' : ''}`} style={{ background: v || 'var(--ink)' }}
-          title="Цвет иконки" aria-label={`Цвет иконки ${k}`} onClick={() => editor.setIconColor(k)} />
-      ))}
+      {icons.length > 0 && <>
+        <Swatches editor={editor} swatches={Object.entries(ICON_COLORS).map(([k, v]) => [k, v || 'var(--ink)'])} current={iconColor}
+          onPick={(c) => editor.setIconColor(c)} label="Цвет иконки" noneLabel="" />
+        <OpacitySlider editor={editor} value={seeThrough(icons)} onChange={(v) => editor.setOpacity('icon', v)} />
+      </>}
+      {(colorable.length > 0 || icons.length > 0) && inks.length > 0 && <div className="sep" />}
+      {inks.length > 0 && <>
+        <Swatches editor={editor} swatches={Object.entries(INK_COLORS).map(([k, v]) => [k, v || 'var(--ink)'])} current={inkColor}
+          onPick={(c) => editor.setInkColor(c)} label="Цвет рисунка" noneLabel="" />
+        <OpacitySlider editor={editor} value={seeThrough(inks)} onChange={(v) => editor.setOpacity('icon', v)} />
+      </>}
     </Palette>
   );
 }
@@ -207,13 +217,13 @@ function MindColors({ editor, nodes }: { editor: Editor; nodes: Item[] }) {
     if (paint.includes('text')) editor.setTextStyle({ tc: c === 'ink' ? undefined : c });
     editor.endChange();
   };
-  const opacity = Number(same(nodes.map((i) => String((target === 'fill' ? i.fo : i.so) ?? 1))) ?? 1);
+  const opacity = Number(same(nodes.map((i) => String((target === 'fill' ? i.fo : target === 'text' ? i.to : i.so) ?? 1))) ?? 1);
   return (
     <Palette label="Цвет">
       <PaintSwitch paint={paint} pick={pick} fill={fill} stroke={stroke ?? MIND_PALETTE[0]} fillLabel="Заливка" strokeLabel="Обводка" text={text} />
       <Swatches editor={editor} swatches={swatches} current={target === 'fill' ? fill : target === 'stroke' ? stroke : text} onPick={setColor}
         label={target === 'fill' ? 'Цвет' : target === 'stroke' ? 'Цвет обводки' : 'Цвет текста'} noneLabel="Без заливки" />
-      {target !== 'text' && <OpacitySlider editor={editor} value={opacity} onChange={(v) => paint.forEach((t) => t !== 'text' && editor.setOpacity(t, v))} />}
+      <OpacitySlider editor={editor} value={opacity} onChange={(v) => paint.forEach((t) => editor.setOpacity(t, v))} />
     </Palette>
   );
 }
@@ -309,7 +319,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
   });
   if (!items.length && !linkCount) return null;
   const tables = items.filter((i) => i.type === 'table'), links = editor.selectedLinks();
-  const colored = items.some((i) => COLORABLE.includes(i.type) || i.type === 'icon');
+  const colored = items.some((i) => COLORABLE.includes(i.type) || i.type === 'icon' || i.type === 'ink');
   const btn = (icon: PanelIconName, title: string, fn: () => void) => (
     <button className="ib" title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
   );

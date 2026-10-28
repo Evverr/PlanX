@@ -11,6 +11,7 @@ import { PanelIcon as Icon, type PanelIconName as IconName } from './PanelIcon';
 import { useSortable } from './sortable';
 import { EDGE } from '../layout';
 import { useLabs } from '../labs/labs';
+import { ColorPicker } from './ColorPicker';
 import { linkPartPatch, linkPatch } from '../labs/textLink';
 
 function Btn({ icon, label, on, off, swatch, menu, onClick }: {
@@ -39,6 +40,27 @@ function Drop({ open, menu, grid, children }: { open: boolean; menu: ReactNode; 
     <div className="tf-drop">
       {children}
       {open && <div className={`tf-menu ${grid ? 'grid' : ''}`} role="menu" data-nosort>{menu}</div>}
+    </div>
+  );
+}
+
+/** Under a colour menu's circles: any colour (the picker over its circle) and how see-through, the
+ *  whole row of the grid. */
+function AnyColor({ editor, current, opacity, label, onColor, onOpacity }: {
+  editor: Editor; current: string | undefined; opacity: number; label: string; onColor: (hex: string) => void; onOpacity: (v: number) => void;
+}) {
+  const [picking, setPicking] = useState(false);
+  const custom = current?.startsWith('#') ? current : null, pct = Math.round(opacity * 100);
+  return (
+    <div className="tf-any">
+      <div className="cp-wrap">
+        <button className={`sw custom ${custom || picking ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет" aria-label="Свой цвет"
+          aria-expanded={picking} onClick={() => setPicking(!picking)} />
+        {picking && <ColorPicker value={custom ?? '#3E7BFA'} onChange={onColor} onStart={() => editor.beginChange()} onEnd={() => editor.endChange()} />}
+      </div>
+      <input type="range" min={0} max={100} value={pct} aria-label={label} title={`${pct}%`} style={{ '--p': `${pct}%` } as React.CSSProperties}
+        onPointerDown={() => { editor.beginChange(); window.addEventListener('pointerup', () => editor.endChange(), { once: true }); }}
+        onChange={(e) => onOpacity(Number(e.target.value) / 100)} />
     </div>
   );
 }
@@ -181,10 +203,14 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
         underline: <span className="sort-wrap"><Btn icon="underline" label="Подчёркнутый" on={item.fu} onClick={() => set({ fu: item.fu ? undefined : true })} /></span>,
         strike: <span className="sort-wrap"><Btn icon="strike" label="Зачёркнутый" on={item.fx} onClick={() => set({ fx: item.fx ? undefined : true })} /></span>,
         sep: <div className="fsep line" />,
-        color: <span className="sort-wrap"><Drop open={menu === 'color'} grid menu={Object.entries(TEXT_COLORS).map(([k, v]) => (
-          <button key={k} className={`sw ${(item.tc ?? 'ink') === k ? 'on' : ''}`} style={{ background: v || 'var(--ink)' }}
-            title={k === 'ink' ? 'Обычный' : undefined} aria-label={`Цвет текста ${k}`} onClick={() => set({ tc: k === 'ink' ? undefined : k })} />
-        ))}>
+        color: <span className="sort-wrap"><Drop open={menu === 'color'} grid menu={<>
+          {Object.entries(TEXT_COLORS).map(([k, v]) => (
+            <button key={k} className={`sw ${(item.tc ?? 'ink') === k ? 'on' : ''}`} style={{ background: v || 'var(--ink)' }}
+              title={k === 'ink' ? 'Обычный' : undefined} aria-label={`Цвет текста ${k}`} onClick={() => set({ tc: k === 'ink' ? undefined : k })} />
+          ))}
+          <AnyColor editor={editor} current={item.tc} opacity={item.to ?? 1} label="Прозрачность текста, %"
+            onColor={(c) => set({ tc: c }, true)} onOpacity={(v) => editor.setOpacity('text', v)} />
+        </>}>
           <Btn icon="color" label="Цвет текста" swatch={textColor ?? 'var(--fmt-ink)'} on={menu === 'color'} onClick={() => toggle('color')} />
         </Drop></span>,
         mark: <span className="sort-wrap"><Drop open={menu === 'mark'} grid menu={<>
@@ -192,6 +218,8 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
           {Object.entries(MARK_COLORS).map(([k, v]) => (
             <button key={k} className={`sw ${item.mk === k ? 'on' : ''}`} style={{ background: v }} aria-label={`Выделение ${k}`} onClick={() => set({ mk: k })} />
           ))}
+          <AnyColor editor={editor} current={item.mk} opacity={item.mo ?? 0.45} label="Прозрачность выделения, %"
+            onColor={(c) => set({ mk: c }, true)} onOpacity={(v) => editor.setOpacity('mark', v)} />
         </>}>
           <Btn icon="marker" label="Выделение цветом" swatch={mark ?? 'transparent'} on={menu === 'mark'} onClick={() => toggle('mark')} />
         </Drop></span>,

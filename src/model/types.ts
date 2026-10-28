@@ -49,9 +49,12 @@ export interface Item {
   sc?: string;
   /** Mind map nodes but central topics: their own fill (a key of FILLS or '#rrggbb'); unset is the usual. */
   fc?: string;
-  /** Opacity of the fill and of the outline, 0…1; unset is solid. */
+  /** Opacity of the fill and of the outline, 0…1; unset is solid (an icon's and a drawing's: theirs). */
   fo?: number;
   so?: number;
+  /** Opacity of the text, and of its highlight (unset: 0.45). */
+  to?: number;
+  mo?: number;
   /** Turned clockwise about its centre by this many degrees (see ROTATABLE). */
   rot?: number;
   /** Audio notes: length in seconds and a coarse waveform, 0…1 per bar. */

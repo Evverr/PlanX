@@ -376,7 +376,7 @@ function addInk(ed: Editor, tool: PenTool, pts: Point[]): void {
   const w = Math.ceil(x2 + sw / 2) - x, h = Math.ceil(y2 + sw / 2) - y;
   const r = (v: number) => Math.round(v * 10) / 10;
   ed.addItem(ed.newItem('ink', x, y, {
-    w, h, iw: w, sw: r(sw), color: style.color, hl: tool === 'marker' || undefined,
+    w, h, iw: w, sw: r(sw), color: style.color, hl: tool === 'marker' || undefined, fo: style.op,
     pts: pts.flatMap((p) => [r(p.x - x), r(p.y - y)]),
   }));
 }

@@ -12,7 +12,7 @@ export const isPoly = (t: Tool): t is PolyShape => ['triangle', 'rhombus', 'pent
 export const MIND_TOPIC = 'Центральная тема';
 
 /** A pen's colour (a key of INK_COLORS or '#rrggbb') and line width in screen pixels at the zoom it's drawn at. */
-export interface InkStyle { color: string; size: number }
+export interface InkStyle { color: string; size: number; op?: number }
 /** Each pen has three presets, as in Miro; `active` is the one it draws with. */
 export interface PenSet { presets: InkStyle[]; active: number }
 export type Pens = Record<PenTool, PenSet>;
