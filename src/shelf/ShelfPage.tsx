@@ -9,6 +9,8 @@ import {
   type BoardEntry, type FolderEntry, type SortBy,
 } from './boards';
 import { loadShelf, refreshPreviews, renameBoard } from './docs';
+import { openBoardFile } from '../collab/boardFile';
+import { boardIdIn, bringsFiles } from '../labs/boardImport';
 import { labOn } from '../labs/labs';
 import { WishlistPage } from '../labs/WishlistPage';
 import './shelf.css';
@@ -146,6 +148,25 @@ export function ShelfPage() {
   const pathText = (id: string | null) => ['Мои доски', ...pathTo(id, folders).map((f) => nameOf(f, UNTITLED_FOLDER))].join(' › ');
 
   const changeBoard = (id: string, patch: Partial<BoardEntry>) => { updateEntry(id, patch); reread(); };
+
+  // A .plnt file ("Доски извне", src/labs), picked or dropped from the Finder: opened as a new board.
+  const [dropping, setDropping] = useState(false);
+  const loadFile = async (f: File) => {
+    setDialog(null);
+    const why = await openBoardFile(f);
+    if (why) setToast({ text: why });
+  };
+  const dropZone = labOn('boardImport') ? {
+    onDragOver: (e: React.DragEvent) => { if (bringsFiles(e)) { e.preventDefault(); setDropping(true); } },
+    onDragLeave: (e: React.DragEvent) => { if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) setDropping(false); },
+    onDrop: (e: React.DragEvent) => {
+      if (!bringsFiles(e)) return;
+      e.preventDefault();
+      setDropping(false);
+      const f = [...e.dataTransfer.files].find((x) => x.name.toLowerCase().endsWith('.plnt'));
+      if (f) void loadFile(f); else setToast({ text: 'Это не файл доски PlanX (.plnt)' });
+    },
+  } : {};
 
   const createBoard = (title: string) => {
     const id = newBoardId();
@@ -299,7 +320,8 @@ export function ShelfPage() {
   const nothingAtAll = boards !== null && all.length === 0 && folders.length === 0;
 
   return (
-    <div className="shelf-page">
+    <div className="shelf-page" {...dropZone}>
+      {dropping && <div className="shelf-drop" aria-hidden="true"><span>Отпустите, чтобы открыть доску</span></div>}
       <header className="shelf-head">
         <div className={`shelf-brand ${wish ? 'wish-on' : ''}`}>
           {/* From the wishlist, "Мои доски" leads back to the top of the shelf. */}
@@ -392,7 +414,8 @@ export function ShelfPage() {
       </main>}
 
       {dialog?.kind === 'new-board' && <NameDialog heading={current ? `Новая доска в «${nameOf(current, UNTITLED_FOLDER)}»` : 'Новая доска'}
-        placeholder="Название, например «План на неделю»" action="Создать" onClose={() => setDialog(null)} onSave={createBoard} />}
+        placeholder="Название, например «План на неделю»" action="Создать" onClose={() => setDialog(null)} onSave={createBoard}
+        more={labOn('boardImport') ? <FromElsewhere onFile={(f) => void loadFile(f)} /> : undefined} />}
       {dialog?.kind === 'folder' && <FolderDialog folder={dialog.folder} inside={dialog.folder ? undefined : current} onClose={() => setDialog(null)} onSave={(title, color) => {
         if (dialog.folder) updateFolder(dialog.folder.id, { title, color });
         else addFolder(newBoardId(), { title, color, parent: current?.id ?? null });
@@ -447,8 +470,8 @@ function Modal({ label, onClose, children }: { label: string; onClose: () => voi
   );
 }
 
-function NameDialog({ heading, initial = '', placeholder, action, onClose, onSave }:
-  { heading: string; initial?: string; placeholder: string; action: string; onClose: () => void; onSave: (title: string) => void }) {
+function NameDialog({ heading, initial = '', placeholder, action, onClose, onSave, more }:
+  { heading: string; initial?: string; placeholder: string; action: string; onClose: () => void; onSave: (title: string) => void; more?: React.ReactNode }) {
   const [title, setTitle] = useState(initial);
   return (
     <Modal label={heading} onClose={onClose}>
@@ -461,7 +484,39 @@ function NameDialog({ heading, initial = '', placeholder, action, onClose, onSav
           <button type="submit" className="btn primary">{action}</button>
         </div>
       </form>
+      {more}
     </Modal>
+  );
+}
+
+/** Under the new board's name ("Доски извне", src/labs): a board from a file, or by the address of
+ *  one shared with you. */
+function FromElsewhere({ onFile }: { onFile: (f: File) => void }) {
+  const file = useRef<HTMLInputElement>(null);
+  const [pasting, setPasting] = useState(false);
+  const [address, setAddress] = useState('');
+  const id = boardIdIn(address);
+  return (
+    <div className="from-elsewhere">
+      <div className="from-line"><span>или</span></div>
+      {!pasting ? (
+        <div className="row from-row">
+          <button type="button" className="btn" onClick={() => file.current?.click()}>Загрузить доску из файла</button>
+          <button type="button" className="btn" onClick={() => setPasting(true)}>Вставить адрес доски</button>
+        </div>
+      ) : (
+        <form className="from-address" onSubmit={(e) => { e.preventDefault(); if (id) location.href = boardUrl(id); }}>
+          <input className="shelf-input" autoFocus placeholder="Адрес доски, которой поделились" aria-label="Адрес доски"
+            value={address} onChange={(e) => setAddress(e.target.value)} />
+          {address.trim() && !id && <p className="from-hint">Не похоже на адрес доски PlanX</p>}
+          <div className="row">
+            <button type="button" className="btn" onClick={() => setPasting(false)}>Назад</button>
+            <button type="submit" className="btn primary" disabled={!id}>Открыть</button>
+          </div>
+        </form>
+      )}
+      <input ref={file} type="file" accept=".plnt" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }} />
+    </div>
   );
 }
 
