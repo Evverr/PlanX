@@ -127,3 +127,7 @@
 /* "Объекты": the menu beside the rail, as the board menu looks. */
 .board-menu.objects-menu { position: fixed; z-index: 7; }
 .board-menu.context-menu { position: fixed; z-index: 40; }
+/* A rectangle's parameters, opened from the right click's menu. */
+.params-title { padding: var(--s4) var(--s4) var(--s8); font-size: var(--s12); font-weight: 600; color: var(--muted); }
+.params-colors { display: flex; flex-wrap: wrap; gap: var(--s8); padding: 0 var(--s4) var(--s8); }
+.params-colors .sw { margin: 0; }

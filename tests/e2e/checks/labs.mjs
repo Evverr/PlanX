@@ -428,4 +428,39 @@ export const checks = {
     await p.drag([550, 420], [900, 200]);
     expect(await p.ev(`planx.board.getLink('${l.id}')?.to ?? null`), 'kept as it was').toBe('c');
   },
+
+  async '"Меню по правому клику" on the board: zoom to 100%, paste there; on a rectangle, its parameters'(p) {
+    const right = async ([x, y]) => {
+      await p.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+      await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'right', buttons: 2, clickCount: 1 });
+      await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'right', buttons: 0, clickCount: 1 });
+      await sleep(200);
+    };
+    const rows = () => p.ev(`[...document.querySelectorAll('.context-menu .menu-row span')].map((s) => s.textContent).join(', ')`);
+    const pick = async (label) => p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent.includes('${label}')).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await p.ev(`(() => { const e = planx.editor; e.zoomCenter(0.5 / e.cam.z); e.setSelection([]); })()`);
+    await right([900, 600]);
+    expect(await rows(), 'nothing copied: just the zoom').toBe('Масштаб 100%');
+    await pick('Масштаб 100%');
+    expect(await p.ev('planx.editor.cam.z'), 'at 100%').toBe(1);
+    // A rectangle: its parameters.
+    await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 300); planx.board.add(e.newItem('rect', x, y, { id: 'r', w: 200, h: 120 })); })()`);
+    const r = await p.ev(`(() => { const i = planx.board.get('r'), s = planx.editor.toScreen({ x: i.x + 30, y: i.y + 30 }); return [s.x, s.y]; })()`);
+    await right(r);
+    expect(await rows(), 'parameters first').toBe('Параметры, Скопировать, Переместить вверх, Переместить вниз, Сделать компонентом, Удалить');
+    await pick('Параметры');
+    expect(await p.ev(`!!document.querySelector('.params-pop .params-colors')`), 'the popup: colours').toBe(true);
+    await p.click(await p.at('.params-pop button[aria-label="Цвет pink"]'));
+    await p.ev(`(() => { const i = document.querySelector('.params-pop input[type=number]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, '24'); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await sleep(100);
+    expect(await p.ev(`planx.board.get('r').color + ' ' + planx.board.get('r').rad`), 'its colour and rounding').toBe('pink 24');
+    await p.key('Escape', 'Escape', 27);
+    // Copied, then pasted where the board was right-clicked.
+    await p.ev(`planx.editor.setSelection(['r']); planx.editor.copy(); planx.editor.setSelection([])`);
+    await right([900, 500]);
+    expect(await rows(), 'with something copied').toBe('Масштаб 100%, Вставить');
+    await pick('Вставить');
+    const pasted = await p.ev(`(() => { const i = planx.board.list().find((x) => x.type === 'rect' && x.id !== 'r'), s = planx.editor.toScreen({ x: i.x + i.w / 2, y: i.y + i.h / 2 }); return [Math.round(s.x), Math.round(s.y)]; })()`);
+    expect(Math.abs(pasted[0] - 900) <= 1 && Math.abs(pasted[1] - 500) <= 1, `pasted there (${pasted})`).toBe(true);
+  },
 };
