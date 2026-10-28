@@ -7,7 +7,7 @@ import { readJSON, readText, writeJSON, writeText } from '../storage';
  * browser. Everything they need lives in this folder; the app only asks labOn() where a feature
  * changes what it does, so one that isn't kept comes out by deleting its file and those few lines.
  */
-export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'taskComponent' | 'objects' | 'contextMenu' | 'lineTool';
+export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'taskComponent' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport';
 
 export interface Lab { id: LabId; label: string; icon: string; hint: string }
 
@@ -26,6 +26,7 @@ export const LABS: Lab[] = [
   { id: 'keys', label: 'Шпаргалка по клавишам', icon: 'keyboard', hint: '?: все сочетания клавиш' },
   { id: 'textPush', label: 'Текст не слипается', icon: 'arrow-down-l', hint: 'Текст, ставший выше, отодвигает текст прямо под ним (до 16 px), и в инстансе тоже' },
   { id: 'wishlist', label: 'Wishlist', icon: 'gift', hint: 'На странице «Мои доски»: общий список пожеланий с лайками' },
+  { id: 'boardImport', label: 'Доски извне', icon: 'upload', hint: 'На «Моих досках»: загрузить доску из файла или по адресу, перетащить файл из Finder' },
   { id: 'lineTool', label: 'Линии', icon: 'path', hint: 'Инструмент линии на левой панели; линию можно тащить к другой цели за любое место' },
   { id: 'contextMenu', label: 'Меню по правому клику', icon: 'more-l', hint: 'Скопировать, удалить, вверх, вниз, сделать компонентом' },
   { id: 'objects', label: 'Объекты', icon: 'timeline', hint: 'Кнопка на левой панели (зажмите — меню объектов); первый — таймлайн' },

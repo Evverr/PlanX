@@ -216,3 +216,15 @@
 .wish-pages button:hover:not(:disabled) { background: var(--fmt-hover); color: var(--ink); }
 .wish-pages button.on { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1px var(--btn-line); }
 .wish-pages button:disabled { opacity: .35; cursor: default; }
+
+/* "Доски извне" (src/labs): a board from a file or by its address, under the new board's name; and a
+   board file brought from the Finder over the page. */
+.from-elsewhere { margin-top: 18px; }
+.from-line { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+.from-line::before, .from-line::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.shelf-dialog .from-row { justify-content: stretch; margin-top: 0; }
+.from-row .btn { flex: 1; justify-content: center; }
+.from-hint { margin: 6px 0 0; font-size: 12px; color: var(--danger); }
+.shelf-drop { position: fixed; inset: 12px; z-index: 50; display: grid; place-items: center; border: 2px dashed var(--accent); border-radius: 16px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent); pointer-events: none; }
+.shelf-drop span { padding: 10px 16px; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); font-weight: 600; }
