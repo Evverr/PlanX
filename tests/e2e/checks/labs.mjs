@@ -549,6 +549,17 @@ export const checks = {
     await sleep(200);
     const pin = await p.ev(`(() => { const r = document.querySelector('.comment-pin').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.bottom)]; })()`);
     expect(pin.join(), 'pin went along').toBe('500,340');
+    // Dragged off it, onto the empty board: pinned there; back onto it: on it again (nothing picked, so
+    // no panel over it).
+    await p.ev('planx.editor.setSelection([])');
+    await sleep(200);
+    await p.drag([515, 325], [815, 225]);
+    [c] = await stored();
+    expect(`${c.on ?? 'board'} ${c.x},${c.y}`, 'on the board where let go').toBe('board 800,240');
+    expect(await p.ev(`document.querySelectorAll('.comment-card').length`), 'dragged: still open as it was, not toggled').toBe(1);
+    await p.drag([815, 225], [515, 325]);
+    [c] = await stored();
+    expect(`${c.on} ${c.dx},${c.dy}`, `on the sticker again (${JSON.stringify(c)})`).toBe('s 100,40');
     // Solved, answered.
     await p.click(await p.at('.comment-card .comment-solve'));
     await p.click(await p.at('.comment-card .comment-answer'));
