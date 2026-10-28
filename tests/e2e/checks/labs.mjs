@@ -507,4 +507,25 @@ export const checks = {
     await p.ev(`(() => { const r = document.querySelectorAll('.params-pop input[type=range]')[0]; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(r, '50'); r.dispatchEvent(new Event('input', { bubbles: true })); })()`);
     expect(await p.ev(`planx.board.get('s').fo`), 'the sticker half see-through').toBe(0.5);
   },
+
+  async '"Параметры" of a line: colour, opacity, dashes, its arrowheads at the start and the end'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 200, 300, { id: 'a', w: 100, h: 100 }));
+      b.add(e.newItem('sticky', 700, 300, { id: 'b', w: 100, h: 100 }));
+      b.addLink({ id: 'L', from: 'a', to: 'b', style: 'straight' }); e.setSelection([]); })()`);
+    await sleep(200);
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: 500, y: 350, button: 'right', buttons: 2, clickCount: 1 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 500, y: 350, button: 'right', buttons: 0, clickCount: 1 });
+    await sleep(200);
+    expect(await p.ev(`[...document.querySelectorAll('.context-menu .menu-row span')].map((s) => s.textContent).join(', ')`), 'its menu').toBe('Параметры, Удалить');
+    await p.click(await p.at('.context-menu .menu-row'));
+    await p.click(await p.at('.params-pop button[aria-label="Цвет: red"]'));
+    await p.ev(`(() => { const r = document.querySelector('.params-pop input[type=range]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(r, '60'); r.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    const row = async (label) => p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.params-pop .menu-row')].find((b) => b.textContent === '${label}').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await row('Пунктир');
+    await row('Стрелка в начале');
+    await row('Стрелка в конце');
+    const l = await p.ev(`JSON.stringify((({ color, lo, dash, heads }) => ({ color, lo, dash, heads }))(planx.board.getLink('L')))`);
+    expect(l, 'red, 60%, dashed, a head at its start only').toBe('{"color":"red","lo":0.6,"dash":true,"heads":"start"}');
+  },
 };

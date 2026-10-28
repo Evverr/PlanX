@@ -775,30 +775,41 @@ function strokeInk(ctx: CanvasRenderingContext2D, { pts, color, width, hl, op }:
 const linkWidth = (z: number) => (z < 0.3 ? 1 : 1.7);
 
 /** Line width and dashes are in screen pixels, so links look the same at any zoom. */
-function arrow(ctx: CanvasRenderingContext2D, [a, c1, c2, b]: Bezier, color: string, z: number, dash: number[] = []) {
-  // The head follows the curve's last tangent; straight links have no control points, so fall back along the line.
+/** Which ends of a line have an arrowhead. */
+export interface Heads { start: boolean; end: boolean }
+const END: Heads = { start: false, end: true };
+
+/** An open chevron like the undo icon's: two round-capped arms at 45° back from `tip`, along `ang`. */
+function head(ctx: CanvasRenderingContext2D, tip: Point, ang: number, arm: number) {
+  ctx.beginPath();
+  ctx.moveTo(tip.x - arm * Math.cos(ang - Math.PI / 4), tip.y - arm * Math.sin(ang - Math.PI / 4));
+  ctx.lineTo(tip.x, tip.y);
+  ctx.lineTo(tip.x - arm * Math.cos(ang + Math.PI / 4), tip.y - arm * Math.sin(ang + Math.PI / 4));
+  ctx.stroke();
+}
+
+function arrow(ctx: CanvasRenderingContext2D, [a, c1, c2, b]: Bezier, color: string, z: number, dash: number[] = [], heads: Heads = END) {
+  // The heads follow the curve's tangents at its ends; straight links have no control points, so fall back along the line.
   const from = c2.x !== b.x || c2.y !== b.y ? c2 : c1.x !== b.x || c1.y !== b.y ? c1 : a;
-  const ang = Math.atan2(b.y - from.y, b.x - from.x);
-  // Open chevron like the undo icon's: two round-capped arms at 45°. Pull the tip back by
-  // half the line width so the rounded cap just touches the target.
+  const back = c1.x !== a.x || c1.y !== a.y ? c1 : c2.x !== a.x || c2.y !== a.y ? c2 : b;
+  const ang = Math.atan2(b.y - from.y, b.x - from.x), ang0 = Math.atan2(a.y - back.y, a.x - back.x);
+  // Pull a tip back by half the line width so the rounded cap just touches the target.
   const px = linkWidth(z), width = px / z;
   const arm = px * 3.8 / z, sx = Math.cos(ang) * width / 2, sy = Math.sin(ang) * width / 2;
-  const tip = { x: b.x - sx, y: b.y - sy };
+  const tip = heads.end ? { x: b.x - sx, y: b.y - sy } : b;
+  const tip0 = heads.start ? { x: a.x - Math.cos(ang0) * width / 2, y: a.y - Math.sin(ang0) * width / 2 } : a;
   ctx.strokeStyle = color;
   ctx.lineWidth = width;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.setLineDash(dash.map((d) => d / z));
   ctx.beginPath();
-  ctx.moveTo(a.x, a.y);
-  ctx.bezierCurveTo(c1.x, c1.y, c2.x - sx, c2.y - sy, tip.x, tip.y);
+  ctx.moveTo(tip0.x, tip0.y);
+  ctx.bezierCurveTo(c1.x, c1.y, heads.end ? c2.x - sx : c2.x, heads.end ? c2.y - sy : c2.y, tip.x, tip.y);
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.beginPath();
-  ctx.moveTo(tip.x - arm * Math.cos(ang - Math.PI / 4), tip.y - arm * Math.sin(ang - Math.PI / 4));
-  ctx.lineTo(tip.x, tip.y);
-  ctx.lineTo(tip.x - arm * Math.cos(ang + Math.PI / 4), tip.y - arm * Math.sin(ang + Math.PI / 4));
-  ctx.stroke();
+  if (heads.end) head(ctx, tip, ang, arm);
+  if (heads.start) head(ctx, tip0, ang0, arm);
 }
 
 /** The side of a target at `to` a link from `from` comes into: the one facing back along its way. */
@@ -809,18 +820,20 @@ function facing(from: Point, to: Point): Side {
 
 /** A link drawn by its shape: a smooth one as its curve; a straight or right-angled one through its
  *  points, its corners rounded, the head along its last stretch. */
-function linkArrow(ctx: CanvasRenderingContext2D, shape: LinkShape, color: string, z: number, dash: number[] = []) {
-  if (shape.curve) { arrow(ctx, shape.curve, color, z, dash); return; }
-  const pts = shape.pts, b = pts[pts.length - 1], from = pts[pts.length - 2];
-  const ang = Math.atan2(b.y - from.y, b.x - from.x), px = linkWidth(z), width = px / z, arm = px * 3.8 / z;
-  const tip = { x: b.x - Math.cos(ang) * width / 2, y: b.y - Math.sin(ang) * width / 2 };
+function linkArrow(ctx: CanvasRenderingContext2D, shape: LinkShape, color: string, z: number, dash: number[] = [], heads: Heads = END) {
+  if (shape.curve) { arrow(ctx, shape.curve, color, z, dash, heads); return; }
+  const pts = shape.pts, b = pts[pts.length - 1], from = pts[pts.length - 2], a = pts[0], back = pts[1];
+  const ang = Math.atan2(b.y - from.y, b.x - from.x), ang0 = Math.atan2(a.y - back.y, a.x - back.x);
+  const px = linkWidth(z), width = px / z, arm = px * 3.8 / z;
+  const tip = heads.end ? { x: b.x - Math.cos(ang) * width / 2, y: b.y - Math.sin(ang) * width / 2 } : b;
+  const tip0 = heads.start ? { x: a.x - Math.cos(ang0) * width / 2, y: a.y - Math.sin(ang0) * width / 2 } : a;
   ctx.strokeStyle = color;
   ctx.lineWidth = width;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.setLineDash(dash.map((d) => d / z));
   ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
+  ctx.moveTo(tip0.x, tip0.y);
   for (let i = 1; i < pts.length - 1; i++) {
     // Corners rounded, but never past halfway along either side of them.
     const p = pts[i], n = pts[i + 1], l = pts[i - 1];
@@ -830,11 +843,18 @@ function linkArrow(ctx: CanvasRenderingContext2D, shape: LinkShape, color: strin
   ctx.lineTo(tip.x, tip.y);
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.beginPath();
-  ctx.moveTo(tip.x - arm * Math.cos(ang - Math.PI / 4), tip.y - arm * Math.sin(ang - Math.PI / 4));
-  ctx.lineTo(tip.x, tip.y);
-  ctx.lineTo(tip.x - arm * Math.cos(ang + Math.PI / 4), tip.y - arm * Math.sin(ang + Math.PI / 4));
-  ctx.stroke();
+  if (heads.end) head(ctx, tip, ang, arm);
+  if (heads.start) head(ctx, tip0, ang0, arm);
+}
+
+/** A link's own look: its colour (the usual grey unset), dashes, arrowheads. */
+function linkLook(l: Link, theme: Theme): { color: string; dash: number[]; heads: Heads } {
+  const c = l.color && l.color !== 'gray' ? (l.color.startsWith('#') ? l.color : STROKE_COLORS[l.color] || (l.color === 'ink' ? theme.ink : '')) : '';
+  return {
+    color: c ? shade(c, theme.dim) : theme.link,
+    dash: l.dash ? [8, 6] : [],
+    heads: { start: l.heads === 'start' || l.heads === 'both', end: l.heads !== 'start' && l.heads !== 'none' },
+  };
 }
 
 function outline(ctx: CanvasRenderingContext2D, it: Item, z: number, color: string, dash: number[] = []) {
@@ -947,13 +967,15 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
     gc.setTransform(dpr * cam.z, 0, 0, dpr * cam.z, dpr * cam.x, dpr * cam.y);
     for (const k of ks) {
       const l = s.links[k], shape = shapes[k]!;
-      linkArrow(gc, shape, s.selection.has(l.id) ? SELECT_COLOR : theme.link, cam.z);
+      const look = linkLook(l, theme);
+      gc.globalAlpha = l.lo ?? 1;
+      linkArrow(gc, shape, s.selection.has(l.id) ? SELECT_COLOR : look.color, cam.z, look.dash, look.heads);
       // The one under the pointer a little bluer.
       if (l.id === s.hotLink && !s.selection.has(l.id)) {
-        gc.globalAlpha = 0.4;
-        linkArrow(gc, shape, SELECT_COLOR, cam.z);
-        gc.globalAlpha = 1;
+        gc.globalAlpha = 0.4 * (l.lo ?? 1);
+        linkArrow(gc, shape, SELECT_COLOR, cam.z, look.dash, look.heads);
       }
+      gc.globalAlpha = 1;
     }
     const own = new Set(key ? key.split(',') : []), cut = new Path2D(items);
     for (const f of frames) if (!own.has(f.id)) outlineOn(cut, f);

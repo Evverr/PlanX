@@ -152,6 +152,12 @@ export interface Link {
   toSide?: Side;
   /** How it runs: straight, in right angles, or (unset) in a smooth curve (see linkShape in canvas/geometry.ts). */
   style?: LinkStyle;
+  /** Its colour (a key of STROKE_COLORS or '#rrggbb'; unset, the usual grey), how see-through, dashed,
+   *  and where its arrowheads are (unset: at its end). */
+  color?: string;
+  lo?: number;
+  dash?: boolean;
+  heads?: 'start' | 'both' | 'none';
 }
 
 export type LinkStyle = 'straight' | 'elbow';
