@@ -11,7 +11,7 @@ import { newTable, withCellFormat, withCount, withTableFormat, type TableLine } 
 import type { AudioNote } from '../canvas/audio';
 import { addChild, descendants, foldedAway, folding, makeRoom, mindDepth, type Way } from '../model/mind';
 import { readJSON, writeJSON } from '../storage';
-import { cameraFor, clamp, fittedTo, flyTo, freeArea, wheelMove, zoomedAt } from './camera';
+import { cameraFor, clamp, fittedTo, flyTo, freeArea, minZoomFor, wheelMove, zoomedAt } from './camera';
 import { copiesOf } from './copies';
 import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked } from './frames';
 import { copyId, hasComponents, syncOps } from '../model/components';
@@ -429,7 +429,7 @@ export class Editor {
   }
 
   zoomAt(sx: number, sy: number, factor: number): void {
-    this.cam = zoomedAt(this.cam, sx, sy, factor);
+    this.cam = zoomedAt(this.cam, sx, sy, factor, this.minZoom());
     this.camChanged();
   }
 
@@ -441,7 +441,7 @@ export class Editor {
    *  with 5% of it left empty at each side. */
   fit(): void {
     const b = boundsOf(this.shown());
-    this.cam = b ? fittedTo(b, freeArea(this.width, this.height, this.canvas?.getBoundingClientRect() ?? { left: 0, top: 0 }))
+    this.cam = b ? fittedTo(b, freeArea(this.width, this.height, this.canvas?.getBoundingClientRect() ?? { left: 0, top: 0 }), this.minZoom())
       : { x: this.width / 2, y: this.height / 2, z: 1 };
     this.camChanged();
   }
@@ -460,6 +460,11 @@ export class Editor {
 
   /** Wheel and trackpad: zoom or scroll the board. `sp` is the screen point zooming keeps still,
    *  the pointer by default; the board map passes the middle of the screen. */
+  /** How far out the board may be zoomed now: 8%, or as far as everything on it shows, down to 4%. */
+  minZoom(): number {
+    return minZoomFor(boundsOf(this.board.list()), this.width, this.height);
+  }
+
   wheel(e: WheelEvent, sp: Point = this.local(e)): void {
     e.preventDefault();
     const m = wheelMove(e, this.cam);

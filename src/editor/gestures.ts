@@ -7,7 +7,7 @@ import { cellAt, MIN_COL, MIN_ROW, movedLines, newTable, withScale, type TableLi
 import { snapToGuides, type Guide } from '../canvas/guides';
 import { shapeStyle } from './shapeStyle';
 import { branchCrosses, canMoveTo, foldedWays, folding, mindWay, moveBranch } from '../model/mind';
-import { clamp, MAX_Z, MIN_Z } from './camera';
+import { clamp, MAX_Z } from './camera';
 import { rotateCursor } from './cursors';
 import { MIND_TOPIC, type PenTool } from './tools';
 import type { Editor } from './editor';
@@ -46,7 +46,7 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
     case 'pinch': {
       const [p, q] = [...ed.pointers.values()];
       if (!q) return;
-      const z = clamp(g.z0 * Math.hypot(p.x - q.x, p.y - q.y) / g.d0, MIN_Z, MAX_Z);
+      const z = clamp(g.z0 * Math.hypot(p.x - q.x, p.y - q.y) / g.d0, ed.minZoom(), MAX_Z);
       const cx = (p.x + q.x) / 2, cy = (p.y + q.y) / 2;
       ed.cam = { z, x: cx - g.anchor.x * z, y: cy - g.anchor.y * z };
       ed.camChanged();
