@@ -1,19 +1,20 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Point } from '../canvas/geometry';
-import { hitItem } from '../canvas/geometry';
+import { hitItem, hitLink } from '../canvas/geometry';
 import { linkInTextAt } from '../canvas/renderer';
-import { alignOf, baseWeight, COLORABLE, DEFAULTS, FILLS, HAS_FONT, ICON_COLORS, INK_COLORS, STROKABLE, STROKE_COLORS, TEXT_COLORS, type Item } from '../model/types';
+import { alignOf, baseWeight, COLORABLE, DEFAULTS, FILLS, HAS_FONT, ICON_COLORS, INK_COLORS, STROKABLE, STROKE_COLORS, TEXT_COLORS, type Item, type LinkStyle } from '../model/types';
 import { fitHeight, FONTS } from '../canvas/text';
 import { PanelIcon, type PanelIconName } from '../ui/PanelIcon';
 import { MIND_PALETTE } from '../model/mind';
 import { Glyph } from '../ui/glyphs';
 import { ColorPicker } from '../ui/ColorPicker';
+import { Switch } from '../ui/BoardMenu';
 import { labOn } from './labs';
 
 /** Where the menu opened (on the screen and the board), what it's for, and whether it shows the
  *  picked item's parameters in place of its rows. */
-interface Open { x: number; y: number; w: Point; url: string | null; board: boolean; params: boolean }
+interface Open { x: number; y: number; w: Point; url: string | null; board: boolean; params: boolean; link?: string }
 
 /**
  * "Меню по правому клику": a right click on the board opens a menu there, as the board menu looks.
@@ -35,6 +36,14 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
       e.preventDefault();
       const r = canvas.getBoundingClientRect(), w = editor.toWorld(e.clientX - r.left, e.clientY - r.top);
       const hit = hitItem(editor.shown(), w, editor.cam.z);
+      // A link (where no item but a frame is over it, as a press would find it): its own menu.
+      const link = hit && hit.type !== 'frame' ? null : hitLink(editor.shownLinks(), (i) => editor.board.get(i), w, editor.cam.z);
+      if (link) {
+        editor.setSelection([link.id]);
+        editor.stopEditing();
+        setAt({ x: e.clientX, y: e.clientY, w, url: null, board: false, params: false, link: link.id });
+        return;
+      }
       // What's in an instance is picked with it, as a click would.
       const id = hit ? (hit.host && !editor.selection.has(hit.id) ? hit.host : hit.id) : null;
       if (id && !editor.selection.has(id)) editor.setSelection([id]);
@@ -77,6 +86,19 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
       </button>
     </div>
   );
+  const link = at.link ? editor.board.getLink(at.link) : undefined;
+  if (link) {
+    return (
+      <div ref={ref} className={`board-menu context-menu ${at.params ? 'params-pop' : ''}`} role={at.params ? 'dialog' : 'menu'} aria-label={at.params ? 'Параметры линии' : 'Линия'}
+        onContextMenu={(e) => e.preventDefault()}>
+        {at.params ? <LinkParams editor={editor} id={link.id} /> : <>
+          {row('sign', 'Параметры', () => setAt({ ...at, params: true }))}
+          <div className="menu-line" />
+          {row('trashcan-l', 'Удалить', run(() => editor.deleteSelection()))}
+        </>}
+      </div>
+    );
+  }
   const params = paramItems(editor);
   if (at.params && params.length) {
     return (
@@ -110,6 +132,50 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
         <div className="menu-line" />
         {row('trashcan-l', 'Удалить', run(() => editor.deleteSelection()))}
       </>}
+    </div>
+  );
+}
+
+/** A line's parameters: its colour (any too) and opacity, dashed or not, its arrowheads, the way it runs. */
+function LinkParams({ editor, id }: { editor: Editor; id: string }) {
+  const [, redraw] = useState(0);
+  const l = editor.board.getLink(id);
+  if (!l) return null;
+  const set = (patch: Parameters<Editor['board']['updateLink']>[1]) => { editor.board.updateLink(id, patch); redraw((n) => n + 1); };
+  const start = l.heads === 'start' || l.heads === 'both', end = l.heads !== 'start' && l.heads !== 'none';
+  const heads = (s: boolean, e: boolean) => set({ heads: s && e ? 'both' : s ? 'start' : e ? undefined : 'none' });
+  const btn = (icon: PanelIconName, label: string, on: boolean, fn: () => void) => (
+    <button className={`params-btn ${on ? 'on' : ''}`} title={label} aria-label={label} aria-pressed={on} onClick={fn}><PanelIcon name={icon} /></button>
+  );
+  const styled = (style: LinkStyle | undefined) => { editor.board.setLinkStyle(id, style); redraw((n) => n + 1); };
+  return (
+    <div className="params-list">
+      <div className="params-title">Линия</div>
+      <ColorRow editor={editor} label="Цвет" colors={Object.fromEntries(Object.entries(STROKE_COLORS).filter(([k]) => k !== 'none').map(([k, v]) => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--link)')]))}
+        current={l.color ?? 'gray'} opacity={l.lo ?? 1} onColor={(c) => set({ color: c === 'gray' ? undefined : c })} onOpacity={(v) => set({ lo: v })} />
+      <div className="params-group">
+        <div className="params-label">Вид</div>
+        <div className="params-text">
+          {btn('line-curve', 'Плавная', !l.style, () => styled(undefined))}
+          {btn('line-elbow', 'С прямыми углами', l.style === 'elbow', () => styled('elbow'))}
+          {btn('line-straight', 'Прямая', l.style === 'straight', () => styled('straight'))}
+        </div>
+      </div>
+      <div className="menu-item">
+        <button className="menu-row" role="menuitemcheckbox" aria-checked={!!l.dash} onClick={() => set({ dash: l.dash ? undefined : true })}>
+          <span>Пунктир</span><Switch on={!!l.dash} />
+        </button>
+      </div>
+      <div className="menu-item">
+        <button className="menu-row" role="menuitemcheckbox" aria-checked={start} onClick={() => heads(!start, end)}>
+          <span>Стрелка в начале</span><Switch on={start} />
+        </button>
+      </div>
+      <div className="menu-item">
+        <button className="menu-row" role="menuitemcheckbox" aria-checked={end} onClick={() => heads(start, !end)}>
+          <span>Стрелка в конце</span><Switch on={end} />
+        </button>
+      </div>
     </div>
   );
 }
