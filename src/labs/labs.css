@@ -134,3 +134,18 @@
 .params-pop { max-height: calc(100vh - 16px); overflow-y: auto; }
 .params-row .menu-input input[type="range"] { width: var(--e110, 110px); padding: 0; border: 0; }
 .params-row .menu-input i { min-width: 3.2em; text-align: right; }
+.params-pop { width: var(--e320, 320px); }
+.params-group { padding: var(--s4) var(--s4) var(--s8); }
+.params-label { margin-bottom: var(--s6); font-size: var(--s12); color: var(--muted); }
+.params-inline { display: flex; align-items: center; justify-content: space-between; }
+.params-inline .params-label { margin: 0; }
+.params-opacity { display: flex; align-items: center; gap: var(--s10); margin-top: var(--s6); }
+.params-opacity input[type="range"] { flex: 1; min-width: 0; }
+.params-opacity i { font-style: normal; font-size: var(--s12); color: var(--muted); min-width: 3em; text-align: right; }
+.params-text { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s4); margin-bottom: var(--s6); }
+.params-text select { height: var(--e30, 30px); padding: 0 var(--s6); border: 1px solid var(--btn-line); border-radius: var(--s6); background: var(--surface); color: var(--ink); font: inherit; }
+.params-btn { width: var(--e30, 30px); height: var(--e30, 30px); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--s6); background: none; cursor: pointer; color: var(--ink); }
+.params-btn:hover { background: var(--fmt-hover); }
+.params-btn.on { background: var(--fmt-on); color: var(--fmt-on-ink); }
+.params-btn .pi { width: 24px; height: 24px; }
+.params-gap { width: var(--s6); }
