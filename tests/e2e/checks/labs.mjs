@@ -15,7 +15,7 @@ export const checks = {
     const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Нововведения')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
     await sleep(250);
-    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(19);
+    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(20);
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.labs-menu .menu-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`document.querySelector('.labs-menu [aria-checked="false"]')?.textContent`), 'switched off').toBe('Общий таймер');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
@@ -372,5 +372,21 @@ export const checks = {
     // Wider, more days.
     await p.ev(`planx.board.update('${tl.id}', { w: planx.board.get('${tl.id}').w + 23 * 10 })`);
     expect(await p.ev(`planx.board.get('${tl.id}').w`), 'wider').toBe(tl.w + 230);
+  },
+
+  async '"Меню по правому клику": a right click picks what is under it and opens the menu; its rows do what they say'(p) {
+    await stickers(p);
+    await p.ev('planx.editor.setSelection([])');
+    const a = await p.ev(`(() => { const i = planx.board.list().find((x) => x.text === 'Купить молоко'), s = planx.editor.toScreen({ x: i.x + 40, y: i.y + 40 }); return [s.x, s.y, i.id]; })()`);
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: a[0], y: a[1] });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: a[0], y: a[1], button: 'right', buttons: 2, clickCount: 1 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: a[0], y: a[1], button: 'right', buttons: 0, clickCount: 1 });
+    await sleep(200);
+    expect(await p.ev('[...planx.editor.selection].join()'), 'picked').toBe(a[2]);
+    expect(await p.ev(`[...document.querySelectorAll('.context-menu .menu-row span')].map((s) => s.textContent).join(', ')`), 'its rows')
+      .toBe('Скопировать, Переместить вверх, Переместить вниз, Сделать компонентом, Удалить');
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Удалить').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    expect(await p.ev(`planx.board.get('${a[2]}') ?? null`), 'deleted').toBe(null);
+    expect(await p.ev(`document.querySelectorAll('.context-menu').length`), 'and the menu gone').toBe(0);
   },
 };

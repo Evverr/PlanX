@@ -14,6 +14,7 @@ import { drawTidy, endTidyDrag, gapAt, moveTidyDrag, setGaps, setHotGap, startTi
 import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
 import { SwapPop } from './SwapPop';
+import { ContextMenu } from './ContextMenu';
 import { drawGroup, endGroupScale, groupScaling, moveGroupScale, onGroupHandle, startGroupScale } from './multi';
 import './labs.css';
 
@@ -206,6 +207,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       {pop === 'timer' && <TimerPop onStart={(min) => { startTimer(editor.board.doc, min * 60000, conn.me.name); setPop(null); }} />}
       {pop === 'keys' && <KeysSheet onClose={() => setPop(null)} />}
       {labs.swap && <SwapPop editor={editor} />}
+      <ContextMenu editor={editor} onToast={setToast} />
       <div className="labs-top">
         {labs.timer && <TimerPill editor={editor} />}
         {following && labs.follow && (
