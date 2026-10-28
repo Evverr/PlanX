@@ -15,6 +15,7 @@ import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
 import { SwapPop } from './SwapPop';
 import { ContextMenu } from './ContextMenu';
+import { CommentsLayer } from './CommentsLayer';
 import { drawGroup, endGroupScale, groupScaling, moveGroupScale, onGroupHandle, startGroupScale } from './multi';
 import './labs.css';
 
@@ -208,6 +209,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       {pop === 'keys' && <KeysSheet onClose={() => setPop(null)} />}
       {labs.swap && <SwapPop editor={editor} />}
       <ContextMenu editor={editor} onToast={setToast} />
+      {labs.comments && <CommentsLayer editor={editor} name={conn.me.name} />}
       <div className="labs-top">
         {labs.timer && <TimerPill editor={editor} />}
         {following && labs.follow && (

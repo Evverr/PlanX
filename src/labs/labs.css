@@ -153,3 +153,31 @@
 .params-grip { position: sticky; top: calc(-1 * var(--s13)); z-index: 1; height: var(--s14); margin: calc(-1 * var(--s8)) calc(-1 * var(--s18)) var(--s4) calc(-1 * var(--s14)); cursor: grab; background: var(--surface); }
 .params-grip::after { content: ""; display: block; width: 36px; height: 4px; margin: 5px auto 0; border-radius: 2px; background: var(--line); }
 .params-grip:active { cursor: grabbing; }
+
+/* "Комментарии": pins over the board (pointing from their lower left corner), and the card opened. */
+.comments-layer { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+.comment-pin { position: fixed; transform: translateY(-100%); width: 32px; height: 32px; padding: 0; display: grid; place-items: center;
+  border: 2px solid var(--surface); border-radius: 50% 50% 50% 0; background: var(--surface); box-shadow: 0 2px 6px rgba(0, 0, 0, .2); cursor: pointer; pointer-events: auto; }
+.comment-pin img { width: 22px; height: 22px; pointer-events: none; }
+.comment-pin.on { border-color: var(--accent); }
+.comment-pin.ghost { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, var(--surface)); cursor: default; }
+.comment-done { position: absolute; right: -4px; top: -4px; width: 12px; height: 12px; border-radius: 50%; background: #30A46C; border: 2px solid var(--surface); }
+.comment-card { position: fixed; width: 280px; box-sizing: border-box; padding: 12px; border-radius: 12px; background: var(--surface); box-shadow: 0 6px 16px rgba(0, 0, 0, .18);
+  pointer-events: auto; font-size: 13px; color: var(--ink); }
+.comment-head { display: flex; align-items: center; gap: 6px; }
+.comment-cat { width: 20px; height: 20px; }
+.comment-when { flex: 1; color: var(--muted); font-size: 12px; }
+.comment-solve, .comment-more { width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: none; cursor: pointer; color: var(--muted); }
+.comment-solve:hover, .comment-more:hover { background: var(--fmt-hover); }
+.comment-solve.on { color: #30A46C; }
+.comment-solve svg, .comment-more svg { width: 18px; height: 18px; }
+.comment-more-wrap { position: relative; }
+.comment-menu { position: absolute; right: 0; top: 28px; z-index: 1; display: flex; flex-direction: column; min-width: 120px; padding: 4px; border-radius: 8px; background: var(--surface); box-shadow: 0 4px 12px rgba(0, 0, 0, .18); }
+.comment-menu button { padding: 6px 10px; border: 0; border-radius: 6px; background: none; text-align: left; cursor: pointer; color: var(--ink); font: inherit; }
+.comment-menu button:hover { background: var(--fmt-hover); }
+.comment-text { margin: 6px 0 0 26px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.comment-line { height: 1px; margin: 10px 0; background: var(--line); }
+.comment-answer { margin: 8px 0 0 26px; padding: 0; border: 0; background: none; color: var(--accent); cursor: pointer; font: inherit; }
+.comment-writer textarea { width: 100%; box-sizing: border-box; resize: vertical; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); font: inherit; outline: 0; }
+.comment-writer textarea:focus { border-color: var(--accent); }
+.comment-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
