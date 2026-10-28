@@ -94,6 +94,8 @@ export class Editor {
   lastEmpty = { t: 0, x: 0, y: 0 };
   needsFit: boolean;
   hotDot: Side | null = null;
+  /** With the line tool, the item showing its link dots (see lineToolHover). */
+  linkDots: string | null = null;
   /** Shared: the link under the pointer, faintly lit. */
   hotLink: string | null = null;
   /** The mind map node button under the pointer (see buttonKey). */
@@ -217,7 +219,7 @@ export class Editor {
     on(canvas, 'pointerleave', () => {
       this.presence?.setCursor(null);
       restOn(this, null);
-      if (this.hotDot || this.hotLine) { this.hotDot = null; this.hotLine = null; this.requestRender(); }
+      if (this.hotDot || this.hotLine || this.linkDots) { this.hotDot = null; this.hotLine = null; this.linkDots = null; this.requestRender(); }
     });
     on(canvas, 'wheel', (e) => this.wheel(e), { passive: false });
     on(window, 'keydown', (e) => onKeyDown(this, e));
@@ -374,6 +376,7 @@ export class Editor {
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]) && !isLocked(this.board.get([...this.selection][0])),
       byFinger: this.byFinger,
       hotDot: this.hotDot,
+      linkDots: this.tool === 'link' && !this.gesture ? this.linkDots : null,
       hotPlus: this.hotPlus,
       plusFade,
       folded: this.folded(),
@@ -721,14 +724,14 @@ export class Editor {
   }
 
   /** Puts a frame around the selected items (one is enough) with all that goes with them (a mind map
-   *  node's branches, what a frame holds), 40 units clear of them, and opens its title for typing as a
-   *  new frame's is. Returns whether there was anything to frame. */
-  frameSelection(extra: Partial<Item> = {}): boolean {
+   *  node's branches, what a frame holds), `pad` (40) units clear of them, and opens its title for typing
+   *  as a new frame's is. Returns whether there was anything to frame. */
+  frameSelection(extra: Partial<Item> = {}, pad = 40): boolean {
     const held = [...this.carried(this.selectedItems()).keys()].map((id) => this.board.get(id)).filter((i): i is Item => !!i);
     const b = boundsOf(held);
     if (!held.length || !b) return false;
     // Just under the lowest of them, not under everything: a frame they already sit in stays below.
-    const pad = 40, z = Math.min(...held.map((i) => i.z)) - 0.5;
+    const z = Math.min(...held.map((i) => i.z)) - 0.5;
     const it = this.newItem('frame', b.x - pad, b.y - pad, { w: Math.round(b.w + pad * 2), h: Math.round(b.h + pad * 2), z, members: [], ...extra });
     // Only these go in: whatever else lies under the new frame stays out of it.
     this.board.beginGesture();
@@ -742,14 +745,14 @@ export class Editor {
   }
 
   /** Makes a component of what's selected: a frame picked on its own becomes one; anything else gets a
-   *  component round it, as a frame would be put round it. */
+   *  component round it, as a frame would be put round it but half as far off (20). */
   makeComponent(): boolean {
     const sel = this.selectedItems();
     if (sel.length === 1 && sel[0].type === 'frame' && !sel[0].inst && !sel[0].host) {
       this.board.update(sel[0].id, { comp: true, fold: undefined, ...(sel[0].fold && { w: sel[0].fold.w, h: sel[0].fold.h }) });
       return true;
     }
-    return this.frameSelection({ comp: true, text: 'Компонент' });
+    return this.frameSelection({ comp: true, text: 'Компонент' }, 20);
   }
 
   /** A new instance of component `id`, right of it (or of its last instance), the component staying picked

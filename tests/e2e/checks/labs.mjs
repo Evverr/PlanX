@@ -463,4 +463,21 @@ export const checks = {
     const pasted = await p.ev(`(() => { const i = planx.board.list().find((x) => x.type === 'rect' && x.id !== 'r'), s = planx.editor.toScreen({ x: i.x + i.w / 2, y: i.y + i.h / 2 }); return [Math.round(s.x), Math.round(s.y)]; })()`);
     expect(Math.abs(pasted[0] - 900) <= 1 && Math.abs(pasted[1] - 500) <= 1, `pasted there (${pasted})`).toBe(true);
   },
+
+  async '"Линии": with the line tool, any item under the pointer shows its dots, a mind map node too, and a line goes from the one pressed'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board, { x, y } = e.toWorld(300, 300);
+      b.add(e.newItem('mind', x, y, { id: 'm', w: 200, h: 56, text: 'Тема' }));
+      b.add(e.newItem('sticky', x + 500, y - 50, { id: 's', w: 120, h: 120 }));
+      e.setSelection([]); e.setTool('link'); })()`);
+    await p.mouse('mouseMoved', 400, 328);
+    await sleep(100);
+    expect(await p.ev('planx.editor.linkDots'), 'its dots show').toBe('m');
+    const dot = await p.ev(`(() => { const m = planx.board.get('m'), s = planx.editor.toScreen({ x: m.x + m.w + 12, y: m.y + m.h / 2 }); return [s.x, s.y]; })()`);
+    await p.mouse('mouseMoved', dot[0], dot[1]);
+    await sleep(100);
+    expect(await p.ev('planx.editor.linkDots + " " + planx.editor.hotDot'), 'still, on its right dot').toBe('m right');
+    await p.drag(dot, [860, 310]);
+    const l = await p.ev(`(() => { const l = planx.board.linkList()[0]; return l && l.from + '>' + l.to + ' ' + l.fromSide; })()`);
+    expect(l, 'from that dot to the sticker').toBe('m>s right');
+  },
 };
