@@ -1,4 +1,5 @@
 import type { Tool } from './tools';
+import { readPictures } from '../canvas/pictures';
 import type { Editor } from './editor';
 import { isLocked } from '../labs/labs';
 
@@ -17,7 +18,8 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
       case 'KeyY': e.preventDefault(); ed.redo(); return;
       case 'KeyC': ed.copy(); return;
       case 'KeyX': if (ed.copy()) ed.deleteSelection(); return;
-      case 'KeyV': e.preventDefault(); ed.paste(); return;
+      // Ctrl+V comes as the browser's paste (see onPaste): a picture copied anywhere, or what was copied here.
+      case 'KeyV': return;
       case 'KeyD': e.preventDefault(); ed.duplicate(); return;
       case 'KeyA': e.preventDefault(); ed.setSelection(ed.shown().map((i) => i.id)); return;
       case 'KeyG': e.preventDefault(); ed.frameSelection(); return;
@@ -58,4 +60,15 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
   }
   if (e.code === 'KeyI') { window.dispatchEvent(new CustomEvent('planx:toggle-icons')); return; }
   if (TOOL_KEYS[e.code]) ed.setTool(TOOL_KEYS[e.code]);
+}
+
+/** Pasting on the board: a picture copied anywhere (a screenshot, from a page or the Finder) goes on it
+ *  as one added from the panel does; otherwise what was copied on the board. Not while typing. */
+export function onPaste(ed: Editor, e: ClipboardEvent): void {
+  const t = e.target as HTMLElement | null;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith('image/'));
+  e.preventDefault();
+  if (files.length) void readPictures(files).then((pics) => ed.addPictures(pics));
+  else ed.paste();
 }

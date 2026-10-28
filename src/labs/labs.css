@@ -149,3 +149,7 @@
 .params-btn.on { background: var(--fmt-on); color: var(--fmt-on-ink); }
 .params-btn .pi { width: 24px; height: 24px; }
 .params-gap { width: var(--s6); }
+/* Its top, taken to move it about: a short bar. */
+.params-grip { position: sticky; top: calc(-1 * var(--s13)); z-index: 1; height: var(--s14); margin: calc(-1 * var(--s8)) calc(-1 * var(--s18)) var(--s4) calc(-1 * var(--s14)); cursor: grab; background: var(--surface); }
+.params-grip::after { content: ""; display: block; width: 36px; height: 4px; margin: 5px auto 0; border-radius: 2px; background: var(--line); }
+.params-grip:active { cursor: grabbing; }

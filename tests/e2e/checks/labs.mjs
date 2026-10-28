@@ -448,7 +448,7 @@ export const checks = {
     await pick('Масштаб 100%');
     expect(await p.ev('planx.editor.cam.z'), 'at 100%').toBe(1);
     // A rectangle: its parameters.
-    await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 300); planx.board.add(e.newItem('rect', x, y, { id: 'r', w: 200, h: 120 })); })()`);
+    await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 300); planx.board.add(e.newItem('rect', x, y, { id: 'r', w: 200, h: 120, text: 'Фигура' })); })()`);
     const r = await p.ev(`(() => { const i = planx.board.get('r'), s = planx.editor.toScreen({ x: i.x + 30, y: i.y + 30 }); return [s.x, s.y]; })()`);
     await right(r);
     expect(await rows(), 'parameters first').toBe('Параметры, Скопировать, Переместить вверх, Переместить вниз, Сделать компонентом, Удалить');
@@ -502,8 +502,8 @@ export const checks = {
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Параметры').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     const titles = await p.ev(`[...document.querySelectorAll('.params-pop .params-title')].map((t) => t.textContent).join(' | ')`);
     expect(titles, 'each, the task by what is in it').toBe('Стикер | Текст «Подпись» | Прямоугольник | Эллипс | Текст «Что надо сделать» | Текст «Подробности»');
-    expect(await p.ev(`[...document.querySelectorAll('.params-pop .params-item')].map((i) => i.querySelectorAll('input[type=range]').length).join()`), 'an opacity for each colour')
-      .toBe('2,1,3,3,1,1');
+    expect(await p.ev(`[...document.querySelectorAll('.params-pop .params-item')].map((i) => i.querySelectorAll('input[type=range]').length).join()`), 'an opacity for each colour (no text yet, no text colour)')
+      .toBe('1,1,2,2,1,1');
     await p.ev(`(() => { const r = document.querySelectorAll('.params-pop input[type=range]')[0]; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(r, '50'); r.dispatchEvent(new Event('input', { bubbles: true })); })()`);
     expect(await p.ev(`planx.board.get('s').fo`), 'the sticker half see-through').toBe(0.5);
   },
