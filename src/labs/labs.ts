@@ -13,7 +13,7 @@ export interface Lab { id: LabId; label: string; icon: string; hint: string }
 
 /** In the order they're listed in the menu. `icon` is from the board's icon set. */
 export const LABS: Lab[] = [
-  { id: 'export', label: 'Экспорт в PNG', icon: 'download', hint: 'Скачать доску или выделенное картинкой' },
+  { id: 'export', label: 'Экспорт в PNG', icon: 'cloud-download', hint: 'Скачать доску или выделенное картинкой' },
   { id: 'pdf', label: 'Экспорт в PDF', icon: 'file', hint: 'Скачать доску или выделенное PDF-файлом' },
   { id: 'tidy', label: 'Авторасположение', icon: 'apps', hint: 'Выделенное ровной сеткой; отступы между рядами и столбцами тянутся' },
   { id: 'lock', label: 'Замок', icon: 'lock-l', hint: 'Закреплённое не сдвинуть и не удалить' },
@@ -22,17 +22,17 @@ export const LABS: Lab[] = [
   { id: 'reactions', label: 'Реакции', icon: 'like', hint: 'Лайки и другие значки на элементах' },
   { id: 'laser', label: 'Лазерная указка', icon: 'magic-wand', hint: 'K: след, который тает за секунду' },
   { id: 'follow', label: 'Следовать за участником', icon: 'meeting-point', hint: 'Смотреть туда же, куда другой, и звать всех к себе' },
-  { id: 'cursors', label: 'Курсоры участников', icon: 'user-profile', hint: 'Видеть, где мышь у других на доске' },
+  { id: 'cursors', label: 'Курсоры участников', icon: 'person-search', hint: 'Видеть, где мышь у других на доске' },
   { id: 'keys', label: 'Шпаргалка по клавишам', icon: 'keyboard', hint: '?: все сочетания клавиш' },
   { id: 'textPush', label: 'Текст не слипается', icon: 'arrow-down-l', hint: 'Текст, ставший выше, отодвигает текст прямо под ним (до 16 px), и в инстансе тоже' },
-  { id: 'wishlist', label: 'Wishlist', icon: 'like', hint: 'На странице «Мои доски»: общий список пожеланий с лайками' },
+  { id: 'wishlist', label: 'Wishlist', icon: 'gift', hint: 'На странице «Мои доски»: общий список пожеланий с лайками' },
   { id: 'contextMenu', label: 'Меню по правому клику', icon: 'more-l', hint: 'Скопировать, удалить, вверх, вниз, сделать компонентом' },
   { id: 'objects', label: 'Объекты', icon: 'timeline', hint: 'Кнопка на левой панели (зажмите — меню объектов); первый — таймлайн' },
   { id: 'taskComponent', label: 'Задача-компонент', icon: 'circle-check', hint: 'Задача — встроенный компонент; клик по кружку: сделана, отложена, снова в работе' },
   { id: 'textLink', label: 'Ссылка в тексте', icon: 'link', hint: 'Кнопка-цепочка на панели текста; Cmd+клик (Ctrl+клик) открывает ссылку' },
-  { id: 'multi', label: 'Несколько сразу', icon: 'layers', hint: 'Выбрано несколько: общий текст на панели и один уголок, чтобы масштабировать всё вместе' },
+  { id: 'multi', label: 'Несколько сразу', icon: 'group', hint: 'Выбрано несколько: общий текст на панели и один уголок, чтобы масштабировать всё вместе' },
   { id: 'clickThrough', label: 'Клик сквозь', icon: 'layers', hint: 'Медленный повторный клик по выбранному выбирает то, что под ним' },
-  { id: 'swap', label: 'Замена двойным кликом', icon: 'refresh-l', hint: 'Двойной клик по смайлу, иконке или фигуре: выбрать другую на её место, и в инстансе тоже' },
+  { id: 'swap', label: 'Замена двойным кликом', icon: 'repeat', hint: 'Двойной клик по смайлу, иконке или фигуре: выбрать другую на её место, и в инстансе тоже' },
 ];
 
 const KEY = 'planx-labs';

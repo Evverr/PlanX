@@ -188,7 +188,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
   const toggle = (p: LabPop) => setPop((cur) => (cur === p ? null : p));
   const summon = () => setToast(presence.summon() ? 'Все участники перенесены к вам' : 'На доске пока никого нет. Откройте ссылку на доску во втором окне');
   const all: Record<'export' | 'pdf' | 'search' | 'timer' | 'laser' | 'follow' | 'keys', RailButton> = {
-    export: { icon: 'download', title: 'Экспорт в PNG', on: pop === 'export', onClick: () => toggle('export') },
+    export: { icon: 'cloud-download', title: 'Экспорт в PNG', on: pop === 'export', onClick: () => toggle('export') },
     pdf: { icon: 'file', title: 'Экспорт в PDF', on: pop === 'pdf', onClick: () => toggle('pdf') },
     search: { icon: 'search', title: 'Поиск по доске (Ctrl+F)', on: pop === 'search', onClick: () => toggle('search') },
     timer: { icon: 'timer', title: 'Общий таймер', on: pop === 'timer', onClick: () => toggle('timer') },

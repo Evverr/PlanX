@@ -8,13 +8,13 @@ export type PanelIconName =
   | 'moon' | 'sun' | 'zoom-in' | 'zoom-out' | 'screen' | 'question-l' | 'undo-on' | 'redo-on'
   | 'to-front' | 'to-back' | 'duplicate' | 'trashcan' | 'map' | 'pen' | 'highlighter' | 'eraser'
   | 'align-left' | 'align-center' | 'align-right' | 'bulleted-list' | 'numbered-list' | 'question' | 'ellipse' | 'frame' | 'microphone' | 'triangle' | 'rhombus' | 'pentagon' | 'star' | 'plus' | 'cross' | 'plus-s' | 'minus-s' | 'branch' | 'more' | 'palette' | 'node-pool' | 'more-vertical' | 'chevron-down' | 'burger'
-  | 'download' | 'file' | 'apps' | 'hexagon' | 'parallelogram' | 'trapezoid' | 'arrow' | 'shape-cross' | 'settings' | 'detach' | 'line-straight' | 'line-elbow' | 'line-curve' | 'timer' | 'magic-wand' | 'meeting-point' | 'keyboard' | 'lock-l' | 'unlock-l' | 'like';
+  | 'download' | 'file' | 'apps' | 'hexagon' | 'parallelogram' | 'trapezoid' | 'arrow' | 'shape-cross' | 'settings' | 'detach' | 'line-straight' | 'line-elbow' | 'line-curve' | 'timer' | 'magic-wand' | 'meeting-point' | 'keyboard' | 'lock-l' | 'unlock-l' | 'like' | 'timeline';
 
 /** These come from the board icon set (assets/icons), drawn on a 24 grid; they're shown at 30 like the rest. */
 const GRID24 = new Set<PanelIconName>(['list', 'moon', 'sun', 'zoom-in', 'zoom-out', 'screen', 'question-l', 'undo-on', 'redo-on',
   'to-front', 'to-back', 'duplicate', 'trashcan', 'map', 'pen', 'highlighter', 'eraser',
   'align-left', 'align-center', 'align-right', 'bulleted-list', 'numbered-list', 'question', 'ellipse', 'frame', 'microphone', 'triangle', 'rhombus', 'pentagon', 'star', 'plus', 'cross', 'plus-s', 'minus-s', 'branch', 'more', 'palette', 'node-pool', 'more-vertical', 'chevron-down', 'burger',
-  'download', 'file', 'apps', 'hexagon', 'parallelogram', 'trapezoid', 'arrow', 'shape-cross', 'settings', 'detach', 'line-straight', 'line-elbow', 'line-curve', 'timer', 'magic-wand', 'meeting-point', 'keyboard', 'lock-l', 'unlock-l', 'like']);
+  'download', 'file', 'apps', 'hexagon', 'parallelogram', 'trapezoid', 'arrow', 'shape-cross', 'settings', 'detach', 'line-straight', 'line-elbow', 'line-curve', 'timer', 'magic-wand', 'meeting-point', 'keyboard', 'lock-l', 'unlock-l', 'like', 'timeline']);
 
 /** The icon is a mask over a plain fill, so CSS picks its colour: the panel's ink, blue when pressed. */
 export function PanelIcon({ name, className, style }: { name: PanelIconName; className?: string; style?: React.CSSProperties }) {
