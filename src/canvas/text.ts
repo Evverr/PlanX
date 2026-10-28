@@ -102,10 +102,10 @@ export const itemTextHeight = (it: Item, text = it.text ?? '', width = it.w): nu
 export const taskHeight = (it: Item, text = it.text ?? '', width = it.w): number =>
   Math.max(DEFAULTS.task.h, measureTextHeight(withList(text || ' ', it.ls), width - TASK_INSET * 2 - 20, it.fs ?? 16, fontOf(it)) + 20);
 
-/** Widest a mind map node grows before its text wraps, and its narrowest. */
-const MIND_MAX_W = 260, MIND_MIN_W = 48;
+/** Narrowest a mind map node gets (it grows as wide as its text, lines breaking only where it's typed so). */
+const MIND_MIN_W = 48;
 
-/** A mind map node's size: as wide as its longest line (up to MIND_MAX_W), as tall as its lines, plus padding. */
+/** A mind map node's size: as wide as its longest line, as tall as its lines, plus padding. */
 export function mindSize(it: Item, text = it.text ?? ''): { w: number; h: number } {
   // 15 above and below the text, 16 to each side; the central topic a third taller and with twice the
   // room to each side.
@@ -115,7 +115,7 @@ export function mindSize(it: Item, text = it.text ?? ''): { w: number; h: number
   if (!measureCtx) return { w: 160, h: (Math.ceil(fs * LINE_HEIGHT) + pad * 2) * tall };
   measureCtx.font = font(fs, st.weight, st.family, st.italic);
   const widest = Math.max(...(text || ' ').split('\n').map((l) => measureCtx!.measureText(l).width));
-  const inner = Math.ceil(Math.min(MIND_MAX_W, Math.max(MIND_MIN_W, widest + 2)));
+  const inner = Math.ceil(Math.max(MIND_MIN_W, widest + 2));
   return { w: inner + padX * 2, h: Math.round((measureTextHeight(text || ' ', inner, fs, st) + pad * 2) * tall) };
 }
 

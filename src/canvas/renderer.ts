@@ -69,6 +69,8 @@ export interface Scene {
   byFinger: boolean;
   /** The dot under the pointer, drawn larger and at full strength; the others are faint. */
   hotDot: Side | null;
+  /** With the line tool, the item whose link dots show. */
+  linkDots?: string | null;
   /** The mind map node button under the pointer, drawn full size and strength; the others are smaller and faint. */
   hotPlus: string | null;
   /** How far the node buttons have faded in, 0…1: they come a moment after the node is picked. */
@@ -924,8 +926,9 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
   const frames = seen.filter((it) => it.type === 'frame' && !it.fold);
   const items = new Path2D();
   for (const it of seen) if (!frames.includes(it)) outlineOn(items, it);
-  // The frames holding a link's ends (a point of the item it's from or to inside the frame).
-  const holding = (id: string) => { const it = s.get(id); if (!it) return []; const c = center(it); return frames.filter((f) => pointInRect(c, f)).map((f) => f.id); };
+  // The frames holding a link's ends (the middle of the item it's from or to inside the frame), not
+  // the ends themselves: a line between two timelines fades crossing either.
+  const holding = (id: string) => { const it = s.get(id); if (!it) return []; const c = center(it); return frames.filter((f) => f.id !== id && pointInRect(c, f)).map((f) => f.id); };
   const groups = new Map<string, number[]>();
   for (const [k, l] of s.links.entries()) {
     if (!shapes[k]) continue;
@@ -959,6 +962,23 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(linkLayer, 0, 0);
   ctx.restore();
+}
+
+/** An item's four link dots, beside its sides; the one under the pointer bigger. */
+function drawDots(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
+  const { cam } = s;
+  ctx.fillStyle = SELECT_COLOR;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2 / cam.z;
+  for (const side of SIDES) {
+    const p = sidePoint(it, side, DOT_GAP / cam.z);
+    ctx.beginPath();
+    ctx.globalAlpha = side === s.hotDot ? 1 : DOT_FADE;
+    ctx.arc(p.x, p.y, (side === s.hotDot ? DOT_R * DOT_HOT : DOT_R) / cam.z, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 }
 
 /** Mind map colours parallel branches take from a coloured one, worked out once per drawing. */
@@ -1100,17 +1120,12 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       ctx.stroke();
       ctx.fillStyle = SELECT_COLOR;
       ctx.strokeStyle = '#fff';
-      for (const side of SIDES) {
-        const p = sidePoint(it, side, DOT_GAP / cam.z);
-        ctx.beginPath();
-        ctx.globalAlpha = side === s.hotDot ? 1 : DOT_FADE;
-        ctx.arc(p.x, p.y, (side === s.hotDot ? DOT_R * DOT_HOT : DOT_R) / cam.z, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
+      drawDots(ctx, it, s);
     }
   }
+  // With the line tool, the dots of the item under the pointer, whatever it is.
+  const dotted = s.linkDots ? s.get(s.linkDots) : undefined;
+  if (dotted && !(s.selection.size === 1 && s.selection.has(dotted.id))) drawDots(ctx, dotted, s);
 
   if (s.mindMove) {
     const { from, to } = s.mindMove;

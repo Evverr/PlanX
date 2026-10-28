@@ -99,6 +99,11 @@ export function onRotate(ed: Editor, it: Item, w: Point): boolean {
 /** The link dot under the point, if any. */
 export function dotAt(ed: Editor, it: Item, w: Point): Side | null {
   if (it.type === 'mind' || it.inst || it.host) return null;
+  return anyDotAt(ed, it, w);
+}
+
+/** The same, for any item (with the line tool, every item has its dots). */
+export function anyDotAt(ed: Editor, it: Item, w: Point): Side | null {
   const r = ed.reach(16.5);  // well beyond the dot itself, so it is easy to catch
   for (const side of SIDES) {
     const p = sidePoint(it, side, DOT_GAP / ed.cam.z);
@@ -107,12 +112,23 @@ export function dotAt(ed: Editor, it: Item, w: Point): Side | null {
   return null;
 }
 
+/** With the line tool ("Линии", src/labs): the item under the pointer shows its link dots (any item,
+ *  mind map nodes too), and keeps them while the pointer's on one, to be pressed and dragged from. */
+function lineToolHover(ed: Editor, w: Point): void {
+  const shown = ed.linkDots ? ed.board.get(ed.linkDots) : undefined, dot = shown ? anyDotAt(ed, shown, w) : null;
+  const hit = dot ? shown : hitItem(ed.shown(), w, ed.cam.z);
+  const id = hit && !hit.inst ? hit.id : null;
+  if (id !== ed.linkDots || dot !== ed.hotDot) { ed.linkDots = id; ed.hotDot = dot; ed.requestRender(); }
+  ed.canvas!.style.cursor = id ? 'crosshair' : '';
+}
+
 /** The frame button under the point, of the topmost frame in sight that has one there. */
 export const frameButtonUnder = (ed: Editor, w: Point) => frameButtonAt(ed.shown(), w, ed.reach(4));
 
 /** With the pointer over the board and nothing being done: what's under it lights up (a link dot,
  *  a table line it has rested on, a mind map button) and the cursor says what a press would do. */
 export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
+  if (ed.canvas && !ed.gesture && ed.tool === 'link') { lineToolHover(ed, w); return; }
   if (!ed.canvas || ed.gesture || ed.tool !== 'select') return;
   const picked = ed.selection.size === 1 ? ed.board.get([...ed.selection][0]) : undefined;
   // A locked item has no handles to take.

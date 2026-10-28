@@ -4,7 +4,7 @@ import { center, hitItem, hitLink, instanceBounds, onAudioButton, onTaskBox, poi
 import { copyId } from '../model/components';
 import { TASK_STATES } from '../model/builtins';
 import { toggleAudio } from '../canvas/audio';
-import { dotAt, foldBadgeAt, frameButtonUnder, sideAt, linkEndAt, onHandle, onInstanceGlyph, onInstancePlus, onRotate, plusAt } from './hover';
+import { anyDotAt, dotAt, foldBadgeAt, frameButtonUnder, sideAt, linkEndAt, onHandle, onInstanceGlyph, onInstancePlus, onRotate, plusAt } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -116,9 +116,13 @@ export function press(ed: Editor, e: PointerEvent): void {
       ed.gesture = { type: 'create', id: it.id, origin: w };
       return;
     }
-    case 'link':
-      if (hit) ed.gesture = { type: 'link', from: hit.id, fromSide: null, to: w, target: null };
+    case 'link': {
+      // From the dot pressed of the item showing them (see lineToolHover), or from the item pressed.
+      const shown = ed.linkDots ? board.get(ed.linkDots) : undefined, side = shown ? anyDotAt(ed, shown, w) : null;
+      if (shown && side) ed.gesture = { type: 'link', from: shown.id, fromSide: side, to: w, target: null };
+      else if (hit) ed.gesture = { type: 'link', from: hit.id, fromSide: null, to: w, target: null };
       return;
+    }
     case 'pen':
     case 'marker':
       if (ed.selection.size) ed.setSelection([]);
