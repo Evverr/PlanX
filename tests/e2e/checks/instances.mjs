@@ -129,6 +129,22 @@ export const checks = {
     expect(await p.ev(`planx.board.get('instance~b').x`), 'undone in one step').toBe(at.x + 190);
   },
 
+  async 'a picked instance stretches across by its right side only, down by its bottom only'(p) {
+    await fixture(p);
+    await p.click([390, 330]);
+    // The contents run from (340, 290) to (590, 370) on screen.
+    await p.mouse('mouseMoved', 591, 320);
+    await sleep(100);
+    expect(await p.ev('planx.editor.canvas.style.cursor'), 'across').toBe('ew-resize');
+    await p.drag([591, 320], [651, 360]);
+    expect(await p.ev(`JSON.stringify(planx.board.get('instance').grow)`), 'wider only').toBe('{"w":60,"h":0}');
+    await p.mouse('mouseMoved', 400, 371);
+    await sleep(100);
+    expect(await p.ev('planx.editor.canvas.style.cursor'), 'down').toBe('ns-resize');
+    await p.drag([400, 371], [450, 401]);
+    expect(await p.ev(`JSON.stringify(planx.board.get('instance').grow)`), 'taller only').toBe('{"w":60,"h":30}');
+  },
+
   async 'dragging on the first press still moves the whole instance and keeps its source unchanged'(p) {
     await fixture(p);
     const before = await p.ev(`['instance', 'instance~a', 'instance~b', 'a'].map((id) => { const i = planx.board.get(id); return { id, x: i.x, y: i.y }; })`);

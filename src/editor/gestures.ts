@@ -21,7 +21,7 @@ export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
   | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean }
-  | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect }
+  | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' }
@@ -88,7 +88,7 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       // An instance stretches what's in it (see stretched in model/components.ts), from its contents' corner.
       if (it.inst && g.box) {
         const g0 = g.orig.grow ?? { w: 0, h: 0 }, b = g.box;
-        const nw = Math.max(20, Math.round(b.w + w.x - g.start.x)), nh = Math.max(20, Math.round(b.h + w.y - g.start.y));
+        const nw = g.only === 'h' ? b.w : Math.max(20, Math.round(b.w + w.x - g.start.x)), nh = g.only === 'w' ? b.h : Math.max(20, Math.round(b.h + w.y - g.start.y));
         const grow = { w: g0.w + nw - b.w, h: g0.h + nh - b.h };
         board.update(g.id, { grow: grow.w || grow.h ? grow : undefined });
         return;

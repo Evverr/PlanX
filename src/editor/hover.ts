@@ -23,6 +23,16 @@ export function onHandle(ed: Editor, it: Item, w: Point): boolean {
   return pointInRect(it.inst ? w : toLocal(it, w), { x: b.x + b.w + off - hs / 2, y: b.y + b.h + off - hs / 2, w: hs, h: hs });
 }
 
+/** Which side of a picked instance's contents the point is on, to stretch it one way only: its right
+ *  side across, its bottom down (the corner, onHandle, both). */
+export function instanceSide(ed: Editor, it: Item, w: Point): 'w' | 'h' | null {
+  if (!it.inst || it.fold || ed.editingId) return null;
+  const b = instanceBounds(it, ed.board.list()), near = ed.reach(4), corner = ed.reach(10);
+  if (Math.abs(w.x - (b.x + b.w)) <= near && w.y >= b.y && w.y <= b.y + b.h - corner) return 'w';
+  if (Math.abs(w.y - (b.y + b.h)) <= near && w.x >= b.x && w.x <= b.x + b.w - corner) return 'h';
+  return null;
+}
+
 /** Which of a mind map node's buttons is under the point, once they're showing. */
 export function plusAt(ed: Editor, it: Item, w: Point): MindButtonAt | null {
   if (it.type !== 'mind' || it.host || ed.plusFade() === 0) return null;
@@ -120,6 +130,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (dot) cursor = 'crosshair';
   else if (single && onHandle(ed, single, w)) cursor = 'nwse-resize';
+  else if (single && instanceSide(ed, single, w)) cursor = instanceSide(ed, single, w) === 'w' ? 'ew-resize' : 'ns-resize';
   else if (single && onRotate(ed, single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);
   else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
   else if (linkEndAt(ed, w)) cursor = 'grab';
