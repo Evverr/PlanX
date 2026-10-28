@@ -94,6 +94,7 @@ export function press(ed: Editor, e: PointerEvent): void {
     case 'task':
     case 'table':
     case 'mind':
+    case 'timeline':
       ed.gesture = { type: 'place', at: w, tool: ed.tool };
       return;
     case 'rect':

@@ -76,6 +76,8 @@ export interface Item {
   collapsed?: boolean;
   /** The ways a mind map's central topic has its branches folded away, each on its own. */
   foldedWays?: Array<'right' | 'left' | 'down' | 'up'>;
+  /** A frame that's a timeline (src/labs, "Объекты"): the month it starts with, "YYYY-MM" (see canvas/timeline.ts). */
+  tl?: string;
   /** A folded frame's unfolded size (see model/frame.ts). */
   fold?: { w: number; h: number };
   /** Components (see model/components.ts): a frame that's a component; a frame that's an instance of

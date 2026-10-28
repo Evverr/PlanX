@@ -14,6 +14,7 @@ import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
 import { openSwap, swapKind } from '../labs/swap';
 import { pushedBelow } from '../labs/textPush';
+import { halfDay } from '../canvas/timeline';
 import { under } from '../labs/clickThrough';
 
 /** What a press on the board has started, followed till it's let go. */
@@ -24,7 +25,7 @@ export type Gesture =
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point }
-  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' }
+  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline' }
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
   | { type: 'relink'; id: string; from: Point; to: Point; target: string | null; away?: boolean }
@@ -76,8 +77,17 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         const others = ed.shown().filter((i) => !g.orig.has(i.id) && i.type !== 'ink').map(boxOf).filter((r) => rectsIntersect(r, view));
         if (box) ({ dx: sx, dy: sy, guides: g.guides } = snapToGuides(box, others, GUIDE_SNAP / ed.cam.z));
       }
+      // On a timeline ("Объекты", src/labs), what's dragged keeps its left side to whole and half days.
+      const lead = board.get(g.id), from = g.orig.get(g.id);
+      let halves = false;
+      if (!e.shiftKey && lead && from && !lead.tl) {
+        const c = { x: from.x + dx + lead.w / 2, y: from.y + dy + lead.h / 2 };
+        const tl = ed.shown().find((t) => t.tl && !g.orig.has(t.id) && c.x >= t.x && c.x <= t.x + t.w && c.y >= t.y && c.y <= t.y + t.h);
+        if (tl) { sx = halfDay(tl, from.x + dx) - (from.x + dx); halves = true; }
+      }
+      const round = (v: number) => (halves ? Math.round(v * 2) / 2 : Math.round(v));
       board.transact(() => {
-        for (const [id, o] of g.orig) board.update(id, { x: Math.round(o.x + dx + sx), y: Math.round(o.y + dy + sy) });
+        for (const [id, o] of g.orig) board.update(id, { x: round(o.x + dx + sx), y: Math.round(o.y + dy + sy) });
       });
       if (g.guides) ed.requestRender();
       return;
@@ -240,7 +250,9 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         }
         // A frame folds on a double click, and unfolds (a component too, not an instance); on its title
         // over it, that opens for typing.
-        if (it?.type === 'frame' && !it.inst && (it.fold || toLocal(it, g.start).y >= it.y)) ed.setFolded(it.id, !it.fold);
+        // (A timeline neither folds nor has a title.)
+        if (it?.tl) { /* nothing */ }
+        else if (it?.type === 'frame' && !it.inst && (it.fold || toLocal(it, g.start).y >= it.y)) ed.setFolded(it.id, !it.fold);
         else if (!it?.inst) ed.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
       } else if (g.again && !g.cell && under(ed, g.id, g.start)) {
         // "Клик сквозь": what's under it there is picked instead.
@@ -261,6 +273,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
     case 'place': {
       // "Задача-компонент" (src/labs): a task is the component that comes with PlanX.
       if (g.tool === 'task' && labOn('taskComponent')) { ed.addTask(g.at); return; }
+      if (g.tool === 'timeline') { ed.addTimeline(g.at); return; }
       const d = DEFAULTS[g.tool];
       const it = g.tool === 'text'
         ? ed.newItem('text', g.at.x - 4, g.at.y - 14)

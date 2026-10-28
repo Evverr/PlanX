@@ -13,6 +13,7 @@ import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame'
 import { COMPONENT_COLOR, instancePlus } from '../model/components';
 import { isBuiltin } from '../model/builtins';
 import { drawnLinks } from '../model/textLinks';
+import { drawTimeline } from './timeline';
 import { autoInk } from '../model/color';
 import cursorUrl from './cursor.svg';
 import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, spreadElbows, polyPoints, linkShape, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
@@ -347,6 +348,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       if (!editing) drawText(ctx, it, 0, theme.ink, false, s);
       break;
     case 'frame': {
+      if (it.tl) { drawTimeline(ctx, it, { card: theme.surface, ink: theme.ink }, cam.z); break; }
       if (it.fold) { drawFolded(ctx, it, s, editing); break; }
       // An instance shows only its red title after a hollow diamond (to its component), flush with
       // its contents, and that only while it's picked (as a whole or something inside it).

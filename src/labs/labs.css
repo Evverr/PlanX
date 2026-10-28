@@ -123,3 +123,6 @@
 .swap-pop .icon-scroll .icon-grid { max-height: none; }
 .swap-pop .icon-grid button.on { background: var(--fmt-on); }
 .swap-pop .shape-grid { grid-template-columns: repeat(6, var(--s44)); }
+
+/* "Объекты": the menu beside the rail, as the board menu looks. */
+.board-menu.objects-menu { position: fixed; z-index: 7; }

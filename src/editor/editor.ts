@@ -17,6 +17,7 @@ import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked } fro
 import { copyId, hasComponents, syncOps } from '../model/components';
 import { BUILTINS, nextTaskState, TASK_STATES } from '../model/builtins';
 import { remapLinks } from '../model/textLinks';
+import { monthKey, timelineSize, tlStart } from '../canvas/timeline';
 import { shapePatch, shapeStyle } from './shapeStyle';
 import { endGesture, moveGesture, type Gesture } from './gestures';
 import { updateCursor } from './hover';
@@ -300,6 +301,22 @@ export class Editor {
     const title = copyId(it.id, '@task-title');
     this.setSelection([title]);
     this.startEditing(title);
+  }
+
+  /** A timeline ("Объекты", src/labs): this month and the next, its middle at `c`; what lies on it is
+   *  taken in, as a new frame takes it. */
+  addTimeline(c: Point): void {
+    const start = new Date(), size = timelineSize(start);
+    const it = this.newItem('frame', Math.round(c.x - size.w / 2), Math.round(c.y - size.h / 2), { ...size, tl: monthKey(start), text: 'Таймлайн', members: [] });
+    this.addItem(it);
+    this.setTool('select');
+    this.setSelection([it.id]);
+  }
+
+  /** A timeline started a month earlier (-1) or later (1). */
+  shiftTimeline(id: string, by: number): void {
+    const it = this.board.get(id);
+    if (it?.tl) this.board.update(id, { tl: monthKey(tlStart(it), by) });
   }
 
   /** A task moved on to its next state (to be done, done, put off), by a click on its ring. */
@@ -685,6 +702,7 @@ export class Editor {
    *  rail onto the board). Text, tasks and frames open for typing, as when made with the tool. */
   dropItem(tool: Tool, at: Point): void {
     if (tool === 'task' && labOn('taskComponent')) { this.addTask(this.toWorld(at.x, at.y)); return; }
+    if (tool === 'timeline') { this.addTimeline(this.toWorld(at.x, at.y)); return; }
     const type = (isPoly(tool) ? 'polygon' : tool) as ItemType;
     if (!DEFAULTS[type]) return;
     const extra: Partial<Item> = isPoly(tool) ? { shape: tool } : tool === 'table' ? newTable() : tool === 'mind' ? { text: MIND_TOPIC } : {};
