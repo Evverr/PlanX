@@ -15,7 +15,7 @@ export const checks = {
     const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Нововведения')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
     await sleep(250);
-    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(10);
+    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(11);
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.labs-menu .menu-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`document.querySelector('.labs-menu [aria-checked="false"]')?.textContent`), 'switched off').toBe('Общий таймер');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
@@ -401,5 +401,31 @@ export const checks = {
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Удалить').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`planx.board.get('${a[2]}') ?? null`), 'deleted').toBe(null);
     expect(await p.ev(`document.querySelectorAll('.context-menu').length`), 'and the menu gone').toBe(0);
+  },
+
+  async '"Линии": the rail tool links any item to any other; a line dragged by its middle goes to another item'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board, { x, y } = e.toWorld(300, 300);
+      b.add(e.newItem('sticky', x, y, { id: 'a', w: 100, h: 100 }));
+      b.add(e.newItem('sticky', x + 400, y, { id: 'b', w: 100, h: 100 }));
+      b.add(e.newItem('sticky', x + 400, y + 250, { id: 'c', w: 100, h: 100 }));
+      e.setSelection([]); })()`);
+    // On a short screen it's under "more".
+    if (!(await p.rect('.tools [data-key="lines"]'))) await p.click(await p.at('.tools > button[aria-label="Ещё"]'));
+    await p.click(await p.at('[data-key="lines"], [data-more-key="lines"]'));
+    expect(await p.ev('planx.editor.tool'), 'the line tool').toBe('link');
+    await p.drag([350, 350], [750, 350]);
+    const l = await p.ev(`(() => { const l = planx.board.linkList()[0]; return l && { id: l.id, from: l.from, to: l.to }; })()`);
+    expect(`${l.from}>${l.to}`, 'from one to the other').toBe('a>b');
+    // A click on its middle picks it, nothing else.
+    await p.click([550, 350]);
+    expect(await p.ev('[...planx.editor.selection].join()'), 'picked').toBe(l.id);
+    expect(await p.ev(`planx.board.getLink('${l.id}').to`), 'still to the same').toBe('b');
+    expect(await p.ev('planx.editor.canvas.style.cursor') !== 'grab', 'no hand over its middle').toBe(true);
+    // Dragged by its middle onto another.
+    await p.drag([550, 350], [750, 600]);
+    expect(await p.ev(`planx.board.getLink('${l.id}').to`), 'to the other now').toBe('c');
+    // Dragged by its middle onto nothing: it stays.
+    await p.drag([550, 420], [900, 200]);
+    expect(await p.ev(`planx.board.getLink('${l.id}')?.to ?? null`), 'kept as it was').toBe('c');
   },
 };
