@@ -3,8 +3,9 @@ import { Glyph } from '../ui/glyphs';
 import { Switch } from '../ui/BoardMenu';
 import { LABS, setLab, useLabs } from './labs';
 
-/** The board menu's "Нововведения" level: every feature on trial with its switch. */
-export function LabsMenu() {
+/** A board menu level of features on trial, each with its switch: the first half of them (under
+ *  "Нововведения") or the second (under "Оглавление"). */
+export function LabsMenu({ half = 1 }: { half?: 1 | 2 }) {
   const labs = useLabs();
   // To the right of its row, or to the left where the screen ends (as the menu's other levels).
   const ref = useRef<HTMLDivElement>(null);
@@ -15,7 +16,7 @@ export function LabsMenu() {
   }, [leftward]);
   return (
     <div ref={ref} className={`board-menu sub labs-menu ${leftward ? 'leftward' : ''}`} role="menu" aria-label="Нововведения" data-nosort>
-      {LABS.map((l) => (
+      {(half === 1 ? LABS.slice(0, Math.ceil(LABS.length / 2)) : LABS.slice(Math.ceil(LABS.length / 2))).map((l) => (
         <div className="menu-item" key={l.id}>
           <button className="menu-row" role="menuitemcheckbox" aria-checked={labs[l.id]} title={l.hint} onClick={() => setLab(l.id, !labs[l.id])}>
             <Glyph id={l.icon} className="menu-icon" />

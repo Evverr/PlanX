@@ -17,7 +17,8 @@ const card = (color: string, extra: Partial<Item> = {}): Item => ({
 const ring: Item = { id: '@task-ring', type: 'ellipse', x: 239, y: 55, w: 40, h: 40, z: 1, color: '#ffffff', fo: 0.44, text: '', fs: 16, ta: 'left', va: 'top', sc: 'none' };
 // Clear of the ring by 10, so it never runs under it.
 const title = (text: string, extra: Partial<Item> = {}): Item => ({ id: '@task-title', type: 'text', x: 62, y: 64, w: 167, h: 21, z: 3, text, fs: 16, fw: 700, ...extra });
-const note = (extra: Partial<Item> = {}): Item => ({ id: '@task-note', type: 'text', x: 65, y: 96, w: 208, h: 18, z: 4, text: 'Подробности', fs: 14, fw: 400, ta: 'left', ls: 'bullet', ...extra });
+// Plain text under the title, in line with it; typed away, the title's left alone.
+const note = (extra: Partial<Item> = {}): Item => ({ id: '@task-note', type: 'text', x: 62, y: 96, w: 211, h: 18, z: 4, text: 'Подробности', fs: 14, fw: 400, ta: 'left', ...extra });
 const frame = (id: string, text: string, members: string[]): Item => ({ id, type: 'frame', x: 0, y: 0, w: 335, h: 410, z: 0, text, comp: true, members });
 
 const task = (id: string, name: string, items: Item[]): [string, Builtin] => [id, { frame: frame(id, name, items.map((i) => i.id)), items }];

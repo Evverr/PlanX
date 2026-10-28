@@ -3,14 +3,15 @@ import type { Editor } from '../editor/editor';
 import { hitItem } from '../canvas/geometry';
 import { Glyph } from '../ui/glyphs';
 import { labOn } from './labs';
+import { linkInTextAt } from '../canvas/renderer';
 
 /**
  * "Меню по правому клику": a right click on the board picks what's under it (unless it's picked
  * already) and opens a menu there, as the board menu looks: copy, delete, move down or up, make a
- * component of it. Esc, a press elsewhere or a scroll closes it.
+ * component of it; on a link, the way to it first. Esc, a press elsewhere or a scroll closes it.
  */
 export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (text: string) => void }) {
-  const [at, setAt] = useState<{ x: number; y: number } | null>(null);
+  const [at, setAt] = useState<{ x: number; y: number; url: string | null } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,7 +27,9 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
       if (id && !editor.selection.has(id)) editor.setSelection([id]);
       if (!editor.selection.size) { setAt(null); return; }
       editor.stopEditing();
-      setAt({ x: e.clientX, y: e.clientY });
+      // On a link (in text, or the item's own): the way to it first.
+      const url = labOn('textLink') ? linkInTextAt(w) ?? hit?.url ?? null : null;
+      setAt({ x: e.clientX, y: e.clientY, url });
     };
     window.addEventListener('contextmenu', open);
     return () => window.removeEventListener('contextmenu', open);
@@ -62,6 +65,10 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
   );
   return (
     <div ref={ref} className="board-menu context-menu" role="menu" aria-label="Действия с выделенным" onContextMenu={(e) => e.preventDefault()}>
+      {at.url && <>
+        {row('link', 'Перейти по ссылке', () => window.open(at.url!, '_blank', 'noopener'))}
+        <div className="menu-line" />
+      </>}
       {row('copy', 'Скопировать', () => { if (editor.copy()) onToast('Скопировано. Вставить: Ctrl+V'); })}
       {row('arrow-top-l', 'Переместить вверх', () => editor.bringToFront())}
       {row('arrow-down-l', 'Переместить вниз', () => editor.sendToBack())}
