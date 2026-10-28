@@ -8,6 +8,7 @@ import { addChild, siblingOf, siblingTints } from '../model/mind';
 import { autoInk } from '../model/color';
 import { colsOf, rowsOf } from '../model/table';
 import { openSwap, swapKind } from '../labs/swap';
+import { linkedTexts } from '../labs/textPush';
 
 /**
  * A textarea laid over the item being edited, scaled with the board so the
@@ -138,6 +139,15 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           if (next < 0 || next >= colsOf(t).length * rowsOf(t).length) return;
           commit();
           editor.startEditing(id, next);
+        } else if (item.type === 'text' && e.key === 'Tab' && linkedTexts(item, editor.board.list()).length > 1) {
+          // Text going together with other text ("Текст не слипается", src/labs): Tab goes on typing in
+          // the next of them down (Shift+Tab, up), round to the top past the last.
+          e.preventDefault();
+          const group = linkedTexts(editor.board.get(id) ?? item, editor.board.list()), i = group.findIndex((t) => t.id === id);
+          const next = group[(i + (e.shiftKey ? -1 : 1) + group.length) % group.length];
+          commit();
+          editor.setSelection([next.id]);
+          editor.startEditing(next.id, null, 'end');
         } else if (item.type === 'mind' && e.key === 'Tab') {
           // In a mind map, Tab goes on typing in the next branch of the same parent (Shift+Tab, the one
           // before), round to the first past the last. Typing in a branch alone there, it makes another

@@ -22,3 +22,17 @@ export function pushedBelow(it: Item, dh: number, items: Item[]): Map<string, Pi
   }
   return moves;
 }
+
+/** The text items going together with `it` (it, those under it and over it, and so on), top first:
+ *  Tab goes from one to the next as they're typed in. Just it, with the feature off. */
+export function linkedTexts(it: Item, items: Item[]): Item[] {
+  if (it.type !== 'text' || it.rot || !labOn('textPush')) return [it];
+  const texts = items.filter((i) => i.type === 'text' && !i.rot && i.host === it.host && !i.lock);
+  const group = new Map([[it.id, it]]), queue = [it];
+  while (queue.length) {
+    const t = queue.shift()!;
+    const near = [...textsUnder(t, texts), ...texts.filter((o) => textsUnder(o, [t]).length)];
+    for (const n of near) if (!group.has(n.id)) { group.set(n.id, n); queue.push(n); }
+  }
+  return [...group.values()].sort((a, b) => a.y - b.y || a.x - b.x);
+}
