@@ -10,11 +10,15 @@ import { ColorPicker } from './ColorPicker';
 import { crowds, EDGE, shownRects } from '../layout';
 import { useLabs } from '../labs/labs';
 import { LockButton, ReactButton, TidyButton } from '../labs/SelectionLabs';
+import { tlStart } from '../canvas/timeline';
+
+/** A timeline's first month, "Январь 2027". */
+const monthName = (it: Item) => tlStart(it).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }).replace(/ г\.$/, '').replace(/^./, (c) => c.toUpperCase());
 
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['colors', 'tidy', 'rows', 'cols', 'lines', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+const ORDER = ['colors', 'months', 'tidy', 'rows', 'cols', 'lines', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -341,6 +345,14 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
               <button key={icon} className={`ib ${links.some((l) => l.style === style) ? 'on' : ''}`} title={title} aria-label={title}
                 aria-pressed={links.some((l) => l.style === style)} onClick={() => editor.setLinkStyle(style)}><PanelIcon name={icon} /></button>
             ))}
+          </div>
+        ) : undefined,
+        // A timeline picked alone: the month it starts with, a month earlier or later.
+        months: items.length === 1 && items[0].tl ? (
+          <div className="sw-group table-count">
+            <button className="ib" title="На месяц раньше" aria-label="На месяц раньше" onClick={() => editor.shiftTimeline(items[0].id, -1)}><PanelIcon name="chevron-left" /></button>
+            <span>{monthName(items[0])}</span>
+            <button className="ib" title="На месяц позже" aria-label="На месяц позже" onClick={() => editor.shiftTimeline(items[0].id, 1)}><PanelIcon name="chevron-left" style={{ transform: 'scaleX(-1)' }} /></button>
           </div>
         ) : undefined,
         // An instance can be cut loose from its component.

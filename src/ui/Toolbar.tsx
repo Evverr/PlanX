@@ -9,6 +9,8 @@ import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { isSeparator, useSortable } from './sortable';
 import { ToolPreview } from './ToolPreview';
 import { readText, writeText } from '../storage';
+import { useLabs } from '../labs/labs';
+import { ObjectsMenu, OBJECTS } from '../labs/ObjectsMenu';
 
 /** Tool panel from the Figma mockup (Mol / Bar vertical). */
 const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
@@ -25,7 +27,7 @@ const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
 const LATER: Partial<Record<string, [PanelIconName, string]>> = {};
 
 /** Everything on the rail, top to bottom, until someone rearranges it. */
-const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'component', 'table', 'mind', 'frames', 'draw', 'image', 'audio', 'smile'];
+const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'component', 'table', 'mind', 'objects', 'frames', 'draw', 'image', 'audio', 'smile'];
 
 /** Rail buttons that make something on the board when dragged off the rail, and their icons. */
 const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape' };
@@ -36,7 +38,7 @@ const MORE_COL = { pad: 21, size: 30, gap: 18 };
 export const moreCol = (k: number) => ({ pad: Math.round(MORE_COL.pad * k) * 2, size: Math.round((MORE_COL.size * k) / 2) * 2, gap: Math.round(MORE_COL.gap * k) });
 
 /** Rail buttons with variants, opened by holding the button still. */
-const VARIANTS = new Set(['oval', 'draw']);
+const VARIANTS = new Set(['oval', 'draw', 'objects']);
 
 const SHAPE_KEY = 'planx-last-shape';
 function savedShape(): Tool {
@@ -61,12 +63,17 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     writeText(SHAPE_KEY, tool);
   }
   const shapeIcon = SHAPES.find(([t]) => t === lastShape.current)?.[1] ?? 'landscape';
+  // "Объекты" (src/labs): its button takes the object used last; held, it opens the menu of them.
+  const labs = useLabs();
+  const lastObject = useRef<Tool>('timeline');
+  const objecting = OBJECTS.some(([t]) => t === tool);
+  if (objecting) lastObject.current = tool;
   // The variants beside the rail (the shapes, or the pens and their colours): opened by holding their
   // button, closed by a press anywhere else (and the shapes by picking one).
   const [variants, setVariants] = useState<string | null>(null);
   useEffect(() => {
     if (!variants) return;
-    const close = (e: PointerEvent) => { if (!(e.target as Element | null)?.closest?.(`.draw-panel, [data-key="${variants}"]`)) setVariants(null); };
+    const close = (e: PointerEvent) => { if (!(e.target as Element | null)?.closest?.(`.draw-panel, .objects-menu, [data-key="${variants}"]`)) setVariants(null); };
     window.addEventListener('pointerdown', close, true);
     return () => window.removeEventListener('pointerdown', close, true);
   }, [variants]);
@@ -78,7 +85,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
   // A button dragged off the rail turns into what it makes and lands on the board there; buttons
   // that make nothing to preview stay an icon (and the picture button opens its dialog for that spot).
   const toolOf = (key: string): Tool | null =>
-    key === 'frames' ? 'frame' : key === 'oval' ? lastShape.current : ['sticky', 'text', 'task', 'table', 'mind'].includes(key) ? key as Tool : null;
+    key === 'frames' ? 'frame' : key === 'oval' ? lastShape.current : key === 'objects' ? lastObject.current : ['sticky', 'text', 'task', 'table', 'mind'].includes(key) ? key as Tool : null;
   const dropOut = {
     preview: (key: string) => {
       const t = toolOf(key), icon = TOOLS[key]?.[1] ?? ICONS[key];
@@ -159,6 +166,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     if (key === 'component') return button(key, false, 'Компонент из выделенного', 'maximize', () => editor.makeComponent());
     if (key === 'oval') return button(key, shaping, 'Фигуры', shapeIcon, () => editor.setTool(shaping ? 'select' : lastShape.current), { 'aria-pressed': shaping });
     if (key === 'draw') return button(key, drawing, 'Рисование (P)', 'marker', () => editor.setTool(drawing ? 'select' : lastDraw.current), { 'aria-pressed': drawing });
+    if (key === 'objects') return labs.objects ? button(key, objecting, 'Объекты (зажмите — выбрать)', 'apps', () => editor.setTool(objecting ? 'select' : lastObject.current), { 'aria-pressed': objecting }) : null;
     if (key === 'image') return button(key, false, 'Картинка', 'image', () => { pictureAt.current = undefined; filePicker.current?.click(); });
     if (key === 'audio') return button(key, recorderOpen, 'Аудиозаметка', 'microphone', onToggleRecorder, { 'aria-expanded': recorderOpen });
     if (key === 'smile') return button(key, iconsOpen, 'Смайлы, стикеры и иконки (I)', 'smile', onToggleIcons, { 'aria-expanded': iconsOpen });
@@ -190,6 +198,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
       </div>
     )}
     {variants === 'draw' && <DrawPanel editor={editor} tool={tool} pens={pens} />}
+    {variants === 'objects' && <ObjectsMenu tool={tool} onPick={(t) => { editor.setTool(t); setVariants(null); }} />}
     {variants === 'oval' && <ShapePanel editor={editor} tool={tool} zoom={zoom} onPick={() => setVariants(null)} />}
     <input ref={filePicker} type="file" accept="image/*" multiple hidden
       onChange={(e) => { const at = pictureAt.current; void readPictures(e.target.files ?? []).then((pics) => editor.addPictures(pics, at)); e.target.value = ''; }} />

@@ -336,7 +336,7 @@ export function hitItem(items: Item[], p: Point, zoom: number): Item | null {
     p = it.rot ? toLocal(it, at) : at;
     if (it.type === 'frame') {
       const b = it.inst ? instanceBounds(it, items) : it, q = it.inst ? at : p;
-      const onLabel = !it.fold && q.x >= b.x && q.x <= b.x + b.w && q.y >= b.y - FRAME_LABEL && q.y < b.y;
+      const onLabel = !it.fold && !it.tl && q.x >= b.x && q.x <= b.x + b.w && q.y >= b.y - FRAME_LABEL && q.y < b.y;
       if (onLabel || pointInRect(q, b)) return it;
       continue;
     }
