@@ -126,3 +126,4 @@
 
 /* "Объекты": the menu beside the rail, as the board menu looks. */
 .board-menu.objects-menu { position: fixed; z-index: 7; }
+.board-menu.context-menu { position: fixed; z-index: 40; }
