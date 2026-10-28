@@ -16,7 +16,7 @@ import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
 import { autoInk } from '../model/color';
 import cursorUrl from './cursor.svg';
-import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, spreadElbows, polyPoints, linkShape, nearestSide, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
+import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, spreadElbows, polyPoints, linkShape, nearestSide, pointInRect, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -477,7 +477,7 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
 }
 
 /** Adds a polygon item's outline to the current path. */
-function outlinePolygon(ctx: CanvasRenderingContext2D, it: Item) {
+function outlinePolygon(ctx: CanvasPath, it: Item) {
   const pts = polyPoints(it), n = pts.length, rad = it.rad ?? 0;
   if (!rad) {
     ctx.moveTo(pts[0].x, pts[0].y);
@@ -878,50 +878,81 @@ function drawBackground(ctx: CanvasRenderingContext2D, s: Scene) {
 
 let linkLayer: HTMLCanvasElement | null = null;
 
+/** Another layer, for links faded through frames of their own (see drawLinks). */
+let groupLayer: HTMLCanvasElement | null = null;
+
+/** An item's outline on a path, turned as it is. */
+function outlineOn(path: Path2D, it: Item): void {
+  const own = new Path2D();
+  if (it.type === 'ellipse') {
+    own.moveTo(it.x + it.w, it.y + it.h / 2);
+    own.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
+  } else if (it.type === 'polygon') outlinePolygon(own, it);
+  else own.roundRect(it.x, it.y, it.w, it.h, it.tl ? 10 : corner(it));
+  const a = angleOf(it), c = center(it);
+  path.addPath(own, a ? new DOMMatrix().translate(c.x, c.y).rotate((a * 180) / Math.PI).translate(-c.x, -c.y) : undefined);
+}
+
 /**
  * Links go on their own layer so that where one crosses an item it can be faded to 15%:
  * the items' outlines are filled as one path (so overlaps don't fade twice) and cut out
- * at 85% strength. Frames are left out, otherwise every link inside one would fade.
+ * at 85% strength. Frames (timelines too) fade the links crossing them, but not those with an end on
+ * something they hold, else every link inside one would fade: links are drawn in groups by the frames
+ * holding their ends, each group cut through all but those. Instances and components show no card of
+ * their own, so nothing fades through them but what's in them.
  */
 function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
   const { cam, dpr, theme } = s;
   const W = ctx.canvas.width, H = ctx.canvas.height;
-  if (!linkLayer) linkLayer = document.createElement('canvas');
-  if (linkLayer.width !== W || linkLayer.height !== H) { linkLayer.width = W; linkLayer.height = H; }
-  const lc = linkLayer.getContext('2d')!;
+  const layer = (c: HTMLCanvasElement | null) => {
+    const l = c ?? document.createElement('canvas');
+    if (l.width !== W || l.height !== H) { l.width = W; l.height = H; }
+    return l;
+  };
+  linkLayer = layer(linkLayer);
+  groupLayer = layer(groupLayer);
+  const lc = linkLayer.getContext('2d')!, gc = groupLayer.getContext('2d')!;
   lc.setTransform(1, 0, 0, 1, 0, 0);
-  lc.globalCompositeOperation = 'source-over';
-  lc.globalAlpha = 1;
   lc.clearRect(0, 0, W, H);
-  lc.setTransform(dpr * cam.z, 0, 0, dpr * cam.z, dpr * cam.x, dpr * cam.y);
   // Right-angled ones kept off one another, a line's width apart.
   const shapes = s.links.map((l) => linkShape(l, s.get));
   spreadElbows(shapes.filter((sh): sh is LinkShape => !!sh), (linkWidth(cam.z) * 2) / cam.z);
+  // What fades links: every item in sight but drawings and the frames of instances and components.
+  const seen = s.items.filter((it) => it.type !== 'ink' && !it.inst && !it.comp && rectsIntersect(boxOf(it), view));
+  const frames = seen.filter((it) => it.type === 'frame' && !it.fold);
+  const items = new Path2D();
+  for (const it of seen) if (!frames.includes(it)) outlineOn(items, it);
+  // The frames holding a link's ends (a point of the item it's from or to inside the frame).
+  const holding = (id: string) => { const it = s.get(id); if (!it) return []; const c = center(it); return frames.filter((f) => pointInRect(c, f)).map((f) => f.id); };
+  const groups = new Map<string, number[]>();
   for (const [k, l] of s.links.entries()) {
-    const shape = shapes[k];
-    if (!shape) continue;
-    linkArrow(lc, shape, s.selection.has(l.id) ? SELECT_COLOR : theme.link, cam.z);
-    // The one under the pointer a little bluer.
-    if (l.id === s.hotLink && !s.selection.has(l.id)) {
-      lc.globalAlpha = 0.4;
-      linkArrow(lc, shape, SELECT_COLOR, cam.z);
-      lc.globalAlpha = 1;
+    if (!shapes[k]) continue;
+    const key = [...new Set([...holding(l.from), ...holding(l.to)])].sort().join();
+    groups.set(key, [...groups.get(key) ?? [], k]);
+  }
+  for (const [key, ks] of groups) {
+    gc.setTransform(1, 0, 0, 1, 0, 0);
+    gc.globalCompositeOperation = 'source-over';
+    gc.globalAlpha = 1;
+    gc.clearRect(0, 0, W, H);
+    gc.setTransform(dpr * cam.z, 0, 0, dpr * cam.z, dpr * cam.x, dpr * cam.y);
+    for (const k of ks) {
+      const l = s.links[k], shape = shapes[k]!;
+      linkArrow(gc, shape, s.selection.has(l.id) ? SELECT_COLOR : theme.link, cam.z);
+      // The one under the pointer a little bluer.
+      if (l.id === s.hotLink && !s.selection.has(l.id)) {
+        gc.globalAlpha = 0.4;
+        linkArrow(gc, shape, SELECT_COLOR, cam.z);
+        gc.globalAlpha = 1;
+      }
     }
+    const own = new Set(key ? key.split(',') : []), cut = new Path2D(items);
+    for (const f of frames) if (!own.has(f.id)) outlineOn(cut, f);
+    gc.globalCompositeOperation = 'destination-out';
+    gc.globalAlpha = 0.85;
+    gc.fill(cut);
+    lc.drawImage(groupLayer, 0, 0);
   }
-  lc.globalCompositeOperation = 'destination-out';
-  lc.globalAlpha = 0.85;
-  lc.beginPath();
-  for (const it of s.items) {
-    if (it.type === 'frame' || it.type === 'ink' || !rectsIntersect(boxOf(it), view)) continue;
-    turned(lc, it, () => {
-      if (it.type === 'ellipse') {
-        lc.moveTo(it.x + it.w, it.y + it.h / 2);
-        lc.ellipse(it.x + it.w / 2, it.y + it.h / 2, it.w / 2, it.h / 2, 0, 0, Math.PI * 2);
-      } else if (it.type === 'polygon') outlinePolygon(lc, it);
-      else lc.roundRect(it.x, it.y, it.w, it.h, corner(it));
-    });
-  }
-  lc.fill();
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(linkLayer, 0, 0);
