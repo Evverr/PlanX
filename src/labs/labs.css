@@ -157,7 +157,7 @@
 /* "Комментарии": pins over the board (pointing from their lower left corner), and the card opened. */
 .comments-layer { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
 .comment-pin { position: fixed; transform: translateY(-100%); width: 32px; height: 32px; padding: 0; display: grid; place-items: center;
-  border: 2px solid var(--surface); border-radius: 50% 50% 50% 0; background: var(--surface); box-shadow: 0 2px 6px rgba(0, 0, 0, .2); cursor: pointer; pointer-events: auto; }
+  border: 2px solid var(--surface); border-radius: 50% 50% 50% 0; background: var(--surface); box-shadow: 0 2px 6px rgba(0, 0, 0, .2); cursor: pointer; pointer-events: auto; touch-action: none; }
 .comment-pin img { width: 22px; height: 22px; pointer-events: none; }
 .comment-pin.on { border-color: var(--accent); }
 .comment-pin.ghost { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 15%, var(--surface)); cursor: default; }

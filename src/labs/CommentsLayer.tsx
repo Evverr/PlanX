@@ -1,6 +1,6 @@
-import { useEffect, useReducer, useState, useSyncExternalStore } from 'react';
+import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from 'react';
 import type { Editor } from '../editor/editor';
-import type { Point } from '../canvas/geometry';
+import { hitItem, type Point } from '../canvas/geometry';
 import { Glyph } from '../ui/glyphs';
 import { ago } from '../shelf/boards';
 import { addComment, catOf, comments, mine, onComments, pinAt, removeComment, updateComment, type Comment, type Note } from './comments';
@@ -22,6 +22,8 @@ export function CommentsLayer({ editor, name }: { editor: Editor; name: string }
   useEffect(() => onComments(board, redraw), [board]);
   const [open, setOpen] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  // A pin just dragged: the click that ends it doesn't open it.
+  const dragged = useRef(false);
 
   useEffect(() => {
     const start = (e: Event) => { const d = (e as CustomEvent<Draft>).detail; setOpen(null); setDraft(d); };
@@ -39,6 +41,28 @@ export function CommentsLayer({ editor, name }: { editor: Editor; name: string }
 
   const canvas = editor.canvas?.getBoundingClientRect();
   if (!canvas) return null;
+  /** A pin taken and moved (more than a twitch): it follows the pointer, and let go, it's pinned there,
+   *  on the item there if any. A click without moving opens it. */
+  const grab = (e: React.PointerEvent, c: Comment, at: Point) => {
+    if (e.button !== 0) return;
+    const from = { x: e.clientX, y: e.clientY }, off = { x: e.clientX - at.x, y: e.clientY - at.y };
+    const pointAt = (ev: PointerEvent) => editor.toWorld(ev.clientX - off.x - canvas.left, ev.clientY - off.y - canvas.top);
+    const move = (ev: PointerEvent) => {
+      if (!dragged.current && Math.hypot(ev.clientX - from.x, ev.clientY - from.y) < 4) return;
+      dragged.current = true;
+      const w = pointAt(ev);
+      updateComment(board, c.id, { on: undefined, dx: undefined, dy: undefined, x: Math.round(w.x), y: Math.round(w.y) });
+    };
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      if (!dragged.current) return;
+      const w = pointAt(ev), on = hitItem(editor.shown(), w, editor.cam.z);
+      updateComment(board, c.id, on ? { on: on.id, dx: Math.round(w.x - on.x), dy: Math.round(w.y - on.y), x: Math.round(w.x), y: Math.round(w.y) } : { x: Math.round(w.x), y: Math.round(w.y) });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
   const get = (id: string) => board.get(id);
   const screen = (p: Point) => { const s = editor.toScreen(p); return { x: canvas.left + s.x, y: canvas.top + s.y }; };
   const list = comments(board), opened = list.find((c) => c.id === open);
@@ -51,7 +75,8 @@ export function CommentsLayer({ editor, name }: { editor: Editor; name: string }
         if (p.x < -40 || p.y < -40 || p.x > innerWidth + 40 || p.y > innerHeight + 40) return null;
         return (
           <button key={c.id} className={`comment-pin ${open === c.id ? 'on' : ''}`} style={{ left: p.x, top: p.y }} title={c.by}
-            aria-label={`Комментарий: ${c.by}`} onClick={() => { setDraft(null); setOpen(open === c.id ? null : c.id); }}>
+            aria-label={`Комментарий: ${c.by}`} onPointerDown={(e) => grab(e, c, p)}
+            onClick={() => { if (dragged.current) { dragged.current = false; return; } setDraft(null); setOpen(open === c.id ? null : c.id); }}>
             <img src={catOf(c)} alt="" draggable={false} />
             {c.done && <i className="comment-done" aria-hidden="true" />}
           </button>
