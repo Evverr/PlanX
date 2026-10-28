@@ -180,6 +180,16 @@ export function App({ boardId }: { boardId: string }) {
     const t = setTimeout(() => setTextShown(textItem.id), 600);
     return () => clearTimeout(t);
   }, [textItem?.id, ui.moving]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Typing ended (by a press elsewhere, or Esc): the panel goes, and stays away from what that press
+  // picked, till something else is picked or typing starts again.
+  const [quiet, setQuiet] = useState<string | null>(null);
+  const wasEditing = useRef<string | null>(null);
+  useEffect(() => {
+    if (wasEditing.current && !ui.editingId) setQuiet(textItem?.id ?? null);
+    else if (ui.editingId) setQuiet(null);
+    wasEditing.current = ui.editingId;
+  }, [ui.editingId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (quiet && quiet !== textItem?.id) setQuiet(null); }, [textItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const peers = conn.peers();
   // Features on trial (src/labs): with "following" on, a click on someone's avatar follows them.
   const labs = useLabs();
@@ -303,7 +313,7 @@ export function App({ boardId }: { boardId: string }) {
       <Labs editor={editor} conn={conn} docked={docked} />
 
       {/* Typing in a table cell, the panel shows and sets that cell's own formatting. */}
-      {textItem && textShown === textItem.id && <TextPanel editor={editor}
+      {textItem && textShown === textItem.id && quiet !== textItem.id && <TextPanel editor={editor}
         item={editing?.id === textItem.id && editing.type === 'table' && ui.editingCell !== null ? cellItem(editing, ui.editingCell) : textItem} />}
 
       {/* Hidden while typing, but for a mind map node, which opens for typing on a single click. */}
