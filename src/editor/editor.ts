@@ -21,7 +21,7 @@ import { dayKey, timelineSize } from '../canvas/timeline';
 import { shapePatch, shapeStyle } from './shapeStyle';
 import { endGesture, moveGesture, type Gesture } from './gestures';
 import { updateCursor } from './hover';
-import { onKeyDown } from './keys';
+import { onKeyDown, onPaste } from './keys';
 import { addMindNode, mindFit, refitMind, removeMindNode, type MindAdd } from './mindOps';
 import { press } from './press';
 import { formatCells, pickCell, restOn, setTableLines } from './tables';
@@ -223,6 +223,7 @@ export class Editor {
     });
     on(canvas, 'wheel', (e) => this.wheel(e), { passive: false });
     on(window, 'keydown', (e) => onKeyDown(this, e));
+    on(window, 'paste', (e) => onPaste(this, e));
     on(window, 'keyup', (e) => { if (e.code === 'Space') this.setSpace(false); });
     on(window, 'blur', () => this.setSpace(false));
     on(window, 'resize', () => this.resize());
@@ -847,6 +848,8 @@ export class Editor {
     const ids = new Set(items.map((i) => i.id));
     const links = this.board.linkList().filter((l) => ids.has(l.from) && ids.has(l.to));
     this.clipboard = JSON.stringify({ items, links });
+    // The system's clipboard takes a note of it, so a picture copied before isn't pasted in its place.
+    void navigator.clipboard?.writeText?.('PlanX').catch(() => {});
     return true;
   }
 

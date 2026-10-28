@@ -27,6 +27,8 @@ interface Open { x: number; y: number; w: Point; url: string | null; board: bool
 export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (text: string) => void }) {
   const [at, setAt] = useState<Open | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  // Where the parameters' popup was dragged to (by its top), kept till the menu opens again.
+  const placed = useRef<{ left: number; top: number } | null>(null);
 
   useEffect(() => {
     // On the window: the editor gets its canvas after this has run.
@@ -41,6 +43,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
       if (link) {
         editor.setSelection([link.id]);
         editor.stopEditing();
+        placed.current = null;
         setAt({ x: e.clientX, y: e.clientY, w, url: null, board: false, params: false, link: link.id });
         return;
       }
@@ -51,6 +54,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
       editor.stopEditing();
       // On a link (in text, or the item's own): the way to it first.
       const url = labOn('textLink') ? linkInTextAt(w) ?? hit?.url ?? null : null;
+      placed.current = null;
       setAt({ x: e.clientX, y: e.clientY, w, url, board: !id, params: false });
     };
     window.addEventListener('contextmenu', open);
@@ -72,11 +76,31 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || !at) return;
+    if (placed.current) { el.style.left = `${placed.current.left}px`; el.style.top = `${placed.current.top}px`; return; }
     el.style.left = `${Math.max(8, at.x + el.offsetWidth > innerWidth - 8 ? at.x - el.offsetWidth : at.x)}px`;
     el.style.top = `${Math.max(8, Math.min(at.y, innerHeight - 8 - el.offsetHeight))}px`;
   });
 
   if (!at) return null;
+  /** The parameters' popup taken by its top and moved about, kept on the screen. */
+  const grip = (e: React.PointerEvent) => {
+    const el = ref.current;
+    if (!el || e.button !== 0) return;
+    e.preventDefault();
+    const r = el.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+    const move = (ev: PointerEvent) => {
+      placed.current = {
+        left: Math.max(8, Math.min(innerWidth - 8 - r.width, ev.clientX - dx)),
+        top: Math.max(8, Math.min(innerHeight - 40, ev.clientY - dy)),
+      };
+      el.style.left = `${placed.current.left}px`;
+      el.style.top = `${placed.current.top}px`;
+    };
+    const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  const gripBar = <div className="params-grip" onPointerDown={grip} title="Перетащить" aria-hidden="true" />;
   const run = (fn: () => void) => () => { fn(); setAt(null); };
   const row = (icon: string, label: string, fn: () => void) => (
     <div className="menu-item">
@@ -91,7 +115,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
     return (
       <div ref={ref} className={`board-menu context-menu ${at.params ? 'params-pop' : ''}`} role={at.params ? 'dialog' : 'menu'} aria-label={at.params ? 'Параметры линии' : 'Линия'}
         onContextMenu={(e) => e.preventDefault()}>
-        {at.params ? <LinkParams editor={editor} id={link.id} /> : <>
+        {at.params ? <>{gripBar}<LinkParams editor={editor} id={link.id} /></> : <>
           {row('sign', 'Параметры', () => setAt({ ...at, params: true }))}
           <div className="menu-line" />
           {row('trashcan-l', 'Удалить', run(() => editor.deleteSelection()))}
@@ -103,6 +127,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
   if (at.params && params.length) {
     return (
       <div ref={ref} className="board-menu context-menu params-pop" role="dialog" aria-label="Параметры" onContextMenu={(e) => e.preventDefault()}>
+        {gripBar}
         <ParamsList editor={editor} items={params} />
       </div>
     );
@@ -259,7 +284,8 @@ const SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72, 96];
  *  text panel sets it (font, size, style, alignment, list, colour), and a rectangle's or figure's
  *  rounding. */
 function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch: Partial<Item>) => void }) {
-  const fillable = COLORABLE.includes(it.type), strokable = STROKABLE.includes(it.type), texted = HAS_FONT.includes(it.type) && it.type !== 'table';
+  // Its text's parameters once it has some (not a new rectangle's).
+  const fillable = COLORABLE.includes(it.type), strokable = STROKABLE.includes(it.type), texted = HAS_FONT.includes(it.type) && it.type !== 'table' && !!it.text?.trim();
   const fills = it.type === 'mind' ? Object.fromEntries(MIND_PALETTE.map((c) => [c, c])) : FILLS;
   const own = it.type === 'icon' ? ICON_COLORS : it.type === 'ink' ? INK_COLORS : null;
   const fs = it.fs ?? DEFAULTS[it.type].fs ?? 16, bold = (it.fw ?? baseWeight(it.type)) >= 600, align = alignOf(it);

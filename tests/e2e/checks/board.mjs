@@ -384,4 +384,16 @@ export const checks = {
     await p.drag([r[2], r[3]], [r[2] + 40, r[3] + 30]);
     expect(await p.ev(`[planx.board.get('r').w, planx.board.get('r').h].join()`), 'taller only').toBe('260,150');
   },
+
+  async 'a picture copied anywhere is pasted on the board as one added from the panel'(p) {
+    const n0 = await p.ev(`planx.board.list().filter((i) => i.type === 'image').length`);
+    await p.ev(`(async () => {
+      const c = document.createElement('canvas'); c.width = 40; c.height = 30; c.getContext('2d').fillRect(0, 0, 40, 30);
+      const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
+      const dt = new DataTransfer(); dt.items.add(new File([blob], 'shot.png', { type: 'image/png' }));
+      window.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    })()`);
+    await sleep(600);
+    expect(await p.ev(`planx.board.list().filter((i) => i.type === 'image').length`) - n0, 'a picture').toBe(1);
+  },
 };
