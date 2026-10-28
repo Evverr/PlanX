@@ -131,3 +131,6 @@
 .params-title { padding: var(--s4) var(--s4) var(--s8); font-size: var(--s12); font-weight: 600; color: var(--muted); }
 .params-colors { display: flex; flex-wrap: wrap; gap: var(--s8); padding: 0 var(--s4) var(--s8); }
 .params-colors .sw { margin: 0; }
+.params-pop { max-height: calc(100vh - 16px); overflow-y: auto; }
+.params-row .menu-input input[type="range"] { width: var(--e110, 110px); padding: 0; border: 0; }
+.params-row .menu-input i { min-width: 3.2em; text-align: right; }

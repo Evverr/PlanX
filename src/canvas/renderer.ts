@@ -409,10 +409,14 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       ctx.globalAlpha = 1;
       break;
     case 'emoji':
+      ctx.globalAlpha = it.fo ?? 1;
       drawEmoji(ctx, it.emoji ?? '', it.x, it.y, Math.min(it.w, it.h));
+      ctx.globalAlpha = 1;
       break;
     case 'image':
+      ctx.globalAlpha = it.fo ?? 1;
       drawPicture(ctx, it, theme.line);
+      ctx.globalAlpha = 1;
       break;
     case 'task':
       drawTask(ctx, it, s, editing);
