@@ -185,11 +185,18 @@ export function App({ boardId }: { boardId: string }) {
   const [quiet, setQuiet] = useState<string | null>(null);
   const wasEditing = useRef<string | null>(null);
   useEffect(() => {
-    if (wasEditing.current && !ui.editingId) setQuiet(textItem?.id ?? null);
+    // (Not when typing ended for one of the panel's own fields, the link's address.)
+    if (wasEditing.current && !ui.editingId && !document.activeElement?.closest('.tfmt')) setQuiet(textItem?.id ?? null);
     else if (ui.editingId) setQuiet(null);
     wasEditing.current = ui.editingId;
   }, [ui.editingId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (quiet && quiet !== textItem?.id) setQuiet(null); }, [textItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Any later press on the board (one that doesn't end typing) brings it back, on the same item too.
+  useEffect(() => {
+    const press = (e: PointerEvent) => { if (e.target === editor.canvas && !editor.editingId) setQuiet(null); };
+    window.addEventListener('pointerdown', press, true);
+    return () => window.removeEventListener('pointerdown', press, true);
+  }, [editor]);
   const peers = conn.peers();
   // Features on trial (src/labs): with "following" on, a click on someone's avatar follows them.
   const labs = useLabs();

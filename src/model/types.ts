@@ -92,6 +92,8 @@ export interface Item {
   hl?: boolean;
   /** The address the item leads to (src/labs, "Ссылка в тексте"). */
   url?: string;
+  /** Links on parts of its text, by character (see model/textLinks.ts). */
+  links?: Array<{ s: number; e: number; url: string }>;
   /** Locked in place: not moved, resized, typed in or deleted (src/labs, "Замок"). */
   lock?: boolean;
   /** Reactions: for each emoji id, who put it, by their browser's id (src/labs, "Реакции"). */
