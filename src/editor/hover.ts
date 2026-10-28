@@ -1,7 +1,7 @@
 import type { Item, Link, Side } from '../model/types';
 import { ROTATABLE } from '../model/types';
 import type { Point } from '../canvas/geometry';
-import { hitItem, hitLink, instanceBounds, linkShape, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
+import { hitItem, hitLink, instanceBounds, linkHandles, linkShape, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, HANDLE } from '../canvas/renderer';
 import { instanceGlyph, instancePlus } from '../model/components';
 import { isBuiltin } from '../model/builtins';
@@ -36,6 +36,19 @@ export function sideAt(ed: Editor, it: Item, w: Point): 'w' | 'h' | 'l' | null {
   if (it.tl && Math.abs(p.x - b.x) <= near && along(p.y, b.y, b.h)) return 'l';
   if (it.type !== 'text' && Math.abs(p.y - (b.y + b.h)) <= near && along(p.x, b.x, b.w)) return 'h';
   return null;
+}
+
+/** The handle of the link picked alone under the point: one of its nodes (`node`, its place in `via`),
+ *  or the middle of a stretch to pull a new node out of (`at`, where it would go). */
+export function linkHandleAt(ed: Editor, w: Point): { id: string; node?: number; at?: number } | null {
+  if (ed.selection.size !== 1) return null;
+  const link = ed.selectedLinks()[0], shape = link && linkShape(link, (id) => ed.board.get(id));
+  if (!link || !shape) return null;
+  const { nodes, middles } = linkHandles(link, shape), r = ed.reach(7);
+  const node = nodes.findIndex((n) => Math.hypot(w.x - n.x, w.y - n.y) <= r);
+  if (node >= 0) return { id: link.id, node };
+  const mid = middles.find((m) => Math.hypot(w.x - m.p.x, w.y - m.p.y) <= r);
+  return mid ? { id: link.id, at: mid.at } : null;
 }
 
 /** Which of a mind map node's buttons is under the point, once they're showing. */
@@ -149,6 +162,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   const plus = picked ? plusAt(ed, picked, w) : null, hot = plus ? buttonKey(plus) : picked && onInstancePlus(ed, picked, w) ? 'instance' : glyph;
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
+  else if (linkHandleAt(ed, w)) cursor = 'move';
   else if (dot) cursor = 'crosshair';
   else if (single && onHandle(ed, single, w)) cursor = 'nwse-resize';
   else if (single && sideAt(ed, single, w)) cursor = sideAt(ed, single, w) === 'h' ? 'ns-resize' : 'ew-resize';

@@ -4,7 +4,7 @@ import { center, hitItem, hitLink, instanceBounds, onAudioButton, onTaskBox, poi
 import { copyId } from '../model/components';
 import { TASK_STATES } from '../model/builtins';
 import { toggleAudio } from '../canvas/audio';
-import { anyDotAt, dotAt, foldBadgeAt, frameButtonUnder, sideAt, linkEndAt, onHandle, onInstanceGlyph, onInstancePlus, onRotate, plusAt } from './hover';
+import { anyDotAt, dotAt, linkHandleAt, foldBadgeAt, frameButtonUnder, sideAt, linkEndAt, onHandle, onInstanceGlyph, onInstancePlus, onRotate, plusAt } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -40,6 +40,23 @@ export function press(ed: Editor, e: PointerEvent): void {
   const link = hit && hit.type !== 'frame' ? null : hitLink(ed.shownLinks(), (id) => board.get(id), w, ed.cam.z);
   if (link) hit = null;
   // An arrowhead taken hold of leads its arrow to another item, let go on it.
+  // A picked link's node is moved, or a new one pulled out of a stretch's middle; a node pressed twice
+  // quickly goes.
+  const handle = ed.tool === 'select' && e.button === 0 && !e.shiftKey && !ed.spaceDown && !ed.editingId ? linkHandleAt(ed, w) : null;
+  if (handle) {
+    const via = [...(board.getLink(handle.id)?.via ?? [])], now = performance.now(), key = `${handle.id}:${handle.node}`;
+    if (handle.node !== undefined && ed.lastTap.id === key && now - ed.lastTap.t < 380) {
+      via.splice(handle.node, 1);
+      board.updateLink(handle.id, { via: via.length ? via : undefined });
+      ed.lastTap = { id: '', t: 0 };
+      return;
+    }
+    ed.lastTap = { id: key, t: now };
+    board.beginGesture();
+    // A new one only once it's pulled out (a click on a stretch's middle leaves the line as it is).
+    ed.gesture = { type: 'linkNode', id: handle.id, node: handle.node ?? handle.at!, via, add: handle.node === undefined };
+    return;
+  }
   const end = ed.tool === 'select' && e.button === 0 && !e.shiftKey && !ed.spaceDown && !ed.editingId ? linkEndAt(ed, w) : null;
   if (end) {
     ed.setSelection([end.id]);

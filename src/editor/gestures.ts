@@ -21,7 +21,7 @@ import { under } from '../labs/clickThrough';
 export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean }
+  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]> }
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point }
@@ -29,6 +29,7 @@ export type Gesture =
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
   | { type: 'relink'; id: string; from: Point; to: Point; target: string | null; away?: boolean; body?: boolean; going?: boolean }
+  | { type: 'linkNode'; id: string; node: number; via: Point[]; add?: boolean }
   | { type: 'mindMove'; id: string; from: Point; to: Point; target: string | null }
   | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
   | { type: 'draw'; tool: PenTool; pts: Point[] }
@@ -86,8 +87,11 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         if (tl) { sx = halfDay(tl, from.x + dx) - (from.x + dx); halves = true; }
       }
       const round = (v: number) => (halves ? Math.round(v * 2) / 2 : Math.round(v));
+      // Links with both ends moved take their nodes along.
+      g.vias ??= new Map(board.linkList().filter((l) => l.via?.length && g.orig.has(l.from) && g.orig.has(l.to)).map((l) => [l.id, l.via!]));
       board.transact(() => {
         for (const [id, o] of g.orig) board.update(id, { x: round(o.x + dx + sx), y: Math.round(o.y + dy + sy) });
+        for (const [id, via] of g.vias!) board.updateLink(id, { via: via.map((p) => ({ x: Math.round(p.x + dx + sx), y: Math.round(p.y + dy + sy) })) });
       });
       if (g.guides) ed.requestRender();
       return;
@@ -187,6 +191,13 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       g.to = w;
       g.target = t && t.id !== g.from ? t.id : null;
       ed.requestRender();
+      return;
+    }
+    case 'linkNode': {
+      // A link's node follows the pointer, the line through it (a new one put in first).
+      if (g.add) { g.via = [...g.via.slice(0, g.node), w, ...g.via.slice(g.node)]; g.add = false; }
+      const via = g.via.map((p, i) => (i === g.node ? { x: Math.round(w.x), y: Math.round(w.y) } : p));
+      board.updateLink(g.id, { via });
       return;
     }
     case 'relink': {
@@ -329,6 +340,9 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       }
       ed.requestRender();
       return;
+    case 'linkNode':
+      board.endGesture();
+      return;
     case 'relink': {
       // Let go on another item, the arrow goes to it; taken off its item (by its head or its line) and let
       // go on none, it's gone. A click on its line just picks it.
@@ -376,7 +390,7 @@ export function cancelGesture(ed: Editor): void {
   const g = ed.gesture;
   if (!g) return;
   if (g.type === 'create') { ed.board.remove([g.id]); ed.board.endGesture(); }
-  if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'rotate' || g.type === 'erase' || g.type === 'tableLine') ed.board.endGesture();
+  if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'rotate' || g.type === 'erase' || g.type === 'tableLine' || g.type === 'linkNode') ed.board.endGesture();
   ed.gesture = null;
   ed.setMoving(false);
   ed.requestRender();

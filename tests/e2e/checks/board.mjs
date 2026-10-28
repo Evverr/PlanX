@@ -396,4 +396,29 @@ export const checks = {
     await sleep(600);
     expect(await p.ev(`planx.board.list().filter((i) => i.type === 'image').length`) - n0, 'a picture').toBe(1);
   },
+
+  async 'a picked link gets nodes pulled out of its middles, moved, and gone on a double click; they go with both its ends'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 200, 300, { id: 'a', w: 100, h: 100 }));
+      b.add(e.newItem('sticky', 700, 300, { id: 'b', w: 100, h: 100 }));
+      b.addLink({ id: 'L', from: 'a', to: 'b', style: 'straight' }); e.setSelection(['L']); })()`);
+    await sleep(200);
+    const via = () => p.ev(`(() => { const l = planx.board.getLink('L'); return l ? JSON.stringify(l.via ?? null) : 'NO LINK'; })()`);
+    // A click on its middle leaves it as it is; pulled, a node.
+    await p.click([500, 350]);
+    expect(await via(), 'a click: no node').toBe('null');
+    await p.drag([500, 350], [500, 200]);
+    expect(await via(), 'pulled out: a node there').toBe('[{"x":500,"y":200}]');
+    await p.drag([500, 200], [450, 150]);
+    expect(await via(), 'moved').toBe('[{"x":450,"y":150}]');
+    // Both its ends moved: the node goes along.
+    await p.ev(`planx.editor.setSelection(['a', 'b'])`);
+    await p.drag([250, 350], [250, 450]);
+    expect(await via(), 'along with them').toBe('[{"x":450,"y":250}]');
+    await p.ev(`planx.editor.setSelection(['L'])`);
+    await sleep(100);
+    await p.click([450, 250]);
+    await p.click([450, 250]);
+    expect(await via(), 'a double click: gone').toBe('null');
+  },
 };
