@@ -5,18 +5,18 @@ import { ICONS, isSolid, searchIcons } from '../icons/icons';
 import { EMOJI, emojiRect, emojiSrc, onEmojiLoad } from '../emoji/emoji';
 import { DEFAULTS, FILLS } from '../model/types';
 import { Glyph } from './glyphs';
+import { DOODLE_SIZE, DOODLES, doodle } from '../canvas/doodles';
 import { readOrder } from './sortable';
 import { writeJSON } from '../storage';
 
 type Tab = 'emoji' | 'stickers' | 'icons';
-export type PickKind = 'emoji' | 'sticky' | 'icon';
+export type PickKind = 'emoji' | 'sticky' | 'icon' | 'doodle';
 
 const TABS: Array<[Tab, string]> = [['emoji', 'Смайлы'], ['stickers', 'Стикеры'], ['icons', 'Иконки']];
-const KIND: Record<Tab, PickKind> = { emoji: 'emoji', stickers: 'sticky', icons: 'icon' };
-const STICKY_COLORS = Object.keys(FILLS).filter((c) => c !== 'none');
+const KIND: Record<Tab, PickKind> = { emoji: 'emoji', stickers: 'doodle', icons: 'icon' };
 /** Every tile of a tab in its default order, and where each tab's own order is kept. */
-const ALL: Record<Tab, string[]> = { emoji: EMOJI.map((e) => e.id), stickers: STICKY_COLORS, icons: ICONS.map((i) => i.id) };
-const ORDER_KEY: Record<Tab, string> = { emoji: 'planx-pick-emoji', stickers: 'planx-pick-stickers', icons: 'planx-pick-icons' };
+const ALL: Record<Tab, string[]> = { emoji: EMOJI.map((e) => e.id), stickers: DOODLES.map((d) => d.id), icons: ICONS.map((i) => i.id) };
+const ORDER_KEY: Record<Tab, string> = { emoji: 'planx-pick-emoji', stickers: 'planx-pick-doodles', icons: 'planx-pick-icons' };
 /** The emoji or the icons in the order they have in the picker here. */
 export const pickerOrder = (kind: 'emoji' | 'icon'): string[] => {
   const t: Tab = kind === 'emoji' ? 'emoji' : 'icons';
@@ -39,6 +39,8 @@ export function Tile({ kind, id, px }: { kind: PickKind; id: string; px?: number
     );
   }
   if (kind === 'sticky') return <i className="pick-sticky" style={{ background: FILLS[id], ...size }} />;
+  // A game sticker: as it is here, with its white outline once it's on the board (and over it, dragged).
+  if (kind === 'doodle') return <img className="pick-doodle" src={px ? doodle(id)?.outlined : doodle(id)?.url} alt="" draggable={false} style={size} />;
   return <span className="pick-glyph" style={size}><Glyph id={id} /></span>;
 }
 
@@ -83,7 +85,7 @@ export function IconPicker({ zoom, onPick }: { zoom: number; onPick: (kind: Pick
     const found = new Set(searchIcons(q).map((i) => i.id));
     return orders.icons.filter((id) => found.has(id));
   };
-  const label = (t: Tab, id: string) => (t === 'emoji' ? 'Смайл' : t === 'stickers' ? `Стикер ${id}` : ICONS.find((i) => i.id === id)?.ru ?? id);
+  const label = (t: Tab, id: string) => (t === 'emoji' ? 'Смайл' : t === 'stickers' ? doodle(id)?.name ?? 'Стикер' : ICONS.find((i) => i.id === id)?.ru ?? id);
 
   const tiles = useRef(new Map<string, HTMLElement>());
   const [drag, setDrag] = useState<{ tab: Tab; id: string; x: number; y: number; outside: boolean } | null>(null);
@@ -168,7 +170,7 @@ export function IconPicker({ zoom, onPick }: { zoom: number; onPick: (kind: Pick
   );
 
   // Outside the picker, the size the dropped item will have on screen (at least big enough to see).
-  const boardPx = drag ? Math.max(16, DEFAULTS[KIND[drag.tab]].w * zoom) : 0;
+  const boardPx = drag ? Math.max(16, (KIND[drag.tab] === 'doodle' ? DOODLE_SIZE : DEFAULTS[KIND[drag.tab] as 'emoji' | 'icon'].w) * zoom) : 0;
   return (
     <div ref={root} className="pop icon-pick" role="dialog" aria-label="Смайлы, стикеры и иконки">
       <div className="pick-tabs" role="tablist">
@@ -177,7 +179,7 @@ export function IconPicker({ zoom, onPick }: { zoom: number; onPick: (kind: Pick
         ))}
       </div>
       {tab === 'emoji' && <div className="icon-grid emoji-grid">{shown('emoji').map((id) => tile('emoji', id))}</div>}
-      {tab === 'stickers' && <div className="icon-grid sticky-grid">{shown('stickers').map((id) => tile('stickers', id))}</div>}
+      {tab === 'stickers' && <div className="icon-grid doodle-grid">{shown('stickers').map((id) => tile('stickers', id))}</div>}
       {tab === 'icons' && (
         <>
           <input ref={input} id="icon-search" type="search" placeholder="Найти иконку" aria-label="Найти иконку"

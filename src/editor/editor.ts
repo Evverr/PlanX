@@ -18,6 +18,7 @@ import { copyId, hasComponents, syncOps } from '../model/components';
 import { BUILTINS, nextTaskState, TASK_STATES } from '../model/builtins';
 import { remapLinks } from '../model/textLinks';
 import { dayKey, timelineSize } from '../canvas/timeline';
+import { DOODLE_SIZE } from '../canvas/doodles';
 import { shapePatch, shapeStyle } from './shapeStyle';
 import { endGesture, moveGesture, type Gesture } from './gestures';
 import { updateCursor } from './hover';
@@ -600,6 +601,16 @@ export class Editor {
   }
 
   /** Like addIcon. */
+  /** A game sticker (see canvas/doodles.ts), like addEmoji: a picture naming it, with its white outline. */
+  addDoodle(id: string, at?: Point): void {
+    const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
+    const n = at ? 0 : this.board.list().filter((i) => i.doodle).length % 6, half = DOODLE_SIZE / 2;
+    const it = this.newItem('image', c.x - half + n * 12, c.y - half + n * 12, { w: DOODLE_SIZE, h: DOODLE_SIZE, doodle: id });
+    this.addItem(it);
+    this.setTool('select');
+    this.setSelection([it.id]);
+  }
+
   addEmoji(emoji: string, at?: Point): void {
     const c = this.toWorld(at?.x ?? this.width / 2, at?.y ?? this.height / 2);
     const n = at ? 0 : this.board.list().filter((i) => i.type === 'emoji').length % 6;
