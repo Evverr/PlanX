@@ -1,3 +1,4 @@
+import { doodle } from './doodles';
 import type { Item } from '../model/types';
 
 /**
@@ -15,12 +16,14 @@ export function onPictureLoad(fn: () => void): () => void {
 
 /** Draws the picture stretched over the item; a plain box until it has loaded. */
 export function drawPicture(ctx: CanvasRenderingContext2D, it: Item, placeholder: string): void {
+  // A game sticker, with its white outline.
+  const src = (it.doodle && doodle(it.doodle)?.outlined) || it.src || '';
   let c = images.get(it.id);
-  if (!c || c.src !== it.src) {
+  if (!c || c.src !== src) {
     const img = new Image();
     img.onload = () => listeners.forEach((fn) => fn());
-    img.src = it.src ?? '';
-    c = { src: it.src ?? '', img };
+    img.src = src;
+    c = { src, img };
     images.set(it.id, c);
   }
   if (!c.img.complete || !c.img.naturalWidth) {

@@ -112,3 +112,6 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
   .title-fit { max-width: 120px; }
   .tools { top: auto; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); transform: none; }
 }
+/* Game stickers: bigger tiles, the drawing whole in each. */
+.doodle-grid { grid-template-columns: repeat(auto-fill, minmax(var(--e64, 64px), 1fr)); gap: var(--s6); }
+.pick-doodle { width: 52px; height: 52px; object-fit: contain; pointer-events: none; }

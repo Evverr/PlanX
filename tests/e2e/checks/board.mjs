@@ -446,4 +446,16 @@ export const checks = {
     expect(p2[p2.length - 1].join(), 'its end where it was').toBe(p1[n - 1].join());
     expect(square(p2), 'still square').toBe(true);
   },
+
+  async 'the picker\'s stickers are the game ones, and one picked goes on the board with its outline'(p) {
+    await p.ev(`window.dispatchEvent(new CustomEvent('planx:toggle-icons'))`);
+    await sleep(300);
+    await p.ev(`[...document.querySelectorAll('.pick-tabs button')].find((b) => b.textContent === 'Стикеры').click()`);
+    await sleep(200);
+    expect(await p.ev(`document.querySelectorAll('.doodle-grid button').length`), 'fifteen of them').toBe(15);
+    await p.click(await p.at('.doodle-grid button'));
+    await sleep(300);
+    const it = await p.ev(`(() => { const i = planx.board.list().find((x) => x.doodle); return i && i.type + ' ' + i.doodle; })()`);
+    expect(it, 'a picture of that sticker').toBe('image 01-love');
+  },
 };

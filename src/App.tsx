@@ -276,6 +276,7 @@ export function App({ boardId }: { boardId: string }) {
         setPop(null);
         if (kind === 'emoji') editor.addEmoji(id, at);
         else if (kind === 'sticky') editor.addSticky(id, at);
+        else if (kind === 'doodle') editor.addDoodle(id, at);
         else editor.addIcon(id, at);
       }} />}
 
