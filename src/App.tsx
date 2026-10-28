@@ -202,6 +202,10 @@ export function App({ boardId }: { boardId: string }) {
   const labs = useLabs();
   const following = useFollowing();
 
+  // All the others shown, after "+N" was pressed (back to five once they're five or fewer).
+  const [peersOpen, setPeersOpen] = useState(false);
+  if (peersOpen && peers.length <= 5) setPeersOpen(false);
+
   const share = async () => {
     const url = `${location.origin}${location.pathname}?board=${boardId}`;
     try {
@@ -275,6 +279,22 @@ export function App({ boardId }: { boardId: string }) {
         else editor.addIcon(id, at);
       }} />}
 
+      {/* The others on the board: in the top right corner, faint till the pointer comes over them; five,
+          and the rest behind a "+N" that opens them all. */}
+      {peers.length > 0 && <div className={`peers ${peersOpen ? 'open' : ''}`} aria-label="Участники">
+        {(peersOpen ? peers : peers.slice(0, 5)).map((p) => labs.follow ? (
+          <button key={p.id} className={`avatar follow ${following?.id === p.id ? 'following' : ''}`} style={{ borderColor: following?.id === p.id ? p.color : undefined }}
+            title={following?.id === p.id ? `Перестать следовать за ${p.name}` : `Следовать за ${p.name}`} aria-label={`Следовать за ${p.name}`}
+            onClick={() => window.dispatchEvent(new CustomEvent('planx:follow', { detail: p.id }))}>
+            <img src={catFor(p.id)} alt="" draggable={false} />
+          </button>
+        ) : (
+          <span key={p.id} className="avatar" title={p.name}><img src={catFor(p.id)} alt="" draggable={false} /></span>
+        ))}
+        {!peersOpen && peers.length > 5 && (
+          <button className="avatar peers-more" title="Показать всех" aria-label={`Ещё ${peers.length - 5}`} onClick={() => setPeersOpen(true)}>+{peers.length - 5}</button>
+        )}
+      </div>}
       <div ref={zoomSort.ref as React.RefObject<HTMLDivElement>} className={`bar zoom sortable ${docked ? 'docked' : ''} ${zoomSort.sorting ? 'sorting' : ''}`} {...zoomSort.container}
         style={zoomBar.style}
         onPointerDown={(e) => { if (!zoomBar.grip.onPointerDown(e)) zoomSort.container.onPointerDown(e); }}
@@ -286,16 +306,6 @@ export function App({ boardId }: { boardId: string }) {
             aria-label="Убрать панели" onClick={() => setBare(true)}>
             <img src={catFor()} alt="" draggable={false} />
           </button>
-          {peers.slice(0, 4).map((p) => labs.follow ? (
-            <button key={p.id} className={`avatar follow ${following?.id === p.id ? 'following' : ''}`} style={{ borderColor: following?.id === p.id ? p.color : undefined }}
-              title={following?.id === p.id ? `Перестать следовать за ${p.name}` : `Следовать за ${p.name}`} aria-label={`Следовать за ${p.name}`}
-              onClick={() => window.dispatchEvent(new CustomEvent('planx:follow', { detail: p.id }))}>
-              <img src={catFor(p.id)} alt="" draggable={false} />
-            </button>
-          ) : (
-            <span key={p.id} className="avatar" title={p.name}><img src={catFor(p.id)} alt="" draggable={false} /></span>
-          ))}
-          {peers.length > 4 && <span className="more">+{peers.length - 4}</span>}
         </div>,
         share: <button className="ib" title="Скопировать ссылку на доску" aria-label="Поделиться" onClick={share}><PanelIcon name="link" /></button>,
         sep: <div className="sep" />,

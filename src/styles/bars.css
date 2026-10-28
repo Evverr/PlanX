@@ -99,3 +99,9 @@
   border-radius: 50%; background: #22C55E; opacity: 0; pointer-events: none; animation: logo-dot 20s ease-in-out infinite; }
 @keyframes logo-dot { 0% { opacity: 0; } 2.4% { opacity: 1; } 7.5% { opacity: 1; } 10% { opacity: 0; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .logo::after { animation: none; } }
+/* The others on the board, in the top right corner: faint till the pointer's over them; "+N" for the rest. */
+.peers { position: fixed; z-index: 5; top: calc(12px + env(safe-area-inset-top, 0px)); right: calc(12px + env(safe-area-inset-right, 0px));
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s4); max-width: calc(50vw); }
+.peers .avatar { opacity: .5; transition: opacity .12s ease-out; box-shadow: var(--shadow); }
+.peers .avatar:hover, .peers .avatar.following { opacity: 1; }
+.peers-more { display: grid; place-items: center; cursor: pointer; font: 600 var(--s12)/1 "Inter", var(--ui); color: var(--ink); background: var(--surface); }
