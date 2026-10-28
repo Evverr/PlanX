@@ -11,6 +11,7 @@ import { Glyph } from '../ui/glyphs';
 import { ColorPicker } from '../ui/ColorPicker';
 import { Switch } from '../ui/BoardMenu';
 import { labOn } from './labs';
+import { startComment } from './comments';
 
 /** Where the menu opened (on the screen and the board), what it's for, and whether it shows the
  *  picked item's parameters in place of its rows. */
@@ -141,6 +142,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
           editor.zoomAt(sx, sy, 1 / editor.cam.z);
         }))}
         {editor.hasClipboard() && row('note', 'Вставить', run(() => editor.paste(0, at.w)))}
+        {labOn('comments') && row('message', 'Комментарий', run(() => startComment(at.w)))}
       </> : <>
         {at.url && <>
           {row('link', 'Перейти по ссылке', run(() => window.open(at.url!, '_blank', 'noopener')))}
@@ -148,6 +150,10 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
         </>}
         {params.length > 0 && <>
           {row('sign', 'Параметры', () => setAt({ ...at, params: true }))}
+          <div className="menu-line" />
+        </>}
+        {labOn('comments') && <>
+          {row('message', 'Комментарий', run(() => startComment(at.w, editor.selectedItems()[0])))}
           <div className="menu-line" />
         </>}
         {row('copy', 'Скопировать', run(() => { if (editor.copy()) onToast('Скопировано. Вставить: Ctrl+V или правым кликом'); }))}

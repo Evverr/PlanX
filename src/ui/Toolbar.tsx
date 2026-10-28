@@ -28,7 +28,7 @@ const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
 const LATER: Partial<Record<string, [PanelIconName, string]>> = {};
 
 /** Everything on the rail, top to bottom, until someone rearranges it. */
-const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'component', 'table', 'mind', 'objects', 'frames', 'draw', 'image', 'audio', 'smile', 'lines'];
+const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'component', 'table', 'mind', 'objects', 'frames', 'draw', 'image', 'audio', 'smile', 'lines', 'comments'];
 
 /** Rail buttons that make something on the board when dragged off the rail, and their icons. */
 const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape' };
@@ -167,6 +167,8 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     if (key === 'component') return button(key, false, 'Компонент из выделенного', 'maximize', () => editor.makeComponent());
     if (key === 'oval') return button(key, shaping, 'Фигуры', shapeIcon, () => editor.setTool(shaping ? 'select' : lastShape.current), { 'aria-pressed': shaping });
     if (key === 'draw') return button(key, drawing, 'Рисование (P)', 'marker', () => editor.setTool(drawing ? 'select' : lastDraw.current), { 'aria-pressed': drawing });
+    // "Комментарии" (src/labs): a click on the board puts a comment there.
+    if (key === 'comments') return labs.comments ? button(key, tool === 'comment', 'Комментарий', 'comment', () => editor.setTool(tool === 'comment' ? 'select' : 'comment'), { 'aria-pressed': tool === 'comment' }) : null;
     // "Линии" (src/labs): the line tool, from any item to any other; held, the ways a line runs.
     if (key === 'lines') return labs.lineTool ? button(key, tool === 'link', 'Линия (C; зажмите — вид линии)', 'path', () => editor.setTool(tool === 'link' ? 'select' : 'link'), { 'aria-pressed': tool === 'link' }) : null;
     if (key === 'objects') return labs.objects ? button(key, objecting || variants === 'objects', 'Объекты', 'timeline', () => setVariants(variants === 'objects' ? null : 'objects'), { 'aria-expanded': variants === 'objects' }) : null;

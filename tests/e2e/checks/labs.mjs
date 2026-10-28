@@ -15,7 +15,7 @@ export const checks = {
     const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Нововведения')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
     await sleep(250);
-    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(11);
+    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(12);
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.labs-menu .menu-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`document.querySelector('.labs-menu [aria-checked="false"]')?.textContent`), 'switched off').toBe('Общий таймер');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
@@ -397,7 +397,7 @@ export const checks = {
     await sleep(200);
     expect(await p.ev('[...planx.editor.selection].join()'), 'picked').toBe(a[2]);
     expect(await p.ev(`[...document.querySelectorAll('.context-menu .menu-row span')].map((s) => s.textContent).join(', ')`), 'its rows')
-      .toBe('Параметры, Скопировать, Переместить вверх, Переместить вниз, Сделать компонентом, Удалить');
+      .toBe('Параметры, Комментарий, Скопировать, Переместить вверх, Переместить вниз, Сделать компонентом, Удалить');
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Удалить').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`planx.board.get('${a[2]}') ?? null`), 'deleted').toBe(null);
     expect(await p.ev(`document.querySelectorAll('.context-menu').length`), 'and the menu gone').toBe(0);
@@ -444,14 +444,14 @@ export const checks = {
     const pick = async (label) => p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent.includes('${label}')).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     await p.ev(`(() => { const e = planx.editor; e.zoomCenter(0.5 / e.cam.z); e.setSelection([]); })()`);
     await right([900, 600]);
-    expect(await rows(), 'nothing copied: just the zoom').toBe('Масштаб 100%');
+    expect(await rows(), 'nothing copied: the zoom, a comment').toBe('Масштаб 100%, Комментарий');
     await pick('Масштаб 100%');
     expect(await p.ev('planx.editor.cam.z'), 'at 100%').toBe(1);
     // A rectangle: its parameters.
     await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 300); planx.board.add(e.newItem('rect', x, y, { id: 'r', w: 200, h: 120, text: 'Фигура' })); })()`);
     const r = await p.ev(`(() => { const i = planx.board.get('r'), s = planx.editor.toScreen({ x: i.x + 30, y: i.y + 30 }); return [s.x, s.y]; })()`);
     await right(r);
-    expect(await rows(), 'parameters first').toBe('Параметры, Скопировать, Переместить вверх, Переместить вниз, Сделать компонентом, Удалить');
+    expect(await rows(), 'parameters first').toBe('Параметры, Комментарий, Скопировать, Переместить вверх, Переместить вниз, Сделать компонентом, Удалить');
     await pick('Параметры');
     expect(await p.ev(`!!document.querySelector('.params-pop .params-colors')`), 'the popup: colours').toBe(true);
     await p.click(await p.at('.params-pop button[aria-label="Заливка: pink"]'));
@@ -464,7 +464,7 @@ export const checks = {
     // Copied, then pasted where the board was right-clicked.
     await p.ev(`planx.editor.setSelection(['r']); planx.editor.copy(); planx.editor.setSelection([])`);
     await right([900, 500]);
-    expect(await rows(), 'with something copied').toBe('Масштаб 100%, Вставить');
+    expect(await rows(), 'with something copied').toBe('Масштаб 100%, Вставить, Комментарий');
     await pick('Вставить');
     const pasted = await p.ev(`(() => { const i = planx.board.list().find((x) => x.type === 'rect' && x.id !== 'r'), s = planx.editor.toScreen({ x: i.x + i.w / 2, y: i.y + i.h / 2 }); return [Math.round(s.x), Math.round(s.y)]; })()`);
     expect(Math.abs(pasted[0] - 900) <= 1 && Math.abs(pasted[1] - 500) <= 1, `pasted there (${pasted})`).toBe(true);
@@ -527,5 +527,40 @@ export const checks = {
     await row('Стрелка в конце');
     const l = await p.ev(`JSON.stringify((({ color, lo, dash, heads }) => ({ color, lo, dash, heads }))(planx.board.getLink('L')))`);
     expect(l, 'red, 60%, dashed, a head at its start only').toBe('{"color":"red","lo":0.6,"dash":true,"heads":"start"}');
+  },
+
+  async '"Комментарии": put by a right click on an item, it goes with it; opened, solved, answered once; its own removed'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 300, 300, { id: 's', w: 150, h: 150 })); e.setSelection([]); })()`);
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: 400, y: 340, button: 'right', buttons: 2, clickCount: 1 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 400, y: 340, button: 'right', buttons: 0, clickCount: 1 });
+    await sleep(200);
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Комментарий').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(200);
+    await p.cdp('Input.insertText', { text: 'Проверить сроки' });
+    await p.key('Enter', 'Enter', 13);
+    await sleep(200);
+    const stored = () => p.ev(`(async () => { const c = await import('/src/labs/comments.ts'); return c.comments(planx.board); })()`);
+    let [c] = await stored();
+    expect(`${c.text} ${c.on} ${c.dx},${c.dy}`, 'on the sticker, where clicked').toBe('Проверить сроки s 100,40');
+    expect(await p.ev(`document.querySelectorAll('.comment-pin').length`), 'its pin').toBe(1);
+    // The sticker moved: the pin with it.
+    await p.ev(`planx.board.update('s', { x: 400 })`);
+    await sleep(200);
+    const pin = await p.ev(`(() => { const r = document.querySelector('.comment-pin').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.bottom)]; })()`);
+    expect(pin.join(), 'pin went along').toBe('500,340');
+    // Solved, answered.
+    await p.click(await p.at('.comment-card .comment-solve'));
+    await p.click(await p.at('.comment-card .comment-answer'));
+    await p.cdp('Input.insertText', { text: 'Сделано' });
+    await p.key('Enter', 'Enter', 13);
+    await sleep(200);
+    [c] = await stored();
+    expect(`${c.done} ${c.reply?.text}`, 'ticked, answered').toBe('true Сделано');
+    expect(await p.ev(`document.querySelectorAll('.comment-answer').length`), 'once only').toBe(0);
+    // Its own: removed.
+    await p.click(await p.at('.comment-card .comment-more'));
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.comment-menu button')].find((b) => b.textContent === 'Удалить').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    expect((await stored()).length, 'gone').toBe(0);
   },
 };

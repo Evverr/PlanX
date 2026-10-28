@@ -12,6 +12,7 @@ import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
 import { swapKind } from '../labs/swap';
 import { openLink } from '../labs/textLink';
+import { startComment } from '../labs/comments';
 
 /** A press on the board: works out what it starts (a gesture followed till it's let go) or does at
  *  once, from the tool, what's under it and what's selected. */
@@ -139,6 +140,11 @@ export function press(ed: Editor, e: PointerEvent): void {
       ed.gesture = { type: 'create', id: it.id, origin: w };
       return;
     }
+    // "Комментарии" (src/labs): a new comment where pressed, on what's there.
+    case 'comment':
+      startComment(w, hit ?? undefined);
+      ed.setTool('select');
+      return;
     case 'link': {
       // From the dot pressed of the item showing them (see lineToolHover), or from the item pressed.
       const shown = ed.linkDots ? board.get(ed.linkDots) : undefined, side = shown ? anyDotAt(ed, shown, w) : null;

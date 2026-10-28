@@ -62,7 +62,7 @@ export const checks = {
   },
 
   async 'the rail shortens a button at a time, and back to full'(p) {
-    await p.open(1500, 1000, 1.6);
+    await p.open(1500, 1200, 1.6);
     const full = await p.rail();
     expect(full.more, 'all on the rail at first').toBeFalsy();
     await p.dragEdge('.tools', 'bottom', 0, -250);
