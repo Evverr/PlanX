@@ -842,9 +842,19 @@ export class Editor {
     return true;
   }
 
-  paste(offset = 30): void {
+  /** Whether something's been copied, to paste. */
+  hasClipboard(): boolean { return !!this.clipboard; }
+
+  /** Pastes what was copied `offset` from where it was, or with its middle at the board point `at`. */
+  paste(offset = 30, at?: Point): void {
     if (!this.clipboard) return;
     const data = JSON.parse(this.clipboard) as { items: Item[]; links: Link[] };
+    const b = at && boundsOf(data.items);
+    if (at && b) {
+      const dx = Math.round(at.x - b.x - b.w / 2), dy = Math.round(at.y - b.y - b.h / 2);
+      data.items = data.items.map((i) => ({ ...i, x: i.x + dx, y: i.y + dy }));
+      offset = 0;
+    }
     const { items, links } = this.insertCopies(data.items, data.links, offset);
     // Copies land in the frame they're pasted into, unless they came with their own.
     const held = new Set(items.flatMap((i) => i.members ?? []));
