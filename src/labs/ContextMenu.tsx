@@ -3,7 +3,9 @@ import type { Editor } from '../editor/editor';
 import type { Point } from '../canvas/geometry';
 import { hitItem } from '../canvas/geometry';
 import { linkInTextAt } from '../canvas/renderer';
-import { COLORABLE, FILLS, ICON_COLORS, INK_COLORS, TEXT_COLORS, type Item } from '../model/types';
+import { alignOf, baseWeight, COLORABLE, DEFAULTS, FILLS, HAS_FONT, ICON_COLORS, INK_COLORS, STROKABLE, STROKE_COLORS, TEXT_COLORS, type Item } from '../model/types';
+import { fitHeight, FONTS } from '../canvas/text';
+import { PanelIcon, type PanelIconName } from '../ui/PanelIcon';
 import { MIND_PALETTE } from '../model/mind';
 import { Glyph } from '../ui/glyphs';
 import { ColorPicker } from '../ui/ColorPicker';
@@ -124,18 +126,7 @@ export function paramItems(editor: Editor): Item[] {
   return editor.selectedItems().flatMap((it) => (it.inst ? all.filter((c) => c.host === it.id) : [it])).filter((it) => NAMES[it.type]);
 }
 
-/** The colours an item picks from, and the field its colour and its opacity go in. */
-function paintOf(it: Item): { colors: Record<string, string>; color: 'color' | 'tc' | null; opacity: 'fo' | 'to' } {
-  if (it.type === 'text') return { colors: TEXT_COLORS, color: 'tc', opacity: 'to' };
-  if (it.type === 'icon') return { colors: ICON_COLORS, color: 'color', opacity: 'fo' };
-  if (it.type === 'ink') return { colors: INK_COLORS, color: 'color', opacity: 'fo' };
-  if (it.type === 'mind') return { colors: Object.fromEntries(MIND_PALETTE.map((c) => [c, c])), color: 'color', opacity: 'fo' };
-  if (COLORABLE.includes(it.type)) return { colors: FILLS, color: 'color', opacity: 'fo' };
-  return { colors: {}, color: null, opacity: 'fo' };
-}
-
-/** Each item's parameters, one after another under its name, a line between: its colour (any too),
- *  how see-through, and a rectangle's or figure's rounding. */
+/** Each item's parameters, one after another under its name, a line between. */
 function ParamsList({ editor, items }: { editor: Editor; items: Item[] }) {
   const [, redraw] = useState(0);
   return (
@@ -156,50 +147,114 @@ function ParamsList({ editor, items }: { editor: Editor; items: Item[] }) {
   );
 }
 
-function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch: Partial<Item>) => void }) {
+/** How an item's text looks, set from the parameters: a text item measured again to fit (a copy in
+ *  an instance keeping that height as its own, as typing does). */
+function restyle(it: Item, patch: Partial<Item>): Partial<Item> {
+  if (it.type !== 'text') return patch;
+  const h = fitHeight({ ...it, ...patch });
+  return { ...patch, ...(h && { h }), ...(h && it.host && !it.ovr?.includes('h') && { ovr: [...(it.ovr ?? []), 'h'] }) };
+}
+
+/** A colour row: the colours to pick from (the one now marked), any colour, and how see-through. */
+function ColorRow({ editor, label, colors, current, none, opacity, onColor, onOpacity }: {
+  editor: Editor; label: string; colors: Record<string, string>; current: string | undefined; none?: boolean;
+  opacity: number; onColor: (c: string) => void; onOpacity: (v: number | undefined) => void;
+}) {
   const [picking, setPicking] = useState(false);
-  const paint = paintOf(it), current = paint.color ? it[paint.color] : undefined;
-  const custom = current?.startsWith('#') && !paint.colors[current] ? current : null;
-  const opacity = it[paint.opacity] ?? 1, pct = Math.round(opacity * 100);
-  const rounded = it.type === 'rect' || it.type === 'polygon';
+  const custom = current?.startsWith('#') && !colors[current] ? current : null, pct = Math.round(opacity * 100);
+  return (
+    <div className="params-group">
+      <div className="params-label">{label}</div>
+      <div className="params-colors">
+        {Object.entries(colors).map(([k, v]) => (
+          <button key={k} className={`sw ${k === 'none' ? 'none' : ''} ${current === k ? 'on' : ''}`} style={{ background: v || 'var(--ink)' }}
+            aria-label={`${label}: ${k}`} onClick={() => onColor(k)} />
+        ))}
+        {none && <button className={`sw none ${current === 'none' ? 'on' : ''}`} aria-label={`${label}: нет`} onClick={() => onColor('none')} />}
+        <div className="cp-wrap">
+          <button className={`sw custom ${custom || picking ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет" aria-label={`${label}: свой цвет`}
+            onClick={() => setPicking(!picking)} />
+          {picking && <ColorPicker value={custom ?? '#3E7BFA'} onChange={onColor} onStart={() => editor.beginChange()} onEnd={() => editor.endChange()} />}
+        </div>
+      </div>
+      <div className="params-opacity">
+        <input type="range" min={0} max={100} value={pct} aria-label={`${label}: непрозрачность, %`} style={{ '--p': `${pct}%` } as React.CSSProperties}
+          onPointerDown={() => { editor.beginChange(); window.addEventListener('pointerup', () => editor.endChange(), { once: true }); }}
+          onChange={(e) => onOpacity(Number(e.target.value) >= 100 ? undefined : Number(e.target.value) / 100)} />
+        <i>{pct}%</i>
+      </div>
+    </div>
+  );
+}
+
+const SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72, 96];
+
+/** An item's parameters: its fill and outline (or colour), each with its opacity, its text as the
+ *  text panel sets it (font, size, style, alignment, list, colour), and a rectangle's or figure's
+ *  rounding. */
+function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch: Partial<Item>) => void }) {
+  const fillable = COLORABLE.includes(it.type), strokable = STROKABLE.includes(it.type), texted = HAS_FONT.includes(it.type) && it.type !== 'table';
+  const fills = it.type === 'mind' ? Object.fromEntries(MIND_PALETTE.map((c) => [c, c])) : FILLS;
+  const own = it.type === 'icon' ? ICON_COLORS : it.type === 'ink' ? INK_COLORS : null;
+  const fs = it.fs ?? DEFAULTS[it.type].fs ?? 16, bold = (it.fw ?? baseWeight(it.type)) >= 600, align = alignOf(it);
+  const text = (patch: Partial<Item>) => set(restyle(it, patch));
+  const toggle = (icon: PanelIconName, label: string, on: boolean, patch: Partial<Item>) => (
+    <button className={`params-btn ${on ? 'on' : ''}`} title={label} aria-label={label} aria-pressed={on} onClick={() => text(patch)}><PanelIcon name={icon} /></button>
+  );
   return (
     <>
-      {paint.color && (
-        <div className="params-colors">
-          {Object.entries(paint.colors).map(([k, v]) => (
-            <button key={k} className={`sw ${k === 'none' ? 'none' : ''} ${(current ?? (paint.color === 'tc' ? 'ink' : '')) === k ? 'on' : ''}`} style={{ background: v || 'var(--ink)' }}
-              aria-label={`Цвет ${k}`} onClick={() => set({ [paint.color!]: paint.color === 'tc' && k === 'ink' ? undefined : k })} />
-          ))}
-          <div className="cp-wrap">
-            <button className={`sw custom ${custom || picking ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет" aria-label="Свой цвет"
-              onClick={() => setPicking(!picking)} />
-            {picking && <ColorPicker value={custom ?? '#3E7BFA'} onChange={(c) => set({ [paint.color!]: c })} onStart={() => editor.beginChange()} onEnd={() => editor.endChange()} />}
+      {fillable && <ColorRow editor={editor} label={it.type === 'mind' ? 'Цвет' : 'Заливка'} colors={fills} current={it.color} opacity={it.fo ?? 1}
+        onColor={(c) => set({ color: c })} onOpacity={(v) => set({ fo: v })} />}
+      {strokable && <ColorRow editor={editor} label="Обводка" colors={Object.fromEntries(Object.entries(STROKE_COLORS).filter(([k]) => k !== 'none').map(([k, v]) => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--shape-stroke)')]))} none
+        current={it.sc ?? 'gray'} opacity={it.so ?? 1} onColor={(c) => set({ sc: c === 'gray' ? undefined : c })} onOpacity={(v) => set({ so: v })} />}
+      {own && <ColorRow editor={editor} label="Цвет" colors={own} current={it.color ?? 'ink'} opacity={it.fo ?? 1}
+        onColor={(c) => set({ color: c })} onOpacity={(v) => set({ fo: v })} />}
+      {!fillable && !own && !texted && (
+        <div className="params-group">
+          <div className="params-label">Непрозрачность</div>
+          <div className="params-opacity">
+            <input type="range" min={0} max={100} value={Math.round((it.fo ?? 1) * 100)} aria-label="Непрозрачность, %" style={{ '--p': `${Math.round((it.fo ?? 1) * 100)}%` } as React.CSSProperties}
+              onChange={(e) => set({ fo: Number(e.target.value) >= 100 ? undefined : Number(e.target.value) / 100 })} />
+            <i>{Math.round((it.fo ?? 1) * 100)}%</i>
           </div>
         </div>
       )}
-      <div className="menu-item">
-        <div className="menu-row params-row">
-          <Glyph id="theme" className="menu-icon" />
-          <span>Непрозрачность</span>
-          <span className="menu-input">
-            <input type="range" min={0} max={100} value={pct} aria-label="Непрозрачность, %" style={{ '--p': `${pct}%` } as React.CSSProperties}
-              onPointerDown={() => { editor.beginChange(); window.addEventListener('pointerup', () => editor.endChange(), { once: true }); }}
-              onChange={(e) => set({ [paint.opacity]: Number(e.target.value) >= 100 ? undefined : Number(e.target.value) / 100 })} />
-            <i>{pct}%</i>
-          </span>
-        </div>
-      </div>
-      {rounded && (
-        <div className="menu-item">
-          <div className="menu-row params-row">
-            <Glyph id="collapse-l" className="menu-icon" />
-            <span>Скругление</span>
-            <span className="menu-input">
-              <input type="number" min={0} max={200} step={1} value={it.rad ?? (it.type === 'rect' ? 8 : 0)} aria-label="Скругление углов"
-                onChange={(e) => set({ rad: Math.max(0, Math.min(200, Number(e.target.value) || 0)) })} />
-              <i>px</i>
-            </span>
+      {texted && (
+        <div className="params-group">
+          <div className="params-label">Текст</div>
+          <div className="params-text">
+            <select aria-label="Шрифт" value={it.ff ?? 'onest'} onChange={(e) => text({ ff: e.target.value === 'onest' ? undefined : e.target.value })}>
+              {Object.entries(FONTS).map(([k, f]) => <option key={k} value={k}>{f.label}</option>)}
+            </select>
+            <select aria-label="Размер" value={fs} onChange={(e) => text({ fs: Number(e.target.value) })}>
+              {[...new Set([...SIZES, fs])].sort((a, b) => a - b).map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
           </div>
+          <div className="params-text">
+            {toggle('bold', 'Жирный', bold, { fw: bold ? 400 : 700 })}
+            {toggle('italic', 'Курсив', !!it.fi, { fi: it.fi ? undefined : true })}
+            {toggle('underline', 'Подчёркнутый', !!it.fu, { fu: it.fu ? undefined : true })}
+            {toggle('strike', 'Зачёркнутый', !!it.fx, { fx: it.fx ? undefined : true })}
+            <span className="params-gap" />
+            {toggle('align-left', 'По левому краю', align === 'left', { ta: 'left' })}
+            {toggle('align-center', 'По центру', align === 'center', { ta: 'center' })}
+            {toggle('align-right', 'По правому краю', align === 'right', { ta: 'right' })}
+            <span className="params-gap" />
+            {toggle('bulleted-list', 'Маркированный список', it.ls === 'bullet', { ls: it.ls === 'bullet' ? undefined : 'bullet' })}
+            {toggle('numbered-list', 'Нумерованный список', it.ls === 'number', { ls: it.ls === 'number' ? undefined : 'number' })}
+          </div>
+        </div>
+      )}
+      {texted && <ColorRow editor={editor} label="Цвет текста" colors={TEXT_COLORS} current={it.tc ?? 'ink'} opacity={it.to ?? 1}
+        onColor={(c) => set({ tc: c === 'ink' ? undefined : c })} onOpacity={(v) => set({ to: v })} />}
+      {(it.type === 'rect' || it.type === 'polygon') && (
+        <div className="params-group params-inline">
+          <div className="params-label">Скругление</div>
+          <span className="menu-input">
+            <input type="number" min={0} max={200} step={1} value={it.rad ?? (it.type === 'rect' ? 8 : 0)} aria-label="Скругление углов"
+              onChange={(e) => set({ rad: Math.max(0, Math.min(200, Number(e.target.value) || 0)) })} />
+            <i>px</i>
+          </span>
         </div>
       )}
     </>

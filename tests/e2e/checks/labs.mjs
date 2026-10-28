@@ -454,7 +454,9 @@ export const checks = {
     expect(await rows(), 'parameters first').toBe('Параметры, Скопировать, Переместить вверх, Переместить вниз, Сделать компонентом, Удалить');
     await pick('Параметры');
     expect(await p.ev(`!!document.querySelector('.params-pop .params-colors')`), 'the popup: colours').toBe(true);
-    await p.click(await p.at('.params-pop button[aria-label="Цвет pink"]'));
+    await p.click(await p.at('.params-pop button[aria-label="Заливка: pink"]'));
+    expect(await p.ev(`document.querySelector('.params-pop button[aria-label="Обводка: ink"]') !== null`), 'its outline too').toBe(true);
+    expect(await p.ev(`document.querySelector('.params-pop button[aria-label="Жирный"]') !== null`), 'its text as the text panel sets it').toBe(true);
     await p.ev(`(() => { const i = document.querySelector('.params-pop input[type=number]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, '24'); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
     await sleep(100);
     expect(await p.ev(`planx.board.get('r').color + ' ' + planx.board.get('r').rad`), 'its colour and rounding').toBe('pink 24');
@@ -500,7 +502,8 @@ export const checks = {
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Параметры').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     const titles = await p.ev(`[...document.querySelectorAll('.params-pop .params-title')].map((t) => t.textContent).join(' | ')`);
     expect(titles, 'each, the task by what is in it').toBe('Стикер | Текст «Подпись» | Прямоугольник | Эллипс | Текст «Что надо сделать» | Текст «Подробности»');
-    expect(await p.ev(`document.querySelectorAll('.params-pop input[type=range]').length`), 'an opacity each').toBe(6);
+    expect(await p.ev(`[...document.querySelectorAll('.params-pop .params-item')].map((i) => i.querySelectorAll('input[type=range]').length).join()`), 'an opacity for each colour')
+      .toBe('2,1,3,3,1,1');
     await p.ev(`(() => { const r = document.querySelectorAll('.params-pop input[type=range]')[0]; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(r, '50'); r.dispatchEvent(new Event('input', { bubbles: true })); })()`);
     expect(await p.ev(`planx.board.get('s').fo`), 'the sticker half see-through').toBe(0.5);
   },
