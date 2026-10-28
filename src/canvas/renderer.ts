@@ -97,7 +97,7 @@ export interface Scene {
   noBackground?: boolean;
 }
 
-export interface InkStroke { pts: Point[]; color: string; width: number; hl: boolean }
+export interface InkStroke { pts: Point[]; color: string; width: number; hl: boolean; op?: number }
 
 /** Corner radius of everything with corners except stickers, in board units. */
 const CORNER = 8;
@@ -185,16 +185,19 @@ function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: s
   // drawn, to know which characters it holds.
   const links = it.links?.length ? drawnLinks(it.text ?? '', it.ls, it.links) : null;
   let from = 0;
+  // Seen through as much as it's made to be.
+  const textAlpha = it.to ?? 1;
+  ctx.globalAlpha = textAlpha;
   for (const line of l.lines) {
     const mid = y + l.lineHeight / 2;
     if (line && (mark || it.fu || it.fx)) {
       const tw = ctx.measureText(line).width;
       const left = align === 'center' ? x - tw / 2 : align === 'right' ? x - tw : x;
       if (mark) {
-        ctx.globalAlpha = 0.45;
+        ctx.globalAlpha = it.mo ?? 0.45;
         ctx.fillStyle = mark;
         ctx.fillRect(left - 2, y + l.lineHeight * 0.06, tw + 4, l.lineHeight * 0.88);
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha = textAlpha;
       }
       ctx.fillStyle = ink;
       if (it.fu) ctx.fillRect(left, mid + l.size * 0.42, tw, rule);
@@ -221,6 +224,7 @@ function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: s
     }
     y = mid + l.lineHeight / 2;
   }
+  ctx.globalAlpha = 1;
 }
 
 /** Blue of links in text. */
@@ -394,7 +398,11 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       break;
     }
     case 'icon':
-      drawIcon(ctx, it.icon ?? '', it.x, it.y, Math.min(it.w, it.h), ICON_COLORS[it.color ?? 'ink'] ? shade(ICON_COLORS[it.color ?? 'ink'], theme.dim) : theme.ink);
+      // Its colour: one of the set, or any ('#rrggbb'), seen through as much as it's made to be.
+      ctx.globalAlpha = it.fo ?? 1;
+      drawIcon(ctx, it.icon ?? '', it.x, it.y, Math.min(it.w, it.h), it.color?.startsWith('#') ? shade(it.color, theme.dim)
+        : ICON_COLORS[it.color ?? 'ink'] ? shade(ICON_COLORS[it.color ?? 'ink'], theme.dim) : theme.ink);
+      ctx.globalAlpha = 1;
       break;
     case 'emoji':
       drawEmoji(ctx, it.emoji ?? '', it.x, it.y, Math.min(it.w, it.h));
@@ -415,7 +423,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       drawMind(ctx, it, s, editing);
       break;
     case 'ink':
-      strokeInk(ctx, { pts: inkPoints(it), color: it.color ?? 'ink', width: (it.sw ?? 2) * it.w / (it.iw || it.w), hl: !!it.hl }, theme);
+      strokeInk(ctx, { pts: inkPoints(it), color: it.color ?? 'ink', width: (it.sw ?? 2) * it.w / (it.iw || it.w), hl: !!it.hl, op: it.fo }, theme);
       break;
   }
 }
@@ -735,11 +743,11 @@ function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCel
 }
 
 /** A pen or highlighter line, smoothed by curving through the midpoints between its points. */
-function strokeInk(ctx: CanvasRenderingContext2D, { pts, color, width, hl }: InkStroke, theme: Theme) {
+function strokeInk(ctx: CanvasRenderingContext2D, { pts, color, width, hl, op }: InkStroke, theme: Theme) {
   if (!pts.length) return;
   const c = color.startsWith('#') ? color : INK_COLORS[color];
   ctx.save();
-  ctx.globalAlpha = hl ? 0.45 : 1;
+  ctx.globalAlpha = (hl ? 0.45 : 1) * (op ?? 1);
   ctx.strokeStyle = c ? shade(c, theme.dim) : theme.ink;
   ctx.lineWidth = width;
   ctx.lineCap = 'round';

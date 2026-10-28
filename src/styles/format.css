@@ -43,3 +43,6 @@
 .tf-link input { width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: var(--s6); padding: var(--s6) var(--s8); font: inherit; outline: 0; }
 .tf-link input:focus { border-color: var(--accent); }
 .tf-link-row { display: flex; gap: var(--s4); }
+/* Under a colour menu's circles: any colour and how see-through, across the whole grid. */
+.tf-any { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--s10); }
+.tf-any input[type="range"] { flex: 1; min-width: 0; }

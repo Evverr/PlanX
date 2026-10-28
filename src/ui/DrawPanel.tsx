@@ -3,6 +3,7 @@ import { DRAW_TOOLS, INK_SIZES, type Editor, type Pens, type PenTool, type Tool 
 import { INK_COLORS } from '../model/types';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
+import { ColorPicker } from './ColorPicker';
 
 const PENS: Array<[Tool, PanelIconName, string]> = [
   ['pen', 'pen', 'Ручка (P)'],
@@ -18,6 +19,7 @@ const dot = (tool: PenTool, size: number) => Math.round(4 + (size / INK_SIZES[to
  *  Clicking the preset in use opens its colours and widths. */
 export function DrawPanel({ editor, tool, pens }: { editor: Editor; tool: Tool; pens: Pens }) {
   const [editing, setEditing] = useState(false);
+  const [picking, setPicking] = useState(false);
   // Pen, highlighter and eraser can be rearranged by holding them; the presets stay put.
   const sort = useSortable('planx-order-draw', PENS.map(([t]) => t), 'y');
   const pen = tool === 'pen' || tool === 'marker' ? tool : null;
@@ -48,7 +50,17 @@ export function DrawPanel({ editor, tool, pens }: { editor: Editor; tool: Tool; 
                   <button key={c} className={`sw ${set.presets[set.active].color === c ? 'on' : ''}`} style={{ background: swatch(c) }}
                     aria-label={`Цвет ${c}`} onClick={() => editor.setPenStyle(pen, set.active, { color: c })} />
                 ))}
+                {/* Any colour, and how see-through the lines come out. */}
+                <div className="cp-wrap">
+                  <button className={`sw custom ${set.presets[set.active].color.startsWith('#') || picking ? 'on' : ''}`} title="Свой цвет" aria-label="Свой цвет"
+                    style={set.presets[set.active].color.startsWith('#') ? { background: set.presets[set.active].color } : undefined} onClick={() => setPicking(!picking)} />
+                  {picking && <ColorPicker value={swatch(set.presets[set.active].color).startsWith('#') ? swatch(set.presets[set.active].color) : '#1C1F26'}
+                    onChange={(c) => editor.setPenStyle(pen, set.active, { color: c })} />}
+                </div>
               </div>
+              <input type="range" min={0} max={100} aria-label="Прозрачность, %" value={Math.round((set.presets[set.active].op ?? 1) * 100)}
+                style={{ '--p': `${Math.round((set.presets[set.active].op ?? 1) * 100)}%` } as React.CSSProperties}
+                onChange={(e) => editor.setPenStyle(pen, set.active, { op: Number(e.target.value) >= 100 ? undefined : Number(e.target.value) / 100 })} />
               <div className="ink-sizes">
                 {INK_SIZES[pen].map((s) => (
                   <button key={s} className={`ink-size ${set.presets[set.active].size === s ? 'on' : ''}`} aria-label={`Толщина ${s}`}

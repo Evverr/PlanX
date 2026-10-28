@@ -68,10 +68,10 @@
 .op-pop { position: absolute; bottom: calc(100% + var(--s18)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: var(--s10); height: var(--e52); box-sizing: border-box; padding: 0 var(--s16); background: var(--surface); border-radius: var(--s12); box-shadow: var(--shadow); white-space: nowrap; animation: fade-in .12s ease-out; }
 /* The slider drawn by hand: a plain grey track (no outline), blue up to the knob, and a knob 2px
    bigger than the browser's. --p is how far along it is. */
-.op-pop input[type="range"] { -webkit-appearance: none; appearance: none; width: var(--e150); height: var(--e4); margin: 0; border-radius: var(--s2); cursor: pointer;
+:is(.op-pop, .tf-any, .ink-style) input[type="range"] { -webkit-appearance: none; appearance: none; width: var(--e150); height: var(--e4); margin: 0; border-radius: var(--s2); cursor: pointer;
   background: linear-gradient(to right, var(--fmt-on-ink) var(--p), var(--op-track) var(--p)); }
-.op-pop input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: var(--e18); height: var(--e18); border: 0; border-radius: 50%; background: var(--fmt-on-ink); }
-.op-pop input[type="range"]::-moz-range-thumb { width: var(--e18); height: var(--e18); border: 0; border-radius: 50%; background: var(--fmt-on-ink); }
+:is(.op-pop, .tf-any, .ink-style) input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: var(--e18); height: var(--e18); border: 0; border-radius: 50%; background: var(--fmt-on-ink); }
+:is(.op-pop, .tf-any, .ink-style) input[type="range"]::-moz-range-thumb { width: var(--e18); height: var(--e18); border: 0; border-radius: 50%; background: var(--fmt-on-ink); }
 /* The palette's popover: the fill/outline switch, the colours, the opacity slider, lines between. */
 .op-pop.palette-pop { gap: 0; padding: 0 var(--s12); }
 .op-pop.palette-pop .paint-target { gap: var(--s2); }
