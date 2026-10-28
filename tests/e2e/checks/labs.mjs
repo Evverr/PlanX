@@ -15,7 +15,7 @@ export const checks = {
     const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Нововведения')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
     await sleep(250);
-    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(20);
+    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(10);
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.labs-menu .menu-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`document.querySelector('.labs-menu [aria-checked="false"]')?.textContent`), 'switched off').toBe('Общий таймер');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
@@ -347,21 +347,23 @@ export const checks = {
     await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: at[0], y: at[1], button: 'left', buttons: 0, clickCount: 1, modifiers: 4 });
     await sleep(200);
     expect(await p.ev('window.opened'), 'Cmd+click on the blue part opens it').toBe('https://docs.example.com');
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: at[0], y: at[1], button: 'right', buttons: 2, clickCount: 1 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: at[0], y: at[1], button: 'right', buttons: 0, clickCount: 1 });
+    await sleep(200);
+    expect(await p.ev(`document.querySelector('.context-menu .menu-row span')?.textContent`), 'a right click on it: the way to it first').toBe('Перейти по ссылке');
+    await p.ev('window.opened = null');
+    await p.click(await p.at('.context-menu .menu-row'));
+    expect(await p.ev('window.opened'), 'and it goes there').toBe('https://docs.example.com');
   },
 
-  async '"Объекты": the rail button held opens the menu, a timeline is put with a click, holds what is put on it, in half days'(p) {
-    const btn = await p.at('.tools [data-key="objects"]');
-    await p.mouse('mouseMoved', btn[0], btn[1]);
-    await p.mouse('mousePressed', btn[0], btn[1]);
-    await sleep(700);
-    await p.mouse('mouseReleased', btn[0], btn[1]);
-    await sleep(200);
+  async '"Объекты": the rail button opens the menu, a timeline is put with a click, holds what is put on it, in half days'(p) {
+    await p.click(await p.at('.tools [data-key="objects"]'));
     expect(await p.ev(`document.querySelector('.objects-menu .menu-row span')?.textContent`), 'the menu').toBe('Таймлайн');
     await p.click(await p.at('.objects-menu .menu-row'));
     expect(await p.ev('planx.editor.tool'), 'its tool').toBe('timeline');
     await p.click([600, 400]);
     const tl = await p.ev(`(() => { const t = planx.board.list().find((i) => i.tl); return t && { id: t.id, x: t.x, y: t.y, w: t.w, tl: t.tl }; })()`);
-    expect(tl.tl, 'this month on').toBe(new Date().toISOString().slice(0, 7));
+    expect(tl.tl, 'from the first of this month').toBe(new Date().toISOString().slice(0, 7) + '-01');
     // A sticker dragged on: in half days from its start, and it goes along with it.
     await p.ev(`(() => { const e = planx.editor; planx.board.add(e.newItem('sticky', ${tl.x} + 400, ${tl.y} - 120, { id: 'st', w: 60, h: 60 })); e.setSelection([]); })()`);
     const st = await p.ev(`(() => { const s = planx.editor.toScreen({ x: ${tl.x} + 430, y: ${tl.y} - 90 }); return [s.x, s.y]; })()`);
@@ -369,9 +371,20 @@ export const checks = {
     const off = await p.ev(`(planx.board.get('st').x - ${tl.x} - 19) / 11.5`);
     expect(Math.abs(off - Math.round(off)) < 1e-6, `on a half day (${off})`).toBe(true);
     expect(await p.ev(`planx.board.get('${tl.id}').members.includes('st')`), 'held by it').toBe(true);
-    // Wider, more days.
-    await p.ev(`planx.board.update('${tl.id}', { w: planx.board.get('${tl.id}').w + 23 * 10 })`);
-    expect(await p.ev(`planx.board.get('${tl.id}').w`), 'wider').toBe(tl.w + 230);
+    // Its left side moved two days on: it starts two days later, there, what's on it staying.
+    const stX = await p.ev(`planx.board.get('st').x`);
+    await p.ev(`(() => { const e = planx.editor, t = planx.board.get('${tl.id}'); e.cam = { x: 200 - t.x * 0.5, y: 300 - t.y * 0.5, z: 0.5 }; e.camChanged(); e.setSelection(['${tl.id}']); })()`);
+    await sleep(100);
+    const left = await p.ev(`(() => { const t = planx.board.get('${tl.id}'), s = planx.editor.toScreen({ x: t.x + 1, y: t.y + t.h / 4 }); return [s.x, s.y]; })()`);
+    await p.mouse('mouseMoved', left[0], left[1]);
+    await sleep(100);
+    expect(await p.ev('planx.editor.canvas.style.cursor'), 'its left side').toBe('ew-resize');
+    await p.drag(left, [left[0] + 23, left[1]]);
+    const now = await p.ev(`(() => { const t = planx.board.get('${tl.id}'); return { x: t.x, w: t.w, tl: t.tl }; })()`);
+    expect(now.x - tl.x, 'two days on').toBe(46);
+    expect(now.w, 'two days shorter').toBe(tl.w - 46);
+    expect(now.tl.slice(8), 'from the third').toBe('03');
+    expect(await p.ev(`planx.board.get('st').x`), 'what is on it stays').toBe(stX);
   },
 
   async '"Меню по правому клику": a right click picks what is under it and opens the menu; its rows do what they say'(p) {

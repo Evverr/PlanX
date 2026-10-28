@@ -58,20 +58,15 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
         {row('save-template', 'Сохранить панели', { onClick: onSave })}
         {row('refresh-l', 'Сбросить панели', { onClick: onReset })}
         {row('collapse-l', 'Размер панелей', { end: <SizeDots size={panelSize} onPick={setPanelSize} /> })}
-        {row('lightning-plus', 'Нововведения', { more: <LabsMenu />, end: arrow })}
+        {row('lightning-plus', 'Нововведения', { more: <LabsMenu half={1} />, end: arrow })}
         <div className="menu-line" />
         {row('user-profile', 'Профиль')}
         {row('settings-l', 'Настройки')}
         <div className="menu-line" />
       </>}
       {row('link-settings', 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
-      {row('change-order', 'Оглавление', { light: true, more: true, end: arrow })}
-      {row('broom', 'Преобразовать текст в таблицу')}
-      {row('server-settings', 'Параметры оглавления')}
-      <div className="menu-line" />
-      {row('message-to', 'Добавить сноску')}
-      {row('statistics-arrow', 'Добавить концевую сноску')}
-      {row('reply', 'Закладки')}
+      {/* The second half of the features on trial. */}
+      {row('change-order', 'Оглавление', { light: true, more: <LabsMenu half={2} />, end: arrow })}
     </div>
   );
 }

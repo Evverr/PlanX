@@ -375,4 +375,13 @@ export const checks = {
     expect(await p.ev(`planx.board.get('tx').h`), 'still three lines tall').toBeNear(h, 2);
     expect(await p.ev('planx.editor.editingId'), 'still typing').toBe('tx');
   },
+
+  async 'a shape stretches across by its right side only, down by its bottom only'(p) {
+    await put(p, `const a = e.newItem('rect', X, Y, { id: 'r', w: 200, h: 120 }); b.add(a); e.setSelection([a.id]);`);
+    const r = await p.ev(`(() => { const i = planx.board.get('r'), a = planx.editor.toScreen({ x: i.x + i.w, y: i.y + i.h * 0.25 }), b = planx.editor.toScreen({ x: i.x + i.w * 0.25, y: i.y + i.h }); return [a.x, a.y, b.x, b.y]; })()`);
+    await p.drag([r[0], r[1]], [r[0] + 60, r[1] + 40]);
+    expect(await p.ev(`[planx.board.get('r').w, planx.board.get('r').h].join()`), 'wider only').toBe('260,120');
+    await p.drag([r[2], r[3]], [r[2] + 40, r[3] + 30]);
+    expect(await p.ev(`[planx.board.get('r').w, planx.board.get('r').h].join()`), 'taller only').toBe('260,150');
+  },
 };

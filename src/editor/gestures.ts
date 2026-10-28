@@ -14,7 +14,7 @@ import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
 import { openSwap, swapKind } from '../labs/swap';
 import { pushedBelow } from '../labs/textPush';
-import { halfDay } from '../canvas/timeline';
+import { DAY, dayKey, halfDay, TL_PAD, tlDays, tlStart } from '../canvas/timeline';
 import { under } from '../labs/clickThrough';
 
 /** What a press on the board has started, followed till it's let go. */
@@ -22,7 +22,7 @@ export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
   | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean }
-  | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' }
+  | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline' }
@@ -103,13 +103,22 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         board.update(g.id, { grow: grow.w || grow.h ? grow : undefined });
         return;
       }
+      // A timeline's left side moves where it starts, a whole day at a time, what's on it staying.
+      if (g.only === 'l' && g.orig.tl) {
+        const days = Math.min(Math.round((w.x - g.start.x) / DAY), tlDays(g.orig) - 7);
+        board.update(g.id, { x: g.orig.x + days * DAY, w: g.orig.w - days * DAY, tl: dayKey(tlStart(g.orig), days) });
+        return;
+      }
       const min = it.type === 'frame' ? 80 : it.type === 'ink' ? 4 : it.type === 'audio' ? 32 : it.type === 'icon' || it.type === 'emoji' || it.type === 'image' ? 16 : 40;
       // A turned item is stretched along its own sides.
       const { w: w0, h: h0 } = g.orig, d = turn({ x: w.x - g.start.x, y: w.y - g.start.y }, { x: 0, y: 0 }, -angleOf(g.orig));
-      let nw = Math.max(min, Math.round(w0 + d.x));
-      let nh = Math.max(min, Math.round(h0 + d.y));
+      // By a side, one way only.
+      let nw = g.only === 'h' ? w0 : Math.max(min, Math.round(w0 + d.x));
+      let nh = g.only === 'w' ? h0 : Math.max(min, Math.round(h0 + d.y));
+      // A timeline holds whole days.
+      if (it.tl) nw = TL_PAD * 2 + Math.max(7, Math.round((nw - TL_PAD * 2) / DAY)) * DAY;
       // Stickers, icons, emoji, drawings and pictures keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
-      const keep = it.type === 'sticky' || it.type === 'image' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || it.type === 'ink' || it.type === 'audio' || e.shiftKey;
+      const keep = !g.only && (it.type === 'sticky' || it.type === 'image' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || it.type === 'ink' || it.type === 'audio' || e.shiftKey);
       if (keep) {
         const k = Math.max(nw / w0, nh / h0);
         nw = Math.round(w0 * k);

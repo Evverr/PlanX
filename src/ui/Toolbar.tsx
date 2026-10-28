@@ -63,7 +63,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     writeText(SHAPE_KEY, tool);
   }
   const shapeIcon = SHAPES.find(([t]) => t === lastShape.current)?.[1] ?? 'landscape';
-  // "Объекты" (src/labs): its button takes the object used last; held, it opens the menu of them.
+  // "Объекты" (src/labs): its button opens the menu of them; dragged off the rail, it makes the one used last.
   const labs = useLabs();
   const lastObject = useRef<Tool>('timeline');
   const objecting = OBJECTS.some(([t]) => t === tool);
@@ -166,7 +166,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     if (key === 'component') return button(key, false, 'Компонент из выделенного', 'maximize', () => editor.makeComponent());
     if (key === 'oval') return button(key, shaping, 'Фигуры', shapeIcon, () => editor.setTool(shaping ? 'select' : lastShape.current), { 'aria-pressed': shaping });
     if (key === 'draw') return button(key, drawing, 'Рисование (P)', 'marker', () => editor.setTool(drawing ? 'select' : lastDraw.current), { 'aria-pressed': drawing });
-    if (key === 'objects') return labs.objects ? button(key, objecting, 'Объекты (зажмите — выбрать)', 'timeline', () => editor.setTool(objecting ? 'select' : lastObject.current), { 'aria-pressed': objecting }) : null;
+    if (key === 'objects') return labs.objects ? button(key, objecting || variants === 'objects', 'Объекты', 'timeline', () => setVariants(variants === 'objects' ? null : 'objects'), { 'aria-expanded': variants === 'objects' }) : null;
     if (key === 'image') return button(key, false, 'Картинка', 'image', () => { pictureAt.current = undefined; filePicker.current?.click(); });
     if (key === 'audio') return button(key, recorderOpen, 'Аудиозаметка', 'microphone', onToggleRecorder, { 'aria-expanded': recorderOpen });
     if (key === 'smile') return button(key, iconsOpen, 'Смайлы, стикеры и иконки (I)', 'smile', onToggleIcons, { 'aria-expanded': iconsOpen });
