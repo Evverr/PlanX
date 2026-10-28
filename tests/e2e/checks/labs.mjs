@@ -397,7 +397,7 @@ export const checks = {
     await sleep(200);
     expect(await p.ev('[...planx.editor.selection].join()'), 'picked').toBe(a[2]);
     expect(await p.ev(`[...document.querySelectorAll('.context-menu .menu-row span')].map((s) => s.textContent).join(', ')`), 'its rows')
-      .toBe('Скопировать, Переместить вверх, Переместить вниз, Сделать компонентом, Удалить');
+      .toBe('Параметры, Скопировать, Переместить вверх, Переместить вниз, Сделать компонентом, Удалить');
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Удалить').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`planx.board.get('${a[2]}') ?? null`), 'deleted').toBe(null);
     expect(await p.ev(`document.querySelectorAll('.context-menu').length`), 'and the menu gone').toBe(0);
@@ -483,5 +483,25 @@ export const checks = {
     await p.drag(dot, [860, 310]);
     const l = await p.ev(`(() => { const l = planx.board.linkList()[0]; return l && l.from + '>' + l.to + ' ' + l.fromSide; })()`);
     expect(l, 'from that dot to the sticker').toBe('m>s right');
+  },
+
+  async '"Параметры" of several picked, an instance by what is in it: each under its name, with its opacity'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board, { x, y } = e.toWorld(300, 300);
+      b.add(e.newItem('sticky', x, y, { id: 's', w: 100, h: 100 }));
+      b.add(e.newItem('text', x + 150, y, { id: 't', w: 150, text: 'Подпись' }));
+      e.addTask({ x: x + 500, y: y + 100 }); e.stopEditing();
+      const task = b.list().find((i) => i.inst === '@task-open');
+      e.setSelection(['s', 't', task.id]); })()`);
+    await sleep(200);
+    const at = await p.ev(`(() => { const i = planx.board.get('s'), s = planx.editor.toScreen({ x: i.x + 30, y: i.y + 30 }); return [s.x, s.y]; })()`);
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: at[0], y: at[1], button: 'right', buttons: 2, clickCount: 1 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: at[0], y: at[1], button: 'right', buttons: 0, clickCount: 1 });
+    await sleep(200);
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Параметры').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    const titles = await p.ev(`[...document.querySelectorAll('.params-pop .params-title')].map((t) => t.textContent).join(' | ')`);
+    expect(titles, 'each, the task by what is in it').toBe('Стикер | Текст «Подпись» | Прямоугольник | Эллипс | Текст «Что надо сделать» | Текст «Подробности»');
+    expect(await p.ev(`document.querySelectorAll('.params-pop input[type=range]').length`), 'an opacity each').toBe(6);
+    await p.ev(`(() => { const r = document.querySelectorAll('.params-pop input[type=range]')[0]; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(r, '50'); r.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    expect(await p.ev(`planx.board.get('s').fo`), 'the sticker half see-through').toBe(0.5);
   },
 };
