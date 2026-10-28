@@ -177,6 +177,11 @@ export function linkShape(link: Link, get: (id: string) => Item | undefined): Li
   if (!a || !b) return null;
   // Through its nodes: from its item's edge (or side) toward the first, on through each, into the other's
   // edge from the last; in a smooth curve through them, or straight from one to the next.
+  // Right-angled, with its own bends: out of its sides, through them, square at every turn.
+  if (link.via?.length && link.style === 'elbow') {
+    const via = link.via, ps = link.fromSide ?? nearestSide(a, via[0]), qs = link.toSide ?? nearestSide(b, via[via.length - 1]);
+    return { pts: squared([sidePoint(a, ps), ...via, sidePoint(b, qs)], ps === 'left' || ps === 'right') };
+  }
   if (link.via?.length) {
     const via = link.via, p = link.fromSide ? sidePoint(a, link.fromSide) : edgePoint(a, via[0]);
     const q = link.toSide ? sidePoint(b, link.toSide) : edgePoint(b, via[via.length - 1]), all = [p, ...via, q];
@@ -190,6 +195,48 @@ export function linkShape(link: Link, get: (id: string) => Item | undefined): Li
   const p = link.fromSide || link.style === 'elbow' ? sidePoint(a, ps) : linkEnds(link, get)![0];
   const q = link.toSide || link.style === 'elbow' ? sidePoint(b, qs) : linkEnds(link, get)![1];
   return { pts: link.style === 'straight' ? [p, q] : elbowRoute(p, ps, q, qs) };
+}
+
+/** Points made a right-angled route: a corner put in where two don't line up (turning the other way
+ *  from the stretch before, the first going `across` or up and down), and points in line dropped. */
+export function squared(pts: Point[], across: boolean): Point[] {
+  const out: Point[] = [pts[0]];
+  let flat = across;
+  for (const q of pts.slice(1)) {
+    const a = out[out.length - 1];
+    if (Math.abs(a.x - q.x) > 0.5 && Math.abs(a.y - q.y) > 0.5) out.push(flat ? { x: q.x, y: a.y } : { x: a.x, y: q.y });
+    out.push(q);
+    const b = out[out.length - 2];
+    flat = Math.abs(b.y - q.y) <= 0.5;
+  }
+  return straightened(out);
+}
+
+/** The same points without repeats or points in line between two others. */
+function straightened(pts: Point[]): Point[] {
+  const out: Point[] = [];
+  for (const pt of pts) {
+    const last = out[out.length - 1];
+    if (last && Math.abs(last.x - pt.x) < 0.5 && Math.abs(last.y - pt.y) < 0.5) continue;
+    const prev = out[out.length - 2];
+    if (prev && ((Math.abs(prev.x - last.x) < 0.5 && Math.abs(last.x - pt.x) < 0.5) || (Math.abs(prev.y - last.y) < 0.5 && Math.abs(last.y - pt.y) < 0.5))) out.pop();
+    out.push(pt);
+  }
+  return out;
+}
+
+/** A right-angled route with its stretch `k` (from pts[k] to pts[k + 1]) moved across to `v` (its y if
+ *  it runs across, its x if up and down). Its ends stay on their items: a stretch at an end moved gets a
+ *  new bend `stub` out from it. Gives the bends between the ends. */
+export function movedStretch(pts: Point[], k: number, v: number, stub = 24): Point[] {
+  const a = pts[k], b = pts[k + 1], flat = Math.abs(a.y - b.y) <= 0.5, n = pts.length;
+  const at = (p: Point, w: number) => (flat ? { x: p.x, y: w } : { x: w, y: p.y });
+  const along = (p: Point, d: number) => (flat ? { x: p.x + d, y: p.y } : { x: p.x, y: p.y + d });
+  const dir = Math.sign(flat ? b.x - a.x : b.y - a.y) || 1;
+  const head = k === 0 ? [a, along(a, stub * dir), at(along(a, stub * dir), v)] : [at(a, v)];
+  const tail = k + 1 === n - 1 ? [at(along(b, -stub * dir), v), along(b, -stub * dir), b] : [at(b, v)];
+  const route = straightened([...pts.slice(0, k), ...head, ...tail, ...pts.slice(k + 2)]);
+  return route.slice(1, -1);
 }
 
 /** A smooth curve through the points (Catmull-Rom, as Béziers), as points close enough to draw it by. */
@@ -206,6 +253,11 @@ export function throughSmoothly(pts: Point[], steps = 16): Point[] {
 /** A picked link's handles: its nodes (on the board), and the middles of the stretches between its ends
  *  and nodes, to make a new node at (`at` is where in `via` it would go). */
 export function linkHandles(link: Link, shape: LinkShape): { nodes: Point[]; middles: Array<{ p: Point; at: number }> } {
+  // A right-angled one: the middle of each of its stretches, to move that stretch (see movedStretch).
+  if (link.style === 'elbow') {
+    const pts = shape.pts;
+    return { nodes: [], middles: pts.slice(1).map((q, i) => ({ p: { x: (pts[i].x + q.x) / 2, y: (pts[i].y + q.y) / 2 }, at: i })) };
+  }
   const via = link.via ?? [], all = [shape.pts[0], ...via, shape.pts[shape.pts.length - 1]];
   // Without nodes yet, the middle is on the line as it's drawn (a curve's own, not its chord's).
   // On a smooth one, halfway along each stretch of its curve (16 points each, see throughSmoothly).

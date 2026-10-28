@@ -944,7 +944,7 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
   lc.clearRect(0, 0, W, H);
   // Right-angled ones kept off one another, a line's width apart.
   const shapes = s.links.map((l) => linkShape(l, s.get));
-  spreadElbows(shapes.filter((sh): sh is LinkShape => !!sh), (linkWidth(cam.z) * 2) / cam.z);
+  spreadElbows(shapes.filter((sh, k): sh is LinkShape => !!sh && !s.links[k].via?.length), (linkWidth(cam.z) * 2) / cam.z);
   // What fades links: every item in sight but drawings and the frames of instances and components.
   const seen = s.items.filter((it) => it.type !== 'ink' && !it.inst && !it.comp && rectsIntersect(boxOf(it), view));
   const frames = seen.filter((it) => it.type === 'frame' && !it.fold);

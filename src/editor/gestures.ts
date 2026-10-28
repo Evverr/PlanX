@@ -1,7 +1,7 @@
 import type { Item, Link, Side } from '../model/types';
 import { DEFAULTS, ROTATABLE, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
-import { angleOf, boxOf, hitItem, linkShape, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedAt, toLocal, turn } from '../canvas/geometry';
+import { angleOf, boxOf, center, hitItem, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedAt, toLocal, turn } from '../canvas/geometry';
 import { fitHeight, itemTextHeight, mindSize } from '../canvas/text';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, newTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
@@ -30,6 +30,7 @@ export type Gesture =
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
   | { type: 'relink'; id: string; from: Point; to: Point; target: string | null; away?: boolean; body?: boolean; going?: boolean }
   | { type: 'linkNode'; id: string; node: number; via: Point[]; add?: boolean }
+  | { type: 'linkStretch'; id: string; k: number; pts: Point[]; start: Point; moved?: boolean }
   | { type: 'mindMove'; id: string; from: Point; to: Point; target: string | null }
   | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
   | { type: 'draw'; tool: PenTool; pts: Point[] }
@@ -193,6 +194,17 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       ed.requestRender();
       return;
     }
+    case 'linkStretch': {
+      // A right-angled link's stretch follows the pointer across (once it's moved a little).
+      const a = g.pts[g.k], b = g.pts[g.k + 1], flat = Math.abs(a.y - b.y) <= 0.5;
+      if (!g.moved && Math.abs(flat ? w.y - g.start.y : w.x - g.start.x) * ed.cam.z < 3) return;
+      // Pinned to the sides it ran out of and into, so its bends don't send it round another way.
+      const l = board.getLink(g.id), from = l && board.get(l.from), to = l && board.get(l.to);
+      const sides = !g.moved && l && from && to && !l.fromSide ? { fromSide: nearestSide(from, center(to)), toSide: nearestSide(to, center(from)) } : {};
+      g.moved = true;
+      board.updateLink(g.id, { via: movedStretch(g.pts, g.k, Math.round(flat ? w.y : w.x)), ...sides });
+      return;
+    }
     case 'linkNode': {
       // A link's node follows the pointer, the line through it (a new one put in first).
       if (g.add) { g.via = [...g.via.slice(0, g.node), w, ...g.via.slice(g.node)]; g.add = false; }
@@ -341,6 +353,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       ed.requestRender();
       return;
     case 'linkNode':
+    case 'linkStretch':
       board.endGesture();
       return;
     case 'relink': {
@@ -390,7 +403,7 @@ export function cancelGesture(ed: Editor): void {
   const g = ed.gesture;
   if (!g) return;
   if (g.type === 'create') { ed.board.remove([g.id]); ed.board.endGesture(); }
-  if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'rotate' || g.type === 'erase' || g.type === 'tableLine' || g.type === 'linkNode') ed.board.endGesture();
+  if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'rotate' || g.type === 'erase' || g.type === 'tableLine' || g.type === 'linkNode' || g.type === 'linkStretch') ed.board.endGesture();
   ed.gesture = null;
   ed.setMoving(false);
   ed.requestRender();

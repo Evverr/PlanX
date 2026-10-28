@@ -225,7 +225,7 @@ export class Board {
 
   /** Changes how a link looks: its colour, opacity, dashes, arrowheads (an undefined field goes back
    *  to the usual). */
-  updateLink(id: string, patch: Pick<Link, 'color' | 'lo' | 'dash' | 'heads' | 'via'>): void {
+  updateLink(id: string, patch: Pick<Link, 'color' | 'lo' | 'dash' | 'heads' | 'via' | 'fromSide' | 'toSide'>): void {
     const m = this.links.get(id);
     if (!m) return;
     this.transact(() => {
