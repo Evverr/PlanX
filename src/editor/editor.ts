@@ -339,7 +339,7 @@ export class Editor {
     }
     // An arrow being led to another item is drawn from its start to the pointer (or the item under it).
     const relinked = g?.type === 'relink' ? this.board.getLink(g.id) : undefined;
-    if (g?.type === 'relink' && relinked) {
+    if (g?.type === 'relink' && relinked && (!g.body || g.going)) {
       const from = this.board.get(relinked.from);
       if (from) linkPreview = { from, fromSide: relinked.fromSide ?? null, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null, style: relinked.style };
     }

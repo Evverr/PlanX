@@ -11,6 +11,7 @@ import { ToolPreview } from './ToolPreview';
 import { readText, writeText } from '../storage';
 import { useLabs } from '../labs/labs';
 import { ObjectsMenu, OBJECTS } from '../labs/ObjectsMenu';
+import { LinePanel } from '../labs/LinePanel';
 
 /** Tool panel from the Figma mockup (Mol / Bar vertical). */
 const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
@@ -27,7 +28,7 @@ const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
 const LATER: Partial<Record<string, [PanelIconName, string]>> = {};
 
 /** Everything on the rail, top to bottom, until someone rearranges it. */
-const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'component', 'table', 'mind', 'objects', 'frames', 'draw', 'image', 'audio', 'smile'];
+const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'component', 'table', 'mind', 'objects', 'frames', 'draw', 'image', 'audio', 'smile', 'lines'];
 
 /** Rail buttons that make something on the board when dragged off the rail, and their icons. */
 const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape' };
@@ -38,7 +39,7 @@ const MORE_COL = { pad: 21, size: 30, gap: 18 };
 export const moreCol = (k: number) => ({ pad: Math.round(MORE_COL.pad * k) * 2, size: Math.round((MORE_COL.size * k) / 2) * 2, gap: Math.round(MORE_COL.gap * k) });
 
 /** Rail buttons with variants, opened by holding the button still. */
-const VARIANTS = new Set(['oval', 'draw', 'objects']);
+const VARIANTS = new Set(['oval', 'draw', 'objects', 'lines']);
 
 const SHAPE_KEY = 'planx-last-shape';
 function savedShape(): Tool {
@@ -166,6 +167,8 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     if (key === 'component') return button(key, false, 'Компонент из выделенного', 'maximize', () => editor.makeComponent());
     if (key === 'oval') return button(key, shaping, 'Фигуры', shapeIcon, () => editor.setTool(shaping ? 'select' : lastShape.current), { 'aria-pressed': shaping });
     if (key === 'draw') return button(key, drawing, 'Рисование (P)', 'marker', () => editor.setTool(drawing ? 'select' : lastDraw.current), { 'aria-pressed': drawing });
+    // "Линии" (src/labs): the line tool, from any item to any other; held, the ways a line runs.
+    if (key === 'lines') return labs.lineTool ? button(key, tool === 'link', 'Линия (C; зажмите — вид линии)', 'path', () => editor.setTool(tool === 'link' ? 'select' : 'link'), { 'aria-pressed': tool === 'link' }) : null;
     if (key === 'objects') return labs.objects ? button(key, objecting || variants === 'objects', 'Объекты', 'timeline', () => setVariants(variants === 'objects' ? null : 'objects'), { 'aria-expanded': variants === 'objects' }) : null;
     if (key === 'image') return button(key, false, 'Картинка', 'image', () => { pictureAt.current = undefined; filePicker.current?.click(); });
     if (key === 'audio') return button(key, recorderOpen, 'Аудиозаметка', 'microphone', onToggleRecorder, { 'aria-expanded': recorderOpen });
@@ -198,6 +201,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
       </div>
     )}
     {variants === 'draw' && <DrawPanel editor={editor} tool={tool} pens={pens} />}
+    {variants === 'lines' && <LinePanel editor={editor} tool={tool} onPick={() => setVariants(null)} />}
     {variants === 'objects' && <ObjectsMenu tool={tool} onPick={(t) => { editor.setTool(t); setVariants(null); }} />}
     {variants === 'oval' && <ShapePanel editor={editor} tool={tool} zoom={zoom} onPick={() => setVariants(null)} />}
     <input ref={filePicker} type="file" accept="image/*" multiple hidden

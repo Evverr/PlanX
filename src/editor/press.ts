@@ -9,7 +9,7 @@ import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
 import type { Editor } from './editor';
-import { isLocked } from '../labs/labs';
+import { isLocked, labOn } from '../labs/labs';
 import { swapKind } from '../labs/swap';
 import { openLink } from '../labs/textLink';
 
@@ -248,7 +248,11 @@ export function press(ed: Editor, e: PointerEvent): void {
       const next = new Set(ed.selection);
       if (next.has(link.id)) next.delete(link.id); else next.add(link.id);
       ed.setSelection(next);
-    } else ed.setSelection([link.id]);
+    } else {
+      ed.setSelection([link.id]);
+      // Dragged by its line ("Линии", src/labs), it's led to another item as by its head.
+      if (labOn('lineTool')) ed.gesture = { type: 'relink', id: link.id, from: w, to: w, target: null, body: true };
+    }
     return;
   }
   if (!e.shiftKey) ed.setSelection([]);
