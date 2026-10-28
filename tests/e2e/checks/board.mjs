@@ -421,4 +421,29 @@ export const checks = {
     await p.click([450, 250]);
     expect(await via(), 'a double click: gone').toBe('null');
   },
+
+  async 'a right-angled link moves by its stretches, square at every turn; the one at the arrow gets a new bend'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 100, 200, { id: 'a', w: 100, h: 100 }));
+      b.add(e.newItem('sticky', 600, 450, { id: 'b', w: 100, h: 100 }));
+      b.addLink({ id: 'L', from: 'a', to: 'b', style: 'elbow' }); e.setSelection(['L']); })()`);
+    await sleep(200);
+    const pts = () => p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'); return g.linkShape(planx.board.getLink('L'), (id) => planx.board.get(id)).pts.map((q) => [Math.round(q.x), Math.round(q.y)]); })()`);
+    const square = (ps) => ps.slice(1).every((q, i) => q[0] === ps[i][0] || q[1] === ps[i][1]);
+    const p0 = await pts();
+    // Its stretch up and down in the middle: moved across.
+    const k = p0.findIndex((q, i) => i > 0 && i < p0.length - 1 && p0[i + 1] && q[0] === p0[i + 1][0]);
+    const mid = [(p0[k][0] + p0[k + 1][0]) / 2, (p0[k][1] + p0[k + 1][1]) / 2];
+    await p.drag(mid, [mid[0] + 80, mid[1]]);
+    const p1 = await pts();
+    expect(p1[k][0] - p0[k][0], 'that stretch across').toBe(80);
+    expect(square(p1), 'square at every turn').toBe(true);
+    // The stretch at the arrow, moved: a new bend, its end still on the item.
+    const n = p1.length, last = [(p1[n - 2][0] + p1[n - 1][0]) / 2, (p1[n - 2][1] + p1[n - 1][1]) / 2];
+    await p.drag(last, [last[0], last[1] - 60]);
+    const p2 = await pts();
+    expect(p2.length > n, 'more bends').toBe(true);
+    expect(p2[p2.length - 1].join(), 'its end where it was').toBe(p1[n - 1].join());
+    expect(square(p2), 'still square').toBe(true);
+  },
 };

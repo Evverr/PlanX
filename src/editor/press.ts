@@ -1,6 +1,6 @@
 import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
-import { center, hitItem, hitLink, instanceBounds, onAudioButton, onTaskBox, pointInRect } from '../canvas/geometry';
+import { center, hitItem, hitLink, instanceBounds, linkShape, onAudioButton, onTaskBox, pointInRect } from '../canvas/geometry';
 import { copyId } from '../model/components';
 import { TASK_STATES } from '../model/builtins';
 import { toggleAudio } from '../canvas/audio';
@@ -53,6 +53,12 @@ export function press(ed: Editor, e: PointerEvent): void {
     }
     ed.lastTap = { id: key, t: now };
     board.beginGesture();
+    // A right-angled one: the stretch pressed moves across, the route kept square.
+    const l = board.getLink(handle.id), shape = l && linkShape(l, (id) => board.get(id));
+    if (l?.style === 'elbow' && shape) {
+      ed.gesture = { type: 'linkStretch', id: l.id, k: handle.at!, pts: shape.pts, start: w };
+      return;
+    }
     // A new one only once it's pulled out (a click on a stretch's middle leaves the line as it is).
     ed.gesture = { type: 'linkNode', id: handle.id, node: handle.node ?? handle.at!, via, add: handle.node === undefined };
     return;
