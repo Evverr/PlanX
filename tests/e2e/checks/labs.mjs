@@ -301,4 +301,22 @@ export const checks = {
     expect(await state(), 'to be done again').toBe('@task-open false Купить молоко');
     expect(await p.ev(`document.querySelectorAll('.swap-pop').length`), 'no neighbours to swap in a task').toBe(0);
   },
+
+  async '"Текст не слипается": Tab goes round the text items going together, Shift+Tab back'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board, { x, y } = e.toWorld(300, 200);
+      b.add(e.newItem('text', x, y, { id: 'a', w: 200, h: 26, text: 'Первый' }));
+      b.add(e.newItem('text', x, y + 36, { id: 'b', w: 200, h: 26, text: 'Второй' }));
+      b.add(e.newItem('text', x, y + 72, { id: 'c', w: 200, h: 26, text: 'Третий' }));
+      b.add(e.newItem('text', x, y + 200, { id: 'far', w: 200, h: 26, text: 'Далеко' }));
+      e.setSelection(['a']); e.startEditing('a', null, 'end'); })()`);
+    await sleep(200);
+    const at = () => p.ev('planx.editor.editingId');
+    await p.key('Tab', 'Tab', 9); await sleep(100);
+    expect(await at(), 'the next').toBe('b');
+    await p.key('Tab', 'Tab', 9); await sleep(100);
+    await p.key('Tab', 'Tab', 9); await sleep(100);
+    expect(await at(), 'round to the top, not the far one').toBe('a');
+    await p.key('Tab', 'Tab', 9, 8); await sleep(100);
+    expect(await at(), 'Shift+Tab: back up round to the last').toBe('c');
+  },
 };
