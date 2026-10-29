@@ -1031,6 +1031,24 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   }
 
   if (s.links.length) drawLinks(ctx, s, view);
+  // Every component's tick, right of it: an instance in its place, the component put away.
+  for (const it of s.items) {
+    if (!it.comp || it.stowed || s.editingId === it.id) continue;
+    const p = instancePlus(it, cam.z);
+    ctx.fillStyle = COMPONENT_COLOR;
+    ctx.globalAlpha = s.hotPlus === `tick:${it.id}` ? 1 : 0.75;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2 / cam.z;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(p.x - p.r * 0.45, p.y + p.r * 0.02); ctx.lineTo(p.x - p.r * 0.1, p.y + p.r * 0.36); ctx.lineTo(p.x + p.r * 0.45, p.y - p.r * 0.3);
+    ctx.stroke();
+  }
   // A link picked alone: its nodes, and where new ones can be pulled out (the middles of its stretches).
   const pickedLink = s.selection.size === 1 ? s.links.find((l) => s.selection.has(l.id)) : undefined, ps = pickedLink && linkShape(pickedLink, s.get);
   if (pickedLink && ps) {
@@ -1145,23 +1163,6 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       ctx.fill();
       ctx.stroke();
     } else if (s.showHandle && s.editingId !== id) {
-      if (it.comp) {
-        // A picked component's tick for an instance of it, right of it.
-        const p = instancePlus(it, cam.z);
-        ctx.fillStyle = COMPONENT_COLOR;
-        ctx.globalAlpha = s.hotPlus === 'instance' ? 1 : 0.75;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2 / cam.z;
-        ctx.lineCap = 'round';
-        // A tick: done with it, an instance in its place.
-        ctx.beginPath();
-        ctx.moveTo(p.x - p.r * 0.45, p.y + p.r * 0.02); ctx.lineTo(p.x - p.r * 0.1, p.y + p.r * 0.36); ctx.lineTo(p.x + p.r * 0.45, p.y - p.r * 0.3);
-        ctx.stroke();
-      }
       const hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z;
       ctx.fillStyle = theme.surface;
       ctx.strokeStyle = SELECT_COLOR;

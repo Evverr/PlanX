@@ -81,12 +81,15 @@ export function onInstanceGlyph(ed: Editor, it: Item, w: Point): boolean {
   return !!inst?.inst && !isBuiltin(inst.inst) && pointInRect(w, instanceGlyph(instanceBounds(inst, ed.board.list())));
 }
 
-/** Whether the point is on a picked component's "+" for a new instance. */
+/** Whether the point is on a component's tick for an instance of it. */
 export function onInstancePlus(ed: Editor, it: Item, w: Point): boolean {
-  if (!it.comp || ed.editingId === it.id) return false;
+  if (!it.comp || it.stowed || ed.editingId === it.id) return false;
   const p = instancePlus(it, ed.cam.z);
   return Math.hypot(w.x - p.x, w.y - p.y) <= Math.max(p.r * 1.3, ed.reach(0));
 }
+
+/** The component in sight whose tick is under the point, picked or not. */
+export const tickAt = (ed: Editor, w: Point): Item | null => ed.shown().find((it) => onInstancePlus(ed, it, w)) ?? null;
 
 /** The folded mind map node whose count is under the point, picked or not, and the way it's on. */
 export function foldBadgeAt(ed: Editor, w: Point): { id: string; way: Way } | null {
@@ -161,7 +164,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if ((link?.id ?? null) !== ed.hotLink) { ed.hotLink = link?.id ?? null; ed.requestRender(); }
   // The picked instance's diamond (or that of the one holding what's picked) is lit as "glyph:<its id>".
   const glyph = picked && onInstanceGlyph(ed, picked, w) ? `glyph:${picked.inst ? picked.id : picked.host}` : null;
-  const plus = picked ? plusAt(ed, picked, w) : null, hot = plus ? buttonKey(plus) : picked && onInstancePlus(ed, picked, w) ? 'instance' : glyph;
+  const tick = tickAt(ed, w), plus = picked ? plusAt(ed, picked, w) : null, hot = plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : glyph;
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (linkHandleAt(ed, w)) cursor = 'move';
