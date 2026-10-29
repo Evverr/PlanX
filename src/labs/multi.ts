@@ -38,11 +38,12 @@ const around = (rs: Rect[]): Rect => {
 };
 
 /** What the group handle scales: the picked (but what's in instances, which goes with them), unless
- *  fewer than two, something's locked, or one is being typed in. */
+ *  fewer than two, something's locked or a mind map node, or one is being typed in. */
 function group(ed: Editor): Item[] | null {
   if (!labOn('multi') || ed.selection.size < 2 || ed.editingId) return null;
   const items = ed.selectedItems().filter((i) => !i.host);
-  return items.length >= 2 && !items.some(isLocked) ? items : null;
+  // Not for mind map nodes: they size themselves by their text and lay out by their map.
+  return items.length >= 2 && !items.some(isLocked) && !items.some((i) => i.type === 'mind') ? items : null;
 }
 
 /** The box round the picked, as they're seen. */
