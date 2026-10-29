@@ -574,4 +574,26 @@ export const checks = {
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.comment-menu button')].find((b) => b.textContent === 'Удалить').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect((await stored()).length, 'gone').toBe(0);
   },
+
+  async 'lines picked together by a box take their parameters together, by a right click or from the selection panel'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 100, 100, { id: 'a', w: 100, h: 100 })); b.add(e.newItem('sticky', 500, 100, { id: 'b', w: 100, h: 100 }));
+      b.add(e.newItem('sticky', 100, 350, { id: 'c', w: 100, h: 100 })); b.add(e.newItem('sticky', 500, 350, { id: 'd', w: 100, h: 100 }));
+      b.addLink({ id: 'L1', from: 'a', to: 'b', style: 'straight' }); b.addLink({ id: 'L2', from: 'c', to: 'd', style: 'straight' }); e.setSelection([]); })()`);
+    await p.drag([260, 90], [440, 460]);
+    expect(await p.ev('[...planx.editor.selection].sort().join()'), 'both by a box').toBe('L1,L2');
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: 350, y: 150, button: 'right', buttons: 2, clickCount: 1 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 350, y: 150, button: 'right', buttons: 0, clickCount: 1 });
+    await sleep(200);
+    expect(await p.ev('[...planx.editor.selection].sort().join()'), 'still both').toBe('L1,L2');
+    await p.click(await p.at('.context-menu .menu-row'));
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.params-pop .menu-row')].find((b) => b.textContent === 'Пунктир').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    expect(await p.ev(`planx.board.linkList().map((l) => !!l.dash).join()`), 'both dashed').toBe('true,true');
+    await p.key('Escape', 'Escape', 27);
+    await p.ev(`planx.editor.setSelection(['L1', 'L2'])`);
+    await sleep(300);
+    await p.click(await p.at('.bar.panel button[aria-label="Цвет и стрелки линий"]'));
+    await p.click(await p.at('.palette-pop button[aria-label="Цвет: green"]'));
+    expect(await p.ev(`planx.board.linkList().map((l) => l.color).join()`), 'both green from the panel').toBe('green,green');
+  },
 };

@@ -10,6 +10,7 @@ import { ColorPicker } from './ColorPicker';
 import { crowds, EDGE, shownRects } from '../layout';
 import { useLabs } from '../labs/labs';
 import { LockButton, ReactButton, TidyButton } from '../labs/SelectionLabs';
+import { LinkParams } from '../labs/ContextMenu';
 
 
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
@@ -328,7 +329,9 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
         // All the colours are under the palette: a table's own when it's selected alone.
         // (Picking something else closes the palette: the key changes with the selection.)
         colors: tables.length === 1 && items.length === 1 ? <TableColors key={tables[0].id} editor={editor} table={tables[0]} cells={cells} />
-          : colored ? <ItemColors key={items.map((i) => i.id).join()} editor={editor} items={items} /> : undefined,
+          : colored ? <ItemColors key={items.map((i) => i.id).join()} editor={editor} items={items} />
+          // Links alone: their colour, opacity, dashes and arrowheads, all of them at once.
+          : links.length > 0 ? <Palette key={links.map((l) => l.id).join()} label="Цвет и стрелки линий"><LinkParams editor={editor} ids={links.map((l) => l.id)} /></Palette> : undefined,
         // Rows and columns of the selected tables: add or take away the last one.
         rows: tables.length > 0 ? (
           <div className="sw-group table-count">
