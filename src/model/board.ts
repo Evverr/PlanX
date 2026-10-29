@@ -216,11 +216,16 @@ export class Board {
     });
   }
 
-  /** Changes how a link runs (see LinkStyle); unset is a smooth curve. */
+  /** Changes how a link runs (see LinkStyle); unset is a smooth curve. Its nodes go: it starts afresh
+   *  the new way. */
   setLinkStyle(id: string, style: LinkStyle | undefined): void {
     const m = this.links.get(id);
     if (!m) return;
-    this.transact(() => { if (style) m.set('style', style); else m.delete('style'); });
+    this.transact(() => {
+      if ((m.get('style') ?? null) === (style ?? null)) return;
+      if (style) m.set('style', style); else m.delete('style');
+      m.delete('via');
+    });
   }
 
   /** Changes how a link looks: its colour, opacity, dashes, arrowheads (an undefined field goes back
