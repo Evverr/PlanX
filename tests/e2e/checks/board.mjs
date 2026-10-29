@@ -452,7 +452,7 @@ export const checks = {
     await sleep(300);
     await p.ev(`[...document.querySelectorAll('.pick-tabs button')].find((b) => b.textContent === 'Стикеры').click()`);
     await sleep(200);
-    expect(await p.ev(`document.querySelectorAll('.doodle-grid button').length`), 'fifteen of them').toBe(15);
+    expect(await p.ev(`[...document.querySelectorAll('.doodle-grid')].map((g) => g.children.length).join()`), 'fifteen of them, and fourteen badges under them').toBe('15,14');
     await p.click(await p.at('.doodle-grid button'));
     await sleep(300);
     const it = await p.ev(`(() => { const i = planx.board.list().find((x) => x.doodle); return i && i.type + ' ' + i.doodle; })()`);
