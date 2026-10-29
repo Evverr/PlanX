@@ -12,7 +12,7 @@ import { writeJSON } from '../storage';
 type Tab = 'emoji' | 'stickers' | 'icons';
 export type PickKind = 'emoji' | 'sticky' | 'icon' | 'doodle';
 
-const TABS: Array<[Tab, string]> = [['emoji', 'Смайлы'], ['stickers', 'Стикеры'], ['icons', 'Иконки']];
+const TABS: Array<[Tab, string]> = [['emoji', 'Смайлы'], ['stickers', 'Игровые стикеры'], ['icons', 'Иконки']];
 const KIND: Record<Tab, PickKind> = { emoji: 'emoji', stickers: 'doodle', icons: 'icon' };
 /** Every tile of a tab in its default order, and where each tab's own order is kept. */
 const ALL: Record<Tab, string[]> = { emoji: EMOJI.map((e) => e.id), stickers: DOODLES.map((d) => d.id), icons: ICONS.map((i) => i.id) };

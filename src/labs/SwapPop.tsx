@@ -5,6 +5,7 @@ import { searchIcons, ICONS } from '../icons/icons';
 import { onEmojiLoad } from '../emoji/emoji';
 import { IconSections, pickerOrder, Tile } from '../ui/IconPicker';
 import { SHAPES } from '../ui/ShapePanel';
+import { DOODLES, doodle } from '../canvas/doodles';
 import { PanelIcon } from '../ui/PanelIcon';
 import { shapeOf, SWAP_EVENT, swapKind, swapPatch } from './swap';
 
@@ -47,7 +48,7 @@ export function SwapPop({ editor }: { editor: Editor }) {
 
   const r = editor.canvas.getBoundingClientRect(), b = boxOf(it);
   const top = editor.toScreen({ x: b.x, y: b.y + b.h });
-  const now = kind === 'emoji' ? it.emoji : kind === 'icon' ? it.icon : shapeOf(it);
+  const now = kind === 'emoji' ? it.emoji : kind === 'icon' ? it.icon : kind === 'doodle' ? it.doodle : shapeOf(it);
   const pick = (to: string) => {
     if (to === now) return;
     editor.board.update(it.id, swapPatch(it, kind, to));
@@ -70,6 +71,8 @@ export function SwapPop({ editor }: { editor: Editor }) {
           {!icons.length && <p className="muted">Ничего не нашлось</p>}
         </>
       )}
+      {/* A game sticker: the others of its set. */}
+      {kind === 'doodle' && <div className="icon-grid doodle-grid">{DOODLES.filter((d) => d.set === doodle(it.doodle)?.set).map((d) => tile(d.id, d.name, <Tile kind="doodle" id={d.id} />))}</div>}
       {kind === 'shape' && <div className="icon-grid shape-grid">{SHAPES.map(([t, icon, label]) => tile(t, label.replace(/ \(.*\)$/, ''), <PanelIcon name={icon} />))}</div>}
     </div>
   );

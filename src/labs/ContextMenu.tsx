@@ -218,7 +218,7 @@ export function LinkParams({ editor, ids }: { editor: Editor; ids: string[] }) {
 
 /** What each kind of item is called in the parameters' list. */
 const NAMES: Partial<Record<Item['type'], string>> = {
-  sticky: 'Стикер', text: 'Текст', rect: 'Прямоугольник', ellipse: 'Эллипс', polygon: 'Фигура', task: 'Задача', mind: 'Узел майнд-карты',
+  sticky: 'Базовый стикер', text: 'Текст', rect: 'Прямоугольник', ellipse: 'Эллипс', polygon: 'Фигура', task: 'Задача', mind: 'Узел майнд-карты',
   icon: 'Иконка', emoji: 'Смайл', ink: 'Рисунок', image: 'Картинка',
 };
 
@@ -240,7 +240,7 @@ function ParamsList({ editor, items }: { editor: Editor; items: Item[] }) {
         return (
           <div key={it.id} className="params-item">
             {i > 0 && <div className="menu-line" />}
-            <div className="params-title">{NAMES[now.type]}{snippet}</div>
+            <div className="params-title">{now.doodle ? 'Игровой стикер' : NAMES[now.type]}{snippet}</div>
             <ItemParams editor={editor} it={now} set={set} />
           </div>
         );

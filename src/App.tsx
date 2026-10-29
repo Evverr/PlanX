@@ -197,6 +197,10 @@ export function App({ boardId }: { boardId: string }) {
     window.addEventListener('pointerdown', press, true);
     return () => window.removeEventListener('pointerdown', press, true);
   }, [editor]);
+  // A basic sticker typed in: its panel stays while it's picked (its link's address typed in it too).
+  const [typedIn, setTypedIn] = useState<string | null>(null);
+  useEffect(() => { if (ui.editingId) setTypedIn(ui.editingId); }, [ui.editingId]);
+  useEffect(() => { if (typedIn && typedIn !== textItem?.id) setTypedIn(null); }, [textItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const peers = conn.peers();
   // Features on trial (src/labs): with "following" on, a click on someone's avatar follows them.
   const labs = useLabs();
@@ -331,7 +335,8 @@ export function App({ boardId }: { boardId: string }) {
       <Labs editor={editor} conn={conn} docked={docked} />
 
       {/* Typing in a table cell, the panel shows and sets that cell's own formatting. */}
-      {textItem && textShown === textItem.id && quiet !== textItem.id && <TextPanel editor={editor}
+      {/* A basic sticker's panel once its text is being typed, not on just picking it. */}
+      {textItem && textShown === textItem.id && quiet !== textItem.id && (textItem.type !== 'sticky' || selItems.length > 1 || typedIn === textItem.id) && <TextPanel editor={editor}
         item={editing?.id === textItem.id && editing.type === 'table' && ui.editingCell !== null ? cellItem(editing, ui.editingCell) : textItem} />}
 
       {/* Hidden while typing, but for a mind map node, which opens for typing on a single click. */}
