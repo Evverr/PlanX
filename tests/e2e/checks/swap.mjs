@@ -36,7 +36,7 @@ export const checks = {
 
   async 'an icon gets the icon set with its search, a shape the shapes and also opens for typing'(p) {
     await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 250); planx.board.add(e.newItem('icon', x, y, { id: 'ic', icon: 'heart', w: 60, h: 60 }));
-      planx.board.add(e.newItem('rect', x + 300, y, { id: 'sh', w: 120, h: 80, text: 'Фигура' })); e.setSelection([]); })()`);
+      planx.board.add(e.newItem('ellipse', x + 300, y, { id: 'sh', w: 120, h: 80, text: 'Фигура' })); e.setSelection([]); })()`);
     await dbl(p, [330, 280]);
     expect(await tiles(p) > 100, 'the icon set').toBe(true);
     await p.ev(`(() => { const i = document.querySelector('.swap-pop input'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(i, 'звезд'); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
@@ -86,7 +86,7 @@ export const checks = {
   },
 
   async 'a shape being typed in shows its neighbours again on a double click on its text'(p) {
-    await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 250); planx.board.add(e.newItem('rect', x, y, { id: 'sh', w: 200, h: 120, text: 'Фигура' })); e.setSelection([]); })()`);
+    await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 250); planx.board.add(e.newItem('ellipse', x, y, { id: 'sh', w: 200, h: 120, text: 'Фигура' })); e.setSelection([]); })()`);
     await dbl(p, [400, 360]);
     expect(await p.ev('planx.editor.editingId'), 'typing').toBe('sh');
     // A press in the text (as for the caret) puts the popup away; a double click there brings it back.

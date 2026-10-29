@@ -36,6 +36,9 @@ const COPY_KEY = 'planx-copy:';
 type Pop = 'clear' | 'icons' | 'help' | 'name' | null;
 
 
+/** How long the text panel takes to fade out (format.css: half its fading in). */
+const PANEL_OUT = 105;
+
 export function App({ boardId }: { boardId: string }) {
   const conn = useMemo(() => new Connection(boardId), [boardId]);
   const board = useMemo(() => new Board(conn.doc), [conn]);
@@ -171,13 +174,13 @@ export function App({ boardId }: { boardId: string }) {
   const editing = ui.editingId ? board.get(ui.editingId) : undefined;
   // Several picked with text ("Несколько сразу", src/labs): the panel takes them as one.
   const textItem = selItems.length === 1 && ['text', 'sticky', 'task', 'table'].includes(selItems[0].type) ? selItems[0] : asOne(selItems) ?? undefined;
-  // The text panel shows up 0.6 s after the item is picked, or after it's let go when moved;
+  // The text panel shows up 0.42 s after the item is picked, or after it's let go when moved;
   // it stays away while the item is being moved or resized.
   const [textShown, setTextShown] = useState<string | null>(null);
   useEffect(() => {
     setTextShown(null);
     if (!textItem || ui.moving) return;
-    const t = setTimeout(() => setTextShown(textItem.id), 600);
+    const t = setTimeout(() => setTextShown(textItem.id), 420);
     return () => clearTimeout(t);
   }, [textItem?.id, ui.moving]); // eslint-disable-line react-hooks/exhaustive-deps
   // Typing ended (by a press elsewhere, or Esc): the panel goes, and stays away from what that press
@@ -201,6 +204,19 @@ export function App({ boardId }: { boardId: string }) {
   const [typedIn, setTypedIn] = useState<string | null>(null);
   useEffect(() => { if (ui.editingId) setTypedIn(ui.editingId); }, [ui.editingId]);
   useEffect(() => { if (typedIn && typedIn !== textItem?.id) setTypedIn(null); }, [textItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The text panel: shown as above; once it goes, it fades out (half as long as it fades in), still
+  // showing what it showed.
+  const panelOn = !!textItem && textShown === textItem.id && quiet !== textItem.id && (textItem.type !== 'sticky' || selItems.length > 1 || typedIn === textItem.id);
+  const panelNow = panelOn && textItem ? (editing?.id === textItem.id && editing.type === 'table' && ui.editingCell !== null ? cellItem(editing, ui.editingCell) : textItem) : null;
+  const lastPanel = useRef<Item | null>(null);
+  const [, panelGone] = useState(0);
+  if (panelNow) lastPanel.current = panelNow;
+  useEffect(() => {
+    if (panelOn || !lastPanel.current) return;
+    const t = setTimeout(() => { lastPanel.current = null; panelGone((n) => n + 1); }, PANEL_OUT);
+    return () => clearTimeout(t);
+  }, [panelOn]);
+  const panelItem = panelNow ?? lastPanel.current;
   const peers = conn.peers();
   // Features on trial (src/labs): with "following" on, a click on someone's avatar follows them.
   const labs = useLabs();
@@ -336,8 +352,7 @@ export function App({ boardId }: { boardId: string }) {
 
       {/* Typing in a table cell, the panel shows and sets that cell's own formatting. */}
       {/* A basic sticker's panel once its text is being typed, not on just picking it. */}
-      {textItem && textShown === textItem.id && quiet !== textItem.id && (textItem.type !== 'sticky' || selItems.length > 1 || typedIn === textItem.id) && <TextPanel editor={editor}
-        item={editing?.id === textItem.id && editing.type === 'table' && ui.editingCell !== null ? cellItem(editing, ui.editingCell) : textItem} />}
+      {panelItem && <TextPanel editor={editor} item={panelItem} leaving={!panelOn} />}
 
       {/* Hidden while typing, but for a mind map node, which opens for typing on a single click. */}
       {(!editing || editing.type === 'mind') && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={linkCount} docked={docked} />}
