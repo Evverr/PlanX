@@ -17,7 +17,7 @@ import { LinePanel } from '../labs/LinePanel';
 const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
   select: ['select', 'cursor', 'Выбор (V)'],
   hand: ['hand', 'hand', 'Рука (H)'],
-  sticky: ['sticky', 'sticker', 'Стикер (N)'],
+  sticky: ['sticky', 'sticker', 'Базовый стикер (N)'],
   text: ['text', 'text', 'Текст (T)'],
   task: ['task', 'circle-check', 'Задача'],
   table: ['table', 'columns', 'Таблица'],
