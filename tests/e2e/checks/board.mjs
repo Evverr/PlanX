@@ -116,7 +116,7 @@ export const checks = {
     expect((await p.ev(`planx.board.get('${id}').cells`)).join(','), 'what was typed kept').toBe('a,b,,');
   },
 
-  async 'a component made of what\'s picked, its "+" makes instances that follow it, but for what was changed in them'(p) {
+  async 'a component made of what\'s picked, its tick makes instances that follow it, but for what was changed in them'(p) {
     const ids = await put(p, `const a = e.newItem('sticky', X, Y, { text: 'Привет' }), c = e.newItem('rect', X + 200, Y, { text: 'Кнопка' });
       b.add(a); b.add(c); e.setSelection([a.id, c.id]); return { a: a.id, c: c.id };`);
     await p.click(await p.at('.tools [data-key="component"]'));
@@ -129,11 +129,14 @@ export const checks = {
     await sleep(200);
     const inst = await p.ev(`planx.board.list().find((i) => i.inst === '${comp.id}')`);
     const copy = (k) => p.ev(`planx.board.get('${inst.id}~${k}')`);
-    // The first instance folds the component; its "+" by the bar makes another.
-    const bar = await p.ev(`planx.board.get('${comp.id}')`);
-    expect(!!bar.fold, 'the component folded').toBe(true);
-    await sleep(200);
-    await p.click(await screen(p, bar.x + bar.w + 40, bar.y + bar.h / 2));
+    // Its tick puts the component away, the instance picked; brought back, its tick makes another.
+    expect(await p.ev(`(() => { const c = planx.board.get('${comp.id}'); return !!c.stowed && !planx.editor.shown().some((i) => i.id === c.id); })()`), 'the component put away').toBe(true);
+    expect(await p.ev(`[...planx.editor.selection].join()`), 'the instance picked').toBe(inst.id);
+    await p.ev(`planx.editor.goToComponent('${inst.id}')`);
+    await sleep(800);
+    const back = await p.ev(`planx.board.get('${comp.id}')`);
+    expect(!back.stowed, 'brought back').toBe(true);
+    await p.click(await screen(p, back.x + back.w + 40, back.y + back.h / 2));
     await sleep(200);
     expect(await p.ev(`planx.board.list().filter((i) => i.inst === '${comp.id}').length`), 'a second instance').toBe(2);
     expect(await p.ev(`planx.board.list().filter((i) => i.inst === '${comp.id}').every((i) => i.w === ${comp.w})`), 'as big as the component unfolded').toBe(true);
@@ -337,10 +340,15 @@ export const checks = {
   },
 
   async 'the text panel keeps its bottom over the item whatever the panels\' size'(p) {
-    // (Text shows it on being picked; a basic sticker only while typed in.)
-    await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(500, 370); planx.board.add(e.newItem('text', x, y, { id: 'tx', w: 200, h: 26, text: 'Текст' })); e.setSelection([]); })()`);
+    // It's there once text has been typed in: typed in, done, picked again.
+    await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(500, 370); planx.board.add(e.newItem('text', x, y, { id: 'tx', w: 200, h: 26, text: 'Текст' })); e.setSelection(['tx']); })()`);
     await p.click([540, 383]);
-    await sleep(900);
+    expect(await p.rect('.tfmt'), 'not on just picking it').toBeFalsy();
+    await p.ev(`planx.editor.startEditing('tx')`);
+    await sleep(100);
+    await p.ev(`planx.editor.stopEditing()`);
+    await p.click([540, 383]);
+    await sleep(600);
     const b0 = (await p.rect('.tfmt')).b;
     for (const size of ['Средние', 'Маленькие']) {
       await p.menu('Размер панелей');

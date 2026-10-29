@@ -62,12 +62,15 @@ export function carried(board: Board, sel: Item[], items: Item[]): Map<string, P
 /** What an item hides: all a folded frame holds (frames in it, and all those hold, too), or what a mind
  *  map node's folding hides (see foldedAway). */
 function hiddenBy(board: Board, f: Item, items: Item[]): string[] {
+  // A component put away: it and all it holds.
+  if (f.comp && f.stowed) return [...carried(board, [f], items).keys()];
   if (f.type === 'frame') return f.fold ? [...carried(board, [f], items).keys()].filter((id) => id !== f.id) : [];
   if (f.type === 'mind' && (f.collapsed || f.foldedWays)) return [...foldedAway(f, items, (id) => board.get(id)).values()].flat();
   return [];
 }
 
-/** Of these items, everything folded frames hold and folded mind map nodes hide. */
+/** Of these items, everything folded frames hold and folded mind map nodes hide, and components put
+ *  away with what they hold. */
 export function hiddenIn(board: Board, items: Item[]): Set<string> {
   const out = new Set<string>();
   for (const f of items) for (const id of hiddenBy(board, f, items)) out.add(id);

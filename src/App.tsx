@@ -173,16 +173,23 @@ export function App({ boardId }: { boardId: string }) {
   const linkCount = ui.selection.filter((id) => board.getLink(id)).length;
   const editing = ui.editingId ? board.get(ui.editingId) : undefined;
   // Several picked with text ("Несколько сразу", src/labs): the panel takes them as one.
-  const textItem = selItems.length === 1 && ['text', 'sticky', 'task', 'table'].includes(selItems[0].type) ? selItems[0] : asOne(selItems) ?? undefined;
-  // The text panel shows up 0.42 s after the item is picked, or after it's let go when moved;
-  // it stays away while the item is being moved or resized.
+  // What has text the panel sets: text, basic stickers, tasks, tables, shapes (not mind map nodes, nor a
+  // component's title); several picked with text ("Несколько сразу", src/labs) taken as one.
+  const textItem = selItems.length === 1 && ['text', 'sticky', 'task', 'table', 'rect', 'ellipse', 'polygon'].includes(selItems[0].type) ? selItems[0] : asOne(selItems) ?? undefined;
+  // Its text typed in (or being typed): the panel's for it while it stays picked.
+  const [typedIn, setTypedIn] = useState<string | null>(null);
+  useEffect(() => { if (ui.editingId) setTypedIn(ui.editingId); }, [ui.editingId]);
+  useEffect(() => { if (typedIn && typedIn !== textItem?.id) setTypedIn(null); }, [textItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The text panel shows up 0.28 s after typing starts (several picked: after they're picked), or after
+  // it's let go when moved; it stays away while the item is being moved or resized.
   const [textShown, setTextShown] = useState<string | null>(null);
+  const textReady = textItem && (selItems.length > 1 || typedIn === textItem.id) ? textItem.id : null;
   useEffect(() => {
     setTextShown(null);
-    if (!textItem || ui.moving) return;
-    const t = setTimeout(() => setTextShown(textItem.id), 420);
+    if (!textReady || ui.moving) return;
+    const t = setTimeout(() => setTextShown(textReady), 280);
     return () => clearTimeout(t);
-  }, [textItem?.id, ui.moving]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [textReady, ui.moving]);
   // Typing ended (by a press elsewhere, or Esc): the panel goes, and stays away from what that press
   // picked, till something else is picked or typing starts again.
   const [quiet, setQuiet] = useState<string | null>(null);
@@ -200,13 +207,9 @@ export function App({ boardId }: { boardId: string }) {
     window.addEventListener('pointerdown', press, true);
     return () => window.removeEventListener('pointerdown', press, true);
   }, [editor]);
-  // A basic sticker typed in: its panel stays while it's picked (its link's address typed in it too).
-  const [typedIn, setTypedIn] = useState<string | null>(null);
-  useEffect(() => { if (ui.editingId) setTypedIn(ui.editingId); }, [ui.editingId]);
-  useEffect(() => { if (typedIn && typedIn !== textItem?.id) setTypedIn(null); }, [textItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // The text panel: shown as above; once it goes, it fades out (half as long as it fades in), still
   // showing what it showed.
-  const panelOn = !!textItem && textShown === textItem.id && quiet !== textItem.id && (textItem.type !== 'sticky' || selItems.length > 1 || typedIn === textItem.id);
+  const panelOn = !!textItem && textShown === textItem.id && quiet !== textItem.id;
   const panelNow = panelOn && textItem ? (editing?.id === textItem.id && editing.type === 'table' && ui.editingCell !== null ? cellItem(editing, ui.editingCell) : textItem) : null;
   const lastPanel = useRef<Item | null>(null);
   const [, panelGone] = useState(0);

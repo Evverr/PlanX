@@ -175,9 +175,12 @@ export function press(ed: Editor, e: PointerEvent): void {
     else ed.addMindNode(single.id, plus.kind, true);
     return;
   }
-  // The diamond before a picked instance's title goes to its component.
+  // The diamond before a picked instance's title, double-clicked, brings its component back and goes there.
+  // (Pressed twice: once is just taken, so the instance stays picked.)
   if (single && onInstanceGlyph(ed, single, w)) {
-    ed.goToComponent(single.inst ? single.id : single.host!);
+    const inst = single.inst ? single.id : single.host!, now = performance.now(), key = `glyph:${inst}`;
+    if (ed.lastTap.id === key && now - ed.lastTap.t < 380) { ed.lastTap = { id: '', t: 0 }; ed.goToComponent(inst); }
+    else ed.lastTap = { id: key, t: now };
     return;
   }
   // A picked component's "+" makes an instance of it.

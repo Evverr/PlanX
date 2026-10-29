@@ -64,7 +64,7 @@ export const checks = {
     expect(await selected(p), 'where its title shows picks the group').toBe('instance');
   },
 
-  async 'the diamond before the title goes to the component, from the instance or a child in it'(p) {
+  async 'the diamond before the title, double-clicked, goes to the component, from the instance or a child in it'(p) {
     for (const presses of [1, 2]) {
       await p.ev('planx.editor.cam = { x: 0, y: 0, z: 1 }');
       await fixture(p);
@@ -77,8 +77,10 @@ export const checks = {
         ctx.fillText = function(t, ...r) { seen.push(t); return f.call(this, t, ...r); }; try { e.render(); } finally { ctx.fillText = f; } return seen.includes('◆'); })()`);
       expect(solid, 'solid under the pointer').toBe(true);
       await p.click([347, 280]);
+      expect(await selected(p), 'one click: the instance stays picked').toBe(presses === 1 ? 'instance' : 'instance~a');
+      await p.click([347, 280]);
       await sleep(700);
-      expect(await selected(p), 'the diamond picks the component').toBe('source');
+      expect(await selected(p), 'a double click picks the component').toBe('source');
       const seen = await p.ev(`(() => { const c = planx.board.get('source'), s = planx.editor.toScreen({ x: c.x + c.w / 2, y: c.y + c.h / 2 }); return s.x > 0 && s.x < innerWidth && s.y > 0 && s.y < innerHeight; })()`);
       expect(seen, 'the component came into view').toBe(true);
     }

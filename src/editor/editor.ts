@@ -774,8 +774,8 @@ export class Editor {
     return this.frameSelection({ comp: true, text: 'Компонент' }, 20);
   }
 
-  /** A new instance of component `id`, right of it (or of its last instance), the component staying picked
-   *  so its "+" makes another; the first one folds the component, out of the way. */
+  /** A new instance of component `id`, right of it (or of its last instance), picked; the component's
+   *  put away, out of the way. */
   addInstance(id: string): void {
     const comp = this.board.get(id);
     if (!comp?.comp) return;
@@ -784,9 +784,10 @@ export class Editor {
     const it = this.newItem('frame', right + 60, comp.y, { w: comp.fold?.w ?? comp.w, h: comp.fold?.h ?? comp.h, inst: id, text: comp.text, members: [], z: this.board.minZ() - 1 });
     this.board.beginGesture();
     this.board.add(it);
-    if (!others.length) this.setFolded(id, true);
+    // Its job done, the component's put away (its instance's diamond brings it back).
+    this.board.update(id, { stowed: true });
     this.board.endGesture();
-    this.setSelection([id]);
+    this.setSelection([it.id]);
   }
 
   /** Detaches the selected instances from their components: what's in each becomes ordinary items, as
@@ -812,10 +813,11 @@ export class Editor {
     this.setSelection(freed);
   }
 
-  /** Picks instance `id`'s component and brings it into view, gliding there. */
+  /** Picks instance `id`'s component (brought back, if it was put away) and brings it into view, gliding there. */
   goToComponent(id: string): void {
     const comp = this.board.get(this.board.get(id)?.inst ?? '');
     if (!comp) return;
+    if (comp.stowed) this.board.update(comp.id, { stowed: undefined });
     this.setSelection([comp.id]);
     flyTo(this, cameraFor(this, boxOf(comp), 0.5, Math.max(this.cam.z, 1)));
   }

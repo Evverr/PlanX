@@ -1146,7 +1146,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       ctx.stroke();
     } else if (s.showHandle && s.editingId !== id) {
       if (it.comp) {
-        // A picked component's "+" for a new instance of it, right of it.
+        // A picked component's tick for an instance of it, right of it.
         const p = instancePlus(it, cam.z);
         ctx.fillStyle = COMPONENT_COLOR;
         ctx.globalAlpha = s.hotPlus === 'instance' ? 1 : 0.75;
@@ -1157,9 +1157,9 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 2 / cam.z;
         ctx.lineCap = 'round';
+        // A tick: done with it, an instance in its place.
         ctx.beginPath();
-        ctx.moveTo(p.x - p.r * 0.45, p.y); ctx.lineTo(p.x + p.r * 0.45, p.y);
-        ctx.moveTo(p.x, p.y - p.r * 0.45); ctx.lineTo(p.x, p.y + p.r * 0.45);
+        ctx.moveTo(p.x - p.r * 0.45, p.y + p.r * 0.02); ctx.lineTo(p.x - p.r * 0.1, p.y + p.r * 0.36); ctx.lineTo(p.x + p.r * 0.45, p.y - p.r * 0.3);
         ctx.stroke();
       }
       const hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z;
