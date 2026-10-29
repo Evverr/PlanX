@@ -458,4 +458,27 @@ export const checks = {
     const it = await p.ev(`(() => { const i = planx.board.list().find((x) => x.doodle); return i && i.type + ' ' + i.doodle; })()`);
     expect(it, 'a picture of that sticker').toBe('image 01-love');
   },
+
+  async 'once a table line has been waited for, the table\'s other lines are taken at once, till the pointer is off it a second'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('table', 200, 200, { id: 't', w: 360, h: 120, cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill('') })); e.setSelection([]); })()`);
+    const cursor = () => p.ev('planx.editor.canvas.style.cursor');
+    // Columns meet at x 320 and 440.
+    await p.mouse('mouseMoved', 320, 240);
+    await sleep(150);
+    expect(await cursor() === 'col-resize', 'not at once the first time').toBe(false);
+    await sleep(600);
+    expect(await cursor(), 'after waiting').toBe('col-resize');
+    await p.mouse('mouseMoved', 380, 240);
+    await sleep(100);
+    await p.mouse('mouseMoved', 440, 240);
+    await sleep(50);
+    expect(await cursor(), 'the next one at once').toBe('col-resize');
+    // Off the table over a second: waited for again.
+    await p.mouse('mouseMoved', 800, 600);
+    await sleep(1200);
+    await p.mouse('mouseMoved', 320, 280);
+    await sleep(50);
+    expect(await cursor() === 'col-resize', 'off it a second: not at once again').toBe(false);
+  },
 };

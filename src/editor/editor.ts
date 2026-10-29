@@ -125,6 +125,8 @@ export class Editor {
   /** The table line the mouse rests on: it can be taken hold of once it's been there half a second
    *  (till then a press there takes the table), which is when it lights up. */
   lineRest: { line: TableLine; armed: boolean; timer: number } | null = null;
+  /** The table whose lines are taken at once (one of them was waited for), and when the pointer was last on it. */
+  tableWarm: { id: string; last: number } | null = null;
   /** Shared: how new links run (see LINK_STYLE_KEY). */
   linkStyle = readJSON<LinkStyle | null>(LINK_STYLE_KEY) ?? undefined;
   /** Cells picked in the selected table: a click on a cell of a table already selected picks it,

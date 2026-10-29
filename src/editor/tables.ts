@@ -56,10 +56,19 @@ export function restOn(ed: Editor, line: TableLine | null): void {
   clearTimeout(ed.lineRest?.timer);
   ed.lineRest = null;
   if (!line) return;
-  const rest = { line, armed: ed.pickedLines.some((l) => sameLine(l, line)), timer: 0 };
+  // Once one of a table's lines has been waited for, the others of it are taken at once, till the
+  // pointer's been off the table a second (see warmTable).
+  const warm = ed.tableWarm?.id === line.id && performance.now() - ed.tableWarm.last < WARM_FOR;
+  const rest = { line, armed: warm || ed.pickedLines.some((l) => sameLine(l, line)), timer: 0 };
+  if (rest.armed && !ed.gesture) {
+    ed.hotLine = line;
+    if (ed.canvas) ed.canvas.style.cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
+    ed.requestRender();
+  }
   if (!rest.armed) {
     rest.timer = window.setTimeout(() => {
       rest.armed = true;
+      ed.tableWarm = { id: line.id, last: performance.now() };
       if (ed.lineRest !== rest || ed.gesture) return;
       ed.hotLine = line;
       if (ed.canvas) ed.canvas.style.cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
@@ -67,6 +76,14 @@ export function restOn(ed: Editor, line: TableLine | null): void {
     }, LINE_REST);
   }
   ed.lineRest = rest;
+}
+
+/** How long a table stays ready (its lines taken at once) with the pointer off it. */
+const WARM_FOR = 1000;
+
+/** The pointer's over table `id` (or one of its lines): it stays ready. */
+export function warmTable(ed: Editor, id: string | undefined): void {
+  if (id && ed.tableWarm?.id === id) ed.tableWarm.last = performance.now();
 }
 
 /** The table line a press here takes hold of: one picked already; with the mouse, one it has rested

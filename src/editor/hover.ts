@@ -8,7 +8,7 @@ import { isBuiltin } from '../model/builtins';
 import { branchWays, buttonKey, foldBadge, mindButtons, type MindButtonAt, type Way } from '../model/mind';
 import { frameButtonAt } from './frames';
 import { rotateCursor } from './cursors';
-import { restOn, sameLine, tableLineAt } from './tables';
+import { restOn, sameLine, tableLineAt, warmTable } from './tables';
 import type { Editor } from './editor';
 import { isLocked } from '../labs/labs';
 
@@ -149,8 +149,10 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   const dot = single && !ed.editingId ? dotAt(ed, single, w) : null;
   if (dot !== ed.hotDot) { ed.hotDot = dot; ed.requestRender(); }
   let cursor = '';
-  const near = ed.editingId || dot ? null : tableLineAt(ed, w, hitItem(ed.shown(), w, ed.cam.z));
+  const over = hitItem(ed.shown(), w, ed.cam.z), near = ed.editingId || dot ? null : tableLineAt(ed, w, over);
+  // (Whether it's still ready is asked before it's kept ready by the pointer being on it.)
   restOn(ed, near);
+  warmTable(ed, near?.id ?? (over?.type === 'table' ? over.id : undefined));
   const line = ed.lineRest?.armed ? ed.lineRest.line : null;
   if (!sameLine(line, ed.hotLine)) { ed.hotLine = line; ed.requestRender(); }
   // A link the pointer is on (where no item is over it, as a press would find it) is faintly lit.
