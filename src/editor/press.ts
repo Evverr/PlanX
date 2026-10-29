@@ -4,7 +4,7 @@ import { center, hitItem, hitLink, instanceBounds, linkShape, onAudioButton, onT
 import { copyId } from '../model/components';
 import { TASK_STATES } from '../model/builtins';
 import { toggleAudio } from '../canvas/audio';
-import { anyDotAt, dotAt, linkHandleAt, foldBadgeAt, frameButtonUnder, sideAt, linkEndAt, onHandle, onInstanceGlyph, onInstancePlus, onRotate, plusAt } from './hover';
+import { anyDotAt, dotAt, linkHandleAt, foldBadgeAt, frameButtonUnder, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, plusAt, tickAt } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -89,8 +89,8 @@ export function press(ed: Editor, e: PointerEvent): void {
   // resize handle, link dots, turning corner, mind map buttons), on a folded mind map node's count
   // or on a table's line.
   const picked = ed.selection.size === 1 ? board.get([...ed.selection][0]) : undefined;
-  const onControl = (!!picked && !ed.editingId && !isLocked(picked) && (onHandle(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!plusAt(ed, picked, w) || onInstancePlus(ed, picked, w) || !!sideAt(ed, picked, w)))
-    || !!foldBadgeAt(ed, w);
+  const onControl = (!!picked && !ed.editingId && !isLocked(picked) && (onHandle(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!plusAt(ed, picked, w) || !!sideAt(ed, picked, w)))
+    || !!foldBadgeAt(ed, w) || !!tickAt(ed, w);
   const empty = ed.tool === 'select' && e.button === 0 && !ed.spaceDown && !e.shiftKey && !hit && !link && !onControl
     && !grabbableLine(ed, w, hit, e.pointerType) && !ed.editingId;
   // Pressed twice on the empty board: everything on it comes into view, as with the "show all" button.
@@ -175,17 +175,15 @@ export function press(ed: Editor, e: PointerEvent): void {
     else ed.addMindNode(single.id, plus.kind, true);
     return;
   }
-  // The diamond before a picked instance's title, double-clicked, brings its component back and goes there.
-  // (Pressed twice: once is just taken, so the instance stays picked.)
+  // The diamond before a picked instance's title brings its component back and goes there.
   if (single && onInstanceGlyph(ed, single, w)) {
-    const inst = single.inst ? single.id : single.host!, now = performance.now(), key = `glyph:${inst}`;
-    if (ed.lastTap.id === key && now - ed.lastTap.t < 380) { ed.lastTap = { id: '', t: 0 }; ed.goToComponent(inst); }
-    else ed.lastTap = { id: key, t: now };
+    ed.goToComponent(single.inst ? single.id : single.host!);
     return;
   }
-  // A picked component's "+" makes an instance of it.
-  if (single && onInstancePlus(ed, single, w)) {
-    ed.addInstance(single.id);
+  // A component's tick (picked or not) makes an instance of it, the component put away.
+  const tick = tickAt(ed, w);
+  if (tick) {
+    ed.addInstance(tick.id);
     return;
   }
   // A folded mind map node's count unfolds it (that way), and leaves nothing picked: the map to look at.
