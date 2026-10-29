@@ -42,7 +42,8 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
       // A link (where no item but a frame is over it, as a press would find it): its own menu.
       const link = hit && hit.type !== 'frame' ? null : hitLink(editor.shownLinks(), (i) => editor.board.get(i), w, editor.cam.z);
       if (link) {
-        editor.setSelection([link.id]);
+        // One of several links picked: the menu's for them all.
+        if (!editor.selection.has(link.id)) editor.setSelection([link.id]);
         editor.stopEditing();
         placed.current = null;
         setAt({ x: e.clientX, y: e.clientY, w, url: null, board: false, params: false, link: link.id });
@@ -116,7 +117,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
     return (
       <div ref={ref} className={`board-menu context-menu ${at.params ? 'params-pop' : ''}`} role={at.params ? 'dialog' : 'menu'} aria-label={at.params ? 'Параметры линии' : 'Линия'}
         onContextMenu={(e) => e.preventDefault()}>
-        {at.params ? <>{gripBar}<LinkParams editor={editor} id={link.id} /></> : <>
+        {at.params ? <>{gripBar}<LinkParams editor={editor} ids={editor.selectedLinks().map((l) => l.id)} /></> : <>
           {row('sign', 'Параметры', () => setAt({ ...at, params: true }))}
           <div className="menu-line" />
           {row('trashcan-l', 'Удалить', run(() => editor.deleteSelection()))}
@@ -168,20 +169,24 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
 }
 
 /** A line's parameters: its colour (any too) and opacity, dashed or not, its arrowheads, the way it runs. */
-function LinkParams({ editor, id }: { editor: Editor; id: string }) {
+export function LinkParams({ editor, ids }: { editor: Editor; ids: string[] }) {
   const [, redraw] = useState(0);
-  const l = editor.board.getLink(id);
+  // Several picked: shown as the first is, set on all of them.
+  const links = ids.map((id) => editor.board.getLink(id)).filter((l): l is NonNullable<typeof l> => !!l), l = links[0];
   if (!l) return null;
-  const set = (patch: Parameters<Editor['board']['updateLink']>[1]) => { editor.board.updateLink(id, patch); redraw((n) => n + 1); };
+  const set = (patch: Parameters<Editor['board']['updateLink']>[1]) => {
+    editor.board.transact(() => links.forEach((k) => editor.board.updateLink(k.id, patch)));
+    redraw((n) => n + 1);
+  };
   const start = l.heads === 'start' || l.heads === 'both', end = l.heads !== 'start' && l.heads !== 'none';
   const heads = (s: boolean, e: boolean) => set({ heads: s && e ? 'both' : s ? 'start' : e ? undefined : 'none' });
   const btn = (icon: PanelIconName, label: string, on: boolean, fn: () => void) => (
     <button className={`params-btn ${on ? 'on' : ''}`} title={label} aria-label={label} aria-pressed={on} onClick={fn}><PanelIcon name={icon} /></button>
   );
-  const styled = (style: LinkStyle | undefined) => { editor.board.setLinkStyle(id, style); redraw((n) => n + 1); };
+  const styled = (style: LinkStyle | undefined) => { editor.board.transact(() => links.forEach((k) => editor.board.setLinkStyle(k.id, style))); redraw((n) => n + 1); };
   return (
     <div className="params-list">
-      <div className="params-title">Линия</div>
+      <div className="params-title">{links.length > 1 ? `Линии: ${links.length}` : 'Линия'}</div>
       <ColorRow editor={editor} label="Цвет" colors={Object.fromEntries(Object.entries(STROKE_COLORS).filter(([k]) => k !== 'none').map(([k, v]) => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--link)')]))}
         current={l.color ?? 'gray'} opacity={l.lo ?? 1} onColor={(c) => set({ color: c === 'gray' ? undefined : c })} onOpacity={(v) => set({ lo: v })} />
       <div className="params-group">
