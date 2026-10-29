@@ -117,7 +117,7 @@ function textRoom(): number {
 }
 
 /** Hung 20px over the top dot of the selected text or sticker (under the bottom dot when there's no room above). */
-export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
+export function TextPanel({ editor, item, leaving }: { editor: Editor; item: Item; leaving?: boolean }) {
   const sort = useSortable('planx-order-text', ORDER, 'x');
   const labs = useLabs();
   const el = sort.ref;
@@ -171,7 +171,7 @@ export function TextPanel({ editor, item }: { editor: Editor; item: Item }) {
   return (
     // Keep focus in the text being edited when a control is pressed. Controls can be rearranged by holding them;
     // components can't take the ref, so each sits in a wrapper.
-    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`tfmt sortable ${sort.sorting ? 'sorting' : ''}`} role="toolbar" aria-label="Форматирование текста"
+    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`tfmt sortable ${sort.sorting ? 'sorting' : ''} ${leaving ? 'leaving' : ''}`} role="toolbar" aria-label="Форматирование текста"
       {...sort.container} onPointerDown={(e) => { if (!(e.target as Element).closest('input')) e.preventDefault(); sort.container.onPointerDown(e); }}>
       {sort.renderFit({
         font: <span className="sort-wrap"><Drop open={menu === 'font'} menu={Object.entries(FONTS).map(([k, f]) => (
