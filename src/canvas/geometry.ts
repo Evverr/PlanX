@@ -206,8 +206,9 @@ export function squared(pts: Point[], across: boolean): Point[] {
     const a = out[out.length - 1];
     if (Math.abs(a.x - q.x) > 0.5 && Math.abs(a.y - q.y) > 0.5) out.push(flat ? { x: q.x, y: a.y } : { x: a.x, y: q.y });
     out.push(q);
+    // Come in up or down, it goes on across, and the other way round: each point a turn.
     const b = out[out.length - 2];
-    flat = Math.abs(b.y - q.y) <= 0.5;
+    flat = Math.abs(b.y - q.y) > 0.5;
   }
   return straightened(out);
 }
