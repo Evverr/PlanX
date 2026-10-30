@@ -579,6 +579,17 @@ export const checks = {
     expect((await stored()).length, 'gone').toBe(0);
   },
 
+  async 'the board cleared takes its comments too; one Ctrl+Z brings both back'(p) {
+    const n = () => p.ev(`(async () => { const c = await import('/src/labs/comments.ts'); return c.comments(planx.board).length; })()`);
+    await p.ev(`(async () => { const c = await import('/src/labs/comments.ts'), e = planx.editor, b = planx.board;
+      b.add(e.newItem('sticky', 300, 300, { id: 's', w: 150, h: 150 })); c.addComment(b, { x: 50, y: 50 }, undefined, 'Раз', 'Кот'); })()`);
+    expect(await n(), 'put').toBe(1);
+    await p.ev('planx.editor.clearBoard()');
+    expect(`${await n()} ${await p.ev('planx.board.list().length')}`, 'cleared').toBe('0 0');
+    await p.ev('planx.editor.undo()');
+    expect(`${await n()} ${await p.ev('planx.board.list().length')}`, 'back').toBe('1 1');
+  },
+
   async 'lines picked together by a box take their parameters together, by a right click or from the selection panel'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('sticky', 100, 100, { id: 'a', w: 100, h: 100 })); b.add(e.newItem('sticky', 500, 100, { id: 'b', w: 100, h: 100 }));
