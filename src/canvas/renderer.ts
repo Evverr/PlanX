@@ -1033,7 +1033,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   if (s.links.length) drawLinks(ctx, s, view);
   // Every component's tick, right of it: an instance in its place, the component put away.
   for (const it of s.items) {
-    if (!it.comp || it.stowed || s.editingId === it.id) continue;
+    // (Its title being typed in too: done with it there and then.)
+    if (!it.comp || it.stowed) continue;
     const p = instancePlus(it, cam.z);
     ctx.fillStyle = COMPONENT_COLOR;
     ctx.globalAlpha = s.hotPlus === `tick:${it.id}` ? 1 : 0.75;

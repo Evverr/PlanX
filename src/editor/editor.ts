@@ -14,7 +14,7 @@ import { readJSON, writeJSON } from '../storage';
 import { cameraFor, clamp, fittedTo, flyTo, freeArea, minZoomFor, wheelMove, zoomedAt } from './camera';
 import { copiesOf } from './copies';
 import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked } from './frames';
-import { copyId, hasComponents, syncOps } from '../model/components';
+import { around, contents, copyId, hasComponents, stretched, syncOps } from '../model/components';
 import { BUILTINS, isBuiltin, nextTaskState, TASK_STATES } from '../model/builtins';
 import { remapLinks } from '../model/textLinks';
 import { dayKey, timelineSize } from '../canvas/timeline';
@@ -816,13 +816,27 @@ export class Editor {
     const inst = this.board.get(instId), comp = inst?.inst ? this.board.get(inst.inst) : undefined;
     if (!inst || !comp?.comp) return;
     this.board.beginGesture();
+    // Stretched as an instance, the component takes that size: what it holds laid out as the instance
+    // has it, the instance no longer stretched beyond it.
+    const g = inst.grow;
+    if (g && (g.w || g.h)) {
+      const items = this.board.list(), inside = contents(comp, new Map(items.map((i) => [i.id, i])), items), box = inside.length ? around(inside) : null;
+      this.board.transact(() => {
+        if (box) for (const it of inside) {
+          const at = stretched(it, box, g), h = it.type === 'text' ? fitHeight({ ...it, ...at }) : null;
+          this.board.update(it.id, { ...at, ...(h && { h }) });
+        }
+        this.board.update(comp.id, { w: (comp.fold?.w ?? comp.w) + g.w, h: (comp.fold?.h ?? comp.h) + g.h, ...(comp.fold && { fold: undefined }) });
+        this.board.update(inst.id, { grow: undefined });
+      });
+    }
     const before = comp.standsIn ? this.board.get(comp.standsIn) : undefined;
     if (before && before.id !== inst.id) this.board.update(before.id, { stowed: undefined, x: comp.x, y: comp.y });
     // The component and all it holds moved to where the instance stands, unfolded.
-    const dx = inst.x - comp.x, dy = inst.y - comp.y;
+    const now = this.board.get(comp.id)!, dx = inst.x - now.x, dy = inst.y - now.y;
     this.board.transact(() => {
-      for (const [id, o] of this.carried([comp])) this.board.update(id, { x: o.x + dx, y: o.y + dy });
-      this.board.update(comp.id, { stowed: undefined, standsIn: inst.id, ...(comp.fold && { fold: undefined, w: comp.fold.w, h: comp.fold.h }) });
+      for (const [id, o] of this.carried([now])) this.board.update(id, { x: o.x + dx, y: o.y + dy });
+      this.board.update(comp.id, { stowed: undefined, standsIn: inst.id, ...(now.fold && { fold: undefined, w: now.fold.w, h: now.fold.h }) });
       this.board.update(inst.id, { stowed: true });
     });
     this.board.endGesture();

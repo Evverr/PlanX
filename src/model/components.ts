@@ -33,7 +33,7 @@ export const instanceGlyph = (b: { x: number; y: number }) => ({ x: b.x - 6, y: 
 export const instancePlus = (it: Item, zoom: number) => ({ x: it.x + it.w + 40 / zoom, y: it.y + it.h / 2, r: 10 / zoom });
 
 /** Rectangles: the board-aligned box around them all. */
-const around = (rs: Item[]) => {
+export const around = (rs: Item[]) => {
   const x = Math.min(...rs.map((r) => r.x)), y = Math.min(...rs.map((r) => r.y));
   return { x, y, w: Math.max(...rs.map((r) => r.x + r.w)) - x, h: Math.max(...rs.map((r) => r.y + r.h)) - y };
 };
