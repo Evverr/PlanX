@@ -89,8 +89,10 @@ export interface Item {
    *  one (its id); an instance's copy of a component's item: what it's a copy of, the instance it's in,
    *  and the fields changed on it there, kept whatever the component does. */
   comp?: boolean;
-  /** A component put away once it's made an instance (not shown, kept for its instances). */
+  /** A component put away once it's made an instance (not shown, kept for its instances); an instance
+   *  put away while its component is out in its place, being changed (`standsIn`, on the component). */
   stowed?: boolean;
+  standsIn?: string;
   inst?: string;
   from?: string;
   host?: string;

@@ -175,12 +175,12 @@ export function press(ed: Editor, e: PointerEvent): void {
     else ed.addMindNode(single.id, plus.kind, true);
     return;
   }
-  // The diamond before a picked instance's title brings its component back and goes there.
+  // The diamond before a picked instance's title brings its component out in its place, to be changed.
   if (single && onInstanceGlyph(ed, single, w)) {
-    ed.goToComponent(single.inst ? single.id : single.host!);
+    ed.editComponentAt(single.inst ? single.id : single.host!);
     return;
   }
-  // A component's tick (picked or not) makes an instance of it, the component put away.
+  // A component's tick (picked or not) turns it into an instance where it stands.
   const tick = tickAt(ed, w);
   if (tick) {
     ed.addInstance(tick.id);
