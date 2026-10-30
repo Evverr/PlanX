@@ -28,6 +28,7 @@ import { press } from './press';
 import { formatCells, pickCell, restOn, setTableLines } from './tables';
 import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, type Pens, type PenTool, type Tool } from './tools';
 import { pushedBelow } from '../labs/textPush';
+import { clearComments } from '../labs/comments';
 import { isLocked, labOn, subscribeLabs } from '../labs/labs';
 
 export { DRAW_TOOLS, INK_SIZES, SHAPE_TOOLS } from './tools';
@@ -159,7 +160,7 @@ export class Editor {
   private sight: { version: number; hidden: Set<string>; folded: Map<string, Map<Way, number>>; shown: Item[]; links: Link[] } | null = null;
   /** Steps undone along with the board's though they aren't on it (the panels put back as by
    *  default), each at the place in the board's history it was taken. */
-  private outside: Array<{ undo: () => void; depth: number }> = [];
+  private outside: Array<{ undo: () => void; depth: number; along?: boolean }> = [];
 
   constructor(board: Board, opts: { presence?: Presence; storageKey?: string } = {}) {
     this.board = board;
@@ -979,6 +980,8 @@ export class Editor {
   /** Empties the board and goes back to 100% zoom, about the middle of the screen. */
   clearBoard(): void {
     this.board.replaceAll([], []);
+    // Comments go too, and come back with the board's undo (one Ctrl+Z for both).
+    this.outside.push({ undo: clearComments(this.board), depth: this.board.undoManager.undoStack.length, along: true });
     this.setSelection([]);
     this.zoomCenter(1 / this.cam.z);
   }
@@ -993,6 +996,12 @@ export class Editor {
   undo(): void {
     if (this.editingId) this.stopEditing();
     const last = this.outside[this.outside.length - 1];
+    if (last?.along && this.board.undoManager.undoStack.length === last.depth) {
+      this.board.undo();
+      this.outside.pop();
+      last.undo();
+      return;
+    }
     if (last && this.board.undoManager.undoStack.length <= last.depth) {
       this.outside.pop();
       last.undo();

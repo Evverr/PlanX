@@ -57,6 +57,19 @@ export function updateComment(board: Board, id: string, patch: Partial<Omit<Comm
 
 export const removeComment = (board: Board, id: string) => map(board).delete(id);
 
+/** Takes every comment away (the board cleared); gives back what puts them back. */
+export function clearComments(board: Board): () => void {
+  const was = comments(board);
+  board.doc.transact(() => map(board).clear());
+  return () => board.doc.transact(() => {
+    for (const { id, ...c } of was) {
+      const m = new Y.Map<unknown>();
+      map(board).set(id, m);
+      for (const [k, v] of Object.entries(c)) if (v !== undefined) m.set(k, v);
+    }
+  });
+}
+
 /** Whether a note is this browser's own. */
 export const mine = (n: Note) => n.author === myId();
 
