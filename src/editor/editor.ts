@@ -15,7 +15,7 @@ import { cameraFor, clamp, fittedTo, flyTo, freeArea, minZoomFor, wheelMove, zoo
 import { copiesOf } from './copies';
 import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked } from './frames';
 import { copyId, hasComponents, syncOps } from '../model/components';
-import { BUILTINS, nextTaskState, TASK_STATES } from '../model/builtins';
+import { BUILTINS, isBuiltin, nextTaskState, TASK_STATES } from '../model/builtins';
 import { remapLinks } from '../model/textLinks';
 import { dayKey, timelineSize } from '../canvas/timeline';
 import { DOODLE_SIZE } from '../canvas/doodles';
@@ -623,10 +623,25 @@ export class Editor {
     this.setSelection([it.id]);
   }
 
-  deleteSelection(): void {
+  deleteSelection(sure = false): void {
     // Locked items stay (and stay selected), and what's in an instance goes only with it.
     const ids = new Set([...this.selection].filter((id) => !isLocked(this.board.get(id)) && !this.board.get(id)?.host));
     if (!ids.size) return;
+    // A component's last instance going takes the component with it, once that's been said yes to.
+    const all = this.board.list();
+    const orphaned = [...new Set(all.filter((i) => ids.has(i.id) && i.inst && !isBuiltin(i.inst)).map((i) => i.inst!))]
+      .filter((c) => !all.some((i) => i.inst === c && !ids.has(i.id) && !i.stowed) && this.board.get(c)?.stowed);
+    if (orphaned.length && !sure) {
+      window.dispatchEvent(new CustomEvent('planx:confirm', { detail: {
+        text: 'Это последний инстанс, и удалив его, мы удаляем компонент.', action: 'Удалить', ok: () => this.deleteSelection(true),
+      } }));
+      return;
+    }
+    for (const c of orphaned) {
+      const comp = this.board.get(c);
+      if (comp) for (const id of this.carried([comp]).keys()) ids.add(id);
+      for (const i of all) if (i.inst === c) ids.add(i.id);
+    }
     // A mind map node goes with everything branching from it, a folded frame with all it holds.
     const items = this.board.list(), folded = items.filter((i) => i.fold && ids.has(i.id));
     const held = folded.length ? [...this.carried(folded).keys()] : [];
@@ -774,20 +789,44 @@ export class Editor {
     return this.frameSelection({ comp: true, text: 'Компонент' }, 20);
   }
 
-  /** A new instance of component `id`, right of it (or of its last instance), picked; the component's
-   *  put away, out of the way. */
+  /** A component's tick: the component turns into an instance where it stands (the one it was brought
+   *  out in place of, or a new one), picked, and is put away. */
   addInstance(id: string): void {
     const comp = this.board.get(id);
     if (!comp?.comp) return;
-    const others = this.board.list().filter((i) => i.inst === id);
-    const right = Math.max(comp.x + (comp.fold?.w ?? comp.w), ...others.map((i) => i.x + i.w));
-    const it = this.newItem('frame', right + 60, comp.y, { w: comp.fold?.w ?? comp.w, h: comp.fold?.h ?? comp.h, inst: id, text: comp.text, members: [], z: this.board.minZ() - 1 });
+    const was = comp.standsIn ? this.board.get(comp.standsIn) : undefined;
     this.board.beginGesture();
-    this.board.add(it);
-    // Its job done, the component's put away (its instance's diamond brings it back).
-    this.board.update(id, { stowed: true });
+    let inst: string;
+    if (was?.inst === id) {
+      this.board.update(was.id, { stowed: undefined, x: comp.x, y: comp.y });
+      inst = was.id;
+    } else {
+      const it = this.newItem('frame', comp.x, comp.y, { w: comp.fold?.w ?? comp.w, h: comp.fold?.h ?? comp.h, inst: id, text: comp.text, members: [], z: this.board.minZ() - 1 });
+      this.board.add(it);
+      inst = it.id;
+    }
+    this.board.update(id, { stowed: true, standsIn: undefined });
     this.board.endGesture();
-    this.setSelection([it.id]);
+    this.setSelection([inst]);
+  }
+
+  /** An instance's diamond: its component comes out in its place, to be changed (the instance put away
+   *  meanwhile; the component's tick turns it back into it). One out in another's place gives that one back. */
+  editComponentAt(instId: string): void {
+    const inst = this.board.get(instId), comp = inst?.inst ? this.board.get(inst.inst) : undefined;
+    if (!inst || !comp?.comp) return;
+    this.board.beginGesture();
+    const before = comp.standsIn ? this.board.get(comp.standsIn) : undefined;
+    if (before && before.id !== inst.id) this.board.update(before.id, { stowed: undefined, x: comp.x, y: comp.y });
+    // The component and all it holds moved to where the instance stands, unfolded.
+    const dx = inst.x - comp.x, dy = inst.y - comp.y;
+    this.board.transact(() => {
+      for (const [id, o] of this.carried([comp])) this.board.update(id, { x: o.x + dx, y: o.y + dy });
+      this.board.update(comp.id, { stowed: undefined, standsIn: inst.id, ...(comp.fold && { fold: undefined, w: comp.fold.w, h: comp.fold.h }) });
+      this.board.update(inst.id, { stowed: true });
+    });
+    this.board.endGesture();
+    this.setSelection([comp.id]);
   }
 
   /** Detaches the selected instances from their components: what's in each becomes ordinary items, as

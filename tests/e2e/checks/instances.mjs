@@ -145,6 +145,27 @@ export const checks = {
     expect(await p.ev(`JSON.stringify(planx.board.get('instance').grow)`), 'taller only').toBe('{"w":60,"h":30}');
   },
 
+  async 'the diamond brings the component out in the instance\'s place, its tick turns it back; the last instance deleted takes the component, once said yes'(p) {
+    await fixture(p);
+    const st = () => p.ev(`(() => { const b = planx.board, c = b.get('source'), i = b.get('instance'), shown = planx.editor.shown().map((x) => x.id);
+      return { cx: c?.x, cy: c?.y, ix: i?.x, iy: i?.y, comp: !!c && shown.includes('source'), inst: !!i && shown.includes('instance'), sel: [...planx.editor.selection].join() }; })()`);
+    const at = await st();
+    await p.ev(`planx.editor.editComponentAt('instance')`);
+    let now = await st();
+    expect(`${now.cx},${now.cy} ${now.comp} ${now.inst} ${now.sel}`, 'the component out where the instance stood, the instance away').toBe(`${at.ix},${at.iy} true false source`);
+    await p.ev(`planx.board.update('a', { color: 'pink' })`);
+    await p.ev(`planx.editor.addInstance('source')`);
+    await sleep(200);
+    now = await st();
+    expect(`${now.ix},${now.iy} ${now.comp} ${now.inst} ${now.sel}`, 'its tick: the instance back in the same place').toBe(`${at.ix},${at.iy} false true instance`);
+    expect(await p.ev(`planx.board.get('instance~a').color`), 'with the change made').toBe('pink');
+    await p.ev(`planx.editor.setSelection(['instance']); planx.editor.deleteSelection()`);
+    await sleep(100);
+    expect(await p.ev(`document.querySelector('.confirm p')?.textContent`), 'asked first').toBe('Это последний инстанс, и удалив его, мы удаляем компонент.');
+    await p.click(await p.at('.confirm .btn.primary'));
+    expect(await p.ev(`['instance', 'source', 'a', 'b'].map((id) => !!planx.board.get(id)).join()`), 'the instance and the component gone').toBe('false,false,false,false');
+  },
+
   async 'dragging on the first press still moves the whole instance and keeps its source unchanged'(p) {
     await fixture(p);
     const before = await p.ev(`['instance', 'instance~a', 'instance~b', 'a'].map((id) => { const i = planx.board.get(id); return { id, x: i.x, y: i.y }; })`);

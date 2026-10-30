@@ -220,6 +220,12 @@ export function App({ boardId }: { boardId: string }) {
     return () => clearTimeout(t);
   }, [panelOn]);
   const panelItem = panelNow ?? lastPanel.current;
+  const [ask, setAsk] = useState<{ text: string; action: string; ok: () => void } | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => setAsk((e as CustomEvent<{ text: string; action: string; ok: () => void }>).detail);
+    window.addEventListener('planx:confirm', on);
+    return () => window.removeEventListener('planx:confirm', on);
+  }, []);
   const peers = conn.peers();
   // Features on trial (src/labs): with "following" on, a click on someone's avatar follows them.
   const labs = useLabs();
@@ -370,6 +376,17 @@ export function App({ boardId }: { boardId: string }) {
           <div className="row">
             <button className="btn" onClick={() => setPop(null)}>Отмена</button>
             <button className="btn primary" onClick={() => { editor.clearBoard(); setPop(null); setCleared(Date.now()); }}>Очистить</button>
+          </div>
+        </div>
+      )}
+
+      {/* Asked before something goes that takes more with it (a component's last instance). */}
+      {ask && (
+        <div className="pop confirm" role="alertdialog" aria-label="Подтверждение">
+          <p>{ask.text}</p>
+          <div className="row">
+            <button className="btn" onClick={() => setAsk(null)}>Отмена</button>
+            <button className="btn primary" onClick={() => { ask.ok(); setAsk(null); }}>{ask.action}</button>
           </div>
         </div>
       )}
