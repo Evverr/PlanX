@@ -126,6 +126,9 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
     );
   }
   const params = paramItems(editor);
+  // An instance picked (or something in one): its component brought out in its place.
+  const one = editor.selection.size === 1 ? editor.selectedItems()[0] : undefined;
+  const inOne = one?.host ? editor.board.get(one.host) : one, editInst = inOne?.inst && !inOne.inst.startsWith('@') ? inOne.id : null;
   if (at.params && params.length) {
     return (
       <div ref={ref} className="board-menu context-menu params-pop" role="dialog" aria-label="Параметры" onContextMenu={(e) => e.preventDefault()}>
@@ -161,6 +164,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
         {row('arrow-top-l', 'Переместить вверх', run(() => editor.bringToFront()))}
         {row('arrow-down-l', 'Переместить вниз', run(() => editor.sendToBack()))}
         {row('maximize', 'Сделать компонентом', run(() => editor.makeComponent()))}
+        {editInst && row('edit-l', 'Редактировать компонент', run(() => editor.editComponentAt(editInst)))}
         <div className="menu-line" />
         {row('trashcan-l', 'Удалить', run(() => editor.deleteSelection()))}
       </>}

@@ -150,7 +150,13 @@ export const checks = {
     const st = () => p.ev(`(() => { const b = planx.board, c = b.get('source'), i = b.get('instance'), shown = planx.editor.shown().map((x) => x.id);
       return { cx: c?.x, cy: c?.y, ix: i?.x, iy: i?.y, comp: !!c && shown.includes('source'), inst: !!i && shown.includes('instance'), sel: [...planx.editor.selection].join() }; })()`);
     const at = await st();
+    // Stretched as an instance: the component comes out at that size.
+    await p.ev(`planx.board.update('instance', { grow: { w: 100, h: 0 } })`);
+    await sleep(200);
+    const bWidth = await p.ev(`planx.board.get('instance~b').x - planx.board.get('instance~a').x`);
     await p.ev(`planx.editor.editComponentAt('instance')`);
+    expect(await p.ev(`planx.board.get('b').x - planx.board.get('a').x`), 'laid out as the instance had it').toBe(bWidth);
+    expect(await p.ev(`planx.board.get('instance').grow ?? null`), 'the instance no longer stretched beyond it').toBe(null);
     let now = await st();
     expect(`${now.cx},${now.cy} ${now.comp} ${now.inst} ${now.sel}`, 'the component out where the instance stood, the instance away').toBe(`${at.ix},${at.iy} true false source`);
     await p.ev(`planx.board.update('a', { color: 'pink' })`);
