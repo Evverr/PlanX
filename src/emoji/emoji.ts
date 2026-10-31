@@ -5,11 +5,20 @@ const URLS = import.meta.glob<string>('../../assets/emoji/*.png', { eager: true,
 
 export interface EmojiDef { id: string; url: string }
 
-export const EMOJI: EmojiDef[] = Object.entries(URLS)
-  .map(([path, url]) => ({ id: path.match(/(emoji-\d+)\.png$/)![1], url }))
-  .sort((a, b) => Number(a.id.slice(6)) - Number(b.id.slice(6)));
+/** The first thirty of the standard emoji, drawn by the system's own emoji font (whatever it is on
+ *  each computer): id "emoji-u" and their code points in hex. */
+const NATIVE = ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '🫠', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '☺️', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗'];
+const nativeId = (ch: string) => `emoji-u${[...ch].map((c) => c.codePointAt(0)!.toString(16)).join('-')}`;
+const CHAR_BY_ID = new Map(NATIVE.map((ch) => [nativeId(ch), ch]));
 
-const URL_BY_ID = new Map(EMOJI.map((e) => [e.id, e.url]));
+export const EMOJI: EmojiDef[] = [
+  ...NATIVE.map((ch) => ({ id: nativeId(ch), url: '' })),
+  ...Object.entries(URLS)
+    .map(([path, url]) => ({ id: path.match(/(emoji-\d+)\.png$/)![1], url }))
+    .sort((a, b) => Number(a.id.slice(6)) - Number(b.id.slice(6))),
+];
+
+const URL_BY_ID = new Map(EMOJI.filter((e) => e.url).map((e) => [e.id, e.url]));
 export const emojiUrl = (id: string): string | undefined => URL_BY_ID.get(id);
 
 /** Cats for people's avatars: yours is the smiling one, everyone else gets one of the others by their id. */
@@ -32,6 +41,21 @@ const trimmed = new Map<string, { canvas: HTMLCanvasElement; url: string }>();
 const loading = new Set<string>();
 
 function load(id: string): void {
+  const ch = CHAR_BY_ID.get(id);
+  if (ch && !loading.has(id) && typeof document !== 'undefined') {
+    // One of the font's: drawn big once, then cut and kept as the pictures are.
+    loading.add(id);
+    const c = document.createElement('canvas');
+    c.width = c.height = 160;
+    const cx = c.getContext('2d')!;
+    cx.font = '128px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
+    cx.textAlign = 'center';
+    cx.textBaseline = 'middle';
+    cx.fillText(ch, 80, 88);
+    const canvas = trim(c);
+    trimmed.set(id, { canvas, url: canvas.toDataURL('image/png') });
+    return;
+  }
   const url = URL_BY_ID.get(id);
   if (!url || loading.has(id) || typeof document === 'undefined') return;
   loading.add(id);
@@ -45,8 +69,8 @@ function load(id: string): void {
 }
 
 /** The picture cut to the box of its pixels that aren't (nearly) see-through. */
-function trim(img: HTMLImageElement): HTMLCanvasElement {
-  const w = img.naturalWidth, h = img.naturalHeight, src = document.createElement('canvas');
+function trim(img: HTMLImageElement | HTMLCanvasElement): HTMLCanvasElement {
+  const w = img instanceof HTMLCanvasElement ? img.width : img.naturalWidth, h = img instanceof HTMLCanvasElement ? img.height : img.naturalHeight, src = document.createElement('canvas');
   src.width = w; src.height = h;
   const sc = src.getContext('2d')!;
   sc.drawImage(img, 0, 0);

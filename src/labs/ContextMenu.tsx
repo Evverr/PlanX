@@ -227,8 +227,8 @@ export function LinkParams({ editor, ids }: { editor: Editor; ids: string[] }) {
 
 /** What each kind of item is called in the parameters' list. */
 const NAMES: Partial<Record<Item['type'], string>> = {
-  sticky: 'Базовый стикер', text: 'Текст', rect: 'Прямоугольник', ellipse: 'Эллипс', polygon: 'Фигура', task: 'Задача', mind: 'Узел майнд-карты',
-  icon: 'Иконка', emoji: 'Смайл', ink: 'Рисунок', image: 'Картинка',
+  sticky: 'Заметка', text: 'Текст', rect: 'Прямоугольник', ellipse: 'Эллипс', polygon: 'Фигура', task: 'Задача', mind: 'Узел майнд-карты',
+  icon: 'Иконка', emoji: 'Эмодзи', ink: 'Рисунок', image: 'Картинка',
 };
 
 /** The items whose parameters the popup lists: the picked, an instance by what's in it. */
@@ -249,7 +249,7 @@ function ParamsList({ editor, items }: { editor: Editor; items: Item[] }) {
         return (
           <div key={it.id} className="params-item">
             {i > 0 && <div className="menu-line" />}
-            <div className="params-title">{now.doodle ? 'Игровой стикер' : NAMES[now.type]}{snippet}</div>
+            <div className="params-title">{now.doodle ? 'Стикер' : NAMES[now.type]}{snippet}</div>
             <ItemParams editor={editor} it={now} set={set} />
           </div>
         );

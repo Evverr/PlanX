@@ -17,7 +17,7 @@ import { LinePanel } from '../labs/LinePanel';
 const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
   select: ['select', 'cursor', 'Выбор (V)'],
   hand: ['hand', 'hand', 'Рука (H)'],
-  sticky: ['sticky', 'sticker', 'Базовый стикер (N)'],
+  sticky: ['sticky', 'sticker', 'Заметка (N)'],
   text: ['text', 'text', 'Текст (T)'],
   task: ['task', 'circle-check', 'Задача'],
   table: ['table', 'columns', 'Таблица'],
@@ -174,7 +174,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     if (key === 'objects') return labs.objects ? button(key, objecting || variants === 'objects', 'Объекты', 'timeline', () => setVariants(variants === 'objects' ? null : 'objects'), { 'aria-expanded': variants === 'objects' }) : null;
     if (key === 'image') return button(key, false, 'Картинка', 'image', () => { pictureAt.current = undefined; filePicker.current?.click(); });
     if (key === 'audio') return button(key, recorderOpen, 'Аудиозаметка', 'microphone', onToggleRecorder, { 'aria-expanded': recorderOpen });
-    if (key === 'smile') return button(key, iconsOpen, 'Смайлы, стикеры и иконки (I)', 'smile', onToggleIcons, { 'aria-expanded': iconsOpen });
+    if (key === 'smile') return button(key, iconsOpen, 'Эмодзи, стикеры и иконки (I)', 'smile', onToggleIcons, { 'aria-expanded': iconsOpen });
     if (later) return button(key, false, `${later[1]} (скоро)`, later[0]);
     return null;
   };

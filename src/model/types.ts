@@ -30,7 +30,7 @@ export interface Item {
   ls?: ListKind;
   /** Icon id from src/icons/icons.json, icon items only. */
   icon?: string;
-  /** Emoji id from src/emoji/emoji.ts (emoji-0 … emoji-80), emoji items only. */
+  /** Emoji id from src/emoji/emoji.ts (emoji-0 … emoji-80, or emoji-u… for the font's), emoji items only. */
   emoji?: string;
   /** Ink strokes: points as x0, y0, x1, y1… from the item's corner, laid out for width `iw`;
    *  a resized stroke is scaled by w / iw. `sw` is the line width, `hl` marks a highlighter. */

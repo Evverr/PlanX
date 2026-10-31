@@ -12,7 +12,7 @@ import { writeJSON } from '../storage';
 type Tab = 'emoji' | 'stickers' | 'icons';
 export type PickKind = 'emoji' | 'sticky' | 'icon' | 'doodle';
 
-const TABS: Array<[Tab, string]> = [['emoji', 'Смайлы'], ['stickers', 'Игровые стикеры'], ['icons', 'Иконки']];
+const TABS: Array<[Tab, string]> = [['emoji', 'Эмодзи'], ['stickers', 'Стикеры'], ['icons', 'Иконки']];
 const KIND: Record<Tab, PickKind> = { emoji: 'emoji', stickers: 'doodle', icons: 'icon' };
 /** Every tile of a tab in its default order, and where each tab's own order is kept. */
 const ALL: Record<Tab, string[]> = { emoji: EMOJI.map((e) => e.id), stickers: DOODLES.map((d) => d.id), icons: ICONS.map((i) => i.id) };
@@ -85,7 +85,7 @@ export function IconPicker({ zoom, onPick }: { zoom: number; onPick: (kind: Pick
     const found = new Set(searchIcons(q).map((i) => i.id));
     return orders.icons.filter((id) => found.has(id));
   };
-  const label = (t: Tab, id: string) => (t === 'emoji' ? 'Смайл' : t === 'stickers' ? doodle(id)?.name ?? 'Стикер' : ICONS.find((i) => i.id === id)?.ru ?? id);
+  const label = (t: Tab, id: string) => (t === 'emoji' ? 'Эмодзи' : t === 'stickers' ? doodle(id)?.name ?? 'Стикер' : ICONS.find((i) => i.id === id)?.ru ?? id);
 
   const tiles = useRef(new Map<string, HTMLElement>());
   const [drag, setDrag] = useState<{ tab: Tab; id: string; x: number; y: number; outside: boolean } | null>(null);
@@ -172,7 +172,7 @@ export function IconPicker({ zoom, onPick }: { zoom: number; onPick: (kind: Pick
   // Outside the picker, the size the dropped item will have on screen (at least big enough to see).
   const boardPx = drag ? Math.max(16, (KIND[drag.tab] === 'doodle' ? DOODLE_SIZE : DEFAULTS[KIND[drag.tab] as 'emoji' | 'icon'].w) * zoom) : 0;
   return (
-    <div ref={root} className="pop icon-pick" role="dialog" aria-label="Смайлы, стикеры и иконки">
+    <div ref={root} className="pop icon-pick" role="dialog" aria-label="Эмодзи, стикеры и иконки">
       <div className="pick-tabs" role="tablist">
         {TABS.map(([t, name]) => (
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{name}</button>
