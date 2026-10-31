@@ -1,5 +1,5 @@
 import type { Item, Link, Side } from '../model/types';
-import { DEFAULTS, ROTATABLE, uid } from '../model/types';
+import { DEFAULTS, ROTATABLE, textPad, textPadY, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
 import { angleOf, boxOf, center, hitItem, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedAt, toLocal, turn } from '../canvas/geometry';
 import { fitHeight, itemTextHeight, mindSize } from '../canvas/text';
@@ -261,6 +261,12 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
   }
 }
 
+/** Whether a point is on a mind map node's text: inside its padding (but no more than 10 in). */
+const onMindText = (it: Item, w: Point): boolean => {
+  const px = Math.min(textPad(it), 10), py = Math.min(textPadY(it), 10);
+  return w.x > it.x + px && w.x < it.x + it.w - px && w.y > it.y + py && w.y < it.y + it.h - py;
+};
+
 /** The gesture let go of. */
 export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
   const board = ed.board;
@@ -299,8 +305,9 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       } else if (g.cell) {
         const it = board.get(g.id), i = it ? cellAt(it, g.start) : null;
         if (i !== null) ed.pickCell(i, e.shiftKey ? 'range' : e.metaKey || e.ctrlKey ? 'toggle' : 'one');
-      } else if (board.get(g.id)?.type === 'mind' && ed.selection.size === 1 && !e.shiftKey) {
-        // A mind map node opens for typing on a single click, the caret after its text.
+      } else if (board.get(g.id)?.type === 'mind' && ed.selection.size === 1 && !e.shiftKey && onMindText(board.get(g.id)!, g.start)) {
+        // A mind map node opens for typing on a single click on its text (inside its padding), the caret
+        // after its text; on its edge, it's only picked (to be deleted, say).
         ed.startEditing(g.id, null, 'end');
       }
       return;
