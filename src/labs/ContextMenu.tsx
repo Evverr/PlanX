@@ -6,7 +6,7 @@ import { linkInTextAt } from '../canvas/renderer';
 import { alignOf, baseWeight, COLORABLE, DEFAULTS, FILLS, HAS_FONT, ICON_COLORS, INK_COLORS, STROKABLE, STROKE_COLORS, TEXT_COLORS, type Item, type LinkStyle } from '../model/types';
 import { fitHeight, FONTS } from '../canvas/text';
 import { PanelIcon, type PanelIconName } from '../ui/PanelIcon';
-import { MIND_PALETTE } from '../model/mind';
+import { fillOpacity, MIND_PALETTE } from '../model/mind';
 import { Glyph } from '../ui/glyphs';
 import { ColorPicker } from '../ui/ColorPicker';
 import { Switch } from '../ui/BoardMenu';
@@ -310,8 +310,8 @@ function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch
   );
   return (
     <>
-      {fillable && <ColorRow editor={editor} label={it.type === 'mind' ? 'Цвет' : 'Заливка'} colors={fills} current={it.color} opacity={it.fo ?? 1}
-        onColor={(c) => set({ color: c })} onOpacity={(v) => set({ fo: v })} />}
+      {fillable && <ColorRow editor={editor} label={it.type === 'mind' ? 'Цвет' : 'Заливка'} colors={fills} current={it.color} opacity={fillOpacity(it)}
+        onColor={(c) => set({ color: c })} onOpacity={(v) => set({ fo: v ?? (it.type === 'mind' ? 1 : undefined) })} />}
       {strokable && <ColorRow editor={editor} label="Обводка" colors={Object.fromEntries(Object.entries(STROKE_COLORS).filter(([k]) => k !== 'none').map(([k, v]) => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--shape-stroke)')]))} none
         current={it.sc ?? 'gray'} opacity={it.so ?? 1} onColor={(c) => set({ sc: c === 'gray' ? undefined : c })} onOpacity={(v) => set({ so: v })} />}
       {own && <ColorRow editor={editor} label="Цвет" colors={own} current={it.color ?? 'ink'} opacity={it.fo ?? 1}

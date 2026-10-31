@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNod
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { COLORABLE, FILLS, ICON_COLORS, INK_COLORS, STROKABLE, STROKE_COLORS, TEXT_COLORS } from '../model/types';
-import { MIND_PALETTE, mindDepth } from '../model/mind';
+import { fillOpacity, MIND_PALETTE, mindDepth } from '../model/mind';
 import { colsOf, rowsOf } from '../model/table';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
@@ -171,10 +171,10 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
   const swatches: Array<[string, string]> = target === 'text' ? TEXT_SWATCHES : mind ? MIND_PALETTE.map((c) => [c, c]) : target === 'fill'
     ? Object.entries(FILLS).filter(([k]) => k !== 'none' || allowNone)
     : [...Object.entries(STROKE_COLORS).map(([k, v]): [string, string] => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--shape-stroke)')]), ['none', '']];
-  const opacity = Number(same(target === 'fill' ? colorable.map((i) => String(i.fo ?? 1)) : target === 'text' ? colorable.map((i) => String(i.to ?? 1))
+  const opacity = Number(same(target === 'fill' ? colorable.map((i) => String(fillOpacity(i))) : target === 'text' ? colorable.map((i) => String(i.to ?? 1))
     : strokable.map((i) => String(i.so ?? 1))) ?? 1);
   const iconColor = same(icons.map((i) => i.color ?? 'ink')), inks = items.filter((i) => i.type === 'ink'), inkColor = same(inks.map((i) => i.color ?? 'ink'));
-  const seeThrough = (list: Item[]) => Number(same(list.map((i) => String(i.fo ?? 1))) ?? 1);
+  const seeThrough = (list: Item[]) => Number(same(list.map((i) => String(fillOpacity(i)))) ?? 1);
   return (
     <Palette label="Цвет">
       {colorable.length > 0 && <>
@@ -215,7 +215,7 @@ function MindColors({ editor, nodes }: { editor: Editor; nodes: Item[] }) {
     if (paint.includes('text')) editor.setTextStyle({ tc: c === 'ink' ? undefined : c });
     editor.endChange();
   };
-  const opacity = Number(same(nodes.map((i) => String((target === 'fill' ? i.fo : target === 'text' ? i.to : i.so) ?? 1))) ?? 1);
+  const opacity = Number(same(nodes.map((i) => String((target === 'fill' ? fillOpacity(i) : target === 'text' ? i.to : i.so) ?? 1))) ?? 1);
   return (
     <Palette label="Цвет">
       <PaintSwitch paint={paint} pick={pick} fill={fill} stroke={stroke ?? MIND_PALETTE[0]} fillLabel="Заливка" strokeLabel="Обводка" text={text} />
