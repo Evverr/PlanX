@@ -299,14 +299,15 @@ function clearCousins(p: Item, way: Way, all: Item[], byId: Map<string, Item>): 
   const level = toRoot.length, myPart = part(p);
   const kids = branchesOf(p, way, all);
   if (!kids.length) return;
-  const mine = kids.flatMap(block);
-  const others = all.filter((i) => i.type === 'mind' && i.parent && i.parent !== p.id && chain(i).length === level + 1 && part(i) === myPart).map(block);
+  // Measured by the nodes of the level alone, not what grows further from them; each moves with it.
+  const mine = kids;
+  const others = all.filter((i) => i.type === 'mind' && i.parent && i.parent !== p.id && chain(i).length === level + 1 && part(i) === myPart).map((i) => [i]);
   // Between the branches of different parents, a node's height at least (see cousinGap).
   const gap = (b: Item[], from: string) => (b[0].parent !== from ? Math.max(a.gap, b[0].h) : a.gap);
   let edge = hi(mine, a), from = p.id;
   for (const b of others.filter((b) => middle(get(b[0].parent!)!, a) >= middle(p, a)).sort((m, n) => lo(m, a) - lo(n, a))) {
     const need = edge + gap(b, from) - lo(b, a);
-    if (need > 0) shift(b, a, need);
+    if (need > 0) shift(block(b[0]), a, need);
     edge = Math.max(edge, hi(b, a));
     from = b[0].parent!;
   }
@@ -314,7 +315,7 @@ function clearCousins(p: Item, way: Way, all: Item[], byId: Map<string, Item>): 
   from = p.id;
   for (const b of others.filter((b) => middle(get(b[0].parent!)!, a) < middle(p, a)).sort((m, n) => hi(n, a) - hi(m, a))) {
     const need = hi(b, a) + gap(b, from) - edge;
-    if (need > 0) shift(b, a, -need);
+    if (need > 0) shift(block(b[0]), a, -need);
     edge = Math.min(edge, lo(b, a));
     from = b[0].parent!;
   }
