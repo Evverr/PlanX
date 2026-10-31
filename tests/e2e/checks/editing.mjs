@@ -73,6 +73,16 @@ export const checks = {
     expect(await count(p, 'sticky'), 'the copy deleted').toBe(1);
   },
 
+  async 'Ctrl+Z in a new mind map branch with nothing typed takes it away'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('mind', 300, 300, { id: 'r', w: 120, h: 40, text: 'Центр' })); e.setSelection(['r']); e.addMindNode('r', 'child'); })()`);
+    await sleep(200);
+    expect(await p.ev(`document.activeElement?.tagName`), 'typing in it').toBe('TEXTAREA');
+    await p.cdp('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'z', code: 'KeyZ', modifiers: 2, windowsVirtualKeyCode: 90 });
+    await sleep(200);
+    expect(await p.ev(`planx.board.list().filter((i) => i.parent === 'r').length + ' ' + [...planx.editor.selection].join()`), 'gone, its parent picked').toBe('0 r');
+  },
+
   async 'the pointer rested on a mind map node a moment shows its buttons, nothing picked; its "+" adds a branch'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('mind', 300, 300, { id: 'r', w: 120, h: 40, text: 'Центр' })); e.setSelection([]); })()`);

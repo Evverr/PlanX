@@ -71,6 +71,17 @@ export function removeMindNode(ed: Editor, id: string): void {
   ed.setSelection(ed.board.get(it.parent) ? [it.parent] : []);
 }
 
+/** Ctrl+Z in a mind map node being typed in with nothing typed yet: the typing given up and the
+ *  node's adding undone (what was picked before picked again, as the undo leaves it). */
+export function undoMindNode(ed: Editor, id: string): void {
+  const it = ed.board.get(id);
+  ed.editingId = null;
+  // Back past what was done to it since (its size fitted as it opened), to the step that added it.
+  for (let guard = 0; ed.board.get(id) && ed.board.undoManager.undoStack.length && guard < 10; guard++) ed.undo();
+  if (!ed.board.get(id)) ed.setSelection(it?.parent && ed.board.get(it.parent) ? [it.parent] : []);
+  ed.emit();
+}
+
 /** Mind map nodes already checked against the padding they're sized with now. */
 const fitted = new WeakMap<Editor, Set<string>>();
 
