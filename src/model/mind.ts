@@ -334,20 +334,22 @@ export function tidyBranches(id: string, items: Item[]): Map<string, Point> {
   const { all, byId, block } = working(items);
   const n = byId.get(id);
   if (!n) return new Map();
-  tidyFrom(n, all, block);
+  // Each node keeps the way it grows from its parent (its side of it, under, over), as it was before.
+  const ways = new Map(all.filter((k) => k.type === 'mind' && k.parent && byId.has(k.parent)).map((k) => [k.id, mindWay(k, byId.get(k.parent!)!)]));
+  tidyFrom(n, all, block, ways);
   for (const p of [n, ...descendants([id], all).map((d) => byId.get(d)!)]) {
     for (const way of new Set(all.filter((k) => k.type === 'mind' && k.parent === p.id).map((k) => mindWay(k, p)))) clearCousins(p, way, all, byId);
   }
   return moved(items, byId);
 }
-function tidyFrom(n: Item, all: Item[], block: (k: Item) => Item[]): void {
+function tidyFrom(n: Item, all: Item[], block: (k: Item) => Item[], ways: Map<string, Way>): void {
   const kids = all.filter((k) => k.type === 'mind' && k.parent === n.id);
   for (const way of ['right', 'left', 'down', 'up'] as const) {
-    const a = axis(way), row = kids.filter((k) => mindWay(k, n) === way).sort((m, q) => middle(m, a) - middle(q, a));
+    const a = axis(way), row = kids.filter((k) => ways.get(k.id) === way).sort((m, q) => middle(m, a) - middle(q, a));
     // Out from it first, all of the row, so a floor goes out from the widest; then each one's own.
     for (const k of row) { const d = outFrom(floorOf(n, all), way, k); block(k).forEach((m) => { m.x += (d.x ?? k.x) - k.x; m.y += (d.y ?? k.y) - k.y; }); }
     lineUp(row.map((k) => [k]), a, middle(n, a));
-    for (const k of row) tidyFrom(k, all, block);
+    for (const k of row) tidyFrom(k, all, block, ways);
   }
 }
 
