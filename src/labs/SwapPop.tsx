@@ -63,7 +63,7 @@ export function SwapPop({ editor }: { editor: Editor }) {
   return (
     <div ref={ref} className={`pop swap-pop ${kind}`} role="dialog" aria-label="Заменить на соседний"
       style={{ left: Math.max(8, Math.min(window.innerWidth - 340, r.left + top.x)), top: Math.min(window.innerHeight - 120, r.top + top.y + GAP) }}>
-      {kind === 'emoji' && <div className="icon-grid emoji-grid">{pickerOrder('emoji').map((e) => tile(e, 'Смайл', <Tile kind="emoji" id={e} />))}</div>}
+      {kind === 'emoji' && <div className="icon-grid emoji-grid">{pickerOrder('emoji').map((e) => tile(e, 'Эмодзи', <Tile kind="emoji" id={e} />))}</div>}
       {kind === 'icon' && (
         <>
           <input type="search" placeholder="Найти иконку" aria-label="Найти иконку" autoComplete="off" value={q} onChange={(e) => setQ(e.target.value)} />

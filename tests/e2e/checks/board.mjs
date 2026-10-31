@@ -461,7 +461,7 @@ export const checks = {
   async 'the picker\'s stickers are the game ones, and one picked goes on the board with its outline'(p) {
     await p.ev(`window.dispatchEvent(new CustomEvent('planx:toggle-icons'))`);
     await sleep(300);
-    await p.ev(`[...document.querySelectorAll('.pick-tabs button')].find((b) => b.textContent === 'Игровые стикеры').click()`);
+    await p.ev(`[...document.querySelectorAll('.pick-tabs button')].find((b) => b.textContent === 'Стикеры').click()`);
     await sleep(200);
     expect(await p.ev(`[...document.querySelectorAll('.doodle-grid')].map((g) => g.children.length).join()`), 'fifteen of them, and fourteen badges under them').toBe('15,14');
     await p.click(await p.at('.doodle-grid button'));
