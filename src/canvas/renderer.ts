@@ -75,6 +75,8 @@ export interface Scene {
   hotPlus: string | null;
   /** How far the node buttons have faded in, 0…1: they come a moment after the node is picked. */
   plusFade: number;
+  /** A mind map node the pointer has rested on (not the picked one): its buttons show, not the picked one's. */
+  plusOn?: string | null;
   /** How many nodes each folded mind map node hides, each way, shown by it. */
   folded?: Map<string, Map<Way, number>>;
   /** The link under the pointer, faintly lit. */
@@ -504,6 +506,58 @@ function outlinePolygon(ctx: CanvasPath, it: Item) {
     ctx.arcTo(p.x, p.y, b.x, b.y, Math.max(0, Math.min(rad, (Math.min(la, lb) / 2) * Math.tan(half))));
   }
   ctx.closePath();
+}
+
+/** A mind map node's buttons: "+" for a branch of its own and the others, chevrons to fold, the
+ *  arrow to move it; for the one picked, or the one the pointer has rested on. */
+function drawMindButtons(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
+  const { cam } = s;
+  if (s.plusFade > 0) {
+    // The ways it has branches: those in sight, and those folded away.
+    const up = it.parent ? s.get(it.parent) : undefined;
+    const ways = [...new Set([...branchWays(it, s.items), ...foldedWays(it, up)])];
+    const fresh = s.chevronless?.startsWith(`${it.id}:`) ? s.chevronless.slice(it.id.length + 1) as Way : undefined;
+    for (const b of mindButtons(it, s.get, cam.z, ways, fresh)) {
+      // Smaller and faint until the pointer comes over it.
+      const hot = s.hotPlus === buttonKey(b), r = hot ? b.r : b.r * 0.9;
+      ctx.globalAlpha = (hot ? 1 : 0.5) * s.plusFade;
+      ctx.fillStyle = SELECT_COLOR;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      // The plus or arrow on a faint circle is drawn stronger than the circle, so it stands out
+      // half as far from white as it would at the circle's strength.
+      ctx.globalAlpha = (hot ? 1 : 0.75) * s.plusFade;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = (hot ? 2 : 1.5) / cam.z;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      if (b.kind === 'move' && (b.y < it.y || b.y > it.y + it.h)) {
+        // Over a node led down (or under one led up): an arrow pointing up (or down), away from it.
+        const d = b.y < it.y ? -1 : 1;
+        ctx.moveTo(b.x, b.y - d * r * 0.5); ctx.lineTo(b.x, b.y + d * r * 0.5);
+        ctx.moveTo(b.x - r * 0.4, b.y + d * r * 0.1); ctx.lineTo(b.x, b.y + d * r * 0.5); ctx.lineTo(b.x + r * 0.4, b.y + d * r * 0.1);
+      } else if (b.kind === 'move') {
+        // An arrow pointing away from the node.
+        const d = b.x < it.x ? -1 : 1;
+        ctx.moveTo(b.x - d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.5, b.y);
+        ctx.moveTo(b.x + d * r * 0.1, b.y - r * 0.4); ctx.lineTo(b.x + d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.1, b.y + r * 0.4);
+      } else if (b.kind === 'fold') {
+        // A chevron pointing back at the node, for folding its branches away.
+        const [dx, dy] = { down: [0, -1], up: [0, 1], left: [1, 0], right: [-1, 0] }[b.way ?? 'right'];
+        const tip = { x: b.x + dx * r * 0.25, y: b.y + dy * r * 0.25 }, back = r * 0.45;
+        ctx.moveTo(tip.x - dx * back - dy * back, tip.y - dy * back - dx * back);
+        ctx.lineTo(tip.x, tip.y);
+        ctx.lineTo(tip.x - dx * back + dy * back, tip.y - dy * back + dx * back);
+      } else {
+        ctx.moveTo(b.x - r * 0.5, b.y); ctx.lineTo(b.x + r * 0.5, b.y);
+        ctx.moveTo(b.x, b.y - r * 0.5); ctx.lineTo(b.x, b.y + r * 0.5);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
 }
 
 /** A mind map node: white (or a fill of its own) on a faint shadow, with no edge but a strip of its
@@ -1096,6 +1150,9 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     }
   }
 
+  // The buttons of a mind map node the pointer has rested on, in place of the picked one's.
+  const resting = s.plusOn ? s.get(s.plusOn) : undefined;
+  if (resting) drawMindButtons(ctx, resting, s);
   for (const id of s.selection) {
     const it = s.get(id);
     if (!it) continue;
@@ -1105,52 +1162,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     // A mind map node sizes itself and links by its branches: instead of the handle and dots it
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && it.type === 'mind') {
-      if (s.plusFade > 0) {
-        // The ways it has branches: those in sight, and those folded away.
-        const up = it.parent ? s.get(it.parent) : undefined;
-        const ways = [...new Set([...branchWays(it, s.items), ...foldedWays(it, up)])];
-        const fresh = s.chevronless?.startsWith(`${it.id}:`) ? s.chevronless.slice(it.id.length + 1) as Way : undefined;
-        for (const b of mindButtons(it, s.get, cam.z, ways, fresh)) {
-          // Smaller and faint until the pointer comes over it.
-          const hot = s.hotPlus === buttonKey(b), r = hot ? b.r : b.r * 0.9;
-          ctx.globalAlpha = (hot ? 1 : 0.5) * s.plusFade;
-          ctx.fillStyle = SELECT_COLOR;
-          ctx.beginPath();
-          ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
-          ctx.fill();
-          // The plus or arrow on a faint circle is drawn stronger than the circle, so it stands out
-          // half as far from white as it would at the circle's strength.
-          ctx.globalAlpha = (hot ? 1 : 0.75) * s.plusFade;
-          ctx.strokeStyle = '#fff';
-          ctx.lineWidth = (hot ? 2 : 1.5) / cam.z;
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-          ctx.beginPath();
-          if (b.kind === 'move' && (b.y < it.y || b.y > it.y + it.h)) {
-            // Over a node led down (or under one led up): an arrow pointing up (or down), away from it.
-            const d = b.y < it.y ? -1 : 1;
-            ctx.moveTo(b.x, b.y - d * r * 0.5); ctx.lineTo(b.x, b.y + d * r * 0.5);
-            ctx.moveTo(b.x - r * 0.4, b.y + d * r * 0.1); ctx.lineTo(b.x, b.y + d * r * 0.5); ctx.lineTo(b.x + r * 0.4, b.y + d * r * 0.1);
-          } else if (b.kind === 'move') {
-            // An arrow pointing away from the node.
-            const d = b.x < it.x ? -1 : 1;
-            ctx.moveTo(b.x - d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.5, b.y);
-            ctx.moveTo(b.x + d * r * 0.1, b.y - r * 0.4); ctx.lineTo(b.x + d * r * 0.5, b.y); ctx.lineTo(b.x + d * r * 0.1, b.y + r * 0.4);
-          } else if (b.kind === 'fold') {
-            // A chevron pointing back at the node, for folding its branches away.
-            const [dx, dy] = { down: [0, -1], up: [0, 1], left: [1, 0], right: [-1, 0] }[b.way ?? 'right'];
-            const tip = { x: b.x + dx * r * 0.25, y: b.y + dy * r * 0.25 }, back = r * 0.45;
-            ctx.moveTo(tip.x - dx * back - dy * back, tip.y - dy * back - dx * back);
-            ctx.lineTo(tip.x, tip.y);
-            ctx.lineTo(tip.x - dx * back + dy * back, tip.y - dy * back + dx * back);
-          } else {
-            ctx.moveTo(b.x - r * 0.5, b.y); ctx.lineTo(b.x + r * 0.5, b.y);
-            ctx.moveTo(b.x, b.y - r * 0.5); ctx.lineTo(b.x, b.y + r * 0.5);
-          }
-          ctx.stroke();
-        }
-        ctx.globalAlpha = 1;
-      }
+      if (!s.plusOn) drawMindButtons(ctx, it, s);
     } else if (s.showHandle && s.editingId !== id && it.host) {
       // What's in an instance stays where the instance puts it.
     } else if (s.showHandle && s.editingId !== id && it.inst) {

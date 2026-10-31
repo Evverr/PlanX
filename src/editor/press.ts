@@ -89,7 +89,7 @@ export function press(ed: Editor, e: PointerEvent): void {
   // resize handle, link dots, turning corner, mind map buttons), on a folded mind map node's count
   // or on a table's line.
   const picked = ed.selection.size === 1 ? board.get([...ed.selection][0]) : undefined;
-  const onControl = (!!picked && !ed.editingId && !isLocked(picked) && (onHandle(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!plusAt(ed, picked, w) || !!sideAt(ed, picked, w)))
+  const onControl = (!!picked && !ed.editingId && !isLocked(picked) && (onHandle(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!sideAt(ed, picked, w))) || (!!ed.plusNode() && !!plusAt(ed, ed.plusNode()!, w))
     || !!foldBadgeAt(ed, w) || !!tickAt(ed, w);
   const empty = ed.tool === 'select' && e.button === 0 && !ed.spaceDown && !e.shiftKey && !hit && !link && !onControl
     && !grabbableLine(ed, w, hit, e.pointerType) && !ed.editingId;
@@ -167,12 +167,13 @@ export function press(ed: Editor, e: PointerEvent): void {
 
   // Select tool.
   const single = ed.selection.size === 1 ? board.get([...ed.selection][0]) : undefined;
-  const plus = single && plusAt(ed, single, w);
-  if (single && plus) {
-    if (plus.kind === 'move') ed.gesture = { type: 'mindMove', id: single.id, from: w, to: w, target: null };
+  // A mind map node's buttons: the picked one's, or those of the one the pointer rests on.
+  const node = ed.editingId && ed.editingId !== single?.id ? undefined : ed.plusNode(), plus = node && plusAt(ed, node, w);
+  if (node && plus) {
+    if (plus.kind === 'move') ed.gesture = { type: 'mindMove', id: node.id, from: w, to: w, target: null };
     // Folded by its chevron, nothing's left picked: the map to look at.
-    else if (plus.kind === 'fold') { ed.setCollapsed(single.id, plus.way!, true); ed.setSelection([]); }
-    else ed.addMindNode(single.id, plus.kind, true);
+    else if (plus.kind === 'fold') { ed.setCollapsed(node.id, plus.way!, true); ed.setSelection([]); }
+    else ed.addMindNode(node.id, plus.kind, true);
     return;
   }
   // The diamond before a picked instance's title brings its component out in its place, to be changed.

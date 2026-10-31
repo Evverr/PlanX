@@ -164,7 +164,12 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if ((link?.id ?? null) !== ed.hotLink) { ed.hotLink = link?.id ?? null; ed.requestRender(); }
   // The picked instance's diamond (or that of the one holding what's picked) is lit as "glyph:<its id>".
   const glyph = picked && onInstanceGlyph(ed, picked, w) ? `glyph:${picked.inst ? picked.id : picked.host}` : null;
-  const tick = tickAt(ed, w), plus = picked ? plusAt(ed, picked, w) : null, hot = plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : glyph;
+  // A mind map node the pointer is on, or on its buttons, shows them as if it were picked.
+  const rest = ed.mindHover ? ed.board.get(ed.mindHover) : undefined;
+  const mind = rest && (pointInRect(w, rest) || plusAt(ed, rest, w)) ? rest.id : over?.type === 'mind' && !over.host ? over.id : null;
+  if (mind !== ed.mindHover) { ed.mindHover = mind; ed.requestRender(); }
+  const node = ed.plusNode();
+  const tick = tickAt(ed, w), plus = node ? plusAt(ed, node, w) : null, hot = plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : glyph;
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (linkHandleAt(ed, w)) cursor = 'move';

@@ -154,6 +154,9 @@ export class Editor {
    *  or let go), and what was picked then. */
   private plusKey = '';
   private plusFrom = 0;
+  /** Shared: the mind map node the pointer is on (or on its buttons); its buttons fade in as a picked
+   *  one's do, after the same wait (see hover.ts). */
+  mindHover: string | null = null;
   private plusTimer = 0;
   /** What's in sight, worked out once for each change of the board (it's asked for on every move
    *  of the pointer and every frame drawn). */
@@ -351,7 +354,8 @@ export class Editor {
       if (from) linkPreview = { from, fromSide: relinked.fromSide ?? null, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null, style: relinked.style };
     }
     // A mind map node's buttons stay while its text is being typed (one click opens it for typing).
-    const plusKey = `${[...this.selection].join()}|${this.moving}|${this.editingId && this.board.get(this.editingId)?.type !== 'mind' ? this.editingId : ''}`;
+    const plusOn = this.plusOn();
+    const plusKey = `${[...this.selection].join()}|${plusOn ?? ''}|${this.moving}|${this.editingId && this.board.get(this.editingId)?.type !== 'mind' ? this.editingId : ''}`;
     if (plusKey !== this.plusKey) {
       this.plusKey = plusKey;
       this.chevronless = null;
@@ -384,6 +388,7 @@ export class Editor {
       linkDots: this.tool === 'link' && !this.gesture ? this.linkDots : null,
       hotPlus: this.hotPlus,
       plusFade,
+      plusOn,
       folded: this.folded(),
       slide: this.slideOut(plusFade),
       chevronless: this.chevronless,
@@ -401,6 +406,21 @@ export class Editor {
       this.ctx.restore();
     }
     if (again) this.requestRender();
+  }
+
+  /** The mind map node the pointer rests on, when it isn't the one picked alone. */
+  private plusOn(): string | null {
+    const it = this.mindHover ? this.board.get(this.mindHover) : undefined;
+    if (!it || it.type !== 'mind' || it.host || isLocked(it) || this.gesture) return null;
+    return this.selection.size === 1 && this.selection.has(it.id) ? null : it.id;
+  }
+
+  /** Shared: the mind map node whose buttons show: the one the pointer rests on, or the one picked alone. */
+  plusNode(): Item | undefined {
+    const on = this.plusOn();
+    if (on) return this.board.get(on);
+    const one = this.selection.size === 1 ? this.board.get([...this.selection][0]) : undefined;
+    return one?.type === 'mind' && !isLocked(one) ? one : undefined;
   }
 
   /** Shared: how far the selected mind map node's "+" buttons have faded in, 0…1. */
@@ -1186,7 +1206,7 @@ export class Editor {
    *  back as smoothly once they're gone. */
   private slideOut(plusFade: number): Map<string, number> {
     const now = performance.now(), out = new Map<string, number>();
-    const picked = this.selection.size === 1 ? [...this.selection][0] : null;
+    const picked = this.plusNode()?.id ?? null;
     for (const [id, ways] of this.folded()) {
       for (const way of ways.keys()) {
         const key = `${id}:${way}`, to = id === picked ? plusFade : 0, was = this.slides.get(key) ?? { v: to };

@@ -73,6 +73,23 @@ export const checks = {
     expect(await count(p, 'sticky'), 'the copy deleted').toBe(1);
   },
 
+  async 'the pointer rested on a mind map node a moment shows its buttons, nothing picked; its "+" adds a branch'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('mind', 300, 300, { id: 'r', w: 120, h: 40, text: 'Центр' })); e.setSelection([]); })()`);
+    await sleep(200);
+    await p.mouse('mouseMoved', 360, 320);
+    await sleep(100);
+    expect(await p.ev('planx.editor.plusFade()'), 'not yet').toBe(0);
+    await sleep(700);
+    expect(await p.ev('planx.editor.plusNode()?.id'), 'its buttons').toBe('r');
+    const plus = await p.ev(`(async () => { const m = await import('/src/model/mind.ts'), e = planx.editor, it = planx.board.get('r');
+      const b = m.mindButtons(it, (id) => planx.board.get(id), e.cam.z, []).find((b) => b.kind === 'child'); return [b.x, b.y]; })()`);
+    await p.mouse('mouseMoved', ...plus);
+    await p.click(plus);
+    await sleep(200);
+    expect(await p.ev(`planx.board.list().filter((i) => i.parent === 'r').length`), 'a branch').toBe(1);
+  },
+
   async 'a mind map grows by Tab (a branch) and Enter (one beside it)'(p) {
     await p.make('mind', [600, 400]);
     await p.escape();
