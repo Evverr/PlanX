@@ -126,6 +126,11 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         } else if (e.key === 'Escape' || (e.key === 'Enter' && isFrame)) {
           e.preventDefault();
           commit();
+        } else if (item.type === 'mind' && item.parent && (e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'KeyZ' && !e.currentTarget.value) {
+          // Nothing typed in a new branch yet: Ctrl+Z takes it away, as the step that added it.
+          e.preventDefault();
+          done.current = true;
+          editor.undoMindNode(id);
         } else if (item.type === 'mind' && item.parent && (e.key === 'Backspace' || e.key === 'Delete') && !e.currentTarget.value) {
           // An empty mind map node goes on Delete or Backspace.
           e.preventDefault();

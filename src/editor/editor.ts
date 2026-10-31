@@ -23,7 +23,7 @@ import { shapePatch, shapeStyle } from './shapeStyle';
 import { endGesture, moveGesture, type Gesture } from './gestures';
 import { updateCursor } from './hover';
 import { onKeyDown, onPaste } from './keys';
-import { addMindNode, mindFit, refitMind, removeMindNode, type MindAdd } from './mindOps';
+import { addMindNode, mindFit, refitMind, removeMindNode, undoMindNode, type MindAdd } from './mindOps';
 import { press } from './press';
 import { formatCells, pickCell, restOn, setTableLines } from './tables';
 import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, type Pens, type PenTool, type Tool } from './tools';
@@ -1171,6 +1171,7 @@ export class Editor {
 
   /** Takes away an emptied mind map node (see mindOps.ts). */
   removeMindNode(id: string): void { removeMindNode(this, id); }
+  undoMindNode(id: string): void { undoMindNode(this, id); }
 
   /** Shared: typing stops (the overlay listens for this and commits its value). */
   stopEditing(): void {

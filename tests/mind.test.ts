@@ -85,9 +85,9 @@ describe('mind map: adding keeps the levels further in still', () => {
     still(moves);
     expect(moves.get('a1')?.y).toBe(-28);
     expect(moves.get('a2')?.y).toBe(28);
-    // B's and C's branches make way, as far as it takes.
-    expect(moves.get('b1')?.y).toBe(84);
-    expect(moves.get('c1')?.y).toBe(-84);
+    // B's and C's branches make way, as far as it takes: a node's height off a's (a2's).
+    expect(moves.get('b1')?.y).toBe(108);
+    expect(moves.get('c1')?.y).toBe(-108);
   });
 
   it('a branch put beside another moves only that level', () => {
@@ -95,13 +95,13 @@ describe('mind map: adding keeps the levels further in still', () => {
     still(moves);
     // The new one right under a1 (where it was put), B's branches out of its way.
     expect(moves.get('a2')?.y ?? 56).toBe(56);
-    expect(moves.get('b1')?.y).toBe(112);
+    expect(moves.get('b1')?.y).toBe(136);
   });
 
   it('a node growing as it is typed in pushes its level only', () => {
     const moves = makeRoom('a1', 0, 30, base().map((i) => (i.id === 'a1' ? { ...i, h: 70 } : i)));
     still(moves);
-    expect(moves.get('b1')?.y).toBe(86);
+    expect(moves.get('b1')?.y).toBe(110);
   });
 });
 
@@ -348,7 +348,7 @@ describe('mind map: "Авторасположение", branches with their own'
     const moves = tidyBranches('r', items), y = (id: string) => (moves.get(id) ?? items.find((i) => i.id === id)!).y;
     expect(y('b') - y('a')).toBe(56);
     expect(y('a1')).toBe(y('a'));
-    expect(y('b0') - y('a2')).toBe(56);
+    expect(y('b0') - y('a2')).toBe(80);
   });
 });
 
@@ -358,5 +358,14 @@ describe('mind map: "Авторасположение" keeps sides', () => {
     const moves = tidyBranches('r', items), at = (id: string) => moves.get(id) ?? items.find((i) => i.id === id)!;
     expect(at('a1').x + 100 <= at('a').x).toBe(true);
     expect(at('a2').x >= at('a').x + 100).toBe(true);
+  });
+});
+
+describe('mind map: a new branch among neighbours with their own', () => {
+  it('stands the gap off them by their own sizes, their branches kept clear of each other', () => {
+    const items = [node('r', 0, 0), node('a', 160, 0, { parent: 'r' }), ...[0, 1, 2].map((i) => node(`a${i}`, 320, -56 + i * 56, { parent: 'a' })),
+      node('b', 160, 200, { parent: 'r' })];
+    const moves = addChild('b', items), y = (id: string) => (moves.get(id) ?? items.find((i) => i.id === id)!).y;
+    expect(y('b') - y('a')).toBe(56);
   });
 });
