@@ -378,3 +378,14 @@ describe('mind map: one put beside another with its own', () => {
     expect(y('b') - y('a')).toBe(56);
   });
 });
+
+describe('mind map: cousins make way for a new branch by its level alone', () => {
+  it('not by what grows further from its neighbours', () => {
+    const items = [node('r', 0, 0), node('P', 160, -100, { parent: 'r' }), node('Q', 160, 100, { parent: 'r' }),
+      node('c', 320, -100, { parent: 'P' }), node('L', 320, 100, { parent: 'Q' }),
+      ...[0, 1, 2, 3, 4, 5].map((i) => node(`k${i}`, 480, 100 - 140 + i * 56, { parent: 'L' })), node('M', 320, 160, { parent: 'Q' })];
+    const moves = addChild('M', items);
+    // c is far enough from L itself (L's own branches reaching up past it don't count).
+    expect(moves.has('c')).toBe(false);
+  });
+});
