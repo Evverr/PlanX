@@ -11,6 +11,7 @@ import { Glyph } from '../ui/glyphs';
 import { ColorPicker } from '../ui/ColorPicker';
 import { Switch } from '../ui/BoardMenu';
 import { labOn } from './labs';
+import { startTidy } from './tidy';
 import { startComment } from './comments';
 
 /** Where the menu opened (on the screen and the board), what it's for, and whether it shows the
@@ -129,6 +130,9 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
   // An instance picked (or something in one): its component brought out in its place.
   const one = editor.selection.size === 1 ? editor.selectedItems()[0] : undefined;
   const inOne = one?.host ? editor.board.get(one.host) : one, editInst = inOne?.inst && !inOne.inst.startsWith('@') ? inOne.id : null;
+  // "Авторасположение" (src/labs/tidy.ts): a few picked in a grid, or a mind map node's branches.
+  const tidyMind = one?.type === 'mind' && editor.board.list().some((i) => i.parent === one.id) ? one.id : null;
+  const tidy = labOn('tidy') && (editor.selection.size > 1 || tidyMind);
   if (at.params && params.length) {
     return (
       <div ref={ref} className="board-menu context-menu params-pop" role="dialog" aria-label="Параметры" onContextMenu={(e) => e.preventDefault()}>
@@ -165,6 +169,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
         {row('arrow-down-l', 'Переместить вниз', run(() => editor.sendToBack()))}
         {row('maximize', 'Сделать компонентом', run(() => editor.makeComponent()))}
         {editInst && row('edit-l', 'Редактировать компонент', run(() => editor.editComponentAt(editInst)))}
+        {tidy && row('apps', 'Авторасположение', run(() => { if (tidyMind) editor.tidyMind(tidyMind); else startTidy(editor); editor.requestRender(); }))}
         <div className="menu-line" />
         {row('trashcan-l', 'Удалить', run(() => editor.deleteSelection()))}
       </>}

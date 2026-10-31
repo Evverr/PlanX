@@ -132,8 +132,9 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           done.current = true;
           editor.undoMindNode(id);
         } else if (item.type === 'mind' && item.parent && (e.key === 'Backspace' || e.key === 'Delete') && !e.currentTarget.value) {
-          // An empty mind map node goes on Delete or Backspace.
+          // An empty mind map node goes on Delete or Backspace pressed anew, not held on from erasing its text.
           e.preventDefault();
+          if (e.repeat) return;
           done.current = true;
           editor.removeMindNode(id);
         } else if (e.key === 'Tab' && editor.board.get(id)?.type === 'table' && editor.editingCell !== null) {

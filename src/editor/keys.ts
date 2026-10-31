@@ -35,7 +35,8 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
     if (it?.type === 'table') ed.board.update(it.id, { cells: (it.cells ?? []).map((c, i) => (ed.cells.includes(i) ? '' : c)) });
     return;
   }
-  if (e.key === 'Delete' || e.key === 'Backspace') { if (ed.selection.size) { e.preventDefault(); ed.deleteSelection(); } return; }
+  // Held down, it deletes once: what's left picked (a mind map node's parent) waits for the next press.
+  if (e.key === 'Delete' || e.key === 'Backspace') { if (ed.selection.size) { e.preventDefault(); if (!e.repeat) ed.deleteSelection(); } return; }
   if (e.key === 'Escape' && ed.cells.length) { ed.cells = []; ed.emit(); ed.requestRender(); return; }
   if (e.key === 'Escape') { ed.pickedLines = []; ed.setSelection([]); ed.setTool('select'); window.dispatchEvent(new CustomEvent('planx:close-popovers')); return; }
   // On a mind map node, Tab adds a branch to it and Enter one beside it (to the centre: a branch).

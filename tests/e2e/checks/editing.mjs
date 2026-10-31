@@ -73,6 +73,26 @@ export const checks = {
     expect(await count(p, 'sticky'), 'the copy deleted').toBe(1);
   },
 
+  async 'a mind map node: a click on its edge picks it, on its text opens it; Delete held deletes once'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('mind', 100, 300, { id: 'r', w: 120, h: 48, text: 'Центр' }));
+      b.add(e.newItem('mind', 300, 300, { id: 'a', w: 100, h: 48, text: 'Ветка', parent: 'r' })); e.setSelection([]); })()`);
+    await sleep(200);
+    await p.click([303, 324]);
+    await sleep(150);
+    await p.click([303, 324]);
+    await sleep(150);
+    expect(await p.ev(`[...planx.editor.selection].join() + ' ' + planx.editor.editingId`), 'edge: picked only').toBe('a null');
+    await p.click([350, 324]);
+    await sleep(150);
+    expect(await p.ev('planx.editor.editingId'), 'text: typing').toBe('a');
+    await p.ev('planx.editor.stopEditing()');
+    const del = (repeat) => p.cdp('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'Delete', code: 'Delete', windowsVirtualKeyCode: 46, autoRepeat: repeat });
+    await del(false); await sleep(100);
+    for (let i = 0; i < 3; i++) { await del(true); await sleep(50); }
+    expect(await p.ev(`planx.board.list().map((i) => i.id).join()`), 'only the node gone').toBe('r');
+  },
+
   async 'Ctrl+Z in a new mind map branch with nothing typed takes it away'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('mind', 300, 300, { id: 'r', w: 120, h: 40, text: 'Центр' })); e.setSelection(['r']); e.addMindNode('r', 'child'); })()`);
