@@ -327,8 +327,8 @@ function layOut(n: Item, way: Way, all: Item[], block: (k: Item) => Item[]): voi
  * as a mind map lays it out, however it's been dragged about. Each way its branches grow (each side
  * of a central topic, under, over), they go out from it the usual gap off it (off the furthest of
  * their level's, as a floor does), one after another in the order they stand, the gap apart whatever
- * grows from them, centred on it; and so on down. Nothing moves to make room for what grows from
- * them (the gaps between neighbours stay even). The node itself stays put.
+ * grows from them, centred on it; and so on down. What grows from neighbours moves along out of each
+ * other's way, the neighbours' gaps staying even. The node itself stays put.
  */
 export function tidyBranches(id: string, items: Item[]): Map<string, Point> {
   const { all, byId, block } = working(items);
@@ -337,6 +337,23 @@ export function tidyBranches(id: string, items: Item[]): Map<string, Point> {
   // Each node keeps the way it grows from its parent (its side of it, under, over), as it was before.
   const ways = new Map(all.filter((k) => k.type === 'mind' && k.parent && byId.has(k.parent)).map((k) => [k.id, mindWay(k, byId.get(k.parent!)!)]));
   tidyFrom(n, all, block, ways);
+  // Level by level down from it: where what grows from two neighbours would overlap, the later one's
+  // moves along clear of the earlier one's, the neighbours themselves staying put.
+  for (let level = [n], guard = 0; level.length && guard < 50; guard++) {
+    for (const way of ['right', 'left', 'down', 'up'] as const) {
+      const a = axis(way);
+      let edge = -Infinity;
+      for (const p of [...level].sort((m, q) => middle(m, a) - middle(q, a))) {
+        const group = all.filter((k) => k.type === 'mind' && k.parent === p.id && ways.get(k.id) === way).flatMap(block);
+        if (!group.length) continue;
+        const need = edge + a.gap - lo(group, a);
+        if (need > 0) shift(group, a, need);
+        edge = hi(group, a);
+      }
+    }
+    const ids = new Set(level.map((k) => k.id));
+    level = all.filter((k) => k.type === 'mind' && k.parent && ids.has(k.parent));
+  }
   return moved(items, byId);
 }
 function tidyFrom(n: Item, all: Item[], block: (k: Item) => Item[], ways: Map<string, Way>): void {
