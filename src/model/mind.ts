@@ -340,7 +340,8 @@ function layOut(n: Item, way: Way, all: Item[], block: (k: Item) => Item[]): voi
  * of a central topic, under, over), they go out from it the usual gap off it (off the furthest of
  * their level's, as a floor does), one after another in the order they stand, the gap apart whatever
  * grows from them, centred on it; and so on down. What grows from neighbours moves along out of each
- * other's way, the neighbours' gaps staying even. The node itself stays put.
+ * other's way, the neighbours' gaps staying even; then all that grows from it is centred on it as one.
+ * The node itself stays put.
  */
 export function tidyBranches(id: string, items: Item[]): Map<string, Point> {
   const { all, byId, block } = working(items);
@@ -350,6 +351,11 @@ export function tidyBranches(id: string, items: Item[]): Map<string, Point> {
   const ways = new Map(all.filter((k) => k.type === 'mind' && k.parent && byId.has(k.parent)).map((k) => [k.id, mindWay(k, byId.get(k.parent!)!)]));
   tidyFrom(n, all, block, ways);
   spreadGroups(n, all, block, ways);
+  // Each way, all that grows from it (its branches, theirs and so on) centred as one on it.
+  for (const way of ['right', 'left', 'down', 'up'] as const) {
+    const a = axis(way), mass = all.filter((k) => k.type === 'mind' && k.parent === n.id && ways.get(k.id) === way).flatMap(block);
+    if (mass.length) shift(mass, a, middle(n, a) - (lo(mass, a) + hi(mass, a)) / 2);
+  }
   return moved(items, byId);
 }
 

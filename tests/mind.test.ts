@@ -330,10 +330,10 @@ describe('mind map: "Авторасположение" on a node', () => {
     ];
     const moves = tidyBranches('r', items), at = (id: string) => moves.get(id) ?? items.find((i) => i.id === id)!;
     expect(moves.has('r')).toBe(false);
-    // On the right: b above a, 60 off the root, 16 apart whatever grows from them, centred on it; a's
-    // own (a2 above a1, as they stood) 60 off a, 16 apart, centred on it.
+    // On the right: b above a, 60 off the root, 16 apart whatever grows from them; a's own (a2 above
+    // a1, as they stood) 60 off a, 16 apart, centred on it; all of it (-42…98) centred on the root.
     expect([at('b').x, at('a').x, at('l').x]).toEqual([160, 160, -160]);
-    expect([at('b').y, at('a').y]).toEqual([-28, 28]);
+    expect([at('b').y, at('a').y]).toEqual([-42, 14]);
     expect([at('a2').x, at('a1').x]).toEqual([320, 320]);
     expect(at('a1').y - at('a2').y).toBe(56);
     expect((at('a2').y + at('a1').y + 40) / 2).toBe(at('a').y + 20);
