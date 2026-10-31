@@ -241,12 +241,14 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       return;
     case 'marquee': {
       g.rect = normRect(g.start, w);
-      const next = new Set(g.base);
-      for (const it of ed.shown()) {
-        const inside = it.type === 'frame' ? rectContains(g.rect, boxOf(it)) : rectsIntersect(g.rect, boxOf(it));
-        // A mind map branch the box takes in picks the node it leads to.
-        const up = it.type === 'mind' && it.parent ? board.get(it.parent) : undefined;
-        if (inside || (up && branchCrosses(up, it, g.rect))) next.add(it.id);
+      const next = new Set(g.base), rect = g.rect;
+      const inside = (it: Item) => (it.type === 'frame' ? rectContains(rect, boxOf(it)) : rectsIntersect(rect, boxOf(it)));
+      const shown = ed.shown(), any = shown.some(inside);
+      for (const it of shown) {
+        // A mind map branch the box takes in picks the node it leads to, only while the box has no
+        // item in it yet: once it has, it's the items it takes in.
+        const up = !any && it.type === 'mind' && it.parent ? board.get(it.parent) : undefined;
+        if (inside(it) || (up && branchCrosses(up, it, rect))) next.add(it.id);
       }
       // And the links it runs into.
       for (const l of ed.shownLinks()) {
