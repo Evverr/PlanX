@@ -6,7 +6,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchColor, branchCurve, branchWays, buttonKey, foldBadge, foldedWays, levelColor, mindButtons, mindDepth, nodeColors, siblingTints, type Way } from '../model/mind';
+import { branchColor, branchCurve, branchWays, buttonKey, foldBadge, foldedWays, fillOpacity, levelColor, mindButtons, mindDepth, nodeColors, siblingTints, type Way } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
@@ -513,7 +513,7 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   const { theme } = s, own = nodeColors(it, tints);
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, corner(it));
-  ctx.globalAlpha = it.fo ?? 1;
+  ctx.globalAlpha = fillOpacity(it);
   // The shadow: black at 7%, 2 blurred, 1 down, growing with the zoom like the node.
   const k = s.cam.z * s.dpr;
   ctx.shadowColor = 'rgba(0, 0, 0, .07)';

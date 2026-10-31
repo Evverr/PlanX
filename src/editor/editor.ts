@@ -676,7 +676,7 @@ export class Editor {
         if (of === 'text' && HAS_FONT.includes(it.type)) this.board.update(it.id, { to: v });
         if (of === 'mark' && HAS_FONT.includes(it.type)) this.board.update(it.id, { mo: Math.max(0, Math.round(value * 100) / 100) });
         if (of === 'icon' && (it.type === 'icon' || it.type === 'ink')) this.board.update(it.id, { fo: v });
-        if (of === 'fill' && COLORABLE.includes(it.type)) this.board.update(it.id, { fo: v });
+        if (of === 'fill' && COLORABLE.includes(it.type)) this.board.update(it.id, { fo: it.type === 'mind' ? Math.max(0, Math.round(value * 100) / 100) : v });
         if (of === 'stroke' && (STROKABLE.includes(it.type) || it.type === 'mind')) this.board.update(it.id, { so: v });
       }
     });

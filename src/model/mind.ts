@@ -85,6 +85,10 @@ export type Toward = 1 | -1 | 'down' | 'up';
 
 /** Gaps: from a parent to its branches beside it, and between those (one under another); from a
  *  parent to its branches under (or over) it, and between those (side by side). */
+/** How opaque a node's fill is: its own, or by default the central topic 90%, the rest 70%; other
+ *  items, theirs or 100%. */
+export const fillOpacity = (it: Item): number => it.fo ?? (it.type === 'mind' ? (it.parent ? 0.7 : 0.9) : 1);
+
 export const MIND_GAP_X = 60, MIND_GAP_Y = 16, MIND_GAP_DOWN = 48, MIND_GAP_ROW = 24;
 
 /** The axis branches growing that way line up along (y beside their parent, x under or over it), their
@@ -322,13 +326,18 @@ function layOut(n: Item, way: Way, all: Item[], block: (k: Item) => Item[]): voi
  * New places (by id) for "Авторасположение" on node `id`: everything growing from it laid out afresh
  * as a mind map lays it out, however it's been dragged about. Each way its branches grow (each side
  * of a central topic, under, over), they go out from it the usual gap off it (off the furthest of
- * their level's, as a floor does), one after another in the order they stand, centred on it; and so
- * on down. The node itself stays put.
+ * their level's, as a floor does), one after another in the order they stand, the gap apart whatever
+ * grows from them, centred on it; and so on down. Where what grows from two of them would then
+ * overlap, the later one's moves along out of the way (see clearCousins). The node itself stays put.
  */
 export function tidyBranches(id: string, items: Item[]): Map<string, Point> {
   const { all, byId, block } = working(items);
   const n = byId.get(id);
-  if (n) tidyFrom(n, all, block);
+  if (!n) return new Map();
+  tidyFrom(n, all, block);
+  for (const p of [n, ...descendants([id], all).map((d) => byId.get(d)!)]) {
+    for (const way of new Set(all.filter((k) => k.type === 'mind' && k.parent === p.id).map((k) => mindWay(k, p)))) clearCousins(p, way, all, byId);
+  }
   return moved(items, byId);
 }
 function tidyFrom(n: Item, all: Item[], block: (k: Item) => Item[]): void {
@@ -337,8 +346,8 @@ function tidyFrom(n: Item, all: Item[], block: (k: Item) => Item[]): void {
     const a = axis(way), row = kids.filter((k) => mindWay(k, n) === way).sort((m, q) => middle(m, a) - middle(q, a));
     // Out from it first, all of the row, so a floor goes out from the widest; then each one's own.
     for (const k of row) { const d = outFrom(floorOf(n, all), way, k); block(k).forEach((m) => { m.x += (d.x ?? k.x) - k.x; m.y += (d.y ?? k.y) - k.y; }); }
+    lineUp(row.map((k) => [k]), a, middle(n, a));
     for (const k of row) tidyFrom(k, all, block);
-    lineUp(row.map(block), a, middle(n, a));
   }
 }
 
