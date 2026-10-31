@@ -77,6 +77,8 @@ export interface Scene {
   plusFade: number;
   /** A mind map node the pointer has rested on (not the picked one): its buttons show, not the picked one's. */
   plusOn?: string | null;
+  /** A node whose buttons are fading out, and how far they still show. */
+  plusLeaving?: { id: string; fade: number } | null;
   /** How many nodes each folded mind map node hides, each way, shown by it. */
   folded?: Map<string, Map<Way, number>>;
   /** The link under the pointer, faintly lit. */
@@ -1153,6 +1155,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   // The buttons of a mind map node the pointer has rested on, in place of the picked one's.
   const resting = s.plusOn ? s.get(s.plusOn) : undefined;
   if (resting) drawMindButtons(ctx, resting, s);
+  const leaving = s.plusLeaving && s.get(s.plusLeaving.id);
+  if (leaving) drawMindButtons(ctx, leaving, { ...s, plusFade: s.plusLeaving!.fade, hotPlus: null, chevronless: null });
   for (const id of s.selection) {
     const it = s.get(id);
     if (!it) continue;
