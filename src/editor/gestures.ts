@@ -213,8 +213,9 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       return;
     }
     case 'relink': {
-      // Taken by its line, not its head ("Линии", src/labs): it starts going once dragged a little.
-      if (g.body && !g.going) {
+      // Taken by its head or by its line ("Линии", src/labs), it starts going once dragged 5 px: a press
+      // with a twitch only picks it (to colour it, say), keeping where it goes.
+      if (!g.going) {
         if (Math.hypot(w.x - g.from.x, w.y - g.from.y) * ed.cam.z < 5) return;
         g.going = true;
       }
@@ -369,8 +370,8 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       // Let go on another item, the arrow goes to it; taken off its item (by its head or its line) and let
       // go on none, it's gone. A click on its line just picks it.
       const l = board.getLink(g.id), target = g.target ? board.get(g.target) : undefined;
-      if (l && target && target.id !== l.to && !board.hasLink(l.from, target.id)) board.retarget(l.id, target.id, nearestSide(target, g.to));
-      else if (l && g.away && !target && (!g.body || g.going)) {
+      if (l && g.going && target && target.id !== l.to && !board.hasLink(l.from, target.id)) board.retarget(l.id, target.id, nearestSide(target, g.to));
+      else if (l && g.away && !target && g.going) {
         board.remove([l.id]);
         ed.setSelection([]);
       }
