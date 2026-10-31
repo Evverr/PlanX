@@ -157,6 +157,9 @@ export class Editor {
   /** Shared: the mind map node the pointer is on (or on its buttons); its buttons fade in as a picked
    *  one's do, after the same wait (see hover.ts). */
   mindHover: string | null = null;
+  /** The node whose buttons were last drawn and how far faded in; those going away as they fade out. */
+  private plusShown: { id: string; fade: number } | null = null;
+  private plusLeaving: { id: string; from: number; at: number } | null = null;
   private plusTimer = 0;
   /** What's in sight, worked out once for each change of the board (it's asked for on every move
    *  of the pointer and every frame drawn). */
@@ -357,14 +360,21 @@ export class Editor {
     const plusOn = this.plusOn();
     const plusKey = `${[...this.selection].join()}|${plusOn ?? ''}|${this.moving}|${this.editingId && this.board.get(this.editingId)?.type !== 'mind' ? this.editingId : ''}`;
     if (plusKey !== this.plusKey) {
+      // The buttons shown till now fade out, twice as fast as they came.
+      const was = this.plusShown && this.board.get(this.plusShown.id);
+      if (was && this.plusShown!.fade > 0) this.plusLeaving = { id: was.id, from: this.plusShown!.fade, at: performance.now() };
       this.plusKey = plusKey;
       this.chevronless = null;
       this.plusFrom = performance.now() + PLUS_DELAY;
       clearTimeout(this.plusTimer);
       this.plusTimer = window.setTimeout(() => this.requestRender(), PLUS_DELAY);
     }
-    const plusFade = this.plusFade();
+    const plusFade = this.plusFade(), target = this.plusNode()?.id;
     if (plusFade > 0 && plusFade < 1) this.requestRender();
+    this.plusShown = target ? { id: target, fade: plusFade } : null;
+    const l = this.plusLeaving, leaving = l && l.id !== target ? l.from * (1 - (performance.now() - l.at) / (PLUS_FADE / 2)) : 0;
+    if (leaving > 0) this.requestRender();
+    else this.plusLeaving = null;
     const glide = this.gliding();
     drawScene(this.ctx, {
       items: glide ? this.shown().map(glide) : this.shown(),
@@ -389,6 +399,7 @@ export class Editor {
       hotPlus: this.hotPlus,
       plusFade,
       plusOn,
+      plusLeaving: leaving > 0 ? { id: l!.id, fade: leaving } : null,
       folded: this.folded(),
       slide: this.slideOut(plusFade),
       chevronless: this.chevronless,

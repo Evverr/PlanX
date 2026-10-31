@@ -369,3 +369,12 @@ describe('mind map: a new branch among neighbours with their own', () => {
     expect(y('b') - y('a')).toBe(56);
   });
 });
+
+describe('mind map: one put beside another with its own', () => {
+  it('goes the gap off the node itself, not what grows from it', () => {
+    const items = [node('r', 0, 0), node('a', 160, 0, { parent: 'r' }), ...[0, 1, 2].map((i) => node(`a${i}`, 320, -56 + i * 56, { parent: 'a' })),
+      node('b', 160, 300, { parent: 'r' })];
+    const moves = insertBeside('b', 'a', 'below', items), y = (id: string) => (moves.get(id) ?? items.find((i) => i.id === id)!).y;
+    expect(y('b') - y('a')).toBe(56);
+  });
+});

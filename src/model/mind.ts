@@ -221,19 +221,23 @@ export function addChild(id: string, items: Item[]): Map<string, Point> {
 /**
  * New places (by id, the new node's among them) for putting node `id` (already among the items) right
  * before or after node `from`, a branch of the same parent (above or below it beside its parent, to its
- * left or right under it), without `from` moving: the new node goes next to `from` and everything it
- * grows, lined up with it (on the side towards the parent), and the branches beyond it move out of the way.
+ * left or right under it), without `from` moving: the new node goes the gap off `from` itself (whatever
+ * grows from it), lined up with it (on the side towards the parent), and the branches beyond it move out
+ * of the way.
  */
 export function insertBeside(id: string, from: string, where: 'above' | 'below', items: Item[]): Map<string, Point> {
   const { all, byId, block } = working(items);
   const node = byId.get(id)!, start = byId.get(from)!, p = byId.get(start.parent!)!, dir = where === 'below' ? 1 : -1;
-  const way = mindWay(start, p), a = axis(way), own = block(start);
+  const way = mindWay(start, p), a = axis(way);
   if (way === 'right') node.x = start.x;
   else if (way === 'left') node.x = start.x + start.w - node.w;
   else if (way === 'down') node.y = start.y;
   else node.y = start.y + start.h - node.h;
-  node[a.at] = dir > 0 ? hi(own, a) + a.gap : lo(own, a) - a.gap - node[a.size];
+  // Next to it by its own size, not what grows from it (kept clear of that below).
+  node[a.at] = dir > 0 ? start[a.at] + start[a.size] + a.gap : start[a.at] - a.gap - node[a.size];
   pushPast(start, node, (node[a.size] + a.gap) * dir, dir, all, byId, block, 1);
+  const ways = new Map(all.filter((k) => k.type === 'mind' && k.parent && byId.has(k.parent)).map((k) => [k.id, mindWay(k, byId.get(k.parent!)!)]));
+  spreadGroups(p, all, block, ways);
   clearCousins(p, way, all, byId);
   return moved(items, byId);
 }
