@@ -9,7 +9,7 @@ import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { newTable, withCellFormat, withCount, withTableFormat, type TableLine } from '../model/table';
 import type { AudioNote } from '../canvas/audio';
-import { addChild, descendants, foldedAway, folding, makeRoom, mindDepth, type Way } from '../model/mind';
+import { addChild, descendants, foldedAway, folding, makeRoom, mindDepth, tidyBranches, type Way } from '../model/mind';
 import { readJSON, writeJSON } from '../storage';
 import { cameraFor, clamp, fittedTo, flyTo, freeArea, minZoomFor, wheelMove, zoomedAt } from './camera';
 import { copiesOf } from './copies';
@@ -978,6 +978,12 @@ export class Editor {
   }
 
   /** Empties the board and goes back to 100% zoom, about the middle of the screen. */
+  /** "Авторасположение" on a mind map node: what grows from it laid out afresh (one undo step). */
+  tidyMind(id: string): void {
+    const moves = tidyBranches(id, this.board.list());
+    this.board.transact(() => moves.forEach((pt, k) => this.board.update(k, pt)));
+  }
+
   clearBoard(): void {
     this.board.replaceAll([], []);
     // Comments go too, and come back with the board's undo (one Ctrl+Z for both).

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addChild, balance, branchCurve, buttonKey, canMoveTo, childPlace, descendants, foldBadge, foldedAway, folding, insertBeside, makeRoom, mindButtons, mindDepth, moveBranch, siblingOf, type Way } from '../src/model/mind';
+import { addChild, balance, branchCurve, buttonKey, canMoveTo, childPlace, descendants, foldBadge, foldedAway, folding, insertBeside, makeRoom, tidyBranches, mindButtons, mindDepth, moveBranch, siblingOf, type Way } from '../src/model/mind';
 import type { Item } from '../src/model/types';
 
 const node = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item =>
@@ -318,5 +318,25 @@ describe('mind map: floors stand clear of the biggest branch next to them', () =
     const moves = makeRoom('a', 50, 0, [r, a, b, a1, b1].map((i) => (i.id === 'a' ? { ...i, w: 250 } : i)));
     expect(moves.get('a1')).toEqual({ x: 470, y: -28 });
     expect(moves.get('b1')).toEqual({ x: 470, y: 28 });
+  });
+});
+
+describe('mind map: "Авторасположение" on a node', () => {
+  it('lays out everything growing from it afresh, in the order it stands; the node stays put', () => {
+    const items = [
+      node('r', 0, 0),
+      node('a', 230, 90, { parent: 'r' }), node('b', 170, -130, { parent: 'r' }), node('l', -300, 30, { parent: 'r' }),
+      node('a1', 500, 200, { parent: 'a' }), node('a2', 400, 60, { parent: 'a', w: 180 }),
+    ];
+    const moves = tidyBranches('r', items), at = (id: string) => moves.get(id) ?? items.find((i) => i.id === id)!;
+    expect(moves.has('r')).toBe(false);
+    // On the right: b above a, 60 off the root, 16 apart, centred on it (a with its own 96 tall); a's own
+    // (a2 above a1, as they stood) 60 off a, 16 apart, centred on it.
+    expect([at('b').x, at('a').x, at('l').x]).toEqual([160, 160, -160]);
+    expect([at("b").y, at("a").y]).toEqual([-56, 28]);
+    expect([at('a2').x, at('a1').x]).toEqual([320, 320]);
+    expect(at('a1').y - at('a2').y).toBe(56);
+    expect((at('a2').y + at('a1').y + 40) / 2).toBe(at('a').y + 20);
+    expect(at('l').y).toBe(0);
   });
 });

@@ -363,7 +363,8 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
         back: items.length > 0 ? btn('to-back', 'На задний план', () => editor.sendToBack()) : undefined,
         duplicate: items.length > 0 ? btn('duplicate', 'Дублировать (Ctrl+D)', () => editor.duplicate()) : undefined,
         // Features on trial (src/labs), while they're switched on.
-        tidy: labs.tidy && items.length > 1 ? <TidyButton editor={editor} /> : undefined,
+        tidy: labs.tidy && items.length > 1 ? <TidyButton editor={editor} />
+          : labs.tidy && items[0]?.type === 'mind' && editor.board.list().some((i) => i.parent === items[0].id) ? <TidyButton editor={editor} mind={items[0].id} /> : undefined,
         lock: labs.lock && items.length > 0 ? <LockButton editor={editor} items={items} /> : undefined,
         react: labs.reactions && items.length > 0 ? <ReactButton editor={editor} items={items} /> : undefined,
         trash: btn('trashcan', 'Удалить (Del)', () => editor.deleteSelection()),

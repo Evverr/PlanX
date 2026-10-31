@@ -318,6 +318,30 @@ function layOut(n: Item, way: Way, all: Item[], block: (k: Item) => Item[]): voi
   lineUp(kids.map(block), a, middle(n, a));
 }
 
+/**
+ * New places (by id) for "Авторасположение" on node `id`: everything growing from it laid out afresh
+ * as a mind map lays it out, however it's been dragged about. Each way its branches grow (each side
+ * of a central topic, under, over), they go out from it the usual gap off it (off the furthest of
+ * their level's, as a floor does), one after another in the order they stand, centred on it; and so
+ * on down. The node itself stays put.
+ */
+export function tidyBranches(id: string, items: Item[]): Map<string, Point> {
+  const { all, byId, block } = working(items);
+  const n = byId.get(id);
+  if (n) tidyFrom(n, all, block);
+  return moved(items, byId);
+}
+function tidyFrom(n: Item, all: Item[], block: (k: Item) => Item[]): void {
+  const kids = all.filter((k) => k.type === 'mind' && k.parent === n.id);
+  for (const way of ['right', 'left', 'down', 'up'] as const) {
+    const a = axis(way), row = kids.filter((k) => mindWay(k, n) === way).sort((m, q) => middle(m, a) - middle(q, a));
+    // Out from it first, all of the row, so a floor goes out from the widest; then each one's own.
+    for (const k of row) { const d = outFrom(floorOf(n, all), way, k); block(k).forEach((m) => { m.x += (d.x ?? k.x) - k.x; m.y += (d.y ?? k.y) - k.y; }); }
+    for (const k of row) tidyFrom(k, all, block);
+    lineUp(row.map(block), a, middle(n, a));
+  }
+}
+
 /** The rounded place of every item the working copies moved. */
 function moved(items: Item[], byId: Map<string, Item>): Map<string, Point> {
   const out = new Map<string, Point>();
