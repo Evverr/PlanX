@@ -344,11 +344,12 @@ export function tidyBranches(id: string, items: Item[]): Map<string, Point> {
       const a = axis(way);
       let edge = -Infinity;
       for (const p of [...level].sort((m, q) => middle(m, a) - middle(q, a))) {
-        const group = all.filter((k) => k.type === 'mind' && k.parent === p.id && ways.get(k.id) === way).flatMap(block);
-        if (!group.length) continue;
-        const need = edge + a.gap - lo(group, a);
-        if (need > 0) shift(group, a, need);
-        edge = hi(group, a);
+        // Measured by the nodes alone (what grows from them is seen to a level further down).
+        const kids = all.filter((k) => k.type === 'mind' && k.parent === p.id && ways.get(k.id) === way);
+        if (!kids.length) continue;
+        const need = edge + a.gap - lo(kids, a);
+        if (need > 0) shift(kids.flatMap(block), a, need);
+        edge = hi(kids, a);
       }
     }
     const ids = new Set(level.map((k) => k.id));
