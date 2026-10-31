@@ -327,8 +327,8 @@ function layOut(n: Item, way: Way, all: Item[], block: (k: Item) => Item[]): voi
  * as a mind map lays it out, however it's been dragged about. Each way its branches grow (each side
  * of a central topic, under, over), they go out from it the usual gap off it (off the furthest of
  * their level's, as a floor does), one after another in the order they stand, the gap apart whatever
- * grows from them, centred on it; and so on down. Where what grows from two of them would then
- * overlap, the later one's moves along out of the way (see clearCousins). The node itself stays put.
+ * grows from them, centred on it; and so on down. Nothing moves to make room for what grows from
+ * them (the gaps between neighbours stay even). The node itself stays put.
  */
 export function tidyBranches(id: string, items: Item[]): Map<string, Point> {
   const { all, byId, block } = working(items);
@@ -337,9 +337,6 @@ export function tidyBranches(id: string, items: Item[]): Map<string, Point> {
   // Each node keeps the way it grows from its parent (its side of it, under, over), as it was before.
   const ways = new Map(all.filter((k) => k.type === 'mind' && k.parent && byId.has(k.parent)).map((k) => [k.id, mindWay(k, byId.get(k.parent!)!)]));
   tidyFrom(n, all, block, ways);
-  for (const p of [n, ...descendants([id], all).map((d) => byId.get(d)!)]) {
-    for (const way of new Set(all.filter((k) => k.type === 'mind' && k.parent === p.id).map((k) => mindWay(k, p)))) clearCousins(p, way, all, byId);
-  }
   return moved(items, byId);
 }
 function tidyFrom(n: Item, all: Item[], block: (k: Item) => Item[], ways: Map<string, Way>): void {
