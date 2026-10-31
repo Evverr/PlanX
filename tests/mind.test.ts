@@ -330,10 +330,10 @@ describe('mind map: "Авторасположение" on a node', () => {
     ];
     const moves = tidyBranches('r', items), at = (id: string) => moves.get(id) ?? items.find((i) => i.id === id)!;
     expect(moves.has('r')).toBe(false);
-    // On the right: b above a, 60 off the root, 16 apart whatever grows from them; a's own (a2 above
-    // a1, as they stood) 60 off a, 16 apart, centred on it; all of it (-42…98) centred on the root.
+    // On the right: b above a, 60 off the root, 16 apart whatever grows from them, centred on it; a's
+    // own (a2 above a1, as they stood), a's alone on their level, 60 off a, 16 apart, centred on it.
     expect([at('b').x, at('a').x, at('l').x]).toEqual([160, 160, -160]);
-    expect([at('b').y, at('a').y]).toEqual([-42, 14]);
+    expect([at('b').y, at('a').y]).toEqual([-28, 28]);
     expect([at('a2').x, at('a1').x]).toEqual([320, 320]);
     expect(at('a1').y - at('a2').y).toBe(56);
     expect((at('a2').y + at('a1').y + 40) / 2).toBe(at('a').y + 20);
@@ -342,13 +342,14 @@ describe('mind map: "Авторасположение" on a node', () => {
 });
 
 describe('mind map: "Авторасположение", branches with their own', () => {
-  it('stand the gap apart, whatever grows from them; what grows from the lower moves down clear of the upper one\'s', () => {
+  it('stand the gap apart, whatever grows from them; their branches, cousins, a node\'s height apart, centred as one on them', () => {
     const items = [node('r', 0, 0), node('a', 200, 0, { parent: 'r' }), node('b', 200, 60, { parent: 'r' }),
       ...[0, 1, 2].flatMap((i) => [node(`a${i}`, 400, i * 50, { parent: 'a' }), node(`b${i}`, 400, 200 + i * 50, { parent: 'b' })])];
     const moves = tidyBranches('r', items), y = (id: string) => (moves.get(id) ?? items.find((i) => i.id === id)!).y;
     expect(y('b') - y('a')).toBe(56);
-    expect(y('a1')).toBe(y('a'));
+    expect(y('a1') - y('a0')).toBe(56);
     expect(y('b0') - y('a2')).toBe(80);
+    expect(y('a0') + y('b2')).toBe(y('a') + y('b'));
   });
 });
 
