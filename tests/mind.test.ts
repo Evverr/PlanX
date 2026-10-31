@@ -342,13 +342,13 @@ describe('mind map: "Авторасположение" on a node', () => {
 });
 
 describe('mind map: "Авторасположение", branches with their own', () => {
-  it('stand the gap apart, whatever grows from them, each one\'s own centred on it', () => {
+  it('stand the gap apart, whatever grows from them; what grows from the lower moves down clear of the upper one\'s', () => {
     const items = [node('r', 0, 0), node('a', 200, 0, { parent: 'r' }), node('b', 200, 60, { parent: 'r' }),
       ...[0, 1, 2].flatMap((i) => [node(`a${i}`, 400, i * 50, { parent: 'a' }), node(`b${i}`, 400, 200 + i * 50, { parent: 'b' })])];
     const moves = tidyBranches('r', items), y = (id: string) => (moves.get(id) ?? items.find((i) => i.id === id)!).y;
     expect(y('b') - y('a')).toBe(56);
     expect(y('a1')).toBe(y('a'));
-    expect(y('b1')).toBe(y('b'));
+    expect(y('b0') - y('a2')).toBe(56);
   });
 });
 
