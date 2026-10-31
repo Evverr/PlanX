@@ -191,6 +191,23 @@ export const checks = {
     expect(await p.ev(`planx.board.get('t2').y`), 'the component itself not pushed').toBe(s0);
   },
 
+  async '"Авторасположение" on one mind map node lays out what grows from it as a mind map does; one Ctrl+Z puts it back'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.transact(() => {
+        b.add(e.newItem('mind', 200, 300, { id: 'r', w: 100, h: 40, text: 'Центр' }));
+        b.add(e.newItem('mind', 430, 390, { id: 'a', w: 100, h: 40, parent: 'r', text: 'А' }));
+        b.add(e.newItem('mind', 370, 170, { id: 'b', w: 100, h: 40, parent: 'r', text: 'Б' }));
+      }); e.setSelection(['r']); })()`);
+    await sleep(300);
+    await p.click(await p.at('.bar.panel button[aria-label="Авторасположение"]'));
+    await sleep(100);
+    const at = () => p.ev(`['a', 'b'].map((k) => { const i = planx.board.get(k); return i.x + ',' + i.y; }).join(' ')`);
+    expect(await p.ev(`(() => { const [r, a, b] = ['r', 'a', 'b'].map((k) => planx.board.get(k));
+      return [a.x === b.x && a.x === r.x + r.w + 60, a.y - b.y - b.h === 16, b.y + a.y + a.h === 2 * r.y + r.h].join(); })()`), 'b above a, 60 off, 16 apart, centred').toBe('true,true,true');
+    await p.ev('planx.editor.undo()');
+    expect(await at(), 'back').toBe('430,390 370,170');
+  },
+
   async '"Авторасположение" of instances picked by a box: laid out by what they show, its handles there, a gap that can go below nothing'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board, { x: X, y: Y } = e.toWorld(300, 250);
       b.transact(() => {
