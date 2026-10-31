@@ -141,6 +141,8 @@ export const checks = {
     expect(await p.ev(`planx.board.list().filter((i) => i.inst === '${comp.id}').length`), 'a second instance').toBe(2);
     expect(await p.ev(`planx.board.list().filter((i) => i.inst === '${comp.id}').every((i) => i.w === ${comp.w})`), 'as big as the component unfolded').toBe(true);
     expect((await copy(ids.a))?.text, 'a copy of the sticky in the instance').toBe('Привет');
+    // The second stands where the first does (both where the component was): moved aside, to click the first.
+    await p.ev(`(() => { const i = planx.board.list().find((i) => i.inst === '${comp.id}' && i.id !== '${inst.id}'); planx.board.update(i.id, { x: i.x + 800 }); })()`);
     // Changed in the component, changed in the instance; a change undone, undone there too.
     await p.ev(`planx.editor.setSelection([]); planx.board.update('${ids.a}', { text: 'Новое', color: 'pink' })`);
     await sleep(100);
