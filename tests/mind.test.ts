@@ -351,3 +351,12 @@ describe('mind map: "Авторасположение", branches with their own'
     expect(y('b0') - y('a2')).toBe(56);
   });
 });
+
+describe('mind map: "Авторасположение" keeps sides', () => {
+  it('a branch stays on the side of its parent it was on', () => {
+    const items = [node('r', 0, 0), node('a', 400, 0, { parent: 'r' }), node('a1', 380, 100, { parent: 'a' }), node('a2', 700, 0, { parent: 'a' })];
+    const moves = tidyBranches('r', items), at = (id: string) => moves.get(id) ?? items.find((i) => i.id === id)!;
+    expect(at('a1').x + 100 <= at('a').x).toBe(true);
+    expect(at('a2').x >= at('a').x + 100).toBe(true);
+  });
+});
