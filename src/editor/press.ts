@@ -10,6 +10,7 @@ import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
+import { zoomBoxHeld } from '../labs/zoomBox';
 import { swapKind } from '../labs/swap';
 import { openLink } from '../labs/textLink';
 import { startComment } from '../labs/comments';
@@ -166,6 +167,11 @@ export function press(ed: Editor, e: PointerEvent): void {
   }
 
   // Select tool.
+  // Z held: a box from anywhere, to zoom to ("Зум рамкой", src/labs).
+  if (zoomBoxHeld() && e.button === 0) {
+    ed.gesture = { type: 'marquee', start: w, base: new Set(ed.selection), rect: null, zoom: true };
+    return;
+  }
   const single = ed.selection.size === 1 ? board.get([...ed.selection][0]) : undefined;
   // A mind map node's buttons: the picked one's, or those of the one the pointer rests on.
   const node = ed.editingId && ed.editingId !== single?.id ? undefined : ed.plusNode(), plus = node && plusAt(ed, node, w);

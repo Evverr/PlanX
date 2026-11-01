@@ -596,6 +596,18 @@ export const checks = {
     expect((await stored()).length, 'gone').toBe(0);
   },
 
+  async '"Зум рамкой": a box drawn with Z held fills the screen, nothing picked'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 300, 300, { id: 's', w: 150, h: 150 })); e.setSelection([]); })()`);
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'z', code: 'KeyZ', windowsVirtualKeyCode: 90 });
+    await p.drag([250, 250], [450, 450]);
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'z', code: 'KeyZ', windowsVirtualKeyCode: 90 });
+    await sleep(600);
+    const r = await p.ev(`(() => { const a = planx.editor.toScreen({ x: 250, y: 250 }), b = planx.editor.toScreen({ x: 450, y: 450 }), W = planx.editor.canvas.clientWidth, H = planx.editor.canvas.clientHeight;
+      return [Math.round(Math.min(W / (b.x - a.x), H / (b.y - a.y)) * 100) / 100, Math.round((a.x + b.x) / 2 - W / 2), Math.round((a.y + b.y) / 2 - H / 2), planx.editor.selection.size].join(); })()`);
+    expect(r, 'the box fills the screen, centred, nothing picked').toBe('1,0,0,0');
+  },
+
   async 'the board cleared takes its comments too; one Ctrl+Z brings both back'(p) {
     const n = () => p.ev(`(async () => { const c = await import('/src/labs/comments.ts'); return c.comments(planx.board).length; })()`);
     await p.ev(`(async () => { const c = await import('/src/labs/comments.ts'), e = planx.editor, b = planx.board;
