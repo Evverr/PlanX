@@ -939,6 +939,21 @@ export class Editor {
     this.requestRender();
   }
 
+  /** Ctrl+↑ (dir 1) or Ctrl+↓ (-1): each picked item a layer up or down, past the next one that isn't
+   *  picked (their places swapped). */
+  shiftZ(dir: 1 | -1): void {
+    const list = this.board.list().filter((i) => !i.host), picked = new Set(this.selectedItems().map((i) => i.id));
+    if (!picked.size) return;
+    const order = dir > 0 ? [...list.keys()].reverse() : [...list.keys()];
+    const z = list.map((i) => i.z), at = [...list];
+    for (const i of order) {
+      const j = i + dir;
+      if (!picked.has(at[i].id) || j < 0 || j >= at.length || picked.has(at[j].id)) continue;
+      [at[i], at[j]] = [at[j], at[i]];
+    }
+    this.board.transact(() => at.forEach((it, k) => { if (it.z !== z[k]) this.board.update(it.id, { z: z[k] }); }));
+  }
+
   bringToFront(): void {
     let z = this.board.maxZ();
     const items = this.selectedItems().sort((a, b) => a.z - b.z);

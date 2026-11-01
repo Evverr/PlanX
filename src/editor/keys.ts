@@ -22,6 +22,9 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
       // Ctrl+V comes as the browser's paste (see onPaste): a picture copied anywhere, or what was copied here.
       case 'KeyV': return;
       case 'KeyD': e.preventDefault(); ed.duplicate(); return;
+      // Ctrl+↑ / Ctrl+↓: a layer up or down.
+      case 'ArrowUp': e.preventDefault(); ed.shiftZ(1); return;
+      case 'ArrowDown': e.preventDefault(); ed.shiftZ(-1); return;
       case 'KeyA': e.preventDefault(); ed.setSelection(ed.shown().map((i) => i.id)); return;
       case 'KeyG': e.preventDefault(); ed.frameSelection(); return;
       // Ctrl+Alt+B, as in Figma: the selected instances cut loose from their components.
