@@ -126,7 +126,11 @@
 
 /* "Объекты": the menu beside the rail, as the board menu looks. */
 .board-menu.objects-menu { position: fixed; z-index: 7; }
-.objects-menu .menu-caption { padding: var(--s6) var(--s10) var(--s4); font-size: var(--s12); font-weight: 600; color: var(--muted); }
+.objects-mine .menu-row span:not(.menu-x) { flex: 1; }
+.objects-mine .menu-x { display: grid; place-items: center; width: var(--e22, 22px); height: var(--e22, 22px); margin-left: var(--s8); border-radius: var(--s6); font-size: var(--s16); line-height: 1; color: var(--muted); }
+.objects-mine .menu-x:hover { background: var(--fmt-hover); color: #E5484D; }
+/* The icon of one of «Мои объекты» dragged onto the board. */
+.obj-ghost { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; }
 .board-menu.context-menu { position: fixed; z-index: 40; }
 /* A rectangle's parameters, opened from the right click's menu. */
 .params-title { padding: var(--s4) var(--s4) var(--s8); font-size: var(--s13, 13px); font-weight: 600; color: var(--ink); }
