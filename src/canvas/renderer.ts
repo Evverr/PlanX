@@ -10,7 +10,7 @@ import { branchColor, branchCurve, branchWays, buttonKey, foldBadge, foldedWays,
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
-import { COMPONENT_COLOR, instancePlus, objectArrow } from '../model/components';
+import { COMPONENT_COLOR, firstInstance, instancePlus, objectArrow } from '../model/components';
 import { labOn } from '../labs/labs';
 import { isBuiltin } from '../model/builtins';
 import { drawnLinks } from '../model/textLinks';
@@ -374,9 +374,10 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
         ctx.fillStyle = COMPONENT_COLOR;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'bottom';
-        // 2 above the contents; the diamond solid under the pointer.
-        const y = b.y - 2, gap = ctx.measureText('◇ ').width;
-        ctx.fillText(s.hotPlus === `glyph:${it.id}` ? '◆' : '◇', b.x, y);
+        // 2 above the contents; the diamond solid for its component's first instance, and under the pointer.
+        const y = b.y - 2, gap = ctx.measureText('◇ ').width, comp = s.get(it.inst);
+        const first = !!comp && firstInstance(comp, s.items)?.id === it.id;
+        ctx.fillText(first || s.hotPlus === `glyph:${it.id}` ? '◆' : '◇', b.x, y);
         ctx.fillText(it.text ?? '', b.x + gap, y, Math.max(0, b.w - gap));
         break;
       }

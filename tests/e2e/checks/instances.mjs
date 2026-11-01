@@ -15,6 +15,25 @@ const fixture = (p) => p.ev(`(() => {
 const selected = (p) => p.ev(`[...planx.editor.selection].join(',')`);
 
 export const checks = {
+  async 'a component is changed at its first instance, whichever instance asks; its first gone, the oldest left takes its place'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 300, 300, { id: 's', w: 100, h: 100 })); e.setSelection(['s']); e.makeComponent(); e.stopEditing();
+      const c = b.list().find((i) => i.comp); e.addInstance(c.id); })()`);
+    await sleep(200);
+    const comp = await p.ev(`planx.board.list().find((i) => i.comp).id`), a = await p.ev(`planx.board.list().find((i) => i.inst === '${comp}').id`);
+    expect(await p.ev(`planx.board.get('${comp}').first`), 'the one it turned into is its first').toBe(a);
+    await p.ev(`planx.editor.setSelection(['${a}']); planx.editor.duplicate(); planx.editor.duplicate();`);
+    await sleep(200);
+    const others = await p.ev(`planx.board.list().filter((i) => i.inst === '${comp}' && i.id !== '${a}').sort((m, n) => m.born - n.born).map((i) => i.id)`);
+    await p.ev(`planx.editor.editComponentAt('${others[1]}')`);
+    await sleep(200);
+    expect(await p.ev(`planx.board.get('${comp}').standsIn`), 'changed in the first one\'s place').toBe(a);
+    await p.ev(`planx.editor.addInstance('${comp}')`);
+    await p.ev(`planx.editor.setSelection(['${a}']); planx.editor.deleteSelection();`);
+    await sleep(100);
+    expect(await p.ev(`(async () => { const m = await import('/src/model/components.ts'); return m.firstInstance(planx.board.get('${comp}'), planx.board.list())?.id; })()`), 'the oldest left takes its place').toBe(others[0]);
+  },
+
   async 'a first click picks the instance, the next picks its child even after a pause'(p) {
     await fixture(p);
     await p.click([390, 330]);
@@ -54,7 +73,7 @@ export const checks = {
         expect(drawing.text.length, 'no title while nothing is picked').toBe(0);
         continue;
       }
-      expect(drawing.text.map((t) => t.t).join(' '), 'a diamond and the title while picked').toBe('◇ Карточка');
+      expect(drawing.text.map((t) => t.t).join(' '), 'a diamond (solid: its component\'s first instance) and the title while picked').toBe('◆ Карточка');
       expect(drawing.text[0].x, 'diamond flush with the contents on the left').toBe(at.x + 40);
       expect(drawing.text[1].y, 'title 2 above the contents').toBe(at.y + 38);
       expect(drawing.strokes, 'no red instance frame').toBe(0);

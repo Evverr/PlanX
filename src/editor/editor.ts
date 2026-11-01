@@ -2,7 +2,7 @@ import type { Board } from '../model/board';
 import type { Item, ItemType, Link, LinkStyle, Side } from '../model/types';
 import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, STROKABLE, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
-import { boundsOf, boxOf, center, pointInRect, resizedAt } from '../canvas/geometry';
+import { boundsOf, boxOf, center, instanceBounds, pointInRect, resizedAt } from '../canvas/geometry';
 import { clearTextCache, drawScene, readTheme, type Camera, type Peer, type Scene, type Theme } from '../canvas/renderer';
 import { fitHeight, foldedSize, font, itemTextHeight, mindSize } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
@@ -14,7 +14,7 @@ import { readJSON, writeJSON } from '../storage';
 import { cameraFor, clamp, fittedTo, flyTo, freeArea, minZoomFor, wheelMove, zoomedAt } from './camera';
 import { copiesOf } from './copies';
 import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked } from './frames';
-import { around, contents, copyId, hasComponents, stretched, syncOps } from '../model/components';
+import { around, contents, copyId, firstInstance, hasComponents, stretched, syncOps } from '../model/components';
 import { BUILTINS, isBuiltin, nextTaskState, TASK_STATES } from '../model/builtins';
 import { remapLinks } from '../model/textLinks';
 import { dayKey, TL_PAD, timelineSize } from '../canvas/timeline';
@@ -357,7 +357,7 @@ export class Editor {
     if (!comp?.comp) return;
     const sp = at ?? { x: this.width / 2, y: this.height / 2 }, c = this.toWorld(sp.x, sp.y);
     const w = comp.fold?.w ?? comp.w, h = comp.fold?.h ?? comp.h;
-    const it = this.newItem('frame', Math.round(c.x - w / 2), Math.round(c.y - h / 2), { w, h, inst: id, text: comp.text, members: [], z: this.board.minZ() - 1 });
+    const it = this.newItem('frame', Math.round(c.x - w / 2), Math.round(c.y - h / 2), { w, h, inst: id, text: comp.text, members: [], z: this.board.minZ() - 1, born: Date.now() });
     this.board.add(it);
     this.setTool('select');
     this.setSelection([it.id]);
@@ -896,11 +896,13 @@ export class Editor {
       this.board.update(was.id, { stowed: undefined, x: comp.x, y: comp.y });
       inst = was.id;
     } else {
-      const it = this.newItem('frame', comp.x, comp.y, { w: comp.fold?.w ?? comp.w, h: comp.fold?.h ?? comp.h, inst: id, text: comp.text, members: [], z: this.board.minZ() - 1 });
+      const it = this.newItem('frame', comp.x, comp.y, { w: comp.fold?.w ?? comp.w, h: comp.fold?.h ?? comp.h, inst: id, text: comp.text, members: [], z: this.board.minZ() - 1, born: Date.now() });
       this.board.add(it);
       inst = it.id;
     }
-    this.board.update(id, { stowed: true, standsIn: undefined });
+    // The one it turned into is its first instance, unless it has one still.
+    const first = comp.first && this.board.get(comp.first)?.inst === id ? comp.first : inst;
+    this.board.update(id, { stowed: true, standsIn: undefined, first });
     this.board.endGesture();
     this.setSelection([inst]);
   }
@@ -908,8 +910,14 @@ export class Editor {
   /** An instance's diamond: its component comes out in its place, to be changed (the instance put away
    *  meanwhile; the component's tick turns it back into it). One out in another's place gives that one back. */
   editComponentAt(instId: string): void {
-    const inst = this.board.get(instId), comp = inst?.inst ? this.board.get(inst.inst) : undefined;
-    if (!inst || !comp?.comp) return;
+    const clicked = this.board.get(instId), comp = clicked?.inst ? this.board.get(clicked.inst) : undefined;
+    if (!clicked || !comp?.comp) return;
+    // Changed always in the place of its first instance (the board shown there, if it's off the screen).
+    const inst = firstInstance(comp, this.board.list()) ?? clicked;
+    if (inst.id !== clicked.id) {
+      const b = instanceBounds(inst, this.board.list()), tl = this.toScreen({ x: b.x, y: b.y }), br = this.toScreen({ x: b.x + b.w, y: b.y + b.h });
+      if (tl.x < 0 || tl.y < 0 || br.x > this.width || br.y > this.height) flyTo(this, cameraFor(this, b, 0.5, Math.max(this.cam.z, 1)));
+    }
     this.board.beginGesture();
     // Stretched as an instance, the component takes that size: what it holds laid out as the instance
     // has it, the instance no longer stretched beyond it.
