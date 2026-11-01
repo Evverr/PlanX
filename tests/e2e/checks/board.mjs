@@ -424,6 +424,19 @@ export const checks = {
     expect(mid, 'under the pointer').toBe('600,400');
   },
 
+  async 'a timeline is picked by a box drawn round it, or over its edge'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 0.5 }; e.camChanged(); e.addTimeline({ x: 1000, y: 800 }); e.setSelection([]); })()`);
+    await sleep(200);
+    const r = await p.ev(`(() => { const t = planx.board.list().find((i) => i.tl), a = planx.editor.toScreen({ x: t.x, y: t.y }), b = planx.editor.toScreen({ x: t.x + t.w, y: t.y + t.h }); return [a.x, a.y, b.x, b.y, t.w, t.h]; })()`);
+    await p.drag([r[0] - 20, r[1] - 20], [r[2] + 20, r[3] + 20]);
+    await sleep(100);
+    expect(await p.ev(`[...planx.editor.selection].map((id) => !!planx.board.get(id)?.tl).join()`), 'round it').toBe('true');
+    await p.ev('planx.editor.setSelection([])');
+    await p.drag([r[0] + 40, r[1] - 40], [r[0] + 120, r[1] + 30]);
+    await sleep(100);
+    expect(await p.ev(`[...planx.editor.selection].map((id) => !!planx.board.get(id)?.tl).join()`), 'over its edge').toBe('true');
+  },
+
   async 'Ctrl+↑ and Ctrl+↓ take what is picked a layer up or down'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board;
       ['a', 'b', 'c'].forEach((id, i) => b.add(e.newItem('sticky', 100 + i * 20, 100, { id, z: i + 1 }))); e.setSelection(['a']); })()`);
