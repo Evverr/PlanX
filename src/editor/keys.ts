@@ -22,6 +22,8 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
       // Ctrl+V comes as the browser's paste (see onPaste): a picture copied anywhere, or what was copied here.
       case 'KeyV': return;
       case 'KeyD': e.preventDefault(); ed.duplicate(); return;
+      // Cmd+Enter while a component's being changed: done with it.
+      case 'Enter': case 'NumpadEnter': if (ed.finishComponent()) e.preventDefault(); return;
       // Ctrl+↑ / Ctrl+↓: a layer up or down.
       case 'ArrowUp': e.preventDefault(); ed.shiftZ(1); return;
       case 'ArrowDown': e.preventDefault(); ed.shiftZ(-1); return;
@@ -44,6 +46,8 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
   // Held down, it deletes once: what's left picked (a mind map node's parent) waits for the next press.
   if (e.key === 'Delete' || e.key === 'Backspace') { if (ed.selection.size) { e.preventDefault(); if (!e.repeat) ed.deleteSelection(); } return; }
   if (e.key === 'Escape' && ed.cells.length) { ed.cells = []; ed.emit(); ed.requestRender(); return; }
+  // Esc while a component's being changed: done with it (as by its tick).
+  if (e.key === 'Escape' && ed.finishComponent()) return;
   if (e.key === 'Escape') { ed.pickedLines = []; ed.setSelection([]); ed.setTool('select'); window.dispatchEvent(new CustomEvent('planx:close-popovers')); return; }
   // On a mind map node, Tab adds a branch to it and Enter one beside it (to the centre: a branch).
   const one = ed.selection.size === 1 ? ed.board.get([...ed.selection][0]) : undefined;

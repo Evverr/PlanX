@@ -119,13 +119,16 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
       onKeyDown={(e) => {
         e.stopPropagation();
         if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-          // Cmd+Enter is done with it: the text kept and nothing left picked.
+          // Cmd+Enter is done with it: the text kept and nothing left picked; in a component being changed,
+          // done with that too.
           e.preventDefault();
           commit();
-          editor.setSelection([]);
+          if (!editor.finishComponent()) editor.setSelection([]);
         } else if (e.key === 'Escape' || (e.key === 'Enter' && isFrame)) {
           e.preventDefault();
           commit();
+          // A component's title: Esc is done with the component too.
+          if (e.key === 'Escape' && item.comp) editor.finishComponent();
         } else if (item.type === 'mind' && item.parent && (e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'KeyZ' && !e.currentTarget.value) {
           // Nothing typed in a new branch yet: Ctrl+Z takes it away, as the step that added it.
           e.preventDefault();
