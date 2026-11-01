@@ -23,6 +23,18 @@ export const checks = {
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'and still gone after a reload').toBeFalsy();
   },
 
+  async 'a menu level that would open past the bottom of the screen is moved up into it'(p) {
+    await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1280, height: 520, deviceScaleFactor: 1, mobile: false });
+    await sleep(200);
+    await p.click(await p.at('.topbar button[aria-label="Меню"]'));
+    const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].filter((r) => r.textContent.includes('Оглавление')).pop(); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
+    await p.mouse('mouseMoved', row[0], row[1]);
+    await sleep(300);
+    const r = await p.ev(`(() => { const r = document.querySelector('.labs-menu').getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom), innerHeight]; })()`);
+    await p.cdp('Emulation.clearDeviceMetricsOverride', {});
+    expect(r[0] >= 8 && r[1] <= r[2] - 8, `on the screen (${r})`).toBe(true);
+  },
+
   async '"Экспорт в PDF" saves the board as a PDF of one page'(p) {
     await stickers(p);
     // What's handed to the browser to save.
