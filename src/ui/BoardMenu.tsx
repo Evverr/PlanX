@@ -2,7 +2,6 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Glyph } from './glyphs';
 import dropIcon from './menu/drop.svg';
 import { usePanelSize, type PanelSize } from './panels/size';
-import { LabsMenu } from '../labs/LabsMenu';
 
 /**
  * The board's menu, opened from the button after its name (Figma "Mol / Menu right"): first the board
@@ -11,8 +10,9 @@ import { LabsMenu } from '../labs/LabsMenu';
  * arrow for a further level, and a line splits the groups. Icons come from the set (picked at
  * random for now). The first rows' text is a shade lighter, as in the mockup.
  */
-export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, onLoadBoard }: {
+export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, onLoadBoard, onProfile, onSettings }: {
   level?: number; onShare?: () => void; onSave?: () => void; onReset?: () => void; onSaveBoard?: () => void; onLoadBoard?: () => void;
+  onProfile?: () => void; onSettings?: () => void;
 }) {
   const [on, setOn] = useState(false);
   const [panelSize, setPanelSize] = usePanelSize();
@@ -58,15 +58,16 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
         {row('save-template', 'Сохранить панели', { onClick: onSave })}
         {row('refresh-l', 'Сбросить панели', { onClick: onReset })}
         {row('collapse-l', 'Размер панелей', { end: <SizeDots size={panelSize} onPick={setPanelSize} /> })}
-        {row('lightning-plus', 'Нововведения', { more: <LabsMenu half={1} />, end: arrow })}
+        {/* The features on trial are in "Настройки" now; these keep their place, three rows for now. */}
+        {row('lightning-plus', 'Нововведения', { more: <Stub />, end: arrow })}
         <div className="menu-line" />
-        {row('user-profile', 'Профиль')}
-        {row('settings-l', 'Настройки')}
+        {row('user-profile', 'Профиль', { onClick: onProfile })}
+        {row('settings-l', 'Настройки', { onClick: onSettings })}
         <div className="menu-line" />
       </>}
       {row('link-settings', 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
       {/* The second half of the features on trial. */}
-      {row('change-order', 'Оглавление', { light: true, more: <LabsMenu half={2} />, end: arrow })}
+      {row('change-order', 'Оглавление', { light: true, more: <Stub />, end: arrow })}
     </div>
   );
 }
@@ -90,6 +91,17 @@ const MAX_LEVEL = 3;
 
 /** The switch at the end of a row (Figma "Check" and "Check 2"): a blue track with the knob right when on,
  *  grey with it left when off. */
+/** A further level that's still to come: three rows, no icons. */
+function Stub() {
+  return (
+    <div className="board-menu sub plain" role="menu">
+      {['Пункт 1', 'Пункт 2', 'Пункт 3'].map((label) => (
+        <div key={label} className="menu-item"><button className="menu-row" role="menuitem"><span>{label}</span></button></div>
+      ))}
+    </div>
+  );
+}
+
 export function Switch({ on }: { on: boolean }) {
   return <span className={`menu-switch ${on ? 'on' : ''}`} role="switch" aria-checked={on}><i /></span>;
 }

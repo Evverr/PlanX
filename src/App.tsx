@@ -20,6 +20,7 @@ import { Tooltips } from './ui/Tooltips';
 import { FramePeek } from './ui/FramePeek';
 import { ClearFx } from './ui/ClearFx';
 import { BoardMenu } from './ui/BoardMenu';
+import { ProfileDialog, SettingsDialog } from './ui/Dialogs';
 import { openBoardFile, saveBoardFile } from './collab/boardFile';
 import { resetPanels, savePanels } from './ui/panels/store';
 import { useBar } from './ui/panels/bar';
@@ -62,6 +63,8 @@ export function App({ boardId }: { boardId: string }) {
 
   const [pop, setPop] = useState<Pop>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // "Профиль" or "Настройки", open over the board.
+  const [dialog, setDialog] = useState<'profile' | 'settings' | null>(null);
   // A note at the bottom with a button (see src/labs/tidyMind.ts), sent as "planx:toast".
   const [note, setNote] = useState<{ text: string; action: string; run: () => void; at: number } | null>(null);
   useEffect(() => {
@@ -295,6 +298,8 @@ export function App({ boardId }: { boardId: string }) {
                 <PanelIcon name="burger" />
               </button>
               {menuOpen && <BoardMenu
+                onProfile={() => { setMenuOpen(false); setDialog('profile'); }}
+                onSettings={() => { setMenuOpen(false); setDialog('settings'); }}
                 onShare={() => { setMenuOpen(false); void share(); }}
                 onSaveBoard={() => { saveBoardFile(editor); setMenuOpen(false); setToast('Доска сохранена в файл'); }}
                 onLoadBoard={() => { setMenuOpen(false); boardFileInput.current?.click(); }}
@@ -409,6 +414,9 @@ export function App({ boardId }: { boardId: string }) {
           </div>
         </div>
       )}
+
+      {dialog === 'profile' && <ProfileDialog name={conn.me.name} onRename={(n) => conn.rename(n)} onClose={() => setDialog(null)} />}
+      {dialog === 'settings' && <SettingsDialog onClose={() => setDialog(null)} />}
 
       {pop === 'name' && <NamePopover name={conn.me.name} onSave={(n) => { conn.rename(n); setPop(null); }} />}
 
