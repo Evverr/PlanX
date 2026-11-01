@@ -16,7 +16,7 @@ import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
 import { openSwap, swapKind } from '../labs/swap';
 import { pushedBelow } from '../labs/textPush';
-import { DAY, dayKey, halfDay, TL_PAD, tlDays, tlStart } from '../canvas/timeline';
+import { dayKey, dayOf, halfDay, TL_PAD, tlDays, tlStart } from '../canvas/timeline';
 import { under } from '../labs/clickThrough';
 
 /** What a press on the board has started, followed till it's let go. */
@@ -112,8 +112,8 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       }
       // A timeline's left side moves where it starts, a whole day at a time, what's on it staying.
       if (g.only === 'l' && g.orig.tl) {
-        const days = Math.min(Math.round((w.x - g.start.x) / DAY), tlDays(g.orig) - 7);
-        board.update(g.id, { x: g.orig.x + days * DAY, w: g.orig.w - days * DAY, tl: dayKey(tlStart(g.orig), days) });
+        const day = dayOf(g.orig), days = Math.min(Math.round((w.x - g.start.x) / day), tlDays(g.orig) - 7);
+        board.update(g.id, { x: g.orig.x + days * day, w: g.orig.w - days * day, tl: dayKey(tlStart(g.orig), days) });
         return;
       }
       const min = it.type === 'frame' ? 80 : it.type === 'ink' ? 4 : it.type === 'audio' ? 32 : it.type === 'icon' || it.type === 'emoji' || it.type === 'image' ? 16 : 40;
@@ -123,7 +123,7 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       let nw = g.only === 'h' ? w0 : Math.max(min, Math.round(w0 + d.x));
       let nh = g.only === 'w' ? h0 : Math.max(min, Math.round(h0 + d.y));
       // A timeline holds whole days.
-      if (it.tl) nw = TL_PAD * 2 + Math.max(7, Math.round((nw - TL_PAD * 2) / DAY)) * DAY;
+      if (it.tl) nw = TL_PAD * 2 + Math.max(7, Math.round((nw - TL_PAD * 2) / dayOf(it))) * dayOf(it);
       // Stickers, icons, emoji, drawings and pictures keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
       const keep = !g.only && (it.type === 'sticky' || it.type === 'image' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || it.type === 'ink' || it.type === 'audio' || e.shiftKey);
       if (keep) {

@@ -6,6 +6,7 @@ import { font } from './text';
  * it starts with (`tl`, "YYYY-MM-DD"; moved by its left side), as many as its width holds. Each month has its name
  * over its day numbers; down the card a faint line starts each day, a darker one each week (on
  * Mondays), a blue one each month, a red one (and number) today. Stretched wider, it shows more days; taller, its lines run longer.
+ * Its step (`ts`) widens every day as many times, the card staying as wide (so it shows fewer).
  * What's put on it is held as a frame holds things, and moved along it in half days.
  */
 
@@ -36,13 +37,17 @@ export function timelineSize(start: Date): { w: number; h: number } {
   return { w: TL_PAD * 2 + days * DAY, h: 190 };
 }
 
+/** The steps a timeline can have (see `ts`), and a day across at its own. */
+export const TL_STEPS = [1, 2, 4, 6];
+export const dayOf = (it: Item): number => DAY * (it.ts ?? 1);
+
 /** How many days its width holds. */
-export const tlDays = (it: Item): number => Math.max(1, Math.floor((it.w - TL_PAD * 2) / DAY + 0.01));
+export const tlDays = (it: Item): number => Math.max(1, Math.floor((it.w - TL_PAD * 2) / dayOf(it) + 0.01));
 
 /** Where something's left side goes to be at a whole or half day on the timeline. */
 export const halfDay = (tl: Item, x: number): number => {
-  const from = tl.x + TL_PAD;
-  return from + Math.round((x - from) / (DAY / 2)) * (DAY / 2);
+  const from = tl.x + TL_PAD, half = dayOf(tl) / 2;
+  return from + Math.round((x - from) / half) * half;
 };
 
 export function drawTimeline(ctx: CanvasRenderingContext2D, it: Item, colors: { card: string; ink: string }, z: number): void {
@@ -50,13 +55,13 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, it: Item, colors: { 
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, 10);
   ctx.fill();
-  const start = tlStart(it), days = tlDays(it), top = it.y + LINES_Y, bottom = it.y + it.h - BOTTOM;
+  const start = tlStart(it), days = tlDays(it), day = dayOf(it), top = it.y + LINES_Y, bottom = it.y + it.h - BOTTOM;
   const now = new Date(), thisYear = now.getFullYear(), legible = 9 * z >= 4;
   const today = (d: Date) => d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === thisYear;
   ctx.fillStyle = colors.ink;
   ctx.textBaseline = 'top';
   for (let i = 0; i < days; i++) {
-    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i), x = it.x + TL_PAD + i * DAY;
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i), x = it.x + TL_PAD + i * day;
     const first = d.getDate() === 1, monday = d.getDay() === 1, now = today(d);
     // The line starting the day: blue for a month, darker for a week, red for today.
     ctx.globalAlpha = now ? 0.8 : first ? 0.4 : monday ? 0.11 : 0.05;
@@ -68,11 +73,11 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, it: Item, colors: { 
     ctx.fillStyle = now ? TODAY : colors.ink;
     ctx.font = font(9, now ? 600 : 400, 'inter');
     ctx.textAlign = 'center';
-    ctx.fillText(String(d.getDate()), x + 1 + 21 / 2, it.y + NUMBER_Y + 1);
+    ctx.fillText(String(d.getDate()), x + day / 2, it.y + NUMBER_Y + 1);
     // The month's name over its first day (or the card's, for the month it starts in), with its year
     // when it's not this one.
     if (first || i === 0) {
-      ctx.globalAlpha = 0.3;
+      ctx.globalAlpha = 0.6;
       ctx.fillStyle = colors.ink;
       ctx.font = font(10, 500, 'inter');
       ctx.textAlign = 'left';
