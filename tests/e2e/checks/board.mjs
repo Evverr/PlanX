@@ -475,6 +475,21 @@ export const checks = {
     expect(`${t1.ts} ${t1.w === t0.w} ${on.x - t1.x - 19}`, 'twice as wide a day, as wide a card, the sticker on day 10 still').toBe('2 true 460');
   },
 
+  async 'a frame takes a fill and an outline colour as a rectangle does'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('frame', 200, 200, { id: 'f', w: 300, h: 200, text: 'Фрейм', members: [] })); e.setSelection(['f']);
+      e.setColor('blue'); e.setStroke('red'); })()`);
+    await sleep(150);
+    expect(await p.ev(`planx.board.get('f').color + ' ' + planx.board.get('f').sc`), 'its fill and outline').toBe('blue red');
+    const at = await p.ev(`(() => { const s = planx.editor.toScreen({ x: 350, y: 300 }); return [s.x, s.y]; })()`);
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: at[0], y: at[1], button: 'right', buttons: 2, clickCount: 1 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: at[0], y: at[1], button: 'right', buttons: 0, clickCount: 1 });
+    await sleep(200);
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Параметры').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(150);
+    expect(await p.ev(`[...document.querySelectorAll('.params-pop .params-title, .params-pop .params-label')].map((e) => e.textContent).slice(0, 3).join(' | ')`), 'its parameters').toBe('Фрейм «Фрейм» | Заливка | Обводка');
+  },
+
   async 'Ctrl+↑ and Ctrl+↓ take what is picked a layer up or down'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board;
       ['a', 'b', 'c'].forEach((id, i) => b.add(e.newItem('sticky', 100 + i * 20, 100, { id, z: i + 1 }))); e.setSelection(['a']); })()`);

@@ -3,7 +3,7 @@ import type { Editor } from '../editor/editor';
 import type { Point } from '../canvas/geometry';
 import { hitItem, hitLink } from '../canvas/geometry';
 import { linkInTextAt } from '../canvas/renderer';
-import { alignOf, baseWeight, COLORABLE, DEFAULTS, FILLS, HAS_FONT, ICON_COLORS, INK_COLORS, STROKABLE, STROKE_COLORS, TEXT_COLORS, type Item, type LinkStyle } from '../model/types';
+import { alignOf, baseWeight, DEFAULTS, FILLS, fillable, HAS_FONT, ICON_COLORS, INK_COLORS, strokable, STROKE_COLORS, TEXT_COLORS, type Item, type LinkStyle } from '../model/types';
 import { fitHeight, FONTS } from '../canvas/text';
 import { PanelIcon, type PanelIconName } from '../ui/PanelIcon';
 import { fillOpacity, MIND_PALETTE } from '../model/mind';
@@ -229,13 +229,13 @@ export function LinkParams({ editor, ids }: { editor: Editor; ids: string[] }) {
 /** What each kind of item is called in the parameters' list. */
 const NAMES: Partial<Record<Item['type'], string>> = {
   sticky: 'Заметка', text: 'Текст', rect: 'Прямоугольник', ellipse: 'Эллипс', polygon: 'Фигура', task: 'Задача', mind: 'Узел майнд-карты',
-  icon: 'Иконка', emoji: 'Эмодзи', ink: 'Рисунок', image: 'Картинка',
+  icon: 'Иконка', emoji: 'Эмодзи', ink: 'Рисунок', image: 'Картинка', frame: 'Фрейм',
 };
 
 /** The items whose parameters the popup lists: the picked, an instance by what's in it. */
 export function paramItems(editor: Editor): Item[] {
   const all = editor.board.list();
-  return editor.selectedItems().flatMap((it) => (it.inst ? all.filter((c) => c.host === it.id) : [it])).filter((it) => NAMES[it.type] || it.tl);
+  return editor.selectedItems().flatMap((it) => (it.inst ? all.filter((c) => c.host === it.id) : [it])).filter((it) => (NAMES[it.type] && (it.type !== 'frame' || fillable(it))) || it.tl);
 }
 
 /** Each item's parameters, one after another under its name, a line between. */
@@ -305,7 +305,7 @@ const SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72, 96];
  *  rounding. */
 function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch: Partial<Item>) => void }) {
   // Its text's parameters once it has some (not a new rectangle's).
-  const fillable = COLORABLE.includes(it.type), strokable = STROKABLE.includes(it.type), texted = HAS_FONT.includes(it.type) && it.type !== 'table' && !!it.text?.trim();
+  const canFill = fillable(it), canStroke = strokable(it), texted = HAS_FONT.includes(it.type) && it.type !== 'table' && !!it.text?.trim();
   const fills = it.type === 'mind' ? Object.fromEntries(MIND_PALETTE.map((c) => [c, c])) : FILLS;
   const own = it.type === 'icon' ? ICON_COLORS : it.type === 'ink' ? INK_COLORS : null;
   const fs = it.fs ?? DEFAULTS[it.type].fs ?? 16, bold = (it.fw ?? baseWeight(it.type)) >= 600, align = alignOf(it);
@@ -326,13 +326,13 @@ function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch
   );
   return (
     <>
-      {fillable && <ColorRow editor={editor} label={it.type === 'mind' ? 'Цвет' : 'Заливка'} colors={fills} current={it.color} opacity={fillOpacity(it)}
+      {canFill && <ColorRow editor={editor} label={it.type === 'mind' ? 'Цвет' : 'Заливка'} colors={fills} current={it.color} opacity={fillOpacity(it)}
         onColor={(c) => set({ color: c })} onOpacity={(v) => set({ fo: v ?? (it.type === 'mind' ? 1 : undefined) })} />}
-      {strokable && <ColorRow editor={editor} label="Обводка" colors={Object.fromEntries(Object.entries(STROKE_COLORS).filter(([k]) => k !== 'none').map(([k, v]) => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--shape-stroke)')]))} none
+      {canStroke && <ColorRow editor={editor} label="Обводка" colors={Object.fromEntries(Object.entries(STROKE_COLORS).filter(([k]) => k !== 'none').map(([k, v]) => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--shape-stroke)')]))} none
         current={it.sc ?? 'gray'} opacity={it.so ?? 1} onColor={(c) => set({ sc: c === 'gray' ? undefined : c })} onOpacity={(v) => set({ so: v })} />}
       {own && <ColorRow editor={editor} label="Цвет" colors={own} current={it.color ?? 'ink'} opacity={it.fo ?? 1}
         onColor={(c) => set({ color: c })} onOpacity={(v) => set({ fo: v })} />}
-      {!fillable && !own && !texted && (
+      {!canFill && !own && !texted && (
         <div className="params-group">
           <div className="params-label">Непрозрачность</div>
           <div className="params-opacity">

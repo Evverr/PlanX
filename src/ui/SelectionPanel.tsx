@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
-import { COLORABLE, FILLS, ICON_COLORS, INK_COLORS, STROKABLE, STROKE_COLORS, TEXT_COLORS } from '../model/types';
+import { fillable, FILLS, ICON_COLORS, INK_COLORS, strokable as canStroke, STROKE_COLORS, TEXT_COLORS } from '../model/types';
 import { fillOpacity, MIND_PALETTE, mindDepth } from '../model/mind';
 import { colsOf, rowsOf } from '../model/table';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
@@ -146,8 +146,8 @@ function OpacitySlider({ editor, value, onChange }: { editor: Editor; value: num
 /** The colours of the selected stickers, shapes, tasks and mind map nodes, and of icons. */
 function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
   const [paint, pick] = usePaint();
-  const colorable = items.filter((i) => COLORABLE.includes(i.type)), icons = items.filter((i) => i.type === 'icon');
-  const strokable = items.filter((i) => STROKABLE.includes(i.type));
+  const colorable = items.filter(fillable), icons = items.filter((i) => i.type === 'icon');
+  const strokable = items.filter(canStroke);
   // Mind map nodes but central topics (all the selected) get a fill and an edge of their own.
   const deepMind = colorable.length > 0 && colorable.every((i) => i.type === 'mind' && mindDepth(i, (id) => editor.board.get(id)) >= 1);
   if (deepMind) return <MindColors editor={editor} nodes={colorable} />;
@@ -317,7 +317,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
   });
   if (!items.length && !linkCount) return null;
   const tables = items.filter((i) => i.type === 'table'), links = editor.selectedLinks();
-  const colored = items.some((i) => COLORABLE.includes(i.type) || i.type === 'icon' || i.type === 'ink');
+  const colored = items.some((i) => fillable(i) || i.type === 'icon' || i.type === 'ink');
   const btn = (icon: PanelIconName, title: string, fn: () => void) => (
     <button className="ib" title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
   );

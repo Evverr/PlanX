@@ -244,6 +244,11 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
 export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse', 'polygon', 'task', 'mind'];
 /** What has an outline whose colour can be set apart from the fill. */
 export const STROKABLE: ItemType[] = ['rect', 'ellipse', 'polygon', 'task'];
+/** A plain frame (not a component, its instance or a timeline): filled and outlined as a rectangle is. */
+const plainFrame = (it: Item) => it.type === 'frame' && !it.comp && !it.inst && !it.tl;
+/** Whether an item's fill (or its outline) can be given a colour. */
+export const fillable = (it: Item): boolean => COLORABLE.includes(it.type) || plainFrame(it);
+export const strokable = (it: Item): boolean => STROKABLE.includes(it.type) || plainFrame(it);
 export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'task', 'table', 'polygon', 'mind'];
 /** What can be turned by its top right corner (a frame along with what it holds). Tables, mind map
  *  nodes and audio notes stay square to the board. */

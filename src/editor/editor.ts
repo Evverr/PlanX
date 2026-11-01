@@ -1,6 +1,6 @@
 import type { Board } from '../model/board';
 import type { Item, ItemType, Link, LinkStyle, Side } from '../model/types';
-import { COLORABLE, DEFAULTS, EDITABLE, HAS_FONT, STROKABLE, uid } from '../model/types';
+import { DEFAULTS, EDITABLE, fillable, HAS_FONT, strokable, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
 import { boundsOf, boxOf, center, instanceBounds, pointInRect, resizedAt } from '../canvas/geometry';
 import { clearTextCache, drawScene, readTheme, type Camera, type Peer, type Scene, type Theme } from '../canvas/renderer';
@@ -769,7 +769,7 @@ export class Editor {
       for (const it of this.selectedItems()) {
         // Mind map nodes take only their own strong colours (or any picked one), not the pale fills.
         if (it.type === 'mind' && !color.startsWith('#')) continue;
-        if (COLORABLE.includes(it.type) && !(color === 'none' && it.type === 'sticky')) this.board.update(it.id, { color });
+        if (fillable(it) && !(color === 'none' && it.type === 'sticky')) this.board.update(it.id, { color });
       }
     });
   }
@@ -777,7 +777,7 @@ export class Editor {
   /** Outline colour of the selected shapes and tasks; 'gray' is the usual outline. */
   setStroke(color: string): void {
     this.board.transact(() => {
-      for (const it of this.selectedItems()) if (STROKABLE.includes(it.type)) this.board.update(it.id, { sc: color === 'gray' ? undefined : color });
+      for (const it of this.selectedItems()) if (strokable(it)) this.board.update(it.id, { sc: color === 'gray' ? undefined : color });
     });
   }
 
@@ -790,8 +790,8 @@ export class Editor {
         if (of === 'text' && HAS_FONT.includes(it.type)) this.board.update(it.id, { to: v });
         if (of === 'mark' && HAS_FONT.includes(it.type)) this.board.update(it.id, { mo: Math.max(0, Math.round(value * 100) / 100) });
         if (of === 'icon' && (it.type === 'icon' || it.type === 'ink')) this.board.update(it.id, { fo: v });
-        if (of === 'fill' && COLORABLE.includes(it.type)) this.board.update(it.id, { fo: it.type === 'mind' ? Math.max(0, Math.round(value * 100) / 100) : v });
-        if (of === 'stroke' && (STROKABLE.includes(it.type) || it.type === 'mind')) this.board.update(it.id, { so: v });
+        if (of === 'fill' && fillable(it)) this.board.update(it.id, { fo: it.type === 'mind' ? Math.max(0, Math.round(value * 100) / 100) : v });
+        if (of === 'stroke' && (strokable(it) || it.type === 'mind')) this.board.update(it.id, { so: v });
       }
     });
   }

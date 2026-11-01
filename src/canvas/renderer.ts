@@ -386,14 +386,21 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
         // A component is only its red edge, with nothing filled in.
         ctx.beginPath();
         ctx.roundRect(it.x, it.y, it.w, it.h, CORNER);
-        if (!it.comp) { ctx.fillStyle = theme.frame; ctx.fill(); }
+        // A frame's fill and outline: the usual, or a colour of its own as a rectangle's (how opaque, too).
+        if (!it.comp && it.color !== 'none') {
+          ctx.globalAlpha = it.fo ?? 1;
+          ctx.fillStyle = it.color ? shade(it.color.startsWith('#') ? it.color : FILLS[it.color] ?? theme.frame, theme.dim) : theme.frame;
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
         if (it.comp) {
           ctx.globalAlpha = 0.75;
           ctx.strokeStyle = COMPONENT_COLOR;
           ctx.lineWidth = 1.5 / cam.z;
         } else {
-          ctx.strokeStyle = theme.line;
-          ctx.lineWidth = 1 / cam.z;
+          ctx.globalAlpha = it.sc ? it.so ?? 1 : 1;
+          ctx.strokeStyle = (it.sc ? strokeOf(it, theme) : null) ?? (it.sc === 'none' ? 'transparent' : theme.line);
+          ctx.lineWidth = (it.sc ? 2 : 1) / cam.z;
         }
         ctx.stroke();
         ctx.globalAlpha = 1;
@@ -1116,10 +1123,9 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
-    ctx.beginPath();
-    ctx.moveTo(q.x - q.r * 0.45, q.y); ctx.lineTo(q.x + q.r * 0.45, q.y);
-    ctx.moveTo(q.x + q.r * 0.05, q.y - q.r * 0.4); ctx.lineTo(q.x + q.r * 0.45, q.y); ctx.lineTo(q.x + q.r * 0.05, q.y + q.r * 0.4);
-    ctx.stroke();
+    // In it, the set's "Посылка" in white.
+    const k = q.r * 1.6;
+    drawIcon(ctx, 'package', q.x - k / 2, q.y - k / 2, k, '#fff');
   }
   // A link picked alone: its nodes, and where new ones can be pulled out (the middles of its stretches).
   const pickedLink = s.selection.size === 1 ? s.links.find((l) => s.selection.has(l.id)) : undefined, ps = pickedLink && linkShape(pickedLink, s.get);
