@@ -120,7 +120,7 @@ export const checks = {
     const ids = await put(p, `const a = e.newItem('sticky', X, Y, { text: 'Привет' }), c = e.newItem('rect', X + 200, Y, { text: 'Кнопка' });
       b.add(a); b.add(c); e.setSelection([a.id, c.id]); return { a: a.id, c: c.id };`);
     await p.click(await p.at('.tools [data-key="component"]'));
-    await p.escape();
+    await p.ev('planx.editor.stopEditing()');
     const comp = await p.ev(`planx.board.list().find((i) => i.comp)`);
     expect(comp?.members?.length, 'a component round both').toBe(2);
     await p.ev(`planx.editor.setSelection(['${comp.id}'])`);
@@ -221,10 +221,23 @@ export const checks = {
     expect(await p.ev(`planx.board.getLink('L1')?.to`), 'and back on undo').toBe(ids.d);
   },
 
+  async 'Esc and Cmd+Enter are done with a component being changed, as its tick'(p) {
+    for (const key of ['esc', 'enter']) {
+      await put(p, `const a = e.newItem('sticky', X, Y, { text: 'Привет' }); b.add(a); e.setSelection([a.id]); return {};`);
+      await p.click(await p.at('.tools [data-key="component"]'));
+      await sleep(100);
+      // Its title being typed in: done there and then.
+      if (key === 'esc') await p.escape(); else await p.key('Enter', 'Enter', 13, 4);
+      await sleep(200);
+      const c = await p.ev(`planx.board.list().filter((i) => i.comp).pop()`);
+      expect(`${!!c.stowed} ${await p.ev(`planx.board.list().filter((i) => i.inst === '${c.id}').length`)}`, `${key}: an instance in its place`).toBe('true 1');
+    }
+  },
+
   async 'an instance detached from its component leaves its items, as they were, with no frame, and they stay so'(p) {
     const ids = await put(p, `const a = e.newItem('sticky', X, Y, { text: 'Привет' }); b.add(a); e.setSelection([a.id]); return { a: a.id };`);
     await p.click(await p.at('.tools [data-key="component"]'));
-    await p.escape();
+    await p.ev('planx.editor.stopEditing()');
     const comp = await p.ev(`planx.board.list().find((i) => i.comp)`);
     await p.ev(`planx.editor.addInstance('${comp.id}')`);
     await sleep(200);

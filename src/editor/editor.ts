@@ -325,6 +325,22 @@ export class Editor {
     this.startEditing(title);
   }
 
+  /** The component being changed (out, not put away) that's picked or holds what's picked. */
+  componentInEdit(): Item | undefined {
+    const sel = this.selectedItems();
+    if (!sel.length) return undefined;
+    return this.board.list().find((c) => c.comp && !c.stowed && sel.some((s) => s.id === c.id || this.carried([c]).has(s.id)));
+  }
+
+  /** Esc or Cmd+Enter while a component's being changed: done with it, as by its tick. */
+  finishComponent(): boolean {
+    const c = this.componentInEdit();
+    if (!c) return false;
+    if (this.editingId) this.stopEditing();
+    this.addInstance(c.id);
+    return true;
+  }
+
   /** A component's arrow ("Объекты", src/labs): asked for a name, then made one of the board's own
    *  objects and turned into an instance where it stands. */
   askObject(id: string): void {
