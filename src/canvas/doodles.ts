@@ -7,19 +7,22 @@ const PLAIN = import.meta.glob<string>('../../assets/doodles/*.svg', { eager: tr
 const OUTLINED = import.meta.glob<string>('../../assets/doodles/outlined/*.svg', { eager: true, query: '?url', import: 'default' });
 /** A second set, round "volume" badges (assets/doodles/volume): on the board as they are. */
 const VOLUME = import.meta.glob<string>('../../assets/doodles/volume/*.svg', { eager: true, query: '?url', import: 'default' });
+/** A third set, characters (assets/doodles/people, pictures 384 across): on the board as they are. */
+const PEOPLE = import.meta.glob<string>('../../assets/doodles/people/*.png', { eager: true, query: '?url', import: 'default' });
 
 const NAMES: Record<string, string> = {
   '01-love': 'Любовь', '02-on-fire': 'В ударе', '03-you-star': 'Ты звезда', '04-looking': 'Смотрю', '05-good-idea': 'Хорошая идея',
   '06-nice': 'Отлично', '07-peace': 'Мир', '08-good-vibes': 'Хорошие вибрации', '09-lets-go': 'Поехали', '10-flower-power': 'Сила цветов',
   '11-coffee-break': 'Кофе-брейк', '12-wow': 'Вау', '13-electric': 'Энергия', '14-best-buds': 'Лучшие друзья', '15-party-time': 'Вечеринка',
   'v-beer': 'Пиво', 'v-cake': 'Торт', 'v-cup': 'Кубок', 'v-flag': 'Флаг', 'v-flower': 'Цветок', 'v-gift': 'Подарок', 'v-king-or-queen': 'Корона',
+  'p-01-red-hair': 'Рыжие волосы', 'p-02-purple-glasses': 'Фиолетовые очки', 'p-03-headphones': 'Наушники', 'p-04-curls': 'Кудри',
   'v-like': 'Лайк', 'v-love': 'Сердце', 'v-martini': 'Мартини', 'v-money': 'Деньги', 'v-number-one': 'Номер один', 'v-smile': 'Улыбка', 'v-star': 'Звезда',
 };
 
-const idOf = (path: string) => path.match(/([^/]+)\.svg$/)![1];
+const idOf = (path: string) => path.match(/([^/]+)\.(svg|png)$/)![1];
 
 /** A sticker: its picture in the picker, on the board (`outlined`), and its set (the picker shows them apart). */
-export interface Doodle { id: string; name: string; url: string; outlined: string; set: 'doodle' | 'volume' }
+export interface Doodle { id: string; name: string; url: string; outlined: string; set: 'doodle' | 'volume' | 'people' }
 
 export const DOODLES: Doodle[] = [
   ...Object.entries(PLAIN).map(([path, url]): Doodle => {
@@ -29,6 +32,10 @@ export const DOODLES: Doodle[] = [
   ...Object.entries(VOLUME).map(([path, url]): Doodle => {
     const id = `v-${idOf(path)}`;
     return { id, name: NAMES[id] ?? id, url, outlined: url, set: 'volume' };
+  }).sort((a, b) => a.id.localeCompare(b.id)),
+  ...Object.entries(PEOPLE).map(([path, url]): Doodle => {
+    const id = `p-${idOf(path)}`;
+    return { id, name: NAMES[id] ?? id, url, outlined: url, set: 'people' };
   }).sort((a, b) => a.id.localeCompare(b.id)),
 ];
 

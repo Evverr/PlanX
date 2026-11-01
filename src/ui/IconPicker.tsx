@@ -180,9 +180,11 @@ export function IconPicker({ zoom, onPick }: { zoom: number; onPick: (kind: Pick
       </div>
       {tab === 'emoji' && <div className="icon-grid emoji-grid">{shown('emoji').map((id) => tile('emoji', id))}</div>}
       {tab === 'stickers' && <div className="icon-scroll">
-        <div className="icon-grid doodle-grid">{shown('stickers').filter((id) => doodle(id)?.set !== 'volume').map((id) => tile('stickers', id))}</div>
+        <div className="icon-grid doodle-grid">{shown('stickers').filter((id) => doodle(id)?.set === 'doodle').map((id) => tile('stickers', id))}</div>
         <div className="icon-sub">Значки</div>
         <div className="icon-grid doodle-grid">{shown('stickers').filter((id) => doodle(id)?.set === 'volume').map((id) => tile('stickers', id))}</div>
+        <div className="icon-sub">Персонажи</div>
+        <div className="icon-grid doodle-grid">{shown('stickers').filter((id) => doodle(id)?.set === 'people').map((id) => tile('stickers', id))}</div>
       </div>}
       {tab === 'icons' && (
         <>
