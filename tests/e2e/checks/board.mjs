@@ -408,6 +408,22 @@ export const checks = {
     expect(await p.ev(`planx.board.list().filter((i) => i.type === 'image').length`) - n0, 'a picture').toBe(1);
   },
 
+  async 'what is copied goes on the system clipboard as text, and is pasted from it (another board, another window) under the pointer'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 100, 100, { id: 's1', w: 100, h: 100 })); b.add(e.newItem('sticky', 300, 100, { id: 's2', w: 100, h: 100 }));
+      b.addLink({ id: 'l1', from: 's1', to: 's2' }); e.setSelection(['s1', 's2']); e.copy(); })()`);
+    const text = 'planx-copy:' + await p.ev(`localStorage.getItem('planx-clipboard')`);
+    // As on another board: this one emptied, what's copied there only on the clipboard.
+    await p.ev('planx.editor.clearBoard()');
+    await p.mouse('mouseMoved', 600, 400);
+    await p.ev(`(() => { const dt = new DataTransfer(); dt.setData('text/plain', ${JSON.stringify(text)});
+      window.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); })()`);
+    await sleep(200);
+    expect(await p.ev(`planx.board.list().length + ' ' + planx.board.linkList().length`), 'both, and the link').toBe('2 1');
+    const mid = await p.ev(`(() => { const l = planx.board.list(), x = (Math.min(...l.map((i) => i.x)) + Math.max(...l.map((i) => i.x + i.w))) / 2, y = (Math.min(...l.map((i) => i.y)) + Math.max(...l.map((i) => i.y + i.h))) / 2, s = planx.editor.toScreen({ x, y }); return Math.round(s.x) + ',' + Math.round(s.y); })()`);
+    expect(mid, 'under the pointer').toBe('600,400');
+  },
+
   async 'a picked link gets nodes pulled out of its middles, moved, and gone on a double click; they go with both its ends'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('sticky', 200, 300, { id: 'a', w: 100, h: 100 }));

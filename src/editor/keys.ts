@@ -63,13 +63,19 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
   if (TOOL_KEYS[e.code]) ed.setTool(TOOL_KEYS[e.code]);
 }
 
+/** What's copied on a board goes on the system's clipboard as text after this mark, to be pasted on
+ *  any board, in any window. */
+export const CLIP_MARK = 'planx-copy:';
+
 /** Pasting on the board: a picture copied anywhere (a screenshot, from a page or the Finder) goes on it
  *  as one added from the panel does; otherwise what was copied on the board. Not while typing. */
 export function onPaste(ed: Editor, e: ClipboardEvent): void {
   const t = e.target as HTMLElement | null;
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
   const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith('image/'));
+  const text = e.clipboardData?.getData('text/plain') ?? '';
   e.preventDefault();
-  if (files.length) void readPictures(files).then((pics) => ed.addPictures(pics));
-  else ed.paste();
+  if (text.startsWith(CLIP_MARK)) ed.pasteHere(text.slice(CLIP_MARK.length));
+  else if (files.length) void readPictures(files).then((pics) => ed.addPictures(pics));
+  else ed.pasteHere();
 }
