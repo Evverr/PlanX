@@ -29,6 +29,7 @@ import { formatCells, pickCell, restOn, setTableLines } from './tables';
 import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, type Pens, type PenTool, type Tool } from './tools';
 import { pushedBelow } from '../labs/textPush';
 import { holdZoomBox } from '../labs/zoomBox';
+import { startMindTidy } from '../labs/tidyMind';
 import { clearComments } from '../labs/comments';
 import { isLocked, labOn, subscribeLabs } from '../labs/labs';
 
@@ -1054,6 +1055,7 @@ export class Editor {
   tidyMind(id: string): void {
     const moves = tidyBranches(id, this.board.list());
     this.board.transact(() => moves.forEach((pt, k) => this.board.update(k, pt)));
+    startMindTidy(this, id);
   }
 
   clearBoard(): void {

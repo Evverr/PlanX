@@ -10,6 +10,7 @@ import { LabsPresence, useFollowing } from './presence';
 import { cameraFor, flyTo, stopFlight } from './camera';
 import { downloadPicture, pictureSize, renderPicture, type Background, type ExportOptions } from './exportPng';
 import { downloadPdf } from './exportPdf';
+import { dragMindGap, drawMindTidy, mindGapAt, mindGaps, setHotMindGap } from './tidyMind';
 import { drawTidy, endTidyDrag, gapAt, moveTidyDrag, setGaps, setHotGap, startTidyDrag, tidyDragging, tidyItemAt, tidyNow } from './tidy';
 import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
@@ -49,7 +50,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
   // Their drawing over the board, redrawn whenever one is switched on or off (the editor asks about
   // locks as it goes, so its handles change too).
   useEffect(() => {
-    const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) drawTidy(ctx, editor); drawGroup(ctx, editor); return more; };
+    const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) { drawTidy(ctx, editor); drawMindTidy(ctx, editor); } drawGroup(ctx, editor); return more; };
     editor.overlays.add(draw);
     editor.requestRender();
     const off = subscribeLabs(() => { editor.emit(); editor.requestRender(); });
@@ -94,6 +95,8 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     let drawing = false;
     // A gap of the grid being dragged ("Авторасположение"): which, from where, the gaps then.
     let gap: { axis: 'col' | 'row'; from: number; gx: number; gy: number } | null = null;
+    // One of a mind map's handles being dragged ("Авторасположение" on a node): which, from where, the stretch then.
+    let mindGap: { h: { axis: 'col' | 'row'; gap: number; out: boolean; sign: number }; from: number; k0: { kx: number; ky: number } } | null = null;
     const canvas = () => editor.canvas;
     const local = (e: PointerEvent) => { const r = canvas()!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
     const addPoint = (e: PointerEvent) => {
@@ -109,6 +112,15 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       }
       setPop(null);
       if (presence.followingId !== null) { presence.stopFollowing(); stopFlight(); }
+      const mh = e.button === 0 && labOn('tidy') ? mindGapAt(editor, local(e)) : null;
+      if (mh) {
+        e.stopPropagation();
+        canvas()!.setPointerCapture(e.pointerId);
+        mindGap = { h: mh, from: mh.axis === 'col' ? e.clientX : e.clientY, k0: mindGaps() };
+        setHotMindGap(mh.axis);
+        editor.board.beginGesture();
+        return;
+      }
       const along = e.button === 0 && labOn('tidy') ? gapAt(editor, local(e)) : null, t = tidyNow();
       if (along && t) {
         e.stopPropagation();
@@ -152,6 +164,16 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       if (tidyDragging()) { const p = local(e); moveTidyDrag(editor, editor.toWorld(p.x, p.y)); return; }
       if (groupScaling()) { const p = local(e); moveGroupScale(editor, editor.toWorld(p.x, p.y)); return; }
       if (e.target === canvas() && !e.buttons && onGroupHandle(editor, local(e))) canvas()!.style.cursor = 'nwse-resize';
+      if (mindGap) {
+        const d = ((mindGap.h.axis === 'col' ? e.clientX : e.clientY) - mindGap.from) / editor.cam.z;
+        dragMindGap(editor, mindGap.h, mindGap.k0, d);
+        return;
+      }
+      if (e.target === canvas() && !e.buttons && labOn('tidy')) {
+        const mh = mindGapAt(editor, local(e));
+        setHotMindGap(mh?.axis ?? null);
+        if (mh) { canvas()!.style.cursor = mh.axis === 'col' ? 'col-resize' : 'row-resize'; editor.requestRender(); return; }
+      }
       if (gap) {
         const d = ((gap.axis === 'col' ? e.clientX : e.clientY) - gap.from) / editor.cam.z;
         setGaps(editor, gap.axis === 'col' ? Math.round(gap.gx + d) : gap.gx, gap.axis === 'row' ? Math.round(gap.gy + d) : gap.gy);
@@ -169,6 +191,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       if (tidyDragging()) { const p = local(e); endTidyDrag(editor, editor.toWorld(p.x, p.y)); }
       if (groupScaling()) endGroupScale(editor);
       if (drawing) { drawing = false; presence.shareLaser(); }
+      if (mindGap) { mindGap = null; setHotMindGap(null); editor.board.endGesture(); editor.requestRender(); }
       if (gap) { gap = null; setHotGap(null); editor.board.endGesture(); editor.requestRender(); }
     };
     const onWheel = (e: WheelEvent) => { if (e.target === canvas() && presence.followingId !== null) { presence.stopFollowing(); stopFlight(); } };
