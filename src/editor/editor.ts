@@ -22,7 +22,7 @@ import { DOODLE_SIZE } from '../canvas/doodles';
 import { shapePatch, shapeStyle } from './shapeStyle';
 import { endGesture, moveGesture, type Gesture } from './gestures';
 import { updateCursor } from './hover';
-import { onKeyDown, onPaste } from './keys';
+import { CLIP_MARK, onKeyDown, onPaste } from './keys';
 import { addMindNode, mindFit, refitMind, removeMindNode, undoMindNode, type MindAdd } from './mindOps';
 import { press } from './press';
 import { formatCells, pickCell, restOn, setTableLines } from './tables';
@@ -40,6 +40,8 @@ const LINK_STYLE_KEY = 'planx-link-style';
 const FINGER = 40;
 /** The mind map "+" buttons' wait after a node is picked, and their fade in, in ms. */
 const PLUS_DELAY = 330, PLUS_FADE = 300;
+/** What was copied, kept in this browser for every board and tab (on the system's clipboard, see CLIP_MARK). */
+const CLIP_KEY = 'planx-clipboard';
 
 /** What the editor needs from the collaboration layer. Optional, so the editor also runs alone. */
 export interface Presence {
@@ -145,6 +147,10 @@ export class Editor {
   private height = 0;
   private dpr = 1;
   private clipboard: string | null = null;
+  /** Where the pointer is on the canvas (on screen), for Ctrl+V to paste there; null once it's left. */
+  private pointerAt: Point | null = null;
+  /** The last Ctrl+V: where, and how many times there in a row (each a step further). */
+  private pasted: { x: number; y: number; n: number } | null = null;
   private raf = 0;
   private ui: UIState;
   private uiListeners = new Set<() => void>();
@@ -224,6 +230,7 @@ export class Editor {
     };
     on(canvas, 'pointerdown', (e) => press(this, e));
     on(canvas, 'pointermove', (e) => this.onPointerMove(e));
+    on(canvas, 'pointerleave', () => { this.pointerAt = null; });
     on(canvas, 'pointerup', (e) => this.onPointerUp(e));
     on(canvas, 'pointercancel', (e) => this.onPointerUp(e));
     on(canvas, 'pointerleave', () => {
@@ -942,24 +949,54 @@ export class Editor {
     this.board.transact(() => items.forEach((it) => this.board.update(it.id, { z: --z })));
   }
 
+  /** Copies what's picked, with the links among them: kept here, in this browser (for another board,
+   *  another tab) and on the system's clipboard as text (for another window), to be pasted anywhere. */
   copy(): boolean {
-    const items = this.withCopies(this.selectedItems());
-    if (!items.length) return false;
-    const ids = new Set(items.map((i) => i.id));
-    const links = this.board.linkList().filter((l) => ids.has(l.from) && ids.has(l.to));
-    this.clipboard = JSON.stringify({ items, links });
-    // The system's clipboard takes a note of it, so a picture copied before isn't pasted in its place.
-    void navigator.clipboard?.writeText?.('PlanX').catch(() => {});
+    const data = this.copyData();
+    if (!data) return false;
+    this.clipboard = data;
+    try { localStorage.setItem(CLIP_KEY, this.clipboard); } catch { /* too big or not allowed: this board's own then */ }
+    void navigator.clipboard?.writeText?.(CLIP_MARK + this.clipboard).catch(() => {});
+    this.pasted = null;
     return true;
   }
 
+  /** What's picked, with the links among them, as copied. */
+  private copyData(): string | null {
+    const items = this.withCopies(this.selectedItems());
+    if (!items.length) return null;
+    const ids = new Set(items.map((i) => i.id));
+    return JSON.stringify({ items, links: this.board.linkList().filter((l) => ids.has(l.from) && ids.has(l.to)) });
+  }
+
+  /** What was copied: here, or on another board or tab of this browser. */
+  private copied(): string | null {
+    if (this.clipboard) return this.clipboard;
+    try { return localStorage.getItem(CLIP_KEY); } catch { return null; }
+  }
+
   /** Whether something's been copied, to paste. */
-  hasClipboard(): boolean { return !!this.clipboard; }
+  hasClipboard(): boolean { return !!this.copied(); }
+
+  /** Ctrl+V: what was copied (or `text`, copied elsewhere) pasted with its middle under the pointer, or
+   *  in the middle of the screen with the pointer off the board; again at the same spot, a step further. */
+  pasteHere(text?: string): void {
+    if (text) this.clipboard = text;
+    const sp = this.pointerAt ?? { x: this.width / 2, y: this.height / 2 };
+    const n = this.pasted && Math.hypot(this.pasted.x - sp.x, this.pasted.y - sp.y) < 4 ? this.pasted.n + 1 : 0;
+    this.pasted = { ...sp, n };
+    const w = this.toWorld(sp.x, sp.y), step = (30 * n) / this.cam.z;
+    this.paste(0, { x: w.x + step, y: w.y + step });
+  }
 
   /** Pastes what was copied `offset` from where it was, or with its middle at the board point `at`. */
   paste(offset = 30, at?: Point): void {
-    if (!this.clipboard) return;
-    const data = JSON.parse(this.clipboard) as { items: Item[]; links: Link[] };
+    const clip = this.copied();
+    if (!clip) return;
+    let data: { items: Item[]; links: Link[] };
+    try { data = JSON.parse(clip); } catch { return; }
+    if (!Array.isArray(data?.items) || !data.items.length) return;
+    data.links ??= [];
     const b = at && boundsOf(data.items);
     if (at && b) {
       const dx = Math.round(at.x - b.x - b.w / 2), dy = Math.round(at.y - b.y - b.h / 2);
@@ -972,7 +1009,7 @@ export class Editor {
     const held = new Set(items.flatMap((i) => i.members ?? []));
     this.settle(items.filter((i) => !held.has(i.id)).map((i) => i.id));
     // Paste again lands one step further.
-    this.clipboard = JSON.stringify({ items, links });
+    if (!at) this.clipboard = JSON.stringify({ items, links });
     this.setSelection(items.map((i) => i.id));
   }
 
@@ -1003,8 +1040,11 @@ export class Editor {
   }
 
   duplicate(): void {
-    const keep = this.clipboard;
-    if (this.copy()) this.paste(24);
+    // Not copied: what was copied before stays to be pasted.
+    const keep = this.clipboard, data = this.copyData();
+    if (!data) return;
+    this.clipboard = data;
+    this.paste(24);
     this.clipboard = keep;
   }
 
@@ -1339,6 +1379,7 @@ export class Editor {
     if (!this.pointers.size) this.byFinger = e.pointerType === 'touch';
     const sp = this.local(e);
     const w = this.toWorld(sp.x, sp.y);
+    this.pointerAt = sp;
     this.sendCursor(w);
     updateCursor(this, w, e.altKey);
     if (!this.pointers.has(e.pointerId) || !this.gesture) return;
