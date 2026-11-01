@@ -44,6 +44,8 @@
 .recorder .row .btn { flex: 1; white-space: nowrap; }
 .confirm { left: var(--topbar-l, calc(12px + env(safe-area-inset-left, 0px))); top: calc(18px + var(--bar) + env(safe-area-inset-top, 0px)); width: var(--e286); box-sizing: border-box; }
 .confirm p { max-width: 207px; }
+.confirm-check { display: flex; align-items: center; gap: var(--s8); margin: 0 0 var(--s12); font-size: var(--s13); color: var(--muted); cursor: pointer; }
+.confirm-check input { margin: 0; accent-color: #007CFF; }
 .namepop { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(20px + var(--bar) + env(safe-area-inset-bottom, 0px)); width: var(--e240); }
 .namepop input, .icon-pick input, .confirm .confirm-input { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: var(--s8); padding: var(--s8) var(--s10); font: inherit; margin-bottom: var(--s10); }
 .toast { left: 50%; transform: translateX(-50%); top: calc(18px + var(--bar) + env(safe-area-inset-top, 0px)); padding: var(--s10) var(--s14); }
