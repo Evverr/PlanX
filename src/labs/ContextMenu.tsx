@@ -282,12 +282,11 @@ function ColorRow({ editor, label, colors, current, none, opacity, onColor, onOp
             aria-label={`${label}: ${k}`} onClick={() => onColor(k)} />
         ))}
         {none && <button className={`sw none ${current === 'none' ? 'on' : ''}`} aria-label={`${label}: нет`} onClick={() => onColor('none')} />}
-        <div className="cp-wrap">
-          <button className={`sw custom ${custom || picking ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет" aria-label={`${label}: свой цвет`}
-            onClick={() => setPicking(!picking)} />
-          {picking && <ColorPicker value={custom ?? '#3E7BFA'} onChange={onColor} onStart={() => editor.beginChange()} onEnd={() => editor.endChange()} />}
-        </div>
+        <button className={`sw custom ${custom || picking ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет" aria-label={`${label}: свой цвет`}
+          onClick={() => setPicking(!picking)} />
       </div>
+      {/* Under the swatches, in the popup's own flow: not cut off by its edges. */}
+      {picking && <ColorPicker value={custom ?? '#3E7BFA'} onChange={onColor} onStart={() => editor.beginChange()} onEnd={() => editor.endChange()} />}
       <div className="params-opacity">
         <input type="range" min={0} max={100} value={pct} aria-label={`${label}: непрозрачность, %`} style={{ '--p': `${pct}%` } as React.CSSProperties}
           onPointerDown={() => { editor.beginChange(); window.addEventListener('pointerup', () => editor.endChange(), { once: true }); }}
