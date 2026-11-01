@@ -424,6 +424,19 @@ export const checks = {
     expect(mid, 'under the pointer').toBe('600,400');
   },
 
+  async 'Ctrl+↑ and Ctrl+↓ take what is picked a layer up or down'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board;
+      ['a', 'b', 'c'].forEach((id, i) => b.add(e.newItem('sticky', 100 + i * 20, 100, { id, z: i + 1 }))); e.setSelection(['a']); })()`);
+    const order = () => p.ev(`planx.board.list().filter((i) => 'abc'.includes(i.id)).sort((m, n) => m.z - n.z).map((i) => i.id).join('')`);
+    await p.key('ArrowUp', 'ArrowUp', 38, 4);
+    expect(await order(), 'one up').toBe('bac');
+    await p.key('ArrowUp', 'ArrowUp', 38, 4);
+    await p.key('ArrowUp', 'ArrowUp', 38, 4);
+    expect(await order(), 'at the top it stays').toBe('bca');
+    await p.key('ArrowDown', 'ArrowDown', 40, 4);
+    expect(await order(), 'one down').toBe('bac');
+  },
+
   async 'a picked link gets nodes pulled out of its middles, moved, and gone on a double click; they go with both its ends'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('sticky', 200, 300, { id: 'a', w: 100, h: 100 }));
