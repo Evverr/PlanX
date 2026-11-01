@@ -12,7 +12,7 @@ import { descendants, mindWay, upright, type Way } from '../model/mind';
  * gaps as they came out, in proportion, not evened out. Picked again later, it's an ordinary node; pressed
  * again with nothing moved by hand, it's all back as it was, stretches and handles.
  */
-interface MindTidy { id: string; base: Map<string, Point>; kx: number[]; ky: number[]; at: Map<string, Point>; on: boolean }
+interface MindTidy { id: string; base: Map<string, Point>; kx: number[]; ky: number[]; at: Map<string, Point>; on: boolean; warned?: boolean }
 let mt: MindTidy | null = null;
 
 /** A handle: across the gaps out to level `level` (out) or along it; `sign` -1 where dragging left (up) widens it. */
@@ -25,17 +25,48 @@ const subtree = (ed: Editor, id: string): Item[] => descendants([id], ed.board.l
 
 /** Taken up after the node's branches are laid out afresh. */
 export function startMindTidy(ed: Editor, id: string): void {
-  const base = new Map(subtree(ed, id).map((i) => [i.id, { x: i.x, y: i.y }]));
+  const base = relative(ed, id);
   mt = base.size ? { id, base, kx: [], ky: [], at: new Map(base), on: true } : null;
+}
+
+/** Laid out afresh after something in it was moved by hand: the handles' stretches of the last time
+ *  taken up again, so it comes out as near as it can to how it was (what was moved jumps back). */
+export function restartMindTidy(ed: Editor, id: string): void {
+  const was = mt?.id === id ? mt : null;
+  startMindTidy(ed, id);
+  if (!was || !mt) return;
+  mt.kx = was.kx;
+  mt.ky = was.ky;
+  apply(ed);
+}
+
+/** Where everything growing from node `id` stands from its corner (so the node moved, with all of it
+ *  going along, changes nothing). */
+function relative(ed: Editor, id: string): Map<string, Point> {
+  const n = ed.board.get(id);
+  return new Map(n ? subtree(ed, id).map((i) => [i.id, { x: i.x - n.x, y: i.y - n.y }]) : []);
 }
 
 /** Whether node `id`'s branches stand as last laid out here (nothing in them moved by hand, none added
  *  or taken away since): pressed again, "Авторасположение" leaves them so, its handles back. */
 export function mindTidyKept(ed: Editor, id: string): boolean {
   if (mt?.id !== id) return false;
-  const now = subtree(ed, id);
-  if (now.length !== mt.at.size) return false;
-  return now.every((i) => { const p = mt!.at.get(i.id); return !!p && Math.abs(i.x - p.x) <= 1 && Math.abs(i.y - p.y) <= 1; });
+  const now = relative(ed, id);
+  if (now.size !== mt.at.size) return false;
+  return [...now].every(([k, i]) => { const p = mt!.at.get(k); return !!p && Math.abs(i.x - p.x) <= 1 && Math.abs(i.y - p.y) <= 1; });
+}
+
+/** Items dragged by hand: one of a laid out mind map's branches among them, a note at the bottom says
+ *  its layout will start afresh, with a button undoing the move (the layout kept then). Once only, till
+ *  it's undone. */
+export function noteMindMoved(ed: Editor, ids: string[]): void {
+  if (!mt || mt.warned || !ids.some((id) => mt!.at.has(id))) return;
+  mt.warned = true;
+  const was = mt;
+  window.dispatchEvent(new CustomEvent('planx:toast', { detail: {
+    text: 'Вы подвинули элемент: авторасположение выключено', bottom: true,
+    action: 'Отменить', run: () => { ed.undo(); if (mt === was) mt.warned = false; },
+  } }));
 }
 
 /** Pressed again untouched: its handles back. */
@@ -77,7 +108,7 @@ function apply(ed: Editor): void {
   if (!n || !lv) return;
   const { way, rows } = lv, up = upright(way), along = up ? 'x' : 'y', size = up ? 'w' : 'h', out = up ? 'y' : 'x', deep = up ? 'h' : 'w';
   const forth = way === 'right' || way === 'down';
-  const base = (i: Item) => ({ ...i, ...mt!.base.get(i.id) });
+  const base = (i: Item) => { const b = mt!.base.get(i.id); return b ? { ...i, x: n.x + b.x, y: n.y + b.y } : i; };
   const next = new Map<string, Point>();
   const placed = (i: Item) => ({ ...base(i), ...next.get(i.id) });
   rows.forEach((row, level) => {
@@ -97,7 +128,7 @@ function apply(ed: Editor): void {
     });
   });
   ed.board.transact(() => next.forEach((pt, id) => ed.board.update(id, pt)));
-  mt.at = new Map([...mt.base.keys()].map((id) => { const i = ed.board.get(id)!; return [id, { x: i.x, y: i.y }]; }));
+  mt.at = relative(ed, mt.id);
 }
 
 type Line = { axis: 'col' | 'row'; at: number; from: number; to: number; gap: number; level: number; out: boolean };

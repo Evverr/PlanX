@@ -62,6 +62,18 @@ export function App({ boardId }: { boardId: string }) {
 
   const [pop, setPop] = useState<Pop>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // A note at the bottom with a button (see src/labs/tidyMind.ts), sent as "planx:toast".
+  const [note, setNote] = useState<{ text: string; action: string; run: () => void; at: number } | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => setNote({ ...(e as CustomEvent).detail, at: Date.now() });
+    window.addEventListener('planx:toast', on);
+    return () => window.removeEventListener('planx:toast', on);
+  }, []);
+  useEffect(() => {
+    if (!note) return;
+    const t = setTimeout(() => setNote(null), 5000);
+    return () => clearTimeout(t);
+  }, [note]);
   // The picture after the board's been cleared, while it plays (keyed by when, to play again).
   const [cleared, setCleared] = useState<number | null>(null);
   const endCleared = useCallback(() => setCleared(null), []);
@@ -415,6 +427,12 @@ export function App({ boardId }: { boardId: string }) {
       )}
 
       {toast && <div className="pop toast" role="status">{toast}</div>}
+      {note && (
+        <div key={note.at} className="pop toast bottom" role="status">
+          <span>{note.text}</span>
+          <button className="btn" onClick={() => { note.run(); setNote(null); }}>{note.action}</button>
+        </div>
+      )}
       <input ref={boardFileInput} type="file" accept=".plnt" hidden onChange={(e) => {
         const f = e.target.files?.[0];
         e.target.value = '';
