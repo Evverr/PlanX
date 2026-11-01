@@ -26,14 +26,22 @@ export const checks = {
     const note = () => p.ev(`document.querySelector('.confirm p')?.textContent ?? null`);
     await p.ev(`planx.editor.editComponentAt('${inst}')`);
     await sleep(150);
-    expect(await note(), 'said').toBe('Инстанс данного компонента редактировался, поэтому он не совпадает с изначальным компонентом.');
-    expect(await p.ev(`[...document.querySelectorAll('.confirm .btn')].map((b) => b.textContent).join()`), 'its one button').toBe('Понятно');
+    expect(await note(), 'said').toBe('Копия компонента редактировалась, поэтому она не совпадает с изначальным компонентом.');
+    expect(await p.ev(`[...document.querySelectorAll('.confirm .btn')].map((b) => b.textContent).join()`), 'its buttons').toBe('Сбросить изменения,Понятно');
     await p.click(await p.at('.confirm-check input'));
     await p.click(await p.at('.confirm .btn.primary'));
     await p.ev(`planx.editor.finishComponent()`);
     await p.ev(`planx.editor.editComponentAt('${inst}')`);
     await sleep(150);
     expect(await note(), 'not again once told so').toBe(null);
+    // «Сбросить изменения»: the instance as its component is again.
+    await p.ev(`planx.editor.finishComponent(); localStorage.removeItem('planx-no-differs-note')`);
+    await p.ev(`planx.editor.editComponentAt('${inst}')`);
+    await sleep(150);
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.confirm .btn')].find((b) => b.textContent === 'Сбросить изменения').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await p.ev(`planx.editor.finishComponent()`);
+    await sleep(200);
+    expect(await p.ev(`(planx.board.get('${inst}~s').color ?? 'none') + ' ' + (planx.board.get('${inst}~s').ovr ?? 'no ovr')`), 'back as the component is').toBe(await p.ev(`(planx.board.get('s').color ?? 'none') + ' no ovr'`));
   },
 
   async 'a component is changed at its first instance, whichever instance asks; its first gone, the oldest left takes its place'(p) {
@@ -207,7 +215,7 @@ export const checks = {
     expect(await p.ev(`planx.board.get('instance~a').color`), 'with the change made').toBe('pink');
     await p.ev(`planx.editor.setSelection(['instance']); planx.editor.deleteSelection()`);
     await sleep(100);
-    expect(await p.ev(`document.querySelector('.confirm p')?.textContent`), 'asked first').toBe('Это последний инстанс, и удалив его, мы удаляем компонент.');
+    expect(await p.ev(`document.querySelector('.confirm p')?.textContent`), 'asked first').toBe('Это последняя копия компонента, и удалив её, мы удаляем компонент.');
     await p.click(await p.at('.confirm .btn.primary'));
     expect(await p.ev(`['instance', 'source', 'a', 'b'].map((id) => !!planx.board.get(id)).join()`), 'the instance and the component gone').toBe('false,false,false,false');
   },

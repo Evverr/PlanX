@@ -748,7 +748,7 @@ export class Editor {
       .filter((c) => !all.some((i) => i.inst === c && !ids.has(i.id) && !i.stowed) && this.board.get(c)?.stowed);
     if (orphaned.length && !sure) {
       window.dispatchEvent(new CustomEvent('planx:confirm', { detail: {
-        text: 'Это последний инстанс, и удалив его, мы удаляем компонент.', action: 'Удалить', ok: () => this.deleteSelection(true),
+        text: 'Это последняя копия компонента, и удалив её, мы удаляем компонент.', action: 'Удалить', ok: () => this.deleteSelection(true),
       } }));
       return;
     }
@@ -968,9 +968,18 @@ export class Editor {
     // that's what shows now in its place.
     const changed = this.board.list().some((i) => i.host === inst.id && i.ovr?.some((k) => k !== 'h'));
     if (changed && !readJSON<boolean>(DIFFERS_KEY)) window.dispatchEvent(new CustomEvent('planx:confirm', { detail: {
-      text: 'Инстанс данного компонента редактировался, поэтому он не совпадает с изначальным компонентом.', action: 'Понятно', only: true,
+      text: 'Копия компонента редактировалась, поэтому она не совпадает с изначальным компонентом.', action: 'Понятно', only: true,
+      alt: 'Сбросить изменения', altRun: () => this.resetCopy(inst.id),
       check: 'Больше не выводить это предупреждение', ok: (_: string, never: boolean) => { if (never) writeJSON(DIFFERS_KEY, true); },
     } }));
+  }
+
+  /** An instance back as its component is: what was changed in it (its own text, colours…) let go. */
+  resetCopy(instId: string): void {
+    const copies = this.board.list().filter((i) => i.host === instId && i.ovr?.length);
+    if (!copies.length) return;
+    this.board.transact(() => copies.forEach((c) => this.board.update(c.id, { ovr: undefined })));
+    this.syncNow();
   }
 
   /** Detaches the selected instances from their components: what's in each becomes ordinary items, as

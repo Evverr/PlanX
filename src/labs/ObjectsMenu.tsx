@@ -57,7 +57,7 @@ export function ObjectsMenu({ editor, tool, onPick, onClose }: { editor: Editor;
   };
   const remove = (id: string, name: string) => {
     window.dispatchEvent(new CustomEvent('planx:confirm', { detail: {
-      text: `Удалить «${name}» из «Мои объекты»? Его инстансы на доске останутся.`, action: 'Удалить',
+      text: `Удалить «${name}» из «Мои объекты»? Его копии на доске останутся.`, action: 'Удалить',
       ok: () => { editor.board.update(id, { obj: undefined }); redraw((n) => n + 1); },
     } }));
   };
