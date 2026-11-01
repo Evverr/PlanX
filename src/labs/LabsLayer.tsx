@@ -117,7 +117,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
         e.stopPropagation();
         canvas()!.setPointerCapture(e.pointerId);
         mindGap = { h: mh, from: mh.axis === 'col' ? e.clientX : e.clientY, k0: mindStretch(mh) };
-        setHotMindGap(mh.level);
+        setHotMindGap(mh);
         editor.board.beginGesture();
         return;
       }
@@ -171,7 +171,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       }
       if (e.target === canvas() && !e.buttons && labOn('tidy')) {
         const mh = mindGapAt(editor, local(e));
-        setHotMindGap(mh?.level ?? null);
+        setHotMindGap(mh);
         if (mh) { canvas()!.style.cursor = mh.axis === 'col' ? 'col-resize' : 'row-resize'; editor.requestRender(); return; }
       }
       if (gap) {
