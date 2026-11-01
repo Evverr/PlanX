@@ -279,10 +279,11 @@ export const checks = {
     expect(await held(), 'picked again: an ordinary node').toBe(false);
     await p.ev(`planx.editor.tidyMind('r')`);
     expect(await held() + ' ' + await p.ev(`planx.board.get('a').y`), 'pressed again: handles and stretch as they were').toBe('true ' + ay);
-    // Moved by hand: pressed again, laid out afresh.
-    await p.ev(`planx.board.update('b', { y: 700 })`);
+    // Moved by hand: pressed again, laid out afresh with the stretch of the last time; it jumps back.
+    const by = await p.ev(`planx.board.get('b').y`);
+    await p.ev(`planx.board.update('b', { y: 900 })`);
     await p.ev(`planx.editor.tidyMind('r')`);
-    expect(await p.ev(`planx.board.get('b').y - planx.board.get('a').y - planx.board.get('a').h`), 'afresh').toBe(16);
+    expect(await p.ev(`planx.board.get('b').y`), 'back where it was').toBe(by);
   },
 
   async '"Авторасположение" on a mind map node: the first handles set every level, the others only their own'(p) {
@@ -312,6 +313,26 @@ export const checks = {
     await drag({ axis: 'col', gap: g0.ok, level: 0, out: true, sign: 1 }, g0.ok);
     g1 = await g();
     expect([g1.ok, g1.og].join(), 'out from the node: every gap out').toBe([2 * g0.ok, 4 * g0.og].join());
+  },
+
+  async '"Авторасположение" on a mind map node: a branch moved by hand brings a note at the bottom, its button undoes it'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.transact(() => {
+        b.add(e.newItem('mind', 100, 300, { id: 'r', w: 100, h: 40, text: 'Центр' }));
+        for (const [k, y] of [['a', 200], ['b', 400]]) b.add(e.newItem('mind', 300, y, { id: k, w: 100, h: 40, parent: 'r', text: k }));
+      }); e.setSelection(['r']); })()`);
+    await sleep(300);
+    await p.ev(`planx.editor.tidyMind('r')`);
+    await p.ev(`planx.editor.setSelection([])`);
+    const at = await p.ev(`(() => { const a = planx.board.get('a'); return [a.x, a.y]; })()`);
+    const from = await p.ev(`(() => { const a = planx.board.get('a'), s = planx.editor.toScreen({ x: a.x + 4, y: a.y + 4 }); return [s.x, s.y]; })()`);
+    await p.drag(from, [from[0] + 80, from[1] + 60]);
+    await sleep(200);
+    expect(await p.ev(`document.querySelector('.toast.bottom span')?.textContent`), 'the note').toBe('Вы подвинули элемент: авторасположение выключено');
+    await p.click(await p.at('.toast.bottom button'));
+    await sleep(200);
+    expect((await p.ev(`(() => { const a = planx.board.get('a'); return [a.x, a.y]; })()`)).join(), 'moved back').toBe(at.join());
+    expect(await p.ev(`(async () => (await import('/src/labs/tidyMind.ts')).mindTidyKept(planx.editor, 'r'))()`), 'its layout kept').toBe(true);
   },
 
   async '"Авторасположение" of instances picked by a box: laid out by what they show, its handles there, a gap that can go below nothing'(p) {

@@ -47,6 +47,8 @@
 .namepop { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(20px + var(--bar) + env(safe-area-inset-bottom, 0px)); width: var(--e240); }
 .namepop input, .icon-pick input { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: var(--s8); padding: var(--s8) var(--s10); font: inherit; margin-bottom: var(--s10); }
 .toast { left: 50%; transform: translateX(-50%); top: calc(18px + var(--bar) + env(safe-area-inset-top, 0px)); padding: var(--s10) var(--s14); }
+/* A note with a button, at the bottom (a mind map's layout about to start afresh). */
+.toast.bottom { top: auto; bottom: calc(24px + var(--bar) + env(safe-area-inset-bottom, 0px)); display: flex; align-items: center; gap: var(--s12); padding-block: var(--s6); }
 
 .icon-pick { left: calc(24px + var(--rail-w) + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); width: var(--e316); max-width: calc(100vw - var(--e84)); padding: var(--s12); }
 .icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--s44), 1fr)); gap: var(--s4); max-height: min(var(--e340), 55vh); overflow-y: auto; }

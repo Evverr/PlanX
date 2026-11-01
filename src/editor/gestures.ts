@@ -9,6 +9,7 @@ import { shapeStyle } from './shapeStyle';
 import { branchCrosses, canMoveTo, foldedWays, folding, mindWay, moveBranch } from '../model/mind';
 import { clamp, MAX_Z } from './camera';
 import { zoomToBox } from '../labs/zoomBox';
+import { noteMindMoved } from '../labs/tidyMind';
 import { rotateCursor } from './cursors';
 import { MIND_TOPIC, type PenTool } from './tools';
 import type { Editor } from './editor';
@@ -288,6 +289,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // What was dragged into a frame is in it now, and what was dragged out of one is out.
         ed.settle([...ed.selection].map((id) => board.get(id)?.host ?? id));
         board.endGesture();
+        noteMindMoved(ed, [...ed.selection]);
       } else if (g.dbl) {
         const it = board.get(g.id);
         // "Замена двойным кликом": an emoji, an icon or a shape shows its neighbours, a shape opening for
