@@ -504,6 +504,27 @@ export const checks = {
     expect(await p.ev('window.opened'), 'and it goes there').toBe('https://docs.example.com');
   },
 
+  async '"Объекты": a component\'s arrow names it and makes it one of «Мои объекты», an instance where it stood; the menu puts more'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 300, 300, { id: 's', w: 100, h: 100 })); e.setSelection(['s']); e.makeComponent(); e.stopEditing(); })()`);
+    await sleep(200);
+    const comp = await p.ev(`planx.board.list().find((i) => i.comp)`);
+    const arrow = await p.ev(`(() => { const s = planx.editor.toScreen({ x: ${comp.x + comp.w} + 66, y: ${comp.y + comp.h / 2} }); return [s.x, s.y]; })()`);
+    await p.click(arrow);
+    await sleep(200);
+    expect(await p.ev(`document.querySelector('.confirm p')?.textContent`), 'asked').toBe('Добавить в объекты?');
+    await p.ev(`(() => { const i = document.querySelector('.confirm-input'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(i, 'Карточка'); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.confirm .btn')].find((b) => b.textContent === 'Добавить').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(200);
+    const c = await p.ev(`planx.board.get('${comp.id}')`);
+    expect(`${c.text} ${c.obj} ${!!c.stowed} ${await p.ev(`planx.board.list().filter((i) => i.inst === '${comp.id}').length`)}`, 'named, an object, an instance in its place').toBe('Карточка true true 1');
+    await p.click(await p.at('.tools [data-key="objects"]'));
+    expect(await p.ev(`[...document.querySelectorAll('.objects-menu .menu-caption, .objects-menu .menu-row span')].map((e) => e.textContent).join(' | ')`), 'the menu').toBe('Таймлайн | Мои объекты | Карточка');
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.objects-menu .menu-row')].find((b) => b.textContent === 'Карточка').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(200);
+    expect(await p.ev(`planx.board.list().filter((i) => i.inst === '${comp.id}').length`), 'another instance from the menu').toBe(2);
+  },
+
   async '"Объекты": the rail button opens the menu, a timeline is put with a click, holds what is put on it, in half days'(p) {
     await p.click(await p.at('.tools [data-key="objects"]'));
     expect(await p.ev(`document.querySelector('.objects-menu .menu-row span')?.textContent`), 'the menu').toBe('Таймлайн');

@@ -325,6 +325,44 @@ export class Editor {
     this.startEditing(title);
   }
 
+  /** A component's arrow ("Объекты", src/labs): asked for a name, then made one of the board's own
+   *  objects and turned into an instance where it stands. */
+  askObject(id: string): void {
+    const comp = this.board.get(id);
+    if (!comp?.comp) return;
+    if (this.editingId) this.stopEditing();
+    window.dispatchEvent(new CustomEvent('planx:confirm', { detail: {
+      text: 'Добавить в объекты?', action: 'Добавить', input: this.board.get(id)?.text ?? '', placeholder: 'Название объекта',
+      ok: (name?: string) => this.makeObject(id, name?.trim() || 'Объект'),
+    } }));
+  }
+
+  /** Makes a component one of the board's own objects under `name`, and an instance of it where it stands. */
+  makeObject(id: string, name: string): void {
+    this.board.beginGesture();
+    this.board.update(id, { text: name, obj: true });
+    this.addInstance(id);
+    this.board.endGesture();
+  }
+
+  /** The board's own objects ("Мои объекты"): its components made so. */
+  objects(): Item[] {
+    return this.board.list().filter((i) => i.comp && i.obj);
+  }
+
+  /** An instance of one of the board's own objects, its middle at screen point `at` (the screen's middle
+   *  if not given), picked. */
+  addObject(id: string, at?: Point): void {
+    const comp = this.board.get(id);
+    if (!comp?.comp) return;
+    const sp = at ?? { x: this.width / 2, y: this.height / 2 }, c = this.toWorld(sp.x, sp.y);
+    const w = comp.fold?.w ?? comp.w, h = comp.fold?.h ?? comp.h;
+    const it = this.newItem('frame', Math.round(c.x - w / 2), Math.round(c.y - h / 2), { w, h, inst: id, text: comp.text, members: [], z: this.board.minZ() - 1 });
+    this.board.add(it);
+    this.setTool('select');
+    this.setSelection([it.id]);
+  }
+
   /** A timeline's step (1, 2, 4 or 6 times a day's usual width), the card staying as wide: what's on it
    *  keeps its day, moved along with it (one undo step). */
   setTimelineStep(id: string, k: number): void {

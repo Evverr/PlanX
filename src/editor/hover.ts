@@ -3,14 +3,14 @@ import { ROTATABLE } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { hitItem, hitLink, instanceBounds, linkHandles, linkShape, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, HANDLE } from '../canvas/renderer';
-import { instanceGlyph, instancePlus } from '../model/components';
+import { instanceGlyph, instancePlus, objectArrow } from '../model/components';
 import { isBuiltin } from '../model/builtins';
 import { branchWays, buttonKey, foldBadge, mindButtons, type MindButtonAt, type Way } from '../model/mind';
 import { frameButtonAt } from './frames';
 import { rotateCursor } from './cursors';
 import { restOn, sameLine, tableLineAt, warmTable } from './tables';
 import type { Editor } from './editor';
-import { isLocked } from '../labs/labs';
+import { isLocked, labOn } from '../labs/labs';
 
 /** How far outside a corner (in screen pixels) the pointer turns the item. */
 const ROTATE_ZONE = 18;
@@ -91,6 +91,13 @@ export function onInstancePlus(ed: Editor, it: Item, w: Point): boolean {
 /** The component in sight whose tick is under the point, picked or not. */
 export const tickAt = (ed: Editor, w: Point): Item | null => ed.shown().find((it) => onInstancePlus(ed, it, w)) ?? null;
 
+/** The component in sight whose arrow (made one of the board's objects, "Объекты") is under the point. */
+export const objectArrowAt = (ed: Editor, w: Point): Item | null => !labOn('objects') ? null : ed.shown().find((it) => {
+  if (!it.comp || it.stowed || it.obj) return false;
+  const p = objectArrow(it, ed.cam.z);
+  return Math.hypot(w.x - p.x, w.y - p.y) <= Math.max(p.r * 1.3, ed.reach(0));
+}) ?? null;
+
 /** The folded mind map node whose count is under the point, picked or not, and the way it's on. */
 export function foldBadgeAt(ed: Editor, w: Point): { id: string; way: Way } | null {
   const pad = ed.reach(4);
@@ -169,7 +176,8 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   const mind = rest && (pointInRect(w, rest) || plusAt(ed, rest, w)) ? rest.id : over?.type === 'mind' && !over.host ? over.id : null;
   if (mind !== ed.mindHover) { ed.mindHover = mind; ed.requestRender(); }
   const node = ed.plusNode();
-  const tick = tickAt(ed, w), plus = node ? plusAt(ed, node, w) : null, hot = plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : glyph;
+  const tick = tickAt(ed, w), arrow = tick ? null : objectArrowAt(ed, w), plus = node ? plusAt(ed, node, w) : null;
+  const hot = plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : arrow ? `obj:${arrow.id}` : glyph;
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (linkHandleAt(ed, w)) cursor = 'move';

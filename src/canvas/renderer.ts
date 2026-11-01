@@ -10,7 +10,8 @@ import { branchColor, branchCurve, branchWays, buttonKey, foldBadge, foldedWays,
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
-import { COMPONENT_COLOR, instancePlus } from '../model/components';
+import { COMPONENT_COLOR, instancePlus, objectArrow } from '../model/components';
+import { labOn } from '../labs/labs';
 import { isBuiltin } from '../model/builtins';
 import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
@@ -1104,6 +1105,19 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     ctx.lineJoin = 'round';
     ctx.beginPath();
     ctx.moveTo(p.x - p.r * 0.45, p.y + p.r * 0.02); ctx.lineTo(p.x - p.r * 0.1, p.y + p.r * 0.36); ctx.lineTo(p.x + p.r * 0.45, p.y - p.r * 0.3);
+    ctx.stroke();
+    // Past it, an arrow: made one of the board's own objects ("Объекты", src/labs), if it isn't yet.
+    if (it.obj || !labOn('objects')) continue;
+    const q = objectArrow(it, cam.z);
+    ctx.fillStyle = COMPONENT_COLOR;
+    ctx.globalAlpha = s.hotPlus === `obj:${it.id}` ? 1 : 0.75;
+    ctx.beginPath();
+    ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.moveTo(q.x - q.r * 0.45, q.y); ctx.lineTo(q.x + q.r * 0.45, q.y);
+    ctx.moveTo(q.x + q.r * 0.05, q.y - q.r * 0.4); ctx.lineTo(q.x + q.r * 0.45, q.y); ctx.lineTo(q.x + q.r * 0.05, q.y + q.r * 0.4);
     ctx.stroke();
   }
   // A link picked alone: its nodes, and where new ones can be pulled out (the middles of its stretches).

@@ -232,9 +232,11 @@ export function App({ boardId }: { boardId: string }) {
     return () => clearTimeout(t);
   }, [panelOn]);
   const panelItem = panelNow ?? lastPanel.current;
-  const [ask, setAsk] = useState<{ text: string; action: string; ok: () => void } | null>(null);
+  // Asked to say yes (and, with `input`, a name first).
+  const [ask, setAsk] = useState<{ text: string; action: string; ok: (value?: string) => void; input?: string; placeholder?: string } | null>(null);
+  const [askValue, setAskValue] = useState('');
   useEffect(() => {
-    const on = (e: Event) => setAsk((e as CustomEvent<{ text: string; action: string; ok: () => void }>).detail);
+    const on = (e: Event) => { const d = (e as CustomEvent).detail; setAsk(d); setAskValue(d.input ?? ''); };
     window.addEventListener('planx:confirm', on);
     return () => window.removeEventListener('planx:confirm', on);
   }, []);
@@ -395,10 +397,15 @@ export function App({ boardId }: { boardId: string }) {
       {/* Asked before something goes that takes more with it (a component's last instance). */}
       {ask && (
         <div className="pop confirm" role="alertdialog" aria-label="Подтверждение">
+          {ask.input !== undefined && (
+            <input className="confirm-input" autoFocus value={askValue} placeholder={ask.placeholder} aria-label={ask.placeholder}
+              onChange={(e) => setAskValue(e.target.value)} onFocus={(e) => e.currentTarget.select()}
+              onKeyDown={(e) => { if (e.key === 'Enter') { ask.ok(askValue); setAsk(null); } else if (e.key === 'Escape') setAsk(null); }} />
+          )}
           <p>{ask.text}</p>
           <div className="row">
             <button className="btn" onClick={() => setAsk(null)}>Отмена</button>
-            <button className="btn primary" onClick={() => { ask.ok(); setAsk(null); }}>{ask.action}</button>
+            <button className="btn primary" onClick={() => { ask.ok(askValue); setAsk(null); }}>{ask.action}</button>
           </div>
         </div>
       )}
