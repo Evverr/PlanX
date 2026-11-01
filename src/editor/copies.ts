@@ -19,7 +19,7 @@ export function copiesOf(src: Item[], srcLinks: Link[], offset: number, maxZ: nu
   const items = [...src].sort((a, b) => a.z - b.z).map((it) => {
     const id = map.get(it.id)!, hold = it.host ? (hosted(it) ? { host: map.get(it.host) } : { from: undefined, host: undefined, ovr: undefined }) : {};
     // A copy starts with no reactions of its own.
-    return { ...it, ...hold, id, x: it.x + offset, y: it.y + offset, z: it.type === 'frame' ? it.z : ++z, rx: undefined };
+    return { ...it, ...hold, id, x: it.x + offset, y: it.y + offset, z: it.type === 'frame' ? it.z : ++z, rx: undefined, ...(it.inst && { born: Date.now() }) };
   }).map((it) => {
     if (it.parent && map.has(it.parent)) it.parent = map.get(it.parent);
     if (it.members) it.members = it.members.map((m) => map.get(m)).filter((m): m is string => !!m);

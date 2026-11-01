@@ -31,6 +31,12 @@ export const instanceGlyph = (b: { x: number; y: number }) => ({ x: b.x - 6, y: 
 /** The "+" right of a picked component that makes an instance of it, past its blue dot for links: its
  *  middle and radius, the same size on screen whatever the zoom. */
 export const instancePlus = (it: Item, zoom: number) => ({ x: it.x + it.w + 40 / zoom, y: it.y + it.h / 2, r: 10 / zoom });
+/** A component's first instance: the one it turned into, or with that one gone, the oldest left. */
+export function firstInstance(comp: Item, items: Item[]): Item | undefined {
+  const mine = items.filter((i) => i.inst === comp.id);
+  return mine.find((i) => i.id === comp.first) ?? mine.reduce<Item | undefined>((a, b) => (!a || (b.born ?? Infinity) < (a.born ?? Infinity) ? b : a), undefined);
+}
+
 /** A component's arrow past its tick ("Объекты", src/labs): made one of the board's own objects. */
 export const objectArrow = (it: Item, zoom: number) => ({ x: it.x + it.w + 66 / zoom, y: it.y + it.h / 2, r: 10 / zoom });
 

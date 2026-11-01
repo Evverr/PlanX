@@ -93,6 +93,11 @@ export interface Item {
   comp?: boolean;
   /** A component that's one of this board's own objects ("Мои объекты" in "Объекты", src/labs), under its title. */
   obj?: boolean;
+  /** A component's first instance: the one it turned into (its diamond solid; the component's changed in
+   *  its place). Gone, the oldest left (see `born`) takes its place. */
+  first?: string;
+  /** When an instance was made (ms), to tell which is the oldest. */
+  born?: number;
   /** A component put away once it's made an instance (not shown, kept for its instances); an instance
    *  put away while its component is out in its place, being changed (`standsIn`, on the component). */
   stowed?: boolean;
