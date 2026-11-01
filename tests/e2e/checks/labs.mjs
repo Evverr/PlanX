@@ -243,6 +243,35 @@ export const checks = {
     expect(Math.round(c2[0] - a2[0] - a2[1]), 'next gap out, in proportion').toBe(Math.round(gx * kx));
   },
 
+  async '"Авторасположение" on a mind map node: picked again, its handles are back; pressed again untouched, it stays'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.transact(() => {
+        b.add(e.newItem('mind', 100, 300, { id: 'r', w: 100, h: 40, text: 'Центр' }));
+        for (const [k, y] of [['a', 200], ['b', 400]]) b.add(e.newItem('mind', 300, y, { id: k, w: 100, h: 40, parent: 'r', text: k }));
+      }); e.setSelection(['r']); })()`);
+    await sleep(300);
+    await p.ev(`planx.editor.tidyMind('r')`);
+    const held = () => p.ev(`(async () => (await import('/src/labs/tidyMind.ts')).holds(planx.editor))()`);
+    expect(await held(), 'handles').toBe(true);
+    await p.ev(`planx.editor.setSelection([])`);
+    await sleep(100);
+    const r = await p.ev(`(() => { const r = planx.board.get('r'), s = planx.editor.toScreen({ x: r.x + r.w / 2, y: r.y + r.h / 2 }); return [s.x, s.y]; })()`);
+    await p.click(r);
+    await sleep(300);
+    await p.ev('planx.editor.stopEditing()');
+    await sleep(100);
+    expect(await held(), 'picked again: handles back').toBe(true);
+    // Stretched, then pressed again: it stays stretched.
+    await p.ev(`(async () => { const m = await import('/src/labs/tidyMind.ts'); m.dragMindGap(planx.editor, { axis: 'row', gap: 16, level: 0, sign: 1 }, 1, 16); })()`);
+    const ay = await p.ev(`planx.board.get('a').y`);
+    await p.ev(`planx.editor.tidyMind('r')`);
+    expect(await p.ev(`planx.board.get('a').y`), 'kept').toBe(ay);
+    // Moved by hand: pressed again, laid out afresh.
+    await p.ev(`planx.board.update('b', { y: 700 })`);
+    await p.ev(`planx.editor.tidyMind('r')`);
+    expect(await p.ev(`planx.board.get('b').y - planx.board.get('a').y - planx.board.get('a').h`), 'afresh').toBe(16);
+  },
+
   async '"Авторасположение" of instances picked by a box: laid out by what they show, its handles there, a gap that can go below nothing'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board, { x: X, y: Y } = e.toWorld(300, 250);
       b.transact(() => {

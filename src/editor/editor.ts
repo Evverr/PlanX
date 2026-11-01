@@ -29,7 +29,7 @@ import { formatCells, pickCell, restOn, setTableLines } from './tables';
 import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, type Pens, type PenTool, type Tool } from './tools';
 import { pushedBelow } from '../labs/textPush';
 import { holdZoomBox } from '../labs/zoomBox';
-import { startMindTidy } from '../labs/tidyMind';
+import { mindTidyKept, startMindTidy } from '../labs/tidyMind';
 import { clearComments } from '../labs/comments';
 import { isLocked, labOn, subscribeLabs } from '../labs/labs';
 
@@ -1066,8 +1066,11 @@ export class Editor {
   }
 
   /** Empties the board and goes back to 100% zoom, about the middle of the screen. */
-  /** "Авторасположение" on a mind map node: what grows from it laid out afresh (one undo step). */
+  /** "Авторасположение" on a mind map node: what grows from it laid out afresh (one undo step), unless
+   *  it stands as last laid out. */
   tidyMind(id: string): void {
+    // Laid out here already and nothing moved by hand since: it stays as it is (its stretch kept).
+    if (mindTidyKept(this, id)) { this.requestRender(); return; }
     const moves = tidyBranches(id, this.board.list());
     this.board.transact(() => moves.forEach((pt, k) => this.board.update(k, pt)));
     startMindTidy(this, id);

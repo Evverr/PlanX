@@ -6,12 +6,13 @@ import { PanelIcon } from '../ui/PanelIcon';
 import { myId } from './labs';
 import { REACTIONS, toggleReaction } from './overlays';
 import { startTidy, stopTidy, subscribeTidy, tidyMatches, tidyNow } from './tidy';
+import { holds } from './tidyMind';
 
 /** "Авторасположение" on the selection panel: lays what's selected out in a grid, and stays lit (the
  *  gaps' handles showing) while that's what's selected; pressed again, it's off. For one mind map node,
  *  everything growing from it laid out afresh as a mind map lays it out. */
 export function TidyButton({ editor, mind }: { editor: Editor; mind?: string }) {
-  const t = useSyncExternalStore(subscribeTidy, tidyNow), on = !mind && !!t && tidyMatches(editor);
+  const t = useSyncExternalStore(subscribeTidy, tidyNow), on = mind ? holds(editor) : !!t && tidyMatches(editor);
   return (
     <button className={`ib ${on ? 'on' : ''}`} title="Авторасположение" aria-label="Авторасположение" aria-pressed={on}
       onClick={() => { if (mind) editor.tidyMind(mind); else if (on) stopTidy(); else startTidy(editor); editor.requestRender(); }}>
