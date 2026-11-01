@@ -126,6 +126,7 @@
 
 /* "Объекты": the menu beside the rail, as the board menu looks. */
 .board-menu.objects-menu { position: fixed; z-index: 7; }
+.objects-menu .menu-caption { padding: var(--s6) var(--s10) var(--s4); font-size: var(--s12); font-weight: 600; color: var(--muted); }
 .board-menu.context-menu { position: fixed; z-index: 40; }
 /* A rectangle's parameters, opened from the right click's menu. */
 .params-title { padding: var(--s4) var(--s4) var(--s8); font-size: var(--s13, 13px); font-weight: 600; color: var(--ink); }
