@@ -29,7 +29,7 @@ import { formatCells, pickCell, restOn, setTableLines } from './tables';
 import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, type Pens, type PenTool, type Tool } from './tools';
 import { pushedBelow } from '../labs/textPush';
 import { holdZoomBox } from '../labs/zoomBox';
-import { mindTidyKept, startMindTidy } from '../labs/tidyMind';
+import { holds as mindTidyOn, mindTidyKept, resumeMindTidy, startMindTidy } from '../labs/tidyMind';
 import { clearComments } from '../labs/comments';
 import { isLocked, labOn, subscribeLabs } from '../labs/labs';
 
@@ -446,7 +446,8 @@ export class Editor {
   /** Shared: how far the selected mind map node's "+" buttons have faded in, 0…1. */
   plusFade(): number {
     const typing = this.editingId && this.board.get(this.editingId)?.type !== 'mind';
-    return this.moving || typing ? 0 : clamp((performance.now() - this.plusFrom) / PLUS_FADE, 0, 1);
+    // No "+" buttons while a mind map's "Авторасположение" handles are up.
+    return this.moving || typing || mindTidyOn(this) ? 0 : clamp((performance.now() - this.plusFrom) / PLUS_FADE, 0, 1);
   }
 
   /** Shared: how far (in board units) a small thing of radius `px` on screen reaches for the pointer:
@@ -1070,7 +1071,7 @@ export class Editor {
    *  it stands as last laid out. */
   tidyMind(id: string): void {
     // Laid out here already and nothing moved by hand since: it stays as it is (its stretch kept).
-    if (mindTidyKept(this, id)) { this.requestRender(); return; }
+    if (mindTidyKept(this, id)) { resumeMindTidy(); this.requestRender(); return; }
     const moves = tidyBranches(id, this.board.list());
     this.board.transact(() => moves.forEach((pt, k) => this.board.update(k, pt)));
     startMindTidy(this, id);

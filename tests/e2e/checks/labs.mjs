@@ -255,7 +255,7 @@ export const checks = {
     expect(Math.round(c2[0] - a2[0] - a2[1]), 'next gap out, in proportion').toBe(Math.round(gx * kx));
   },
 
-  async '"Авторасположение" on a mind map node: picked again, its handles are back; pressed again untouched, it stays'(p) {
+  async '"Авторасположение" on a mind map node: no "+" buttons meanwhile; picked again, an ordinary node; pressed again untouched, all as it was'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.transact(() => {
         b.add(e.newItem('mind', 100, 300, { id: 'r', w: 100, h: 40, text: 'Центр' }));
@@ -265,6 +265,10 @@ export const checks = {
     await p.ev(`planx.editor.tidyMind('r')`);
     const held = () => p.ev(`(async () => (await import('/src/labs/tidyMind.ts')).holds(planx.editor))()`);
     expect(await held(), 'handles').toBe(true);
+    expect(await p.ev('planx.editor.plusFade()'), 'no "+" buttons').toBe(0);
+    // Stretched by the first level's handle.
+    await p.ev(`(async () => { const m = await import('/src/labs/tidyMind.ts'); m.dragMindGap(planx.editor, { axis: 'row', gap: 16, level: 0, out: false, sign: 1 }, 1, 16); })()`);
+    const ay = await p.ev(`planx.board.get('a').y`);
     await p.ev(`planx.editor.setSelection([])`);
     await sleep(100);
     const r = await p.ev(`(() => { const r = planx.board.get('r'), s = planx.editor.toScreen({ x: r.x + r.w / 2, y: r.y + r.h / 2 }); return [s.x, s.y]; })()`);
@@ -272,16 +276,42 @@ export const checks = {
     await sleep(300);
     await p.ev('planx.editor.stopEditing()');
     await sleep(100);
-    expect(await held(), 'picked again: handles back').toBe(true);
-    // Stretched, then pressed again: it stays stretched.
-    await p.ev(`(async () => { const m = await import('/src/labs/tidyMind.ts'); m.dragMindGap(planx.editor, { axis: 'row', gap: 16, level: 0, sign: 1 }, 1, 16); })()`);
-    const ay = await p.ev(`planx.board.get('a').y`);
+    expect(await held(), 'picked again: an ordinary node').toBe(false);
     await p.ev(`planx.editor.tidyMind('r')`);
-    expect(await p.ev(`planx.board.get('a').y`), 'kept').toBe(ay);
+    expect(await held() + ' ' + await p.ev(`planx.board.get('a').y`), 'pressed again: handles and stretch as they were').toBe('true ' + ay);
     // Moved by hand: pressed again, laid out afresh.
     await p.ev(`planx.board.update('b', { y: 700 })`);
     await p.ev(`planx.editor.tidyMind('r')`);
     expect(await p.ev(`planx.board.get('b').y - planx.board.get('a').y - planx.board.get('a').h`), 'afresh').toBe(16);
+  },
+
+  async '"Авторасположение" on a mind map node: the first handles set every level, the others only their own'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.transact(() => {
+        b.add(e.newItem('mind', 100, 300, { id: 'r', w: 100, h: 40, text: 'Центр' }));
+        for (const [k, y] of [['a', 200], ['b', 400]]) {
+          b.add(e.newItem('mind', 300, y, { id: k, w: 100, h: 40, parent: 'r', text: k }));
+          for (const i of [0, 1]) b.add(e.newItem('mind', 500, y + i * 60, { id: k + i, w: 100, h: 40, parent: k, text: k + i }));
+        }
+      }); e.setSelection(['r']); })()`);
+    await sleep(300);
+    await p.ev(`planx.editor.tidyMind('r')`);
+    const g = () => p.ev(`(() => { const b = (k) => planx.board.get(k);
+      return { k: b('b').y - b('a').y - b('a').h, g: b('a1').y - b('a0').y - b('a0').h, ok: b('a').x - b('r').x - b('r').w, og: b('a0').x - b('a').x - b('a').w }; })()`);
+    const drag = (h, d) => p.ev(`(async () => { const m = await import('/src/labs/tidyMind.ts'); const h = ${JSON.stringify(h)}; m.dragMindGap(planx.editor, h, m.mindStretch(h), ${d}); })()`);
+    const g0 = await g();
+    await drag({ axis: 'row', gap: g0.g, level: 1, out: false, sign: 1 }, g0.g);
+    let g1 = await g();
+    expect([g1.k, g1.g].join(), 'the grandchildren\'s own: theirs alone').toBe([g0.k, 2 * g0.g].join());
+    await drag({ axis: 'row', gap: g0.k, level: 0, out: false, sign: 1 }, g0.k);
+    g1 = await g();
+    expect([g1.k, g1.g].join(), 'the children\'s: every level').toBe([2 * g0.k, 4 * g0.g].join());
+    await drag({ axis: 'col', gap: g0.og, level: 1, out: true, sign: 1 }, g0.og);
+    g1 = await g();
+    expect([g1.ok, g1.og].join(), 'out to the grandchildren: that gap alone').toBe([g0.ok, 2 * g0.og].join());
+    await drag({ axis: 'col', gap: g0.ok, level: 0, out: true, sign: 1 }, g0.ok);
+    g1 = await g();
+    expect([g1.ok, g1.og].join(), 'out from the node: every gap out').toBe([2 * g0.ok, 4 * g0.og].join());
   },
 
   async '"Авторасположение" of instances picked by a box: laid out by what they show, its handles there, a gap that can go below nothing'(p) {
