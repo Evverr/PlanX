@@ -519,10 +519,30 @@ export const checks = {
     const c = await p.ev(`planx.board.get('${comp.id}')`);
     expect(`${c.text} ${c.obj} ${!!c.stowed} ${await p.ev(`planx.board.list().filter((i) => i.inst === '${comp.id}').length`)}`, 'named, an object, an instance in its place').toBe('Карточка true true 1');
     await p.click(await p.at('.tools [data-key="objects"]'));
-    expect(await p.ev(`[...document.querySelectorAll('.objects-menu .menu-caption, .objects-menu .menu-row span')].map((e) => e.textContent).join(' | ')`), 'the menu').toBe('Таймлайн | Мои объекты | Карточка');
-    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.objects-menu .menu-row')].find((b) => b.textContent === 'Карточка').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    expect(await p.ev(`[...document.querySelectorAll('.objects-menu > .menu-item > .menu-row span')].map((e) => e.textContent).join(' | ')`), 'the menu').toBe('Таймлайн | Мои объекты');
+    const mineRow = await p.ev(`(() => { const r = [...document.querySelectorAll('.objects-menu .menu-row')].find((b) => b.textContent === 'Мои объекты').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
+    await p.mouse('mouseMoved', ...mineRow);
+    await sleep(150);
+    const row = await p.ev(`(() => { const r = [...document.querySelectorAll('.objects-mine .menu-row')].find((b) => b.textContent.startsWith('Карточка')).getBoundingClientRect(); return [r.x + 30, r.y + r.height / 2]; })()`);
+    await p.click(row);
     await sleep(200);
     expect(await p.ev(`planx.board.list().filter((i) => i.inst === '${comp.id}').length`), 'another instance from the menu').toBe(2);
+    // Dragged out onto the board: put where it's let go.
+    await p.click(await p.at('.tools [data-key="objects"]'));
+    await p.mouse('mouseMoved', ...mineRow);
+    await sleep(150);
+    await p.drag(row, [700, 500]);
+    await sleep(200);
+    expect(await p.ev(`(() => { const l = planx.board.list().filter((i) => i.inst === '${comp.id}'), at = l.map((i) => planx.editor.toScreen({ x: i.x + i.w / 2, y: i.y + i.h / 2 })).map((s) => Math.round(s.x) + ',' + Math.round(s.y)); return l.length + ' ' + at.includes('700,500'); })()`), 'dragged onto the board').toBe('3 true');
+    // Its cross: off the list, once said yes; its instances stay.
+    await p.click(await p.at('.tools [data-key="objects"]'));
+    await p.mouse('mouseMoved', ...mineRow);
+    await sleep(150);
+    await p.click(await p.at('.objects-mine .menu-x'));
+    await sleep(150);
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.confirm .btn')].find((b) => b.textContent === 'Удалить').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(150);
+    expect(await p.ev(`!!planx.board.get('${comp.id}').obj + ' ' + planx.board.list().filter((i) => i.inst === '${comp.id}').length`), 'off the list, its instances there').toBe('false 3');
   },
 
   async '"Объекты": the rail button opens the menu, a timeline is put with a click, holds what is put on it, in half days'(p) {
