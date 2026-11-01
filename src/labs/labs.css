@@ -128,13 +128,14 @@
 .board-menu.objects-menu { position: fixed; z-index: 7; }
 .board-menu.context-menu { position: fixed; z-index: 40; }
 /* A rectangle's parameters, opened from the right click's menu. */
-.params-title { padding: var(--s4) var(--s4) var(--s8); font-size: var(--s12); font-weight: 600; color: var(--muted); }
+.params-title { padding: var(--s4) var(--s4) var(--s8); font-size: var(--s13, 13px); font-weight: 600; color: var(--ink); }
 .params-colors { display: flex; flex-wrap: wrap; gap: var(--s8); padding: 0 var(--s4) var(--s8); }
 .params-colors .sw { margin: 0; }
 .params-pop { max-height: calc(100vh - 16px); overflow-y: auto; }
 .params-row .menu-input input[type="range"] { width: var(--e110, 110px); padding: 0; border: 0; }
 .params-row .menu-input i { min-width: 3.2em; text-align: right; }
 .params-pop { width: var(--e320, 320px); }
+.params-group > .color-picker { position: static; transform: none; margin: 0 auto var(--s8); box-shadow: 0 0 0 1px var(--line); }
 .params-group { padding: var(--s4) var(--s4) var(--s8); }
 .params-label { margin-bottom: var(--s6); font-size: var(--s12); color: var(--muted); }
 .params-inline { display: flex; align-items: center; justify-content: space-between; }
