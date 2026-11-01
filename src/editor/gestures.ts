@@ -247,7 +247,10 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       // Drawn with Z held, it's where to zoom to, not what to pick ("Зум рамкой", src/labs).
       if (g.zoom) { ed.requestRender(); return; }
       const next = new Set(g.base), rect = g.rect;
-      const inside = (it: Item) => (it.type === 'frame' ? rectContains(rect, boxOf(it)) : rectsIntersect(rect, boxOf(it)));
+      // A frame is taken in whole; a timeline (wide as it is) just touched, by a box started off it (one
+      // started on it picks what lies on it).
+      const whole = (it: Item) => it.type === 'frame' && !(it.tl && !pointInRect(g.start, it));
+      const inside = (it: Item) => (whole(it) ? rectContains(rect, boxOf(it)) : rectsIntersect(rect, boxOf(it)));
       const shown = ed.shown(), any = shown.some(inside);
       for (const it of shown) {
         // A mind map branch the box takes in picks the node it leads to, only while the box has no
