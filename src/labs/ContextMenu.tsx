@@ -11,6 +11,7 @@ import { Glyph } from '../ui/glyphs';
 import { ColorPicker } from '../ui/ColorPicker';
 import { Switch } from '../ui/BoardMenu';
 import { labOn } from './labs';
+import { TL_STEPS } from '../canvas/timeline';
 import { startTidy } from './tidy';
 import { startComment } from './comments';
 
@@ -234,7 +235,7 @@ const NAMES: Partial<Record<Item['type'], string>> = {
 /** The items whose parameters the popup lists: the picked, an instance by what's in it. */
 export function paramItems(editor: Editor): Item[] {
   const all = editor.board.list();
-  return editor.selectedItems().flatMap((it) => (it.inst ? all.filter((c) => c.host === it.id) : [it])).filter((it) => NAMES[it.type]);
+  return editor.selectedItems().flatMap((it) => (it.inst ? all.filter((c) => c.host === it.id) : [it])).filter((it) => NAMES[it.type] || it.tl);
 }
 
 /** Each item's parameters, one after another under its name, a line between. */
@@ -249,7 +250,7 @@ function ParamsList({ editor, items }: { editor: Editor; items: Item[] }) {
         return (
           <div key={it.id} className="params-item">
             {i > 0 && <div className="menu-line" />}
-            <div className="params-title">{now.doodle ? 'Стикер' : NAMES[now.type]}{snippet}</div>
+            <div className="params-title">{now.tl ? 'Таймлайн' : now.doodle ? 'Стикер' : NAMES[now.type]}{now.tl ? '' : snippet}</div>
             <ItemParams editor={editor} it={now} set={set} />
           </div>
         );
@@ -309,6 +310,17 @@ function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch
   const own = it.type === 'icon' ? ICON_COLORS : it.type === 'ink' ? INK_COLORS : null;
   const fs = it.fs ?? DEFAULTS[it.type].fs ?? 16, bold = (it.fw ?? baseWeight(it.type)) >= 600, align = alignOf(it);
   const text = (patch: Partial<Item>) => set(restyle(it, patch));
+  // A timeline: its step alone.
+  if (it.tl) return (
+    <div className="params-group">
+      <div className="params-label">Шаг</div>
+      <div className="labs-seg" role="radiogroup" aria-label="Шаг">
+        {TL_STEPS.map((k) => (
+          <button key={k} role="radio" aria-checked={(it.ts ?? 1) === k} className={(it.ts ?? 1) === k ? 'on' : ''} onClick={() => editor.setTimelineStep(it.id, k)}>{k}x</button>
+        ))}
+      </div>
+    </div>
+  );
   const toggle = (icon: PanelIconName, label: string, on: boolean, patch: Partial<Item>) => (
     <button className={`params-btn ${on ? 'on' : ''}`} title={label} aria-label={label} aria-pressed={on} onClick={() => text(patch)}><PanelIcon name={icon} /></button>
   );

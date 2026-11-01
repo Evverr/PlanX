@@ -17,7 +17,7 @@ import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked } fro
 import { around, contents, copyId, hasComponents, stretched, syncOps } from '../model/components';
 import { BUILTINS, isBuiltin, nextTaskState, TASK_STATES } from '../model/builtins';
 import { remapLinks } from '../model/textLinks';
-import { dayKey, timelineSize } from '../canvas/timeline';
+import { dayKey, TL_PAD, timelineSize } from '../canvas/timeline';
 import { DOODLE_SIZE } from '../canvas/doodles';
 import { shapePatch, shapeStyle } from './shapeStyle';
 import { endGesture, moveGesture, type Gesture } from './gestures';
@@ -323,6 +323,21 @@ export class Editor {
     const title = copyId(it.id, '@task-title');
     this.setSelection([title]);
     this.startEditing(title);
+  }
+
+  /** A timeline's step (1, 2, 4 or 6 times a day's usual width), the card staying as wide: what's on it
+   *  keeps its day, moved along with it (one undo step). */
+  setTimelineStep(id: string, k: number): void {
+    const tl = this.board.get(id);
+    if (!tl?.tl) return;
+    const from = tl.x + TL_PAD, r = k / (tl.ts ?? 1);
+    this.board.transact(() => {
+      this.board.update(id, { ts: k === 1 ? undefined : k });
+      for (const m of tl.members ?? []) {
+        const it = this.board.get(m);
+        if (it) this.board.update(m, { x: Math.round(from + (it.x - from) * r) });
+      }
+    });
   }
 
   /** A timeline ("Объекты", src/labs): this month and the next, its middle at `c`; what lies on it is

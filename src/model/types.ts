@@ -83,6 +83,8 @@ export interface Item {
   foldedWays?: Array<'right' | 'left' | 'down' | 'up'>;
   /** A frame that's a timeline (src/labs, "Объекты"): the month it starts with, "YYYY-MM" (see canvas/timeline.ts). */
   tl?: string;
+  /** A timeline's step: how many times the usual width a day takes (1, 2, 4 or 6; 1 left out). */
+  ts?: number;
   /** A folded frame's unfolded size (see model/frame.ts). */
   fold?: { w: number; h: number };
   /** Components (see model/components.ts): a frame that's a component; a frame that's an instance of
