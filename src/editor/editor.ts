@@ -44,6 +44,8 @@ const FINGER = 40;
 const PLUS_DELAY = 330, PLUS_FADE = 300;
 /** What was copied, kept in this browser for every board and tab (on the system's clipboard, see CLIP_MARK). */
 const CLIP_KEY = 'planx-clipboard';
+/** Whether "the instance differs from its component" isn't to be said any more. */
+const DIFFERS_KEY = 'planx-no-differs-note';
 
 /** What the editor needs from the collaboration layer. Optional, so the editor also runs alone. */
 export interface Presence {
@@ -962,6 +964,13 @@ export class Editor {
     });
     this.board.endGesture();
     this.setSelection([comp.id]);
+    // Changed in it (a sticker's colour, say), the instance isn't the component as it is: said so, as
+    // that's what shows now in its place.
+    const changed = this.board.list().some((i) => i.host === inst.id && i.ovr?.some((k) => k !== 'h'));
+    if (changed && !readJSON<boolean>(DIFFERS_KEY)) window.dispatchEvent(new CustomEvent('planx:confirm', { detail: {
+      text: 'Инстанс данного компонента редактировался, поэтому он не совпадает с изначальным компонентом.', action: 'Понятно', only: true,
+      check: 'Больше не выводить это предупреждение', ok: (_: string, never: boolean) => { if (never) writeJSON(DIFFERS_KEY, true); },
+    } }));
   }
 
   /** Detaches the selected instances from their components: what's in each becomes ordinary items, as

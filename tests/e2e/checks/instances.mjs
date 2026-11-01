@@ -15,6 +15,27 @@ const fixture = (p) => p.ev(`(() => {
 const selected = (p) => p.ev(`[...planx.editor.selection].join(',')`);
 
 export const checks = {
+  async 'a component brought out at an instance changed in it says so once (unless told not to again)'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); localStorage.removeItem('planx-no-differs-note');
+      b.add(e.newItem('sticky', 300, 300, { id: 's', w: 100, h: 100 })); e.setSelection(['s']); e.makeComponent(); e.stopEditing();
+      const c = b.list().find((i) => i.comp); e.addInstance(c.id); })()`);
+    await sleep(200);
+    const inst = await p.ev(`planx.board.list().find((i) => i.inst).id`);
+    await p.ev(`planx.board.update('${inst}~s', { color: 'pink' })`);
+    await sleep(200);
+    const note = () => p.ev(`document.querySelector('.confirm p')?.textContent ?? null`);
+    await p.ev(`planx.editor.editComponentAt('${inst}')`);
+    await sleep(150);
+    expect(await note(), 'said').toBe('Инстанс данного компонента редактировался, поэтому он не совпадает с изначальным компонентом.');
+    expect(await p.ev(`[...document.querySelectorAll('.confirm .btn')].map((b) => b.textContent).join()`), 'its one button').toBe('Понятно');
+    await p.click(await p.at('.confirm-check input'));
+    await p.click(await p.at('.confirm .btn.primary'));
+    await p.ev(`planx.editor.finishComponent()`);
+    await p.ev(`planx.editor.editComponentAt('${inst}')`);
+    await sleep(150);
+    expect(await note(), 'not again once told so').toBe(null);
+  },
+
   async 'a component is changed at its first instance, whichever instance asks; its first gone, the oldest left takes its place'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('sticky', 300, 300, { id: 's', w: 100, h: 100 })); e.setSelection(['s']); e.makeComponent(); e.stopEditing();

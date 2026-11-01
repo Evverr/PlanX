@@ -236,10 +236,12 @@ export function App({ boardId }: { boardId: string }) {
   }, [panelOn]);
   const panelItem = panelNow ?? lastPanel.current;
   // Asked to say yes (and, with `input`, a name first).
-  const [ask, setAsk] = useState<{ text: string; action: string; ok: (value?: string) => void; input?: string; placeholder?: string } | null>(null);
+  // `only`: a note with just its button (no «Отмена»); `check`: a box under it, its state given to `ok`.
+  const [ask, setAsk] = useState<{ text: string; action: string; ok: (value?: string, checked?: boolean) => void; input?: string; placeholder?: string; only?: boolean; check?: string } | null>(null);
   const [askValue, setAskValue] = useState('');
+  const [askChecked, setAskChecked] = useState(false);
   useEffect(() => {
-    const on = (e: Event) => { const d = (e as CustomEvent).detail; setAsk(d); setAskValue(d.input ?? ''); };
+    const on = (e: Event) => { const d = (e as CustomEvent).detail; setAsk(d); setAskValue(d.input ?? ''); setAskChecked(false); };
     window.addEventListener('planx:confirm', on);
     return () => window.removeEventListener('planx:confirm', on);
   }, []);
@@ -408,9 +410,12 @@ export function App({ boardId }: { boardId: string }) {
               onKeyDown={(e) => { if (e.key === 'Enter') { ask.ok(askValue); setAsk(null); } else if (e.key === 'Escape') setAsk(null); }} />
           )}
           <p>{ask.text}</p>
+          {ask.check && (
+            <label className="confirm-check"><input type="checkbox" checked={askChecked} onChange={(e) => setAskChecked(e.target.checked)} />{ask.check}</label>
+          )}
           <div className="row">
-            <button className="btn" onClick={() => setAsk(null)}>Отмена</button>
-            <button className="btn primary" onClick={() => { ask.ok(askValue); setAsk(null); }}>{ask.action}</button>
+            {!ask.only && <button className="btn" onClick={() => setAsk(null)}>Отмена</button>}
+            <button className="btn primary" onClick={() => { ask.ok(askValue, askChecked); setAsk(null); }}>{ask.action}</button>
           </div>
         </div>
       )}
