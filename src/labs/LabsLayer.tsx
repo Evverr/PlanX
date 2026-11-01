@@ -10,7 +10,7 @@ import { LabsPresence, useFollowing } from './presence';
 import { cameraFor, flyTo, stopFlight } from './camera';
 import { downloadPicture, pictureSize, renderPicture, type Background, type ExportOptions } from './exportPng';
 import { downloadPdf } from './exportPdf';
-import { dragMindGap, drawMindTidy, mindGapAt, mindGaps, setHotMindGap } from './tidyMind';
+import { dragMindGap, drawMindTidy, mindGapAt, mindStretch, setHotMindGap, type MindGap } from './tidyMind';
 import { drawTidy, endTidyDrag, gapAt, moveTidyDrag, setGaps, setHotGap, startTidyDrag, tidyDragging, tidyItemAt, tidyNow } from './tidy';
 import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
@@ -96,7 +96,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     // A gap of the grid being dragged ("Авторасположение"): which, from where, the gaps then.
     let gap: { axis: 'col' | 'row'; from: number; gx: number; gy: number } | null = null;
     // One of a mind map's handles being dragged ("Авторасположение" on a node): which, from where, the stretch then.
-    let mindGap: { h: { axis: 'col' | 'row'; gap: number; out: boolean; sign: number }; from: number; k0: { kx: number; ky: number } } | null = null;
+    let mindGap: { h: MindGap; from: number; k0: number } | null = null;
     const canvas = () => editor.canvas;
     const local = (e: PointerEvent) => { const r = canvas()!.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
     const addPoint = (e: PointerEvent) => {
@@ -116,8 +116,8 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       if (mh) {
         e.stopPropagation();
         canvas()!.setPointerCapture(e.pointerId);
-        mindGap = { h: mh, from: mh.axis === 'col' ? e.clientX : e.clientY, k0: mindGaps() };
-        setHotMindGap(mh.axis);
+        mindGap = { h: mh, from: mh.axis === 'col' ? e.clientX : e.clientY, k0: mindStretch(mh) };
+        setHotMindGap(mh.level);
         editor.board.beginGesture();
         return;
       }
@@ -171,7 +171,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       }
       if (e.target === canvas() && !e.buttons && labOn('tidy')) {
         const mh = mindGapAt(editor, local(e));
-        setHotMindGap(mh?.axis ?? null);
+        setHotMindGap(mh?.level ?? null);
         if (mh) { canvas()!.style.cursor = mh.axis === 'col' ? 'col-resize' : 'row-resize'; editor.requestRender(); return; }
       }
       if (gap) {
