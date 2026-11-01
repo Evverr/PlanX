@@ -12,7 +12,11 @@ import { descendants, mindWay, upright, type Way } from '../model/mind';
  * gaps as they came out, in proportion, not evened out. Picked again later, it's an ordinary node; pressed
  * again with nothing moved by hand, it's all back as it was, stretches and handles.
  */
-interface MindTidy { id: string; base: Map<string, Point>; kx: number[]; ky: number[]; at: Map<string, Point>; on: boolean; warned?: boolean }
+interface MindTidy {
+  id: string; base: Map<string, Point>; kx: number[]; ky: number[]; at: Map<string, Point>; on: boolean; warned?: boolean;
+  /** Which two neighbours each level's handle along it stands between, kept so it doesn't hop while dragged. */
+  pairs?: Map<number, [string, string]>;
+}
 let mt: MindTidy | null = null;
 
 /** A handle: across the gaps out to level `level` (out) or along it; `sign` -1 where dragging left (up) widens it. */
@@ -147,11 +151,16 @@ function lines(ed: Editor): Line[] {
     const near = forth ? Math.min(...row.map((k) => k[out])) : Math.max(...row.map((k) => k[out] + k[deep]));
     const lo = Math.min(...row.map((k) => k[along])), hi = Math.max(...row.map((k) => k[along] + k[size]));
     res.push({ axis: up ? 'row' : 'col', at: (edge + near) / 2, from: lo, to: lo + Math.max(24, (hi - lo) / 4), gap: Math.abs(near - edge), level, out: true });
-    // Along it: its widest gap.
+    // Along it: its widest gap (where it first was, while those two still stand side by side).
     if (row.length < 2) return;
-    let best = 1;
     const gapAt = (i: number) => row[i][along] - row[i - 1][along] - row[i - 1][size];
-    for (let i = 2; i < row.length; i++) if (gapAt(i) > gapAt(best)) best = i;
+    const pairs = (mt!.pairs ??= new Map()), kept = pairs.get(level);
+    let best = kept ? row.findIndex((k, i) => i > 0 && row[i - 1].id === kept[0] && k.id === kept[1]) : -1;
+    if (best < 1) {
+      best = 1;
+      for (let i = 2; i < row.length; i++) if (gapAt(i) > gapAt(best)) best = i;
+      pairs.set(level, [row[best - 1].id, row[best].id]);
+    }
     const a = row[best - 1], b = row[best], g = gapAt(best);
     res.push({ axis: up ? 'col' : 'row', at: a[along] + a[size] + g / 2, from: Math.min(a[out], b[out]), to: Math.max(a[out] + a[deep], b[out] + b[deep]), gap: g, level, out: false });
   });
@@ -190,8 +199,9 @@ export function drawMindTidy(ctx: CanvasRenderingContext2D, ed: Editor): void {
   for (const g of lines(ed)) {
     const a = ed.toScreen(g.axis === 'col' ? { x: g.at, y: g.from } : { x: g.from, y: g.at });
     const b = ed.toScreen(g.axis === 'col' ? { x: g.at, y: g.to } : { x: g.to, y: g.at });
-    const strong = hot === key(g);
-    ctx.strokeStyle = '#E5484D';
+    // The first ones (for every level) red, the levels' own grey.
+    const strong = hot === key(g), color = g.level ? '#8B8D98' : '#E5484D';
+    ctx.strokeStyle = color;
     ctx.globalAlpha = strong ? 0.7 : 0.35;
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -200,7 +210,7 @@ export function drawMindTidy(ctx: CanvasRenderingContext2D, ed: Editor): void {
     ctx.stroke();
     const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, [pw, ph] = g.axis === 'col' ? [4, 16] : [16, 4];
     ctx.globalAlpha = 1;
-    ctx.fillStyle = strong ? '#E5484D' : '#fff';
+    ctx.fillStyle = strong ? color : '#fff';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.roundRect(m.x - pw / 2, m.y - ph / 2, pw, ph, 2);
