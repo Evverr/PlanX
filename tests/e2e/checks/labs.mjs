@@ -9,28 +9,43 @@ const stickers = (p) => p.ev(`(() => { const e = planx.editor, b = planx.board, 
 const select = (p, id) => p.ev(`planx.editor.setSelection(['${id}'])`);
 
 export const checks = {
-  async 'the menu has "Нововведения" with a switch for each, and a switched off one goes away'(p) {
+  async '"Настройки" (the board menu) have a switch for each feature on trial, and a switched off one goes away'(p) {
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'the timer button at first').toBeTruthy();
-    await p.click(await p.at('.topbar button[aria-label="Меню"]'));
-    const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Нововведения')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
-    await p.mouse('mouseMoved', row[0], row[1]);
-    await sleep(250);
-    expect(await p.ev(`document.querySelectorAll('.labs-menu .menu-switch').length`), 'switches').toBe(12);
-    await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.labs-menu .menu-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
-    expect(await p.ev(`document.querySelector('.labs-menu [aria-checked="false"]')?.textContent`), 'switched off').toBe('Общий таймер');
+    const open = async (label) => {
+      await p.click(await p.at('.topbar button[aria-label="Меню"]'));
+      await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent === '${label}'); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+      await sleep(150);
+    };
+    await open('Настройки');
+    expect(await p.ev(`document.querySelectorAll('.modal.settings .settings-row .menu-switch').length`), 'switches').toBe(await p.ev(`(async () => (await import('/src/labs/labs.ts')).LABS.length)()`));
+    await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.settings-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    expect(await p.ev(`document.querySelector('.settings-row[aria-checked="false"] b')?.textContent`), 'switched off').toBe('Общий таймер');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
+    await p.escape();
+    expect(await p.ev(`!!document.querySelector('.modal')`), 'Esc closes it').toBe(false);
     await p.reload();
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'and still gone after a reload').toBeFalsy();
+    // "Профиль": a character, the fields, kept.
+    await open('Профиль');
+    expect(await p.ev(`!!document.querySelector('.modal.profile .profile-avatar') + ' ' + document.querySelectorAll('.modal.profile .form-grid label').length`), 'a character and the fields').toBe('true 7');
+    await p.ev(`(() => { const i = [...document.querySelectorAll('.form-grid label')].find((l) => l.textContent.startsWith('Должность')).querySelector('input'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(i, 'Дизайнер'); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.modal .btn')].find((b) => b.textContent === 'Сохранить').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await open('Профиль');
+    expect(await p.ev(`document.querySelector('.profile-role').textContent`), 'kept').toBe('Дизайнер');
   },
 
   async 'a menu level that would open past the bottom of the screen is moved up into it'(p) {
-    await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1280, height: 520, deviceScaleFactor: 1, mobile: false });
+    // The screen just taller than the menu: its last row's level would open past its bottom.
+    await p.click(await p.at('.topbar button[aria-label="Меню"]'));
+    const bottom = await p.ev(`Math.ceil(document.querySelector('.board-menu').getBoundingClientRect().bottom)`);
+    await p.click(await p.at('.topbar button[aria-label="Меню"]'));
+    await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1280, height: bottom + 16, deviceScaleFactor: 1, mobile: false });
     await sleep(200);
     await p.click(await p.at('.topbar button[aria-label="Меню"]'));
     const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].filter((r) => r.textContent.includes('Оглавление')).pop(); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
     await sleep(300);
-    const r = await p.ev(`(() => { const r = document.querySelector('.labs-menu').getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom), innerHeight]; })()`);
+    const r = await p.ev(`(() => { const r = document.querySelector('.board-menu .board-menu.sub').getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom), innerHeight]; })()`);
     await p.cdp('Emulation.clearDeviceMetricsOverride', {});
     expect(r[0] >= 8 && r[1] <= r[2] - 8, `on the screen (${r})`).toBe(true);
   },
