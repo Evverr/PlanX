@@ -8,6 +8,7 @@ import { snapToGuides, type Guide } from '../canvas/guides';
 import { shapeStyle } from './shapeStyle';
 import { branchCrosses, canMoveTo, foldedWays, folding, mindWay, moveBranch } from '../model/mind';
 import { clamp, MAX_Z } from './camera';
+import { zoomToBox } from '../labs/zoomBox';
 import { rotateCursor } from './cursors';
 import { MIND_TOPIC, type PenTool } from './tools';
 import type { Editor } from './editor';
@@ -32,7 +33,7 @@ export type Gesture =
   | { type: 'linkNode'; id: string; node: number; via: Point[]; add?: boolean }
   | { type: 'linkStretch'; id: string; k: number; pts: Point[]; start: Point; moved?: boolean }
   | { type: 'mindMove'; id: string; from: Point; to: Point; target: string | null }
-  | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null }
+  | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null; zoom?: boolean }
   | { type: 'draw'; tool: PenTool; pts: Point[] }
   | { type: 'erase'; last: Point };
 
@@ -242,6 +243,8 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       return;
     case 'marquee': {
       g.rect = normRect(g.start, w);
+      // Drawn with Z held, it's where to zoom to, not what to pick ("Зум рамкой", src/labs).
+      if (g.zoom) { ed.requestRender(); return; }
       const next = new Set(g.base), rect = g.rect;
       const inside = (it: Item) => (it.type === 'frame' ? rectContains(rect, boxOf(it)) : rectsIntersect(rect, boxOf(it)));
       const shown = ed.shown(), any = shown.some(inside);
@@ -396,6 +399,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       ed.requestRender();
       return;
     case 'marquee':
+      if (g.zoom) zoomToBox(ed, g.rect);
       ed.requestRender();
       return;
     case 'draw':

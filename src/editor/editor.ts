@@ -28,6 +28,7 @@ import { press } from './press';
 import { formatCells, pickCell, restOn, setTableLines } from './tables';
 import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, type Pens, type PenTool, type Tool } from './tools';
 import { pushedBelow } from '../labs/textPush';
+import { holdZoomBox } from '../labs/zoomBox';
 import { clearComments } from '../labs/comments';
 import { isLocked, labOn, subscribeLabs } from '../labs/labs';
 
@@ -241,8 +242,8 @@ export class Editor {
     on(canvas, 'wheel', (e) => this.wheel(e), { passive: false });
     on(window, 'keydown', (e) => onKeyDown(this, e));
     on(window, 'paste', (e) => onPaste(this, e));
-    on(window, 'keyup', (e) => { if (e.code === 'Space') this.setSpace(false); });
-    on(window, 'blur', () => this.setSpace(false));
+    on(window, 'keyup', (e) => { if (e.code === 'Space') this.setSpace(false); if (e.code === 'KeyZ') holdZoomBox(false); });
+    on(window, 'blur', () => { this.setSpace(false); holdZoomBox(false); });
     on(window, 'resize', () => this.resize());
     const mq = matchMedia('(prefers-color-scheme: dark)');
     const onTheme = () => { this.theme = readTheme(); this.requestRender(); };

@@ -7,7 +7,7 @@ import { readJSON, readText, writeJSON, writeText } from '../storage';
  * browser. Everything they need lives in this folder; the app only asks labOn() where a feature
  * changes what it does, so one that isn't kept comes out by deleting its file and those few lines.
  */
-export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'taskComponent' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments';
+export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'taskComponent' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox';
 
 export interface Lab { id: LabId; label: string; icon: string; hint: string }
 
@@ -35,6 +35,7 @@ export const LABS: Lab[] = [
   { id: 'textLink', label: 'Ссылка в тексте', icon: 'link', hint: 'Кнопка-цепочка на панели текста; Cmd+клик (Ctrl+клик) открывает ссылку' },
   { id: 'multi', label: 'Несколько сразу', icon: 'group', hint: 'Выбрано несколько: общий текст на панели и один уголок, чтобы масштабировать всё вместе' },
   { id: 'clickThrough', label: 'Клик сквозь', icon: 'layers', hint: 'Медленный повторный клик по выбранному выбирает то, что под ним' },
+  { id: 'zoomBox', label: 'Зум рамкой', icon: 'expand-l', hint: 'Держите Z и обведите рамкой: то, что в ней, на весь экран' },
   { id: 'swap', label: 'Замена двойным кликом', icon: 'repeat', hint: 'Двойной клик по эмодзи, иконке или фигуре: выбрать другую на её место, и в инстансе тоже' },
 ];
 
