@@ -325,14 +325,16 @@ export class Editor {
     this.startEditing(title);
   }
 
-  /** The component being changed (out, not put away) that's picked or holds what's picked. */
+  /** The component being changed (out, not put away): the one picked or holding what's picked, else one
+   *  brought out in an instance's place, else any out. */
   componentInEdit(): Item | undefined {
+    const out = this.board.list().filter((c) => c.comp && !c.stowed && !isBuiltin(c.id));
+    if (!out.length) return undefined;
     const sel = this.selectedItems();
-    if (!sel.length) return undefined;
-    return this.board.list().find((c) => c.comp && !c.stowed && sel.some((s) => s.id === c.id || this.carried([c]).has(s.id)));
+    return out.find((c) => sel.some((s) => s.id === c.id || this.carried([c]).has(s.id))) ?? out.find((c) => c.standsIn) ?? out[out.length - 1];
   }
 
-  /** Esc or Cmd+Enter while a component's being changed: done with it, as by its tick. */
+  /** Esc or Cmd+Enter while a component's being changed (wherever the focus is): done with it, as by its tick. */
   finishComponent(): boolean {
     const c = this.componentInEdit();
     if (!c) return false;

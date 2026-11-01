@@ -232,6 +232,13 @@ export const checks = {
       const c = await p.ev(`planx.board.list().filter((i) => i.comp).pop()`);
       expect(`${!!c.stowed} ${await p.ev(`planx.board.list().filter((i) => i.inst === '${c.id}').length`)}`, `${key}: an instance in its place`).toBe('true 1');
     }
+    // Out again with nothing picked (the focus anywhere): Esc is done with it all the same.
+    const c = await p.ev(`planx.board.list().filter((i) => i.comp).pop().id`);
+    await p.ev(`planx.editor.goToComponent(planx.board.list().find((i) => i.inst === '${c}').id); planx.editor.setSelection([]);`);
+    await sleep(200);
+    await p.escape();
+    await sleep(100);
+    expect(await p.ev(`!!planx.board.get('${c}').stowed`), 'nothing picked: done with it').toBe(true);
   },
 
   async 'an instance detached from its component leaves its items, as they were, with no frame, and they stay so'(p) {
