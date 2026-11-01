@@ -339,7 +339,7 @@ function layOut(n: Item, way: Way, all: Item[], block: (k: Item) => Item[]): voi
  * as a mind map lays it out, however it's been dragged about, level by level. Each way they grow, the
  * nodes of a level go out from their parents the usual gap (off the furthest of their parents' level,
  * as a floor does), each parent's one after another the gap apart in the order they stand, those of
- * different parents (cousins) a node's height apart (cousinGap); all of them centred as one on their
+ * different parents (cousins) three times cousinGap apart; all of them centred as one on their
  * parents (on their parent, for one parent's alone). Every node keeps its side of its parent; the
  * node itself stays put.
  */
@@ -359,11 +359,11 @@ export function tidyBranches(id: string, items: Item[]): Map<string, Point> {
       if (!groups.length) continue;
       for (const { p, kids } of groups) for (const k of kids) Object.assign(k, outFrom(floorOf(p, all), way, k));
       const row = groups.flatMap((g) => g.kids);
-      const total = row.reduce((t, k, i) => t + k[a.size] + (i ? (k.parent === row[i - 1].parent ? a.gap : cousinGap(a, row[i - 1], k)) : 0), 0);
+      const total = row.reduce((t, k, i) => t + k[a.size] + (i ? (k.parent === row[i - 1].parent ? a.gap : 3 * cousinGap(a, row[i - 1], k)) : 0), 0);
       const parents = groups.map((g) => g.p);
       let at = (lo(parents, a) + hi(parents, a)) / 2 - total / 2;
       row.forEach((k, i) => {
-        if (i) at += k.parent === row[i - 1].parent ? a.gap : cousinGap(a, row[i - 1], k);
+        if (i) at += k.parent === row[i - 1].parent ? a.gap : 3 * cousinGap(a, row[i - 1], k);
         k[a.at] = at;
         at += k[a.size];
       });

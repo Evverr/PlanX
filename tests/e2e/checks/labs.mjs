@@ -208,6 +208,41 @@ export const checks = {
     expect(await at(), 'back').toBe('430,390 370,170');
   },
 
+  async '"Авторасположение" on a mind map node: its handles stretch the gaps as they came out, in proportion'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.transact(() => {
+        b.add(e.newItem('mind', 100, 300, { id: 'r', w: 100, h: 40, text: 'Центр' }));
+        for (const [k, y] of [['a', 200], ['b', 400]]) {
+          b.add(e.newItem('mind', 300, y, { id: k, w: 100, h: 40, parent: 'r', text: k }));
+          for (const i of [0, 1]) b.add(e.newItem('mind', 500, y + i * 60, { id: k + i, w: 100, h: 40, parent: k, text: k + i }));
+        }
+      }); e.setSelection(['r']); })()`);
+    await sleep(300);
+    await p.ev(`planx.editor.tidyMind('r')`);
+    await sleep(100);
+    const xs = () => p.ev(`['r', 'a', 'a0'].map((k) => planx.board.get(k)).map((i) => i.x + ',' + i.w)`);
+    const ys = () => p.ev(`['a0', 'a1', 'b0', 'b1'].map((k) => planx.board.get(k).y)`), h = await p.ev(`planx.board.get('a0').h`);
+    const gaps = (y) => [y[1] - y[0] - h, y[2] - y[1] - h, y[3] - y[2] - h];
+    const y = await ys(), g0 = gaps(y);
+    // The fullest level's widest gap (the cousins'): its handle dragged 40 down.
+    const mid = await p.ev(`(() => { const a = planx.board.get('a1'), s = planx.editor.toScreen({ x: a.x + a.w / 2, y: a.y + a.h + ${g0[1]} / 2 }); return [s.x, s.y]; })()`);
+    await p.drag(mid, [mid[0], mid[1] + 40]);
+    await sleep(200);
+    const z = await ys(), k = (g0[1] + 40) / g0[1];
+    expect(gaps(z).map((v) => Math.round(v)).join(), 'gaps along times k').toBe(g0.map((v) => Math.round(v * k)).join());
+    expect(Math.round((z[0] + z[3]) / 2), 'centred where it was').toBe(Math.round((y[0] + y[3]) / 2));
+    // The gap out from the node to its branches: dragged 30 right, every gap out grows in proportion.
+    const [r, a] = (await xs()).map((s) => s.split(',').map(Number));
+    const out = await p.ev(`(() => { const r = planx.board.get('r'), kids = ['a', 'b'].map((k) => planx.board.get(k)), lo = Math.min(...kids.map((k) => k.y)), hi = Math.max(...kids.map((k) => k.y + k.h));
+      const s = planx.editor.toScreen({ x: (r.x + r.w + kids[0].x) / 2, y: lo + Math.max(24, (hi - lo) / 4) / 2 }); return [s.x, s.y]; })()`);
+    const gx = a[0] - r[0] - r[1];
+    await p.drag(out, [out[0] + 30, out[1]]);
+    await sleep(200);
+    const [, a2, c2] = (await xs()).map((s) => s.split(',').map(Number)), kx = (gx + 30) / gx;
+    expect(Math.round(a2[0] - r[0] - r[1]), 'first gap out').toBe(Math.round(gx * kx));
+    expect(Math.round(c2[0] - a2[0] - a2[1]), 'next gap out, in proportion').toBe(Math.round(gx * kx));
+  },
+
   async '"Авторасположение" of instances picked by a box: laid out by what they show, its handles there, a gap that can go below nothing'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board, { x: X, y: Y } = e.toWorld(300, 250);
       b.transact(() => {
