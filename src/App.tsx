@@ -237,7 +237,7 @@ export function App({ boardId }: { boardId: string }) {
   const panelItem = panelNow ?? lastPanel.current;
   // Asked to say yes (and, with `input`, a name first).
   // `only`: a note with just its button (no «Отмена»); `check`: a box under it, its state given to `ok`.
-  const [ask, setAsk] = useState<{ text: string; action: string; ok: (value?: string, checked?: boolean) => void; input?: string; placeholder?: string; only?: boolean; check?: string } | null>(null);
+  const [ask, setAsk] = useState<{ text: string; action: string; ok: (value?: string, checked?: boolean) => void; input?: string; placeholder?: string; only?: boolean; check?: string; alt?: string; altRun?: () => void } | null>(null);
   const [askValue, setAskValue] = useState('');
   const [askChecked, setAskChecked] = useState(false);
   useEffect(() => {
@@ -415,6 +415,7 @@ export function App({ boardId }: { boardId: string }) {
           )}
           <div className="row">
             {!ask.only && <button className="btn" onClick={() => setAsk(null)}>Отмена</button>}
+            {ask.alt && <button className="btn" onClick={() => { ask.altRun?.(); if (askChecked) ask.ok(askValue, askChecked); setAsk(null); }}>{ask.alt}</button>}
             <button className="btn primary" onClick={() => { ask.ok(askValue, askChecked); setAsk(null); }}>{ask.action}</button>
           </div>
         </div>
