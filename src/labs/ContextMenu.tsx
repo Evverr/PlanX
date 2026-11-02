@@ -122,7 +122,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
         {at.params ? <>{gripBar}<LinkParams editor={editor} ids={editor.selectedLinks().map((l) => l.id)} /></> : <>
           {row('sign', 'Параметры', () => setAt({ ...at, params: true }))}
           <div className="menu-line" />
-          {row('trashcan-l', 'Удалить', run(() => editor.deleteSelection()))}
+          {row('trashcan', 'Удалить', run(() => editor.deleteSelection()))}
         </>}
       </div>
     );
@@ -172,7 +172,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
         {editInst && row('edit-l', 'Редактировать компонент', run(() => editor.editComponentAt(editInst)))}
         {tidy && row('apps', 'Авторасположение', run(() => { if (tidyMind) editor.tidyMind(tidyMind); else startTidy(editor); editor.requestRender(); }))}
         <div className="menu-line" />
-        {row('trashcan-l', 'Удалить', run(() => editor.deleteSelection()))}
+        {row('trashcan', 'Удалить', run(() => editor.deleteSelection()))}
       </>}
     </div>
   );
