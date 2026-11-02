@@ -1,7 +1,7 @@
 import type { Item, Link, Side } from '../model/types';
 import { DEFAULTS, ROTATABLE, textPad, textPadY, uid } from '../model/types';
 import type { Point, Rect } from '../canvas/geometry';
-import { angleOf, boxOf, center, hitItem, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedAt, toLocal, turn } from '../canvas/geometry';
+import { angleOf, boxOf, center, hitItem, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedAt, resizedFrom, toLocal, turn } from '../canvas/geometry';
 import { fitHeight, itemTextHeight, mindSize } from '../canvas/text';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, newTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
@@ -24,7 +24,7 @@ export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
   | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]> }
-  | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' }
+  | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline' }
@@ -119,9 +119,9 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       const min = it.type === 'frame' ? 80 : it.type === 'ink' ? 4 : it.type === 'audio' ? 32 : it.type === 'icon' || it.type === 'emoji' || it.type === 'image' ? 16 : 40;
       // A turned item is stretched along its own sides.
       const { w: w0, h: h0 } = g.orig, d = turn({ x: w.x - g.start.x, y: w.y - g.start.y }, { x: 0, y: 0 }, -angleOf(g.orig));
-      // By a side, one way only.
-      let nw = g.only === 'h' ? w0 : Math.max(min, Math.round(w0 + d.x));
-      let nh = g.only === 'w' ? h0 : Math.max(min, Math.round(h0 + d.y));
+      // By a side, one way only; by the left or top one, the right or bottom one staying put.
+      let nw = g.only === 'h' || g.only === 't' ? w0 : Math.max(min, Math.round(w0 + (g.only === 'l' ? -d.x : d.x)));
+      let nh = g.only === 'w' || g.only === 'l' ? h0 : Math.max(min, Math.round(h0 + (g.only === 't' ? -d.y : d.y)));
       // A timeline holds whole days.
       if (it.tl) nw = TL_PAD * 2 + Math.max(7, Math.round((nw - TL_PAD * 2) / dayOf(it))) * dayOf(it);
       // Stickers, icons, emoji, drawings and pictures keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
@@ -137,7 +137,9 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       // Text wrapping onto more lines (or fewer) takes the text just under it along.
       const moves = pushedBelow(it, nh - it.h, board.list());
       board.transact(() => {
-        board.update(g.id, it.type === 'table' ? withScale(it, nw, nh) : g.orig.rot ? { w: nw, h: nh, ...resizedAt(g.orig, nw, nh) } : { w: nw, h: nh });
+        const size = it.type === 'table' ? withScale(it, nw, nh) : { w: nw, h: nh };
+        const back = g.only === 'l' || g.only === 't' ? resizedFrom(g.orig, nw, nh, w0 - nw, g.only === 't' ? h0 - nh : 0) : null;
+        board.update(g.id, back ? { ...size, x: Math.round(back.x), y: Math.round(back.y) } : it.type === 'table' ? size : g.orig.rot ? { ...size, ...resizedAt(g.orig, nw, nh) } : size);
         moves.forEach((pt, k) => board.update(k, pt));
       });
       return;
