@@ -39,12 +39,15 @@ export const checks = {
   },
 
   async 'the pen draws a line and the eraser takes it away'(p) {
+    // (Whole lines, as set for "Ластик кружком"; under its circle only, see labs.mjs.)
+    await p.ev(`(async () => (await import('/src/labs/eraseArea.ts')).setEraserStyle({ whole: true }))()`);
     await p.key('p', 'KeyP', 80);
     await p.drag([500, 400], [650, 450]);
     expect(await count(p, 'ink'), 'a drawn line').toBe(1);
     await p.key('e', 'KeyE', 69);
     await p.drag([560, 380], [580, 460]);
     expect(await count(p, 'ink'), 'erased').toBe(0);
+    await p.ev(`(async () => (await import('/src/labs/eraseArea.ts')).setEraserStyle({ whole: undefined }))()`);
   },
 
   async 'a link is drawn from an item\'s dot to another'(p) {
