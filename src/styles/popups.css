@@ -58,7 +58,7 @@
 .icon-scroll { max-height: min(var(--e340), 55vh); overflow-y: auto; }
 .icon-scroll .icon-grid { max-height: none; overflow: visible; }
 .icon-sub { margin: var(--s12) 0 var(--s6); padding-top: var(--s10); border-top: 1px solid var(--line); font-size: var(--s12); font-weight: 600; color: var(--muted); }
-.icon-grid button { aspect-ratio: 1; border: 0; background: transparent; border-radius: var(--s6); cursor: pointer; color: var(--ink); display: grid; place-items: center; padding: 0; transition: background-color .12s ease-out; }
+.icon-grid button { aspect-ratio: 1; border: 0; background: transparent; border-radius: var(--s6); cursor: pointer; color: var(--fmt-ink); display: grid; place-items: center; padding: 0; transition: background-color .12s ease-out; }
 .icon-grid button:hover { background: var(--fmt-hover); }
 .icon-grid svg { width: var(--e26); height: var(--e26); }
 .emoji-grid { grid-template-columns: repeat(auto-fill, minmax(var(--s34), 1fr)); gap: var(--s6); }

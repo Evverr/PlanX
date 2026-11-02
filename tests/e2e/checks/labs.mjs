@@ -71,6 +71,10 @@ export const checks = {
     await sleep(300);
     await p.click(await p.at('.panel button[aria-label="Выравнивание"]'));
     expect(await p.ev(`document.querySelectorAll('.align-pop button').length`), 'six ways').toBe(6);
+    await p.ev(`document.documentElement.dataset.compact = ''; document.documentElement.dataset.size = 's'`);
+    await sleep(100);
+    expect(await p.ev(`[...document.querySelectorAll('.panel > * > .ib, .panel > .ib')][0].offsetWidth === document.querySelector('.align-pop .ib').offsetWidth`), 'as small as the panel').toBe(true);
+    await p.ev(`delete document.documentElement.dataset.compact; delete document.documentElement.dataset.size`);
     const y = await p.ev(`planx.board.get('${ids.a}').y`);
     await p.click(await p.at('.align-pop button[aria-label="По верхнему краю"]'));
     expect(await p.ev(`planx.board.get('${ids.c}').y`), 'tops meet').toBe(y);
