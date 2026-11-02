@@ -77,7 +77,7 @@ export function ObjectsMenu({ editor, tool, onPick, onClose }: { editor: Editor;
   const level = (which: 'mine' | 'doc', label: string, rows: React.ReactNode[]) => rows.length > 0 && (
     <div className="menu-item" onPointerEnter={() => setOpen(which)}>
       <button className="menu-row" role="menuitem" aria-haspopup aria-expanded={open === which} onClick={() => setOpen(which)}>
-        <Glyph id="component" className="menu-icon" />
+        <Glyph id="package" className="menu-icon" />
         <span>{label}</span>
         <i className="menu-more" aria-hidden="true" />
       </button>
