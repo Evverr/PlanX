@@ -432,7 +432,7 @@ export class Editor {
     if (!comp?.comp) return;
     const sp = at ?? { x: this.width / 2, y: this.height / 2 }, c = this.toWorld(sp.x, sp.y);
     const w = comp.fold?.w ?? comp.w, h = comp.fold?.h ?? comp.h;
-    const it = this.newItem('frame', Math.round(c.x - w / 2), Math.round(c.y - h / 2), { w, h, inst: id, text: comp.text, members: [], z: this.board.minZ() - 1, born: Date.now() });
+    const it = this.newItem('frame', Math.round(c.x - w / 2), Math.round(c.y - h / 2), { w, h, inst: id, text: comp.text, members: [], born: Date.now() });
     this.board.add(it);
     this.setTool('select');
     this.setSelection([it.id]);
@@ -736,7 +736,8 @@ export class Editor {
     // Fitting the board once it loads is for boards opened with content, not for the first thing made on a new one.
     this.needsFit = false;
     const d = DEFAULTS[type];
-    const z = type === 'frame' ? this.board.minZ() - 1 : this.board.maxZ() + 1;
+    // A group goes under what's there; anything else, an instance (a task) too, over it.
+    const z = type === 'frame' && !extra.inst ? this.board.minZ() - 1 : this.board.maxZ() + 1;
     // Shapes come out as set under the gear of their panel.
     const shape = type === 'rect' || type === 'ellipse' || type === 'polygon' ? shapePatch(type, shapeStyle()) : {};
     return { ...d, ...shape, id: uid(), type, x: Math.round(x), y: Math.round(y), z, ...extra } as Item;
@@ -991,7 +992,7 @@ export class Editor {
       this.board.update(was.id, { stowed: undefined, x: comp.x, y: comp.y });
       inst = was.id;
     } else {
-      const it = this.newItem('frame', comp.x, comp.y, { w: comp.fold?.w ?? comp.w, h: comp.fold?.h ?? comp.h, inst: id, text: comp.text, members: [], z: this.board.minZ() - 1, born: Date.now() });
+      const it = this.newItem('frame', comp.x, comp.y, { w: comp.fold?.w ?? comp.w, h: comp.fold?.h ?? comp.h, inst: id, text: comp.text, members: [], z: comp.z, born: Date.now() });
       this.board.add(it);
       inst = it.id;
     }
@@ -1112,17 +1113,23 @@ export class Editor {
     this.requestRender();
   }
 
-  /** Ctrl+↑ (dir 1) or Ctrl+↓ (-1): each picked item a layer up or down, past the next one that isn't
-   *  picked (their places swapped). */
+  /** Ctrl+↑ (dir 1) or Ctrl+↓ (-1): each picked item a layer up or down, past the next one over (or
+   *  under) it that isn't picked, those between keeping their order. */
   shiftZ(dir: 1 | -1): void {
     const list = this.board.list().filter((i) => !i.host), picked = new Set(this.selectedItems().map((i) => i.id));
     if (!picked.size) return;
-    const order = dir > 0 ? [...list.keys()].reverse() : [...list.keys()];
     const z = list.map((i) => i.z), at = [...list];
-    for (const i of order) {
-      const j = i + dir;
-      if (!picked.has(at[i].id) || j < 0 || j >= at.length || picked.has(at[j].id)) continue;
-      [at[i], at[j]] = [at[j], at[i]];
+    const meet = (a: Item, b: Item) => { const p = boxOf(a), q = boxOf(b); return p.x < q.x + q.w && q.x < p.x + p.w && p.y < q.y + q.h && q.y < p.y + p.h; };
+    for (const it of dir > 0 ? [...list].reverse() : list) {
+      if (!picked.has(it.id)) continue;
+      const i = at.indexOf(it);
+      let j = i + dir;
+      while (j >= 0 && j < at.length && (picked.has(at[j].id) || !meet(it, at[j]))) j += dir;
+      // Nothing it lies over (or under) that way: up or down past the next one all the same.
+      if (j < 0 || j >= at.length) { j = i + dir; while (j >= 0 && j < at.length && picked.has(at[j].id)) j += dir; }
+      if (j < 0 || j >= at.length) continue;
+      at.splice(i, 1);
+      at.splice(j, 0, it);
     }
     this.board.transact(() => at.forEach((it, k) => { if (it.z !== z[k]) this.board.update(it.id, { z: z[k] }); }));
   }
