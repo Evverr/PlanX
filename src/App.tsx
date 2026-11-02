@@ -441,7 +441,7 @@ export function App({ boardId }: { boardId: string }) {
             <dt>Переставить инструмент на панели</dt><dd>Удерживать его</dd>
             <dt>Отменить / вернуть свои действия</dt><dd><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></dd>
             <dt>Копировать, вставить, дублировать</dt><dd><kbd>Ctrl</kbd>+<kbd>C</kbd> <kbd>V</kbd> <kbd>D</kbd></dd>
-            <dt>Фрейм вокруг выделенного</dt><dd><kbd>Ctrl</kbd>+<kbd>G</kbd></dd>
+            <dt>Группа вокруг выделенного</dt><dd><kbd>Ctrl</kbd>+<kbd>G</kbd></dd>
             <dt>Удалить выделенное</dt><dd><kbd>Del</kbd></dd>
           </dl>
         </div>

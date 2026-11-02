@@ -4,7 +4,7 @@ import type { Item, ItemType } from '../model/types';
 export interface Found { id: string; kind: string; text: string; at: number; len: number }
 
 const KINDS: Partial<Record<ItemType, string>> = {
-  sticky: 'Стикер', text: 'Текст', rect: 'Фигура', ellipse: 'Фигура', polygon: 'Фигура', frame: 'Фрейм',
+  sticky: 'Стикер', text: 'Текст', rect: 'Фигура', ellipse: 'Фигура', polygon: 'Фигура', frame: 'Группа',
   task: 'Задача', table: 'Таблица', mind: 'Карта',
 };
 
