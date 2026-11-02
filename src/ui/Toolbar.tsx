@@ -160,7 +160,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     if (key === 'sep') return <div key={key} {...sort.item(key)} className={`tsep ${sort.lifted(key) ? 'lifted' : ''}`} />;
     if (t) return button(key, tool === t[0], t[2], t[1], () => editor.setTool(t[0]), { 'aria-pressed': tool === t[0] });
     // With two or more items selected, the frame button puts a frame around them instead.
-    if (key === 'frames') return button(key, tool === 'frame', 'Фрейм (F; вокруг выделенного — Ctrl+G)', 'frame',
+    if (key === 'frames') return button(key, tool === 'frame', 'Группа (F; вокруг выделенного — Ctrl+G)', 'frame',
       () => { if (!editor.frameSelection()) editor.setTool('frame'); }, { 'aria-pressed': tool === 'frame' });
     // The arrow's button (arrows are drawn from an item's blue dots, or with C): makes a component of
     // what's selected.

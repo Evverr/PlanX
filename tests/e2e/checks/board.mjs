@@ -488,7 +488,7 @@ export const checks = {
     await sleep(200);
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Параметры').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     await sleep(150);
-    expect(await p.ev(`[...document.querySelectorAll('.params-pop .params-title, .params-pop .params-label')].map((e) => e.textContent).slice(0, 3).join(' | ')`), 'its parameters').toBe('Фрейм «Фрейм» | Заливка | Обводка');
+    expect(await p.ev(`[...document.querySelectorAll('.params-pop .params-title, .params-pop .params-label')].map((e) => e.textContent).slice(0, 3).join(' | ')`), 'its parameters').toBe('Группа «Фрейм» | Заливка | Обводка');
   },
 
   async 'an item is stretched by its left and top sides too, the other side staying put'(p) {

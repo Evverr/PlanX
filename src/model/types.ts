@@ -229,7 +229,7 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   text: { w: 260, h: 26, fs: 20, text: '' },
   rect: { w: 180, h: 110, color: 'blue', fs: 16, text: '', ta: 'left', va: 'top' },
   ellipse: { w: 170, h: 110, color: 'green', fs: 16, text: '', ta: 'left', va: 'top' },
-  frame: { w: 520, h: 380, text: 'Фрейм' },
+  frame: { w: 520, h: 380, text: 'Группа' },
   icon: { w: 64, h: 64, color: 'ink' },
   emoji: { w: 27, h: 27 },
   ink: { w: 1, h: 1 },

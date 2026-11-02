@@ -229,7 +229,7 @@ export function LinkParams({ editor, ids }: { editor: Editor; ids: string[] }) {
 /** What each kind of item is called in the parameters' list. */
 const NAMES: Partial<Record<Item['type'], string>> = {
   sticky: 'Заметка', text: 'Текст', rect: 'Прямоугольник', ellipse: 'Эллипс', polygon: 'Фигура', task: 'Задача', mind: 'Узел майнд-карты',
-  icon: 'Иконка', emoji: 'Эмодзи', ink: 'Рисунок', image: 'Картинка', frame: 'Фрейм',
+  icon: 'Иконка', emoji: 'Эмодзи', ink: 'Рисунок', image: 'Картинка', frame: 'Группа',
 };
 
 /** The items whose parameters the popup lists: the picked, an instance by what's in it. */
