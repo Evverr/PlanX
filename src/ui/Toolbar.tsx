@@ -171,7 +171,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     if (key === 'comments') return labs.comments ? button(key, tool === 'comment', 'Комментарий', 'comment', () => editor.setTool(tool === 'comment' ? 'select' : 'comment'), { 'aria-pressed': tool === 'comment' }) : null;
     // "Линии" (src/labs): the line tool, from any item to any other; held, the ways a line runs.
     if (key === 'lines') return labs.lineTool ? button(key, tool === 'link', 'Линия (C; зажмите — вид линии)', 'path', () => editor.setTool(tool === 'link' ? 'select' : 'link'), { 'aria-pressed': tool === 'link' }) : null;
-    if (key === 'objects') return labs.objects ? button(key, objecting || variants === 'objects', 'Объекты', 'timeline', () => setVariants(variants === 'objects' ? null : 'objects'), { 'aria-expanded': variants === 'objects' }) : null;
+    if (key === 'objects') return labs.objects ? button(key, objecting || variants === 'objects', 'Объекты', 'package', () => setVariants(variants === 'objects' ? null : 'objects'), { 'aria-expanded': variants === 'objects' }) : null;
     if (key === 'image') return button(key, false, 'Картинка', 'image', () => { pictureAt.current = undefined; filePicker.current?.click(); });
     if (key === 'audio') return button(key, recorderOpen, 'Аудиозаметка', 'microphone', onToggleRecorder, { 'aria-expanded': recorderOpen });
     if (key === 'smile') return button(key, iconsOpen, 'Эмодзи, стикеры и иконки (I)', 'smile', onToggleIcons, { 'aria-expanded': iconsOpen });
