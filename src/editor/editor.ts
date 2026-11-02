@@ -32,6 +32,7 @@ import { holdZoomBox } from '../labs/zoomBox';
 import { holds as mindTidyOn, mindTidyKept, restartMindTidy, resumeMindTidy } from '../labs/tidyMind';
 import { clearComments } from '../labs/comments';
 import { isLocked, labOn, subscribeLabs } from '../labs/labs';
+import { keepMyObject, myObjects } from '../labs/myObjects';
 
 export { DRAW_TOOLS, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -352,22 +353,75 @@ export class Editor {
     if (!comp?.comp) return;
     if (this.editingId) this.stopEditing();
     window.dispatchEvent(new CustomEvent('planx:confirm', { detail: {
-      text: 'Добавить в объекты?', action: 'Добавить', input: this.board.get(id)?.text ?? '', placeholder: 'Название объекта',
+      text: 'Добавить в «Мои объекты»? Он будет в меню «Объекты» на любой доске в этом браузере.', action: 'Добавить', input: this.board.get(id)?.text ?? '', placeholder: 'Название объекта',
       ok: (name?: string) => this.makeObject(id, name?.trim() || 'Объект'),
     } }));
   }
 
-  /** Makes a component one of the board's own objects under `name`, and an instance of it where it stands. */
+  /** Makes a component one of the board's own objects under `name` ("Объекты документа"), kept in this
+   *  browser's "Мои объекты" too, and an instance of it where it stands. */
   makeObject(id: string, name: string): void {
     this.board.beginGesture();
     this.board.update(id, { text: name, obj: true });
+    this.keepObject(id);
     this.addInstance(id);
     this.board.endGesture();
   }
 
-  /** The board's own objects ("Мои объекты"): its components made so. */
+  /** The board's own objects ("Объекты документа"): its components made so, here or by others. */
   objects(): Item[] {
     return this.board.list().filter((i) => i.comp && i.obj);
+  }
+
+  /** A component kept in this browser's "Мои объекты" (a snapshot of it, with all it holds); said so
+   *  when the browser won't hold it. */
+  keepObject(id: string): void {
+    const comp = this.board.get(id);
+    if (!comp?.comp) return;
+    const lib = keepMyObject(comp.text || 'Объект', this.snapshotOf(comp));
+    if (lib) this.board.update(id, { lib });
+    else window.dispatchEvent(new CustomEvent('planx:toast', { detail: { text: 'Не поместилось в «Мои объекты»: в браузере нет места' } }));
+  }
+
+  /** A component (first) with all it holds, and the components of instances in it (and theirs), with
+   *  the links among them, as copied. */
+  private snapshotOf(comp: Item): string {
+    const all = this.board.list(), byId = new Map(all.map((i) => [i.id, i])), got = new Map<string, Item>();
+    const todo = [comp];
+    while (todo.length) {
+      const c = todo.pop()!;
+      for (const i of [c, ...contents(c, byId, all)]) {
+        if (got.has(i.id)) continue;
+        got.set(i.id, i);
+        const of = i.inst ? byId.get(i.inst) : undefined;
+        if (of && !got.has(of.id)) todo.push(of);
+      }
+    }
+    const items = this.withCopies([...got.values()]), ids = new Set(items.map((i) => i.id));
+    return JSON.stringify({ items, links: this.board.linkList().filter((l) => ids.has(l.from) && ids.has(l.to)) });
+  }
+
+  /** One of "Мои объекты" put on the board, as one of the board's own: an instance of its component
+   *  here if the board has it already, or else a copy of the component (put away, with all it holds)
+   *  and an instance of that; its middle at screen point `at` (the screen's middle if not given). */
+  placeMyObject(lib: string, at?: Point): void {
+    const here = this.board.list().find((i) => i.comp && i.lib === lib);
+    if (here) { this.addObject(here.id, at); return; }
+    const kept = myObjects().find((o) => o.id === lib);
+    let data: { items: Item[]; links?: Link[] };
+    try { data = JSON.parse(kept?.data ?? ''); } catch { return; }
+    const main = data.items?.[0];
+    if (!kept || !main?.comp) return;
+    // The component where its instance will stand, put away there.
+    const sp = at ?? { x: this.width / 2, y: this.height / 2 }, c = this.toWorld(sp.x, sp.y);
+    const dx = Math.round(c.x - main.x - main.w / 2), dy = Math.round(c.y - main.y - main.h / 2);
+    const src = data.items.map((i) => ({ ...i, x: i.x + dx, y: i.y + dy }));
+    const links = (data.links ?? []).map((l) => (l.via ? { ...l, via: l.via.map((p) => ({ x: p.x + dx, y: p.y + dy })) } : l));
+    this.board.beginGesture();
+    const { map } = this.insertCopies(src, links, 0, true);
+    for (const i of src) if (i.comp) this.board.update(map.get(i.id)!, { stowed: true, standsIn: undefined, first: undefined, ...(i.id === main.id && { lib, obj: true, text: kept.name }) });
+    this.addObject(map.get(main.id)!, at);
+    this.board.endGesture();
   }
 
   /** An instance of one of the board's own objects, its middle at screen point `at` (the screen's middle
@@ -1129,8 +1183,8 @@ export class Editor {
   }
 
   /** Puts copies of items, and of the links among them, on the board (see copiesOf). */
-  private insertCopies(src: Item[], srcLinks: Link[], offset: number) {
-    const made = copiesOf(src, srcLinks, offset, this.board.maxZ());
+  private insertCopies(src: Item[], srcLinks: Link[], offset: number, whole = false) {
+    const made = copiesOf(src, srcLinks, offset, this.board.maxZ(), whole);
     this.board.transact(() => {
       made.items.forEach((it) => this.board.add(it));
       made.links.forEach((l) => this.board.addLink(l));

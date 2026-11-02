@@ -451,7 +451,7 @@ export function App({ boardId }: { boardId: string }) {
       {note && (
         <div key={note.at} className="pop toast bottom" role="status">
           <span>{note.text}</span>
-          <button className="btn" onClick={() => { note.run(); setNote(null); }}>{note.action}</button>
+          {note.action && <button className="btn" onClick={() => { note.run(); setNote(null); }}>{note.action}</button>}
         </div>
       )}
       <input ref={boardFileInput} type="file" accept=".plnt" hidden onChange={(e) => {

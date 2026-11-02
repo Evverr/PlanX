@@ -132,6 +132,8 @@
 .objects-mine .menu-row span:not(.menu-x) { flex: 1; }
 .objects-mine .menu-x { display: grid; place-items: center; width: var(--e22, 22px); height: var(--e22, 22px); margin-left: var(--s8); border-radius: var(--s6); font-size: var(--s16); line-height: 1; color: var(--muted); }
 .objects-mine .menu-x:hover { background: var(--fmt-hover); color: #E5484D; }
+.objects-mine .menu-take + .menu-x { margin-left: var(--s2); }
+.objects-mine .menu-x.menu-take:hover { color: var(--fmt-on-ink); }
 /* The icon of one of «Мои объекты» dragged onto the board. */
 .obj-ghost { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; }
 .board-menu.context-menu { position: fixed; z-index: 40; }
