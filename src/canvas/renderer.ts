@@ -388,8 +388,9 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
         ctx.roundRect(it.x, it.y, it.w, it.h, CORNER);
         // A frame's fill and outline: the usual, or a colour of its own as a rectangle's (how opaque, too).
         if (!it.comp && it.color !== 'none') {
-          ctx.globalAlpha = it.fo ?? 1;
-          ctx.fillStyle = it.color ? shade(it.color.startsWith('#') ? it.color : FILLS[it.color] ?? theme.frame, theme.dim) : theme.frame;
+          // (Its usual one as it was; given an opacity, the surface's colour seen that far through.)
+          ctx.globalAlpha = it.color || it.fo !== undefined ? fillOpacity(it) : 1;
+          ctx.fillStyle = it.color ? shade(it.color.startsWith('#') ? it.color : FILLS[it.color] ?? theme.frame, theme.dim) : it.fo !== undefined ? theme.surface : theme.frame;
           ctx.fill();
           ctx.globalAlpha = 1;
         }

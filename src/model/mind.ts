@@ -85,9 +85,12 @@ export type Toward = 1 | -1 | 'down' | 'up';
 
 /** Gaps: from a parent to its branches beside it, and between those (one under another); from a
  *  parent to its branches under (or over) it, and between those (side by side). */
-/** How opaque a node's fill is: its own, or by default the central topic 90%, the rest 70%; other
- *  items, theirs or 100%. */
-export const fillOpacity = (it: Item): number => it.fo ?? (it.type === 'mind' ? (it.parent ? 0.7 : 0.9) : 1);
+/** How opaque a node's fill is: its own, or by default the central topic 90%, the rest 70%; a frame
+ *  with no colour of its own 60%; other items, theirs or 100%. */
+export const fillOpacity = (it: Item): number =>
+  it.fo ?? (it.type === 'mind' ? (it.parent ? 0.7 : 0.9) : it.type === 'frame' && !it.color && !it.comp && !it.inst ? FRAME_OPACITY : 1);
+/** A frame's own fill, white seen 60% through (--frame), till given a colour or an opacity of its own. */
+export const FRAME_OPACITY = 0.6;
 
 export const MIND_GAP_X = 60, MIND_GAP_Y = 16, MIND_GAP_DOWN = 48, MIND_GAP_ROW = 24;
 
