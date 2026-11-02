@@ -11,7 +11,8 @@ import { isPoly } from './tools';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
 import { zoomBoxHeld } from '../labs/zoomBox';
-import { nibClick } from '../labs/nib';
+import { nibPress } from '../labs/nib';
+import { nodeEditing, pressNode } from '../labs/paths';
 import { swapKind } from '../labs/swap';
 import { openLink } from '../labs/textLink';
 import { startComment } from '../labs/comments';
@@ -164,7 +165,7 @@ export function press(ed: Editor, e: PointerEvent): void {
       return;
     // "Перо" (src/labs): a corner where clicked.
     case 'nib':
-      nibClick(ed, w, sp, e.shiftKey);
+      nibPress(ed, w, sp, e.shiftKey);
       return;
     case 'eraser':
       board.beginGesture();
@@ -174,6 +175,8 @@ export function press(ed: Editor, e: PointerEvent): void {
   }
 
   // Select tool.
+  // A path's nodes being changed ("Перо", src/labs): a corner or handle taken, or, elsewhere, that's over.
+  if (nodeEditing() && e.button === 0 && pressNode(ed, sp, w)) return;
   // Z held: a box from anywhere, to zoom to ("Зум рамкой", src/labs).
   if (zoomBoxHeld() && e.button === 0) {
     ed.gesture = { type: 'marquee', start: w, base: new Set(ed.selection), rect: null, zoom: true };

@@ -4,6 +4,7 @@ import type { Editor } from './editor';
 import { isLocked } from '../labs/labs';
 import { holdZoomBox } from '../labs/zoomBox';
 import { cancelNib, finishNib, nibPoints, undoNibCorner } from '../labs/nib';
+import { nodeEditing, stopNodeEdit } from '../labs/paths';
 
 /** Keys a tool is picked with. */
 const TOOL_KEYS: Record<string, Tool> = { KeyV: 'select', KeyH: 'hand', KeyN: 'sticky', KeyS: 'sticky', KeyT: 'text', KeyR: 'rect', KeyO: 'ellipse', KeyC: 'link', KeyL: 'link', KeyF: 'frame', KeyP: 'pen', KeyM: 'marker', KeyE: 'eraser' };
@@ -20,6 +21,8 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
     if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); undoNibCorner(ed); return; }
     if (e.key === 'Escape') { cancelNib(ed); return; }
   }
+  // A path's nodes being changed: Esc or Enter, done.
+  if (nodeEditing() && !mod && (e.key === 'Escape' || e.key === 'Enter')) { e.preventDefault(); stopNodeEdit(ed); return; }
   if (mod) {
     switch (e.code) {
       case 'KeyZ': e.preventDefault(); if (e.shiftKey) ed.redo(); else ed.undo(); return;

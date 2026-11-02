@@ -1,6 +1,6 @@
 import type { Item, Link, Side } from '../model/types';
 import { DEFAULTS, ROTATABLE, textPad, textPadY, uid } from '../model/types';
-import type { Point, Rect } from '../canvas/geometry';
+import type { PathNode, Point, Rect } from '../canvas/geometry';
 import { angleOf, boxOf, center, hitItem, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedFrom, toLocal, turn } from '../canvas/geometry';
 import { fitHeight, itemTextHeight, mindSize } from '../canvas/text';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, newTable, withScale, type TableLine } from '../model/table';
@@ -15,6 +15,8 @@ import { MIND_TOPIC, type PenTool } from './tools';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
 import { eraseArea, eraserStyle } from '../labs/eraseArea';
+import { nibDrag, nibRelease } from '../labs/nib';
+import { editablePath, moveNode, startNodeEdit } from '../labs/paths';
 import { openSwap, swapKind } from '../labs/swap';
 import { pushedBelow } from '../labs/textPush';
 import { dayKey, dayOf, halfDay, TL_PAD, tlDays, tlStart } from '../canvas/timeline';
@@ -37,7 +39,10 @@ export type Gesture =
   | { type: 'mindMove'; id: string; from: Point; to: Point; target: string | null }
   | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null; zoom?: boolean }
   | { type: 'draw'; tool: PenTool; pts: Point[] }
-  | { type: 'erase'; last: Point };
+  | { type: 'erase'; last: Point }
+  // "Перо" (src/labs): a corner being pressed (its handles dragged out); a node of a path being changed.
+  | { type: 'nib' }
+  | { type: 'pathNode'; id: string; index: number; part: 'p' | 'i' | 'o'; start: Point; nodes: PathNode[] };
 
 /** How near (in screen pixels) an edge or middle has to come to another's to line up with it. */
 const GUIDE_SNAP = 6;
@@ -48,6 +53,13 @@ const ROTATE_SNAP = 3;
 export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, w: Point): void {
   const board = ed.board;
   switch (g.type) {
+    case 'nib':
+      nibDrag(ed, w, sp);
+      return;
+    case 'pathNode':
+      moveNode(ed, g, w, e.altKey);
+      ed.requestRender();
+      return;
     case 'pinch': {
       const [p, q] = [...ed.pointers.values()];
       if (!q) return;
@@ -289,6 +301,12 @@ const onMindText = (it: Item, w: Point): boolean => {
 export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
   const board = ed.board;
   switch (g.type) {
+    case 'nib':
+      nibRelease(ed);
+      return;
+    case 'pathNode':
+      board.endGesture();
+      return;
     case 'pinch':
       return;
     case 'pan':
@@ -305,6 +323,8 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         noteMindMoved(ed, [...ed.selection]);
       } else if (g.dbl) {
         const it = board.get(g.id);
+        // A path drawn with "Перо" (src/labs): its nodes to change.
+        if (labOn('nib') && editablePath(it)) { startNodeEdit(ed, it.id); return; }
         // "Замена двойным кликом": an emoji, an icon or a shape shows its neighbours, a shape opening for
         // typing too (unless that was the instance it's in being entered).
         if (swapKind(it)) {
@@ -432,7 +452,7 @@ export function cancelGesture(ed: Editor): void {
   const g = ed.gesture;
   if (!g) return;
   if (g.type === 'create') { ed.board.remove([g.id]); ed.board.endGesture(); }
-  if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'rotate' || g.type === 'erase' || g.type === 'tableLine' || g.type === 'linkNode' || g.type === 'linkStretch') ed.board.endGesture();
+  if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'rotate' || g.type === 'erase' || g.type === 'tableLine' || g.type === 'linkNode' || g.type === 'linkStretch' || g.type === 'pathNode') ed.board.endGesture();
   ed.gesture = null;
   ed.setMoving(false);
   ed.requestRender();
