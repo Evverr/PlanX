@@ -825,6 +825,15 @@ export const checks = {
       const d = pts.map((c) => Math.hypot(c.x - W, c.y - H));
       return Math.max(0, ...d.slice(1).map((v, i) => v - d[i])); })()`);
     expect(off < 0.5, `only nearer and nearer (once ${off.toFixed(1)}px further)`).toBe(true);
+    // Z held, a double click even on the sticker: all of the board in view.
+    await sleep(500);
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: -600, y: -600, z: 3 }; e.camChanged(); })()`);
+    const on = await p.ev(`(() => { const s = planx.editor.toScreen({ x: 375, y: 375 }); return [s.x, s.y]; })()`);
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'z', code: 'KeyZ', windowsVirtualKeyCode: 90 });
+    await p.click(on); await p.click(on);
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'z', code: 'KeyZ', windowsVirtualKeyCode: 90 });
+    await sleep(600);
+    expect(await p.ev(`(() => { const e = planx.editor, a = e.toScreen({ x: 300, y: 300 }), b = e.toScreen({ x: 450, y: 450 }); return a.x > 0 && a.y > 0 && b.x < e.canvas.clientWidth && b.y < e.canvas.clientHeight && e.cam.z < 3 && e.selection.size === 0; })()`), 'all in view, nothing picked').toBe(true);
   },
 
   async 'the board cleared takes its comments too; one Ctrl+Z brings both back'(p) {

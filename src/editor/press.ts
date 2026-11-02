@@ -93,7 +93,9 @@ export function press(ed: Editor, e: PointerEvent): void {
   const onControl = (!!picked && !ed.editingId && !isLocked(picked) && (onHandle(ed, picked, w) || onTopLeft(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!sideAt(ed, picked, w))) || (!!ed.plusNode() && !!plusAt(ed, ed.plusNode()!, w))
     || !!foldBadgeAt(ed, w) || !!tickAt(ed, w) || !!objectArrowAt(ed, w);
   const empty = ed.tool === 'select' && e.button === 0 && !ed.spaceDown && !e.shiftKey && !hit && !link && !onControl
-    && !grabbableLine(ed, w, hit, e.pointerType) && !ed.editingId;
+    && !grabbableLine(ed, w, hit, e.pointerType) && !ed.editingId
+    // With Z held ("Зум рамкой"), anywhere is as the empty board.
+    || (ed.tool === 'select' && e.button === 0 && zoomBoxHeld());
   // Pressed twice on the empty board: everything on it comes into view, as with the "show all" button.
   if (empty) {
     const now = performance.now(), last = ed.lastEmpty;
