@@ -8,13 +8,13 @@ export type PanelIconName =
   | 'moon' | 'sun' | 'zoom-in' | 'zoom-out' | 'screen' | 'question-l' | 'undo-on' | 'redo-on'
   | 'to-front' | 'to-back' | 'duplicate' | 'trashcan' | 'map' | 'pen' | 'highlighter' | 'eraser'
   | 'align-left' | 'align-center' | 'align-right' | 'bulleted-list' | 'numbered-list' | 'question' | 'ellipse' | 'frame' | 'microphone' | 'triangle' | 'rhombus' | 'pentagon' | 'star' | 'plus' | 'cross' | 'plus-s' | 'minus-s' | 'branch' | 'more' | 'palette' | 'node-pool' | 'more-vertical' | 'chevron-down' | 'burger'
-  | 'download' | 'file' | 'apps' | 'hexagon' | 'parallelogram' | 'trapezoid' | 'arrow' | 'shape-cross' | 'settings' | 'component' | 'component-off' | 'line-straight' | 'line-elbow' | 'line-curve' | 'timer' | 'magic-wand' | 'meeting-point' | 'keyboard' | 'lock-l' | 'unlock-l' | 'like' | 'timeline' | 'cloud-download' | 'path' | 'align-items-left' | 'align-items-center' | 'align-items-right' | 'align-items-top' | 'align-items-middle' | 'align-items-bottom';
+  | 'download' | 'file' | 'apps' | 'hexagon' | 'parallelogram' | 'trapezoid' | 'arrow' | 'shape-cross' | 'settings' | 'component' | 'component-off' | 'line-straight' | 'line-elbow' | 'line-curve' | 'timer' | 'magic-wand' | 'meeting-point' | 'keyboard' | 'lock-l' | 'unlock-l' | 'like' | 'timeline' | 'package' | 'cloud-download' | 'path' | 'align-items-left' | 'align-items-center' | 'align-items-right' | 'align-items-top' | 'align-items-middle' | 'align-items-bottom';
 
 /** These come from the board icon set (assets/icons), drawn on a 24 grid; they're shown at 30 like the rest. */
 const GRID24 = new Set<PanelIconName>(['list', 'moon', 'sun', 'zoom-in', 'zoom-out', 'screen', 'question-l', 'undo-on', 'redo-on',
   'to-front', 'to-back', 'duplicate', 'trashcan', 'map', 'pen', 'highlighter', 'eraser',
   'align-left', 'align-center', 'align-right', 'bulleted-list', 'numbered-list', 'question', 'ellipse', 'frame', 'microphone', 'triangle', 'rhombus', 'pentagon', 'star', 'plus', 'cross', 'plus-s', 'minus-s', 'branch', 'more', 'palette', 'node-pool', 'more-vertical', 'chevron-down', 'burger',
-  'download', 'file', 'apps', 'hexagon', 'parallelogram', 'trapezoid', 'arrow', 'shape-cross', 'settings', 'component', 'component-off', 'line-straight', 'line-elbow', 'line-curve', 'timer', 'magic-wand', 'meeting-point', 'keyboard', 'lock-l', 'unlock-l', 'like', 'timeline', 'cloud-download', 'path',
+  'download', 'file', 'apps', 'hexagon', 'parallelogram', 'trapezoid', 'arrow', 'shape-cross', 'settings', 'component', 'component-off', 'line-straight', 'line-elbow', 'line-curve', 'timer', 'magic-wand', 'meeting-point', 'keyboard', 'lock-l', 'unlock-l', 'like', 'timeline', 'package', 'cloud-download', 'path',
   'align-items-left', 'align-items-center', 'align-items-right', 'align-items-top', 'align-items-middle', 'align-items-bottom']);
 
 /** The icon is a mask over a plain fill, so CSS picks its colour: the panel's ink, blue when pressed. */
