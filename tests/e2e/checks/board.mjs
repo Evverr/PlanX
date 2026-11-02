@@ -480,6 +480,7 @@ export const checks = {
       b.add(e.newItem('frame', 200, 200, { id: 'f', w: 300, h: 200, text: 'Фрейм', members: [] })); e.setSelection(['f']);
       e.setColor('blue'); e.setStroke('red'); })()`);
     await sleep(150);
+    expect(await p.ev(`(async () => { const m = await import('/src/model/mind.ts'); return m.fillOpacity({ ...planx.board.get('f'), color: undefined }); })()`), 'its usual fill shown as it is, 60%').toBe(0.6);
     expect(await p.ev(`planx.board.get('f').color + ' ' + planx.board.get('f').sc`), 'its fill and outline').toBe('blue red');
     const at = await p.ev(`(() => { const s = planx.editor.toScreen({ x: 350, y: 300 }); return [s.x, s.y]; })()`);
     await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: at[0], y: at[1], button: 'right', buttons: 2, clickCount: 1 });
