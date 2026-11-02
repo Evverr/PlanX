@@ -30,6 +30,14 @@ export function resizedAt(it: Turned, w: number, h: number): Point {
   return { x: c.x - w / 2, y: c.y - h / 2 };
 }
 
+/** Where a (turned) item resized to w × h goes with its own top left corner moved `dl` along its top and
+ *  `dt` down its side (stretched by its left or top side, the other side staying put). */
+export function resizedFrom(it: Turned, w: number, h: number, dl: number, dt: number): Point {
+  const a = angleOf(it), s = turn({ x: dl, y: dt }, { x: 0, y: 0 }, a), tl0 = fromLocal(it, it), tl = { x: tl0.x + s.x, y: tl0.y + s.y };
+  const c = turn({ x: tl.x + w / 2, y: tl.y + h / 2 }, tl, a);
+  return { x: c.x - w / 2, y: c.y - h / 2 };
+}
+
 /** The box square to the board around an item, turned or not. */
 export function boxOf(it: Turned): Rect {
   const a = angleOf(it);

@@ -491,6 +491,19 @@ export const checks = {
     expect(await p.ev(`[...document.querySelectorAll('.params-pop .params-title, .params-pop .params-label')].map((e) => e.textContent).slice(0, 3).join(' | ')`), 'its parameters').toBe('Фрейм «Фрейм» | Заливка | Обводка');
   },
 
+  async 'an item is stretched by its left and top sides too, the other side staying put'(p) {
+    for (const type of ['rect', 'frame']) {
+      await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); b.replaceAll([], []);
+        b.add(e.newItem('${type}', 300, 300, { id: 'r', w: 200, h: 120, members: [] })); e.setSelection(['r']); })()`);
+      await sleep(150);
+      const at = (x, y) => p.ev(`(() => { const s = planx.editor.toScreen({ x: ${'${x}'}, y: ${'${y}'} }); return [s.x, s.y]; })()`.replace('${x}', x).replace('${y}', y));
+      await p.drag(await at(300, 330), await at(260, 330));
+      await p.drag(await at(320, 300), await at(320, 270));
+      const r = await p.ev(`(() => { const r = planx.board.get('r'); return [r.x, r.y, r.x + r.w, r.y + r.h].join(); })()`);
+      expect(r, `${type}: left and top out, right and bottom where they were`).toBe('260,270,500,420');
+    }
+  },
+
   async 'Ctrl+↑ and Ctrl+↓ take what is picked a layer up or down'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board;
       ['a', 'b', 'c'].forEach((id, i) => b.add(e.newItem('sticky', 100 + i * 20, 100, { id, z: i + 1 }))); e.setSelection(['a']); })()`);

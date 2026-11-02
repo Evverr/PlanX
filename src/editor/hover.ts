@@ -27,14 +27,17 @@ export function onHandle(ed: Editor, it: Item, w: Point): boolean {
  *  ('w'), its bottom down ('h'), a timeline's left side to start it on another day ('l'); the corner
  *  (onHandle) does both. Not for what keeps its proportions or sizes itself, nor what's locked. An
  *  instance by its contents. */
-export function sideAt(ed: Editor, it: Item, w: Point): 'w' | 'h' | 'l' | null {
+export function sideAt(ed: Editor, it: Item, w: Point): 'w' | 'h' | 'l' | 't' | null {
   if (it.fold || it.host || ed.editingId || ['mind', 'icon', 'emoji', 'ink', 'audio', 'image'].includes(it.type)) return null;
   const b = it.inst ? instanceBounds(it, ed.board.list()) : it, p = it.inst ? w : toLocal(it, w);
   const near = ed.reach(4), corner = ed.reach(10);
   const along = (v: number, from: number, size: number) => v >= from + corner && v <= from + size - corner;
   if (Math.abs(p.x - (b.x + b.w)) <= near && along(p.y, b.y, b.h)) return 'w';
-  if (it.tl && Math.abs(p.x - b.x) <= near && along(p.y, b.y, b.h)) return 'l';
   if (it.type !== 'text' && Math.abs(p.y - (b.y + b.h)) <= near && along(p.x, b.x, b.w)) return 'h';
+  // The left and top sides too, the other side staying put (an instance stretches from its corner only).
+  if (it.inst) return null;
+  if (Math.abs(p.x - b.x) <= near && along(p.y, b.y, b.h)) return 'l';
+  if (it.type !== 'text' && Math.abs(p.y - b.y) <= near && along(p.x, b.x, b.w)) return 't';
   return null;
 }
 
@@ -183,7 +186,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   else if (linkHandleAt(ed, w)) cursor = 'move';
   else if (dot) cursor = 'crosshair';
   else if (single && onHandle(ed, single, w)) cursor = 'nwse-resize';
-  else if (single && sideAt(ed, single, w)) cursor = sideAt(ed, single, w) === 'h' ? 'ns-resize' : 'ew-resize';
+  else if (single && sideAt(ed, single, w)) cursor = sideAt(ed, single, w) === 'h' || sideAt(ed, single, w) === 't' ? 'ns-resize' : 'ew-resize';
   else if (single && onRotate(ed, single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);
   else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
   else if (linkEndAt(ed, w)) cursor = 'grab';
