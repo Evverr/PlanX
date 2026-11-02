@@ -18,6 +18,8 @@ export interface PenSet { presets: InkStyle[]; active: number }
 export type Pens = Record<PenTool, PenSet>;
 
 export const INK_SIZES: Record<PenTool, number[]> = { pen: [2, 4, 8, 14], marker: [12, 20, 32, 48] };
+/** How thin and how thick each pen's line can be set. */
+export const INK_RANGE: Record<PenTool, [number, number]> = { pen: [1, 24], marker: [6, 64] };
 export const DEFAULT_PENS: Pens = {
   pen: { presets: [{ color: 'ink', size: 2 }, { color: 'red', size: 4 }, { color: 'blue', size: 8 }], active: 0 },
   marker: { presets: [{ color: 'yellow', size: 20 }, { color: 'green', size: 20 }, { color: 'pink', size: 20 }], active: 0 },

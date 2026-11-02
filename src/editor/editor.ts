@@ -35,7 +35,7 @@ import { isLocked, labOn, subscribeLabs } from '../labs/labs';
 import { keepMyObject, myObjects } from '../labs/myObjects';
 import { finishNib, nibPoints } from '../labs/nib';
 
-export { DRAW_TOOLS, INK_SIZES, SHAPE_TOOLS } from './tools';
+export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
 
 /** How the last link was made to run, kept per browser: new links run the same way. */
@@ -1585,7 +1585,8 @@ export class Editor {
     this.pointerAt = sp;
     this.sendCursor(w);
     updateCursor(this, w, e.altKey);
-    if (nibPoints()) this.requestRender();
+    // ("Перо" draws on to the pointer, the eraser's circle follows it.)
+    if (nibPoints() || this.tool === 'eraser') this.requestRender();
     if (!this.pointers.has(e.pointerId) || !this.gesture) return;
     this.pointers.set(e.pointerId, sp);
     moveGesture(this, this.gesture, e, sp, w);

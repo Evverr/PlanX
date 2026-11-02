@@ -127,6 +127,21 @@ export const checks = {
     await p.ev(`localStorage.removeItem('planx-last-draw')`);
   },
 
+  async '"Ластик кружком" takes off only what is under it, the rest left as lines'(p) {
+    await p.ev(`(() => { localStorage.removeItem('planx-eraser'); const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('pen'); })()`);
+    await p.drag([300, 300], [700, 300]);
+    await sleep(100);
+    expect(await p.ev(`planx.board.list().filter((i) => i.type === 'ink').length`), 'a line').toBe(1);
+    await p.ev(`planx.editor.setTool('eraser')`);
+    await p.drag([500, 260], [500, 340]);
+    await sleep(100);
+    const left = await p.ev(`planx.board.list().filter((i) => i.type === 'ink').map((i) => i.x < 500 ? 'left' : 'right').sort().join()`);
+    expect(left, 'cut in two where the eraser went').toBe('left,right');
+    // Undone in one step: the line whole again.
+    await p.key('z', 'KeyZ', 90, 4);
+    expect(await p.ev(`planx.board.list().filter((i) => i.type === 'ink').length`), 'one undo step').toBe(1);
+  },
+
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {
     const ids = await stickers(p);
     await select(p, ids.a);

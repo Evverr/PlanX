@@ -18,6 +18,7 @@ import { SwapPop } from './SwapPop';
 import { ContextMenu } from './ContextMenu';
 import { CommentsLayer } from './CommentsLayer';
 import { drawNib } from './nib';
+import { drawEraser, eraserStyle, subscribeEraser } from './eraseArea';
 import { drawGroup, endGroupScale, groupScaling, moveGroupScale, onGroupHandle, startGroupScale } from './multi';
 import './labs.css';
 
@@ -51,12 +52,19 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
   // Their drawing over the board, redrawn whenever one is switched on or off (the editor asks about
   // locks as it goes, so its handles change too).
   useEffect(() => {
-    const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) { drawTidy(ctx, editor); drawMindTidy(ctx, editor); } drawGroup(ctx, editor); drawNib(ctx, editor); return more; };
+    const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) { drawTidy(ctx, editor); drawMindTidy(ctx, editor); } drawGroup(ctx, editor); drawNib(ctx, editor); if (labOn('softEraser')) drawEraser(ctx, editor); return more; };
     editor.overlays.add(draw);
     editor.requestRender();
     const off = subscribeLabs(() => { editor.emit(); editor.requestRender(); });
     return () => { editor.overlays.delete(draw); off(); };
   }, [editor]);
+
+  // "Ластик кружком": the circle is the eraser's pointer.
+  useEffect(() => {
+    const set = () => editor.canvas?.classList.toggle('soft-eraser', labs.softEraser && !eraserStyle().whole);
+    set();
+    return subscribeEraser(set);
+  }, [editor, labs.softEraser]);
 
   // A feature switched off takes what it had open with it.
   useEffect(() => {
