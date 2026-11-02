@@ -23,6 +23,14 @@ export function onHandle(ed: Editor, it: Item, w: Point): boolean {
   return pointInRect(it.inst ? w : toLocal(it, w), { x: b.x + b.w + off - hs / 2, y: b.y + b.h + off - hs / 2, w: hs, h: hs });
 }
 
+/** Whether the point is on the picked item's top left corner: stretched from there as by its handle
+ *  (nothing drawn there, the pointer says so). */
+export function onTopLeft(ed: Editor, it: Item, w: Point): boolean {
+  if (it.type === 'mind' || it.fold || it.host || it.inst || ed.editingId) return false;
+  const hs = ed.reach((HANDLE + 6) / 2) * 2, off = 3 / ed.cam.z;
+  return pointInRect(toLocal(it, w), { x: it.x - off - hs / 2, y: it.y - off - hs / 2, w: hs, h: hs });
+}
+
 /** Which side of the picked item the point is on, to stretch it one way only: its right side across
  *  ('w'), its bottom down ('h'), a timeline's left side to start it on another day ('l'); the corner
  *  (onHandle) does both. Not for what keeps its proportions or sizes itself, nor what's locked. An
@@ -185,7 +193,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (linkHandleAt(ed, w)) cursor = 'move';
   else if (dot) cursor = 'crosshair';
-  else if (single && onHandle(ed, single, w)) cursor = 'nwse-resize';
+  else if (single && (onHandle(ed, single, w) || onTopLeft(ed, single, w))) cursor = 'nwse-resize';
   else if (single && sideAt(ed, single, w)) cursor = sideAt(ed, single, w) === 'h' || sideAt(ed, single, w) === 't' ? 'ns-resize' : 'ew-resize';
   else if (single && onRotate(ed, single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);
   else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
