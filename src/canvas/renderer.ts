@@ -22,6 +22,9 @@ import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } f
 
 export interface Camera { x: number; y: number; z: number }
 
+/** The component icon before an instance's or a component's name (15px). */
+const GLYPH = 18;
+
 export interface Theme {
   bg: string; link: string; ink: string; muted: string; line: string;
   /** The panels' icon colour, for the buttons drawn on the board. */
@@ -376,10 +379,10 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
         ctx.fillStyle = COMPONENT_COLOR;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'bottom';
-        // 2 above the contents; the diamond solid for its component's first instance, and under the pointer.
-        const y = b.y - 2, gap = ctx.measureText('◇ ').width, comp = s.get(it.inst);
+        // 2 above the contents; the component icon solid for its component's first instance, and under the pointer.
+        const y = b.y - 2, gap = GLYPH + 3, comp = s.get(it.inst);
         const first = !!comp && firstInstance(comp, s.items)?.id === it.id;
-        ctx.fillText(first || s.hotPlus === `glyph:${it.id}` ? '◆' : '◇', b.x, y);
+        drawIcon(ctx, first || s.hotPlus === `glyph:${it.id}` ? 'component-solid' : 'component', b.x - 2, y - GLYPH + 1, GLYPH, COMPONENT_COLOR);
         ctx.fillText(it.text ?? '', b.x + gap, y, Math.max(0, b.w - gap));
         break;
       }
@@ -413,7 +416,9 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
         ctx.fillStyle = kin ? COMPONENT_COLOR : theme.muted;
         ctx.textAlign = 'left';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(kin ? `◆ ${it.text ?? ''}` : it.text!, it.x + 2, it.y - 8, it.w);
+        // A component's name after its icon, solid.
+        if (kin) drawIcon(ctx, 'component-solid', it.x, it.y - 7 - GLYPH, GLYPH, COMPONENT_COLOR);
+        ctx.fillText(kin ? it.text ?? '' : it.text!, it.x + (kin ? GLYPH + 5 : 2), it.y - 8, it.w - (kin ? GLYPH + 3 : 0));
       }
       break;
     }
@@ -1126,9 +1131,9 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
-    // In it, the set's "Посылка" in white.
+    // In it, the component icon in white.
     const k = q.r * 1.6;
-    drawIcon(ctx, 'package', q.x - k / 2, q.y - k / 2, k, '#fff');
+    drawIcon(ctx, 'component', q.x - k / 2, q.y - k / 2, k, '#fff');
   }
   // A link picked alone: its nodes, and where new ones can be pulled out (the middles of its stretches).
   const pickedLink = s.selection.size === 1 ? s.links.find((l) => s.selection.has(l.id)) : undefined, ps = pickedLink && linkShape(pickedLink, s.get);

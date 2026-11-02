@@ -358,7 +358,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
           </div>
         ) : undefined,
         // An instance can be cut loose from its component.
-        detach: items.some((i) => i.inst) ? btn('detach', 'Отвязать от компонента (Ctrl+Alt+B)', () => editor.detachInstances()) : undefined,
+        detach: items.some((i) => i.inst) ? btn('component-off', 'Отвязать от компонента (Ctrl+Alt+B)', () => editor.detachInstances()) : undefined,
         front: items.length > 0 ? btn('to-front', 'На передний план', () => editor.bringToFront()) : undefined,
         back: items.length > 0 ? btn('to-back', 'На задний план', () => editor.sendToBack()) : undefined,
         duplicate: items.length > 0 ? btn('duplicate', 'Дублировать (Ctrl+D)', () => editor.duplicate()) : undefined,
