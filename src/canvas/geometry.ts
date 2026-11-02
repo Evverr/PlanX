@@ -87,7 +87,8 @@ const POLY: Record<PolyShape, Point[]> = (() => {
 
 /** A polygon item's corners on the board. */
 export const polyPoints = (it: Item): Point[] =>
-  (POLY[it.shape ?? 'triangle'] ?? POLY.triangle).map((p) => ({ x: it.x + p.x * it.w, y: it.y + p.y * it.h }));
+  (it.vx && !it.shape ? Array.from({ length: it.vx.length >> 1 }, (_, i) => ({ x: it.vx![i * 2], y: it.vx![i * 2 + 1] })) : POLY[it.shape ?? 'triangle'] ?? POLY.triangle)
+    .map((p) => ({ x: it.x + p.x * it.w, y: it.y + p.y * it.h }));
 
 export function pointInPolygon(p: Point, pts: Point[]): boolean {
   let inside = false;

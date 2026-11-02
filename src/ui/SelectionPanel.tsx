@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
-import { fillable, FILLS, ICON_COLORS, INK_COLORS, strokable as canStroke, STROKE_COLORS, TEXT_COLORS } from '../model/types';
+import { fillable, FILLS, ICON_COLORS, MARKER_OPACITY, INK_COLORS, strokable as canStroke, STROKE_COLORS, TEXT_COLORS } from '../model/types';
 import { fillOpacity, MIND_PALETTE, mindDepth } from '../model/mind';
 import { colsOf, rowsOf } from '../model/table';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
@@ -194,7 +194,8 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
       {inks.length > 0 && <>
         <Swatches editor={editor} swatches={Object.entries(INK_COLORS).map(([k, v]) => [k, v || 'var(--ink)'])} current={inkColor}
           onPick={(c) => editor.setInkColor(c)} label="Цвет рисунка" noneLabel="" />
-        <OpacitySlider editor={editor} value={seeThrough(inks)} onChange={(v) => editor.setOpacity('icon', v)} />
+        {/* How opaque the lines really are (a highlighter's see-through by default). */}
+        <OpacitySlider editor={editor} value={Number(same(inks.map((i) => String(i.fo ?? (i.hl ? MARKER_OPACITY : 1)))) ?? 1)} onChange={(v) => editor.setOpacity('icon', v)} />
       </>}
     </Palette>
   );

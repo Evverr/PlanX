@@ -17,6 +17,7 @@ import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTime
 import { SwapPop } from './SwapPop';
 import { ContextMenu } from './ContextMenu';
 import { CommentsLayer } from './CommentsLayer';
+import { drawNib } from './nib';
 import { drawGroup, endGroupScale, groupScaling, moveGroupScale, onGroupHandle, startGroupScale } from './multi';
 import './labs.css';
 
@@ -50,7 +51,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
   // Their drawing over the board, redrawn whenever one is switched on or off (the editor asks about
   // locks as it goes, so its handles change too).
   useEffect(() => {
-    const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) { drawTidy(ctx, editor); drawMindTidy(ctx, editor); } drawGroup(ctx, editor); return more; };
+    const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) { drawTidy(ctx, editor); drawMindTidy(ctx, editor); } drawGroup(ctx, editor); drawNib(ctx, editor); return more; };
     editor.overlays.add(draw);
     editor.requestRender();
     const off = subscribeLabs(() => { editor.emit(); editor.requestRender(); });
