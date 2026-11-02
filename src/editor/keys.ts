@@ -3,6 +3,7 @@ import { readPictures } from '../canvas/pictures';
 import type { Editor } from './editor';
 import { isLocked } from '../labs/labs';
 import { holdZoomBox } from '../labs/zoomBox';
+import { cancelNib, finishNib, nibPoints, undoNibCorner } from '../labs/nib';
 
 /** Keys a tool is picked with. */
 const TOOL_KEYS: Record<string, Tool> = { KeyV: 'select', KeyH: 'hand', KeyN: 'sticky', KeyS: 'sticky', KeyT: 'text', KeyR: 'rect', KeyO: 'ellipse', KeyC: 'link', KeyL: 'link', KeyF: 'frame', KeyP: 'pen', KeyM: 'marker', KeyE: 'eraser' };
@@ -13,6 +14,12 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
   const mod = e.ctrlKey || e.metaKey;
   if (e.code === 'Space') { e.preventDefault(); ed.setSpace(true); return; }
+  // A figure being drawn with "Перо" (src/labs): Enter leaves it a line, Backspace takes its last corner off, Esc lets it go.
+  if (nibPoints() && !mod) {
+    if (e.key === 'Enter') { e.preventDefault(); finishNib(ed); return; }
+    if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); undoNibCorner(ed); return; }
+    if (e.key === 'Escape') { cancelNib(ed); return; }
+  }
   if (mod) {
     switch (e.code) {
       case 'KeyZ': e.preventDefault(); if (e.shiftKey) ed.redo(); else ed.undo(); return;

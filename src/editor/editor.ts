@@ -33,6 +33,7 @@ import { holds as mindTidyOn, mindTidyKept, restartMindTidy, resumeMindTidy } fr
 import { clearComments } from '../labs/comments';
 import { isLocked, labOn, subscribeLabs } from '../labs/labs';
 import { keepMyObject, myObjects } from '../labs/myObjects';
+import { finishNib, nibPoints } from '../labs/nib';
 
 export { DRAW_TOOLS, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -152,8 +153,8 @@ export class Editor {
   private height = 0;
   private dpr = 1;
   private clipboard: string | null = null;
-  /** Where the pointer is on the canvas (on screen), for Ctrl+V to paste there; null once it's left. */
-  private pointerAt: Point | null = null;
+  /** Where the pointer is on the canvas (on screen), for Ctrl+V to paste there (and "Перо"); null once it's left. */
+  pointerAt: Point | null = null;
   /** The last Ctrl+V: where, and how many times there in a row (each a step further). */
   private pasted: { x: number; y: number; n: number } | null = null;
   private raf = 0;
@@ -651,9 +652,28 @@ export class Editor {
   /* ---------- tools & selection ---------- */
 
   setTool(tool: Tool): void {
+    // A figure being drawn with "Перо" is done as a line, another tool taken.
+    if (tool !== 'nib' && nibPoints()) finishNib(this);
     this.tool = tool;
     if (this.canvas) this.canvas.dataset.tool = tool;
     this.emit();
+  }
+
+  /** "Перо" (src/labs): a figure through these board points, a polygon of its own in their box. */
+  addFigure(pts: Point[]): void {
+    const x1 = Math.min(...pts.map((p) => p.x)), y1 = Math.min(...pts.map((p) => p.y));
+    const w = Math.max(1, Math.max(...pts.map((p) => p.x)) - x1), h = Math.max(1, Math.max(...pts.map((p) => p.y)) - y1);
+    const r = (v: number) => Math.round(v * 10000) / 10000;
+    this.addItem(this.newItem('polygon', Math.round(x1), Math.round(y1), { w: Math.round(w), h: Math.round(h), shape: undefined, vx: pts.flatMap((p) => [r((p.x - x1) / w), r((p.y - y1) / h)]) }));
+  }
+
+  /** "Перо": a line through these board points, straight between them, as the pen ("Ручка") draws. */
+  addLine(pts: Point[]): void {
+    const style = this.penStyle('pen'), sw = style.size / this.cam.z;
+    const x = Math.floor(Math.min(...pts.map((p) => p.x)) - sw / 2), y = Math.floor(Math.min(...pts.map((p) => p.y)) - sw / 2);
+    const w = Math.ceil(Math.max(...pts.map((p) => p.x)) + sw / 2) - x, h = Math.ceil(Math.max(...pts.map((p) => p.y)) + sw / 2) - y;
+    const r = (v: number) => Math.round(v * 10) / 10;
+    this.addItem(this.newItem('ink', x, y, { w, h, iw: w, sw: r(sw), color: style.color, fo: style.op, sharp: true, pts: pts.flatMap((p) => [r(p.x - x), r(p.y - y)]) }));
   }
 
   penStyle(tool: PenTool): InkStyle {
@@ -843,7 +863,8 @@ export class Editor {
       for (const it of this.selectedItems()) {
         if (of === 'text' && HAS_FONT.includes(it.type)) this.board.update(it.id, { to: v });
         if (of === 'mark' && HAS_FONT.includes(it.type)) this.board.update(it.id, { mo: Math.max(0, Math.round(value * 100) / 100) });
-        if (of === 'icon' && (it.type === 'icon' || it.type === 'ink')) this.board.update(it.id, { fo: v });
+        // (A highlighter's line is see-through by default: fully opaque is kept as such.)
+        if (of === 'icon' && (it.type === 'icon' || it.type === 'ink')) this.board.update(it.id, { fo: it.hl ? Math.max(0, Math.round(value * 100) / 100) : v });
         if (of === 'fill' && fillable(it)) this.board.update(it.id, { fo: it.type === 'mind' || it.type === 'frame' ? Math.max(0, Math.round(value * 100) / 100) : v });
         if (of === 'stroke' && (strokable(it) || it.type === 'mind')) this.board.update(it.id, { so: v });
       }
@@ -1557,6 +1578,7 @@ export class Editor {
     this.pointerAt = sp;
     this.sendCursor(w);
     updateCursor(this, w, e.altKey);
+    if (nibPoints()) this.requestRender();
     if (!this.pointers.has(e.pointerId) || !this.gesture) return;
     this.pointers.set(e.pointerId, sp);
     moveGesture(this, this.gesture, e, sp, w);

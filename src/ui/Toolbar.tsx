@@ -9,7 +9,7 @@ import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { isSeparator, useSortable } from './sortable';
 import { ToolPreview } from './ToolPreview';
 import { readText, writeText } from '../storage';
-import { useLabs } from '../labs/labs';
+import { labOn, useLabs } from '../labs/labs';
 import { ObjectsMenu, OBJECTS } from '../labs/ObjectsMenu';
 import { LinePanel } from '../labs/LinePanel';
 
@@ -48,14 +48,26 @@ function savedShape(): Tool {
   return 'rect';
 }
 
+const DRAW_KEY = 'planx-last-draw';
+const DRAW_ICONS: Partial<Record<Tool, PanelIconName>> = { pen: 'pen', marker: 'highlighter', eraser: 'eraser', nib: 'pen-nib' };
+function savedDraw(): Tool {
+  const t = readText(DRAW_KEY) as Tool | null;
+  return t && isDrawTool(t) && (t !== 'nib' || labOn('nib')) ? t : 'pen';
+}
+
 export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleIcons, recorderOpen, onToggleRecorder }: {
   editor: Editor; tool: Tool; pens: Pens; zoom: number; docked: boolean; iconsOpen: boolean; onToggleIcons: () => void;
   recorderOpen: boolean; onToggleRecorder: () => void;
 }) {
-  // The drawing button brings back whichever of pen, highlighter and eraser was used last.
-  const lastDraw = useRef<Tool>('pen');
+  // The drawing button brings back whichever of pen, highlighter, eraser and "Перо" was used last, and
+  // shows it, the next time too.
+  const lastDraw = useRef<Tool>(savedDraw());
   const drawing = isDrawTool(tool);
-  if (drawing) lastDraw.current = tool;
+  if (drawing && lastDraw.current !== tool) {
+    lastDraw.current = tool;
+    writeText(DRAW_KEY, tool);
+  }
+  const drawIcon = DRAW_ICONS[lastDraw.current] ?? 'pen';
   // Likewise the shapes button brings back the figure used last, and shows it, the next time too.
   const lastShape = useRef<Tool>(savedShape());
   const shaping = SHAPE_TOOLS.includes(tool);
@@ -166,7 +178,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     // what's selected.
     if (key === 'component') return button(key, false, 'Компонент из выделенного', 'component', () => editor.makeComponent());
     if (key === 'oval') return button(key, shaping, 'Фигуры', shapeIcon, () => editor.setTool(shaping ? 'select' : lastShape.current), { 'aria-pressed': shaping });
-    if (key === 'draw') return button(key, drawing, 'Рисование (P)', 'marker', () => editor.setTool(drawing ? 'select' : lastDraw.current), { 'aria-pressed': drawing });
+    if (key === 'draw') return button(key, drawing, 'Рисование (P)', drawIcon, () => editor.setTool(drawing ? 'select' : lastDraw.current), { 'aria-pressed': drawing });
     // "Комментарии" (src/labs): a click on the board puts a comment there.
     if (key === 'comments') return labs.comments ? button(key, tool === 'comment', 'Комментарий', 'comment', () => editor.setTool(tool === 'comment' ? 'select' : 'comment'), { 'aria-pressed': tool === 'comment' }) : null;
     // "Линии" (src/labs): the line tool, from any item to any other; held, the ways a line runs.

@@ -84,6 +84,49 @@ export const checks = {
     expect(await p.ev(`planx.board.get('${ids.c}').x - planx.board.get('${ids.a}').x`), 'one undo step back').toBe(260);
   },
 
+  async '"Перо": corners clicked make a figure when closed, a straight line on a double click; Backspace and Esc'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('nib'); })()`);
+    for (const at of [[400, 300], [560, 300], [560, 420]]) { await p.click(at); await sleep(450); }
+    await p.click([480, 360]); await sleep(450);
+    await p.key('Backspace', 'Backspace', 8);
+    await p.click([402, 302]);
+    await sleep(200);
+    const fig = await p.ev(`(() => { const l = planx.board.list(); return l.length === 1 ? [l[0].type, l[0].shape ?? '-', l[0].vx.length, l[0].x, l[0].y, l[0].w, l[0].h].join() : l.length; })()`);
+    expect(fig, 'closed on the first corner (the fourth taken off): a figure of three').toBe('polygon,-,6,400,300,160,120');
+    // A line: two corners and a double click on the last.
+    await p.click([400, 500]); await sleep(450);
+    await p.click([600, 560]); await p.click([600, 560]);
+    await sleep(200);
+    const line = await p.ev(`(() => { const i = planx.board.list().find((i) => i.type === 'ink'); return i ? [i.sharp, i.pts.length].join() : 'none'; })()`);
+    expect(line, 'a straight line through two corners').toBe('true,4');
+    // Esc lets one go.
+    await p.click([700, 300]); await sleep(450);
+    await p.click([760, 300]); await sleep(100);
+    await p.key('Escape', 'Escape', 27);
+    expect(await p.ev(`planx.board.list().length`), 'nothing more').toBe(2);
+    expect(await p.ev(`planx.editor.tool`), 'still the pen').toBe('nib');
+  },
+
+  async 'the drawing button shows and brings back the tool used last; a highlighter line\'s opacity shown as it is'(p) {
+    await p.ev(`planx.editor.setTool('marker')`);
+    await p.ev(`planx.editor.setTool('select')`);
+    await sleep(100);
+    // (On the rail, or under its "more" button when the window is low.)
+    if (!(await p.rect('.tools [data-key="draw"]'))) await p.click(await p.at('.tools:not(.labs-rail) > button[aria-label="Ещё"]'));
+    expect(await p.ev(`document.querySelector('[data-key="draw"] .pi, [data-more-key="draw"] .pi').style.maskImage.includes('highlighter')`), 'the highlighter on the rail').toBe(true);
+    await p.key('Escape', 'Escape', 27);
+    expect(await p.ev(`localStorage.getItem('planx-last-draw')`), 'kept').toBe('marker');
+    await p.ev(`planx.editor.setTool('marker')`);
+    await p.drag([400, 300], [600, 380]);
+    await sleep(100);
+    const id = await p.ev(`planx.board.list().find((i) => i.type === 'ink')?.id`);
+    await p.ev(`(() => { planx.editor.setTool('select'); planx.editor.setSelection(['${id}']); })()`);
+    await sleep(300);
+    await p.click(await p.at('.panel button[aria-label^="Цвет"]'));
+    expect(await p.ev(`document.querySelector('.palette-pop input[type="range"]').value`), 'its real opacity').toBe('45');
+    await p.ev(`localStorage.removeItem('planx-last-draw')`);
+  },
+
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {
     const ids = await stickers(p);
     await select(p, ids.a);

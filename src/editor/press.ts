@@ -11,6 +11,7 @@ import { isPoly } from './tools';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
 import { zoomBoxHeld } from '../labs/zoomBox';
+import { nibClick } from '../labs/nib';
 import { swapKind } from '../labs/swap';
 import { openLink } from '../labs/textLink';
 import { startComment } from '../labs/comments';
@@ -160,6 +161,10 @@ export function press(ed: Editor, e: PointerEvent): void {
       if (ed.selection.size) ed.setSelection([]);
       ed.gesture = { type: 'draw', tool: ed.tool, pts: [w] };
       ed.requestRender();
+      return;
+    // "Перо" (src/labs): a corner where clicked.
+    case 'nib':
+      nibClick(ed, w, sp, e.shiftKey);
       return;
     case 'eraser':
       board.beginGesture();

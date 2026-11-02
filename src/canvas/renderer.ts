@@ -1,6 +1,6 @@
 import './compat';
 import type { Item, Link, LinkStyle, Side } from '../model/types';
-import { alignOf, DEFAULTS, FILLS, textPad, textPadY, ICON_COLORS, INK_COLORS, MARK_COLORS, STROKE_COLORS, TEXT_COLORS } from '../model/types';
+import { MARKER_OPACITY, alignOf, DEFAULTS, FILLS, textPad, textPadY, ICON_COLORS, INK_COLORS, MARK_COLORS, STROKE_COLORS, TEXT_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
@@ -109,7 +109,7 @@ export interface Scene {
   noBackground?: boolean;
 }
 
-export interface InkStroke { pts: Point[]; color: string; width: number; hl: boolean; op?: number }
+export interface InkStroke { pts: Point[]; color: string; width: number; hl: boolean; op?: number; sharp?: boolean }
 
 /** Corner radius of everything with corners except stickers, in board units. */
 const CORNER = 8;
@@ -452,7 +452,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       drawMind(ctx, it, s, editing);
       break;
     case 'ink':
-      strokeInk(ctx, { pts: inkPoints(it), color: it.color ?? 'ink', width: (it.sw ?? 2) * it.w / (it.iw || it.w), hl: !!it.hl, op: it.fo }, theme);
+      strokeInk(ctx, { pts: inkPoints(it), color: it.color ?? 'ink', width: (it.sw ?? 2) * it.w / (it.iw || it.w), hl: !!it.hl, op: it.fo, sharp: it.sharp }, theme);
       break;
   }
 }
@@ -823,12 +823,13 @@ function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCel
   }
 }
 
-/** A pen or highlighter line, smoothed by curving through the midpoints between its points. */
-function strokeInk(ctx: CanvasRenderingContext2D, { pts, color, width, hl, op }: InkStroke, theme: Theme) {
+/** A pen or highlighter line, smoothed by curving through the midpoints between its points (or straight
+ *  from one to the next); as opaque as it's set, a highlighter's by default see-through. */
+function strokeInk(ctx: CanvasRenderingContext2D, { pts, color, width, hl, op, sharp }: InkStroke, theme: Theme) {
   if (!pts.length) return;
   const c = color.startsWith('#') ? color : INK_COLORS[color];
   ctx.save();
-  ctx.globalAlpha = (hl ? 0.45 : 1) * (op ?? 1);
+  ctx.globalAlpha = op ?? (hl ? MARKER_OPACITY : 1);
   ctx.strokeStyle = c ? shade(c, theme.dim) : theme.ink;
   ctx.lineWidth = width;
   ctx.lineCap = 'round';
@@ -836,6 +837,7 @@ function strokeInk(ctx: CanvasRenderingContext2D, { pts, color, width, hl, op }:
   ctx.beginPath();
   ctx.moveTo(pts[0].x, pts[0].y);
   for (let i = 1; i < pts.length - 1; i++) {
+    if (sharp) { ctx.lineTo(pts[i].x, pts[i].y); continue; }
     ctx.quadraticCurveTo(pts[i].x, pts[i].y, (pts[i].x + pts[i + 1].x) / 2, (pts[i].y + pts[i + 1].y) / 2);
   }
   const last = pts[pts.length - 1];
