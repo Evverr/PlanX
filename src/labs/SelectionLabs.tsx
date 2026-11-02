@@ -7,6 +7,7 @@ import { myId } from './labs';
 import { REACTIONS, toggleReaction } from './overlays';
 import { startTidy, stopTidy, subscribeTidy, tidyMatches, tidyNow } from './tidy';
 import { holds } from './tidyMind';
+import { alignItems, type AlignTo } from './align';
 
 /** "Авторасположение" on the selection panel: lays what's selected out in a grid, and stays lit (the
  *  gaps' handles showing) while that's what's selected; pressed again, it's off. For one mind map node,
@@ -18,6 +19,39 @@ export function TidyButton({ editor, mind }: { editor: Editor; mind?: string }) 
       onClick={() => { if (mind) editor.tidyMind(mind); else if (on) stopTidy(); else startTidy(editor); editor.requestRender(); }}>
       <PanelIcon name="apps" />
     </button>
+  );
+}
+
+const ALIGNS: Array<[AlignTo, 'align-items-left' | 'align-items-center' | 'align-items-right' | 'align-items-top' | 'align-items-middle' | 'align-items-bottom', string]> = [
+  ['left', 'align-items-left', 'По левому краю'], ['center', 'align-items-center', 'По центру'], ['right', 'align-items-right', 'По правому краю'],
+  ['top', 'align-items-top', 'По верхнему краю'], ['middle', 'align-items-middle', 'По середине'], ['bottom', 'align-items-bottom', 'По нижнему краю'],
+];
+
+/** "Выравнивание" on the selection panel: a button opening the six ways to line what's selected up,
+ *  across and down; it stays open to try one after another. */
+export function AlignButton({ editor }: { editor: Editor }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    window.addEventListener('pointerdown', close, true);
+    return () => window.removeEventListener('pointerdown', close, true);
+  }, [open]);
+  return (
+    <div ref={ref} className="op-wrap">
+      <button className={`ib ${open ? 'on' : ''}`} title="Выравнивание" aria-label="Выравнивание" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <PanelIcon name="align-items-left" />
+      </button>
+      {open && (
+        <div className="op-pop align-pop" data-nosort role="toolbar" aria-label="Выравнивание">
+          {ALIGNS.map(([to, icon, title], i) => <span key={to} className="align-cell">
+            {i === 3 && <span className="sep" />}
+            <button className="ib" title={title} aria-label={title} onClick={() => alignItems(editor, to)}><PanelIcon name={icon} /></button>
+          </span>)}
+        </div>
+      )}
+    </div>
   );
 }
 

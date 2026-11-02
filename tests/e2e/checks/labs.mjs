@@ -64,6 +64,22 @@ export const checks = {
     expect(f.head === '%PDF-1.4' && f.tail === '%%EOF\n' && f.jpeg, 'whole, with the picture in it').toBe(true);
   },
 
+  async '"Выравнивание" lines the selected up by an edge or the middle, in one undo step'(p) {
+    const ids = await stickers(p);
+    await p.ev(`planx.board.update('${ids.c}', { y: planx.board.get('${ids.c}').y + 90 })`);
+    await p.ev(`planx.editor.setSelection(['${ids.a}', '${ids.c}'])`);
+    await sleep(300);
+    await p.click(await p.at('.panel button[aria-label="Выравнивание"]'));
+    expect(await p.ev(`document.querySelectorAll('.align-pop button').length`), 'six ways').toBe(6);
+    const y = await p.ev(`planx.board.get('${ids.a}').y`);
+    await p.click(await p.at('.align-pop button[aria-label="По верхнему краю"]'));
+    expect(await p.ev(`planx.board.get('${ids.c}').y`), 'tops meet').toBe(y);
+    await p.click(await p.at('.align-pop button[aria-label="По левому краю"]'));
+    expect(await p.ev(`planx.board.get('${ids.c}').x === planx.board.get('${ids.a}').x`), 'left sides meet, the panel still open').toBe(true);
+    await p.ev(`planx.editor.undo()`);
+    expect(await p.ev(`planx.board.get('${ids.c}').x - planx.board.get('${ids.a}').x`), 'one undo step back').toBe(260);
+  },
+
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {
     const ids = await stickers(p);
     await select(p, ids.a);

@@ -90,6 +90,9 @@
 .labs-toast { top: calc(66px + var(--bar) + env(safe-area-inset-top, 0px)); }
 
 /* Реакции on the selection panel: a row of emoji above it. */
+.op-pop.align-pop { gap: var(--s4); padding: 0 var(--s8); }
+.align-pop .align-cell { display: contents; }
+.align-pop .sep { width: 1px; align-self: stretch; margin: var(--s12) var(--s4); background: var(--line); }
 .op-pop.react-pop { gap: var(--s4); padding: 0 var(--s8); }
 .react-btn { position: relative; display: grid; place-items: center; width: var(--e40); height: var(--e40); padding: 0; border: 0; border-radius: var(--s8); background: none; cursor: pointer;
   transition: transform .1s ease-out, background-color .12s ease-out; }
