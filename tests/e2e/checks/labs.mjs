@@ -803,9 +803,17 @@ export const checks = {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('sticky', 300, 300, { id: 's', w: 150, h: 150 })); e.setSelection([]); })()`);
     await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'z', code: 'KeyZ', windowsVirtualKeyCode: 90 });
+    // The magnifier all along, over the sticker too, with the pointer just moved.
+    const cur = [];
+    for (const [x, y] of [[200, 200], [370, 370], [380, 380]]) {
+      await p.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+      cur.push(await p.ev(`getComputedStyle(planx.editor.canvas).cursor`));
+    }
+    expect(cur.join(), 'the magnifier only').toBe('zoom-in,zoom-in,zoom-in');
     await p.drag([250, 250], [450, 450]);
     await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'z', code: 'KeyZ', windowsVirtualKeyCode: 90 });
     await sleep(600);
+    expect(await p.ev(`getComputedStyle(planx.editor.canvas).cursor !== 'zoom-in'`), 'Z let go: no magnifier').toBe(true);
     const r = await p.ev(`(() => { const a = planx.editor.toScreen({ x: 250, y: 250 }), b = planx.editor.toScreen({ x: 450, y: 450 }), W = planx.editor.canvas.clientWidth, H = planx.editor.canvas.clientHeight;
       return [Math.round(Math.min(W / (b.x - a.x), H / (b.y - a.y)) * 100) / 100, Math.round((a.x + b.x) / 2 - W / 2), Math.round((a.y + b.y) / 2 - H / 2), planx.editor.selection.size].join(); })()`);
     expect(r, 'the box fills the screen, centred, nothing picked').toBe('1,0,0,0');
