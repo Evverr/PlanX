@@ -100,6 +100,14 @@ export function textShifts(items: Item[], grew: Map<string, number>): Map<string
   return shifts;
 }
 
+/** What an instance holds, in the order it lies in its component, just over the instance: moved a layer
+ *  up or down (or to the front, the back), all it holds goes along. (Just over: within the layer, an
+ *  instance in an instance within the little of its own.) */
+function layered(inst: Item, inside: Item[]): Item[] {
+  const span = inst.host ? 0.001 : 1, rank = new Map([...inside].sort((a, b) => a.z - b.z).map((i, k) => [i.id, k]));
+  return inside.map((i) => ({ ...i, z: inst.z + ((rank.get(i.id)! + 1) / (inside.length + 1)) * span }));
+}
+
 /** Everything in a frame: what it holds, what frames in it hold, and mind map branches of all that. */
 export function contents(f: Item, byId: Map<string, Item>, items: Item[]): Item[] {
   const out = new Map<string, Item>(), todo = [f];
@@ -150,7 +158,7 @@ export function syncOps(items: Item[], links: Link[], fit?: (it: Item) => number
     }
     // An instance put inside its own component (or copies of copies of copies) would never end.
     const inside = builtin ? builtin.items.map((i) => ({ ...i, z: inst.z + (i.z + 1) / 100 }))
-      : contents(comp, byId, items).filter((i) => i.id.split('~').length < 4), ids = new Set(inside.map((i) => i.id));
+      : layered(inst, contents(comp, byId, items).filter((i) => i.id.split('~').length < 4)), ids = new Set(inside.map((i) => i.id));
     if (ids.has(inst.id)) continue;
     // A folded component keeps where it was and its size unfolded.
     const dx = inst.x - comp.x, dy = inst.y - comp.y, cw = comp.fold?.w ?? comp.w, ch = comp.fold?.h ?? comp.h;

@@ -533,6 +533,38 @@ export const checks = {
     expect(await order(), 'one down').toBe('bac');
   },
 
+  async 'a layer up or down goes past what it lies over, not something elsewhere; an instance takes what it holds along, a new task comes on top'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('rect', 300, 200, { id: 'r', w: 400, h: 300, z: 1 }));
+      b.add(e.newItem('sticky', 900, 600, { id: 'far', w: 100, h: 100, z: 2 }));
+      b.add(e.newItem('sticky', 350, 250, { id: 's', w: 100, h: 100, z: 3 })); e.setSelection(['s']); })()`);
+    const order = () => p.ev(`planx.board.list().filter((i) => ['r', 'far', 's'].includes(i.id)).sort((m, n) => m.z - n.z).map((i) => i.id).join(' ')`);
+    await p.key('ArrowDown', 'ArrowDown', 40, 4);
+    expect(await order(), 'under the rectangle at once, past the one far off').toBe('s r far');
+    // A task put on the rectangle: on top; a layer down, all of it under the rectangle.
+    await p.ev(`planx.editor.setTool('task')`);
+    await p.click([600, 420]);
+    await sleep(300);
+    const over = () => p.ev(`(() => { const l = planx.board.list(), t = l.find((i) => i.inst === '@task-open'), r = planx.board.get('r'); const mine = l.filter((i) => i.host === t.id); return mine.length + ' ' + mine.every((i) => i.z > r.z) + ' ' + mine.every((i) => i.z < r.z); })()`);
+    expect(await over(), 'the task over the rectangle').toBe('4 true false');
+    await p.ev(`(() => { planx.editor.stopEditing(); planx.editor.setSelection([planx.board.list().find((i) => i.inst === '@task-open').id]); })()`);
+    await p.key('ArrowDown', 'ArrowDown', 40, 4);
+    await sleep(200);
+    expect(await over(), 'a layer down: all of it under').toBe('4 false true');
+    // An instance of one's own component alike.
+    await p.ev(`(() => { const e = planx.editor, b = planx.board;
+      b.add(e.newItem('frame', -800, 0, { id: 'comp', comp: true, w: 200, h: 200, members: ['cs'], z: -5 }));
+      b.add(e.newItem('sticky', -780, 20, { id: 'cs', w: 100, h: 100, z: 0.5 }));
+      b.add(e.newItem('frame', 320, 220, { id: 'in', inst: 'comp', w: 200, h: 200, members: [] })); })()`);
+    await sleep(200);
+    const mine = () => p.ev(`(() => { const c = planx.board.get('in~cs'), r = planx.board.get('r'); return c ? (c.z > r.z ? 'over' : 'under') : 'none'; })()`);
+    expect(await mine(), 'a new instance over the rectangle').toBe('over');
+    await p.ev(`planx.editor.setSelection(['in'])`);
+    await p.key('ArrowDown', 'ArrowDown', 40, 4);
+    await sleep(200);
+    expect(await mine(), 'a layer down, what it holds along').toBe('under');
+  },
+
   async 'a picked link gets nodes pulled out of its middles, moved, and gone on a double click; they go with both its ends'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('sticky', 200, 300, { id: 'a', w: 100, h: 100 }));
