@@ -93,6 +93,8 @@ export interface Item {
   comp?: boolean;
   /** A component that's one of this board's own objects ("Мои объекты" in "Объекты", src/labs), under its title. */
   obj?: boolean;
+  /** The entry of "Мои объекты" (in a browser, see labs/myObjects.ts) this component was kept as or came from. */
+  lib?: string;
   /** A component's first instance: the one it turned into (its diamond solid; the component's changed in
    *  its place). Gone, the oldest left (see `born`) takes its place. */
   first?: string;
