@@ -164,7 +164,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
       () => { if (!editor.frameSelection()) editor.setTool('frame'); }, { 'aria-pressed': tool === 'frame' });
     // The arrow's button (arrows are drawn from an item's blue dots, or with C): makes a component of
     // what's selected.
-    if (key === 'component') return button(key, false, 'Компонент из выделенного', 'maximize', () => editor.makeComponent());
+    if (key === 'component') return button(key, false, 'Компонент из выделенного', 'component', () => editor.makeComponent());
     if (key === 'oval') return button(key, shaping, 'Фигуры', shapeIcon, () => editor.setTool(shaping ? 'select' : lastShape.current), { 'aria-pressed': shaping });
     if (key === 'draw') return button(key, drawing, 'Рисование (P)', 'marker', () => editor.setTool(drawing ? 'select' : lastDraw.current), { 'aria-pressed': drawing });
     // "Комментарии" (src/labs): a click on the board puts a comment there.

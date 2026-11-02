@@ -74,7 +74,7 @@ export function ObjectsMenu({ editor, tool, onPick, onClose }: { editor: Editor;
         <div className="menu-line" />
         <div className="menu-item" onPointerEnter={() => setOpen(true)}>
           <button className="menu-row" role="menuitem" aria-haspopup aria-expanded={open} onClick={() => setOpen(true)}>
-            <Glyph id="maximize" className="menu-icon" />
+            <Glyph id="component" className="menu-icon" />
             <span>Мои объекты</span>
             <i className="menu-more" aria-hidden="true" />
           </button>
@@ -83,7 +83,7 @@ export function ObjectsMenu({ editor, tool, onPick, onClose }: { editor: Editor;
               {mine.map((c) => (
                 <div key={c.id} className="menu-item">
                   <button className="menu-row" role="menuitem" title="Клик — в середину экрана, или перетащите на доску" onPointerDown={(e) => press(c.id, e)}>
-                    <Glyph id="maximize" className="menu-icon" />
+                    <Glyph id="component" className="menu-icon" />
                     <span>{c.text || 'Объект'}</span>
                     <span className="menu-x" role="button" aria-label={`Удалить «${c.text || 'Объект'}» из объектов`} title="Удалить из объектов"
                       onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); remove(c.id, c.text || 'Объект'); }}>×</span>
