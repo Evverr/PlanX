@@ -502,6 +502,20 @@ export const checks = {
       const r = await p.ev(`(() => { const r = planx.board.get('r'); return [r.x, r.y, r.x + r.w, r.y + r.h].join(); })()`);
       expect(r, `${type}: left and top out, right and bottom where they were`).toBe('260,270,500,420');
     }
+    // The top left corner: both back, the bottom right where it was; with Alt, from the middle.
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; b.replaceAll([], []); b.add(e.newItem('rect', 300, 300, { id: 'r', w: 200, h: 120 })); e.setSelection(['r']); })()`);
+    await sleep(150);
+    const sc = (x, y) => p.ev(`(() => { const s = planx.editor.toScreen({ x: ${'X'}, y: ${'Y'} }); return [s.x, s.y]; })()`.replace('X', x).replace('Y', y));
+    await p.drag(await sc(298, 298), await sc(278, 268));
+    expect(await p.ev(`(() => { const r = planx.board.get('r'); return [r.x, r.y, r.x + r.w, r.y + r.h].join(); })()`), 'by the top left corner').toBe('280,270,500,420');
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Alt', code: 'AltLeft', modifiers: 1 });
+    const [hx, hy] = await sc(503, 423);
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: hx, y: hy, modifiers: 1 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: hx, y: hy, button: 'left', buttons: 1, clickCount: 1, modifiers: 1 });
+    for (let i = 1; i <= 5; i++) await p.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: hx + 2 * i, y: hy + 2 * i, button: 'left', buttons: 1, modifiers: 1 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: hx + 10, y: hy + 10, button: 'left', buttons: 0, clickCount: 1, modifiers: 1 });
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Alt', code: 'AltLeft' });
+    expect(await p.ev(`(() => { const r = planx.board.get('r'); return [r.x, r.y, r.x + r.w, r.y + r.h].join(); })()`), 'with Alt, from the middle').toBe('270,260,510,430');
   },
 
   async 'Ctrl+↑ and Ctrl+↓ take what is picked a layer up or down'(p) {
