@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { DRAW_TOOLS, INK_SIZES, type Editor, type Pens, type PenTool, type Tool } from '../editor/editor';
+import { DRAW_TOOLS, INK_RANGE, type Editor, type Pens, type PenTool, type Tool } from '../editor/editor';
 import { INK_COLORS, MARKER_OPACITY } from '../model/types';
 import { useLabs } from '../labs/labs';
+import { ERASER_SIZES, eraserStyle, setEraserStyle, subscribeEraser } from '../labs/eraseArea';
+import { useSyncExternalStore } from 'react';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
 import { ColorPicker } from './ColorPicker';
@@ -19,7 +21,19 @@ export const penOpacity = (tool: PenTool) => (tool === 'marker' ? MARKER_OPACITY
 
 const swatch = (color: string) => (color.startsWith('#') ? color : INK_COLORS[color] || 'var(--ink)');
 /** Preset dots grow with the line width, within the 30px button. */
-const dot = (tool: PenTool, size: number) => Math.round(4 + (size / INK_SIZES[tool][INK_SIZES[tool].length - 1]) * 18);
+const dot = (tool: PenTool, size: number) => Math.round(4 + (Math.min(size, INK_RANGE[tool][1]) / INK_RANGE[tool][1]) * 18);
+
+/** A slider under its name, with how much it's at. */
+function Slider({ label, value, min, max, unit, onChange }: { label: string; value: number; min: number; max: number; unit: string; onChange: (v: number) => void }) {
+  const p = Math.round(((value - min) / (max - min)) * 100);
+  return (
+    <label className="ink-slider">
+      <span>{label}<b>{value}{unit}</b></span>
+      <input type="range" min={min} max={max} value={value} aria-label={label} style={{ '--p': `${p}%` } as React.CSSProperties}
+        onChange={(e) => onChange(Number(e.target.value))} />
+    </label>
+  );
+}
 
 /** Drawing tools next to the tool rail, as in Miro: pen, highlighter, eraser, then the pen's three presets.
  *  Clicking the preset in use opens its colours and widths. */
@@ -31,6 +45,9 @@ export function DrawPanel({ editor, tool, pens }: { editor: Editor; tool: Tool; 
   const sort = useSortable('planx-order-draw', pens0.map(([t]) => t), 'y');
   const pen = tool === 'pen' || tool === 'marker' ? tool : null;
   const set = pen ? pens[pen] : null;
+  // "Ластик кружком" (src/labs): its size, or whole lines.
+  const eraser = useSyncExternalStore(subscribeEraser, eraserStyle);
+  const erasing = tool === 'eraser' && labs.softEraser;
   return (
     <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`draw-panel sortable ${sort.sorting ? 'sorting' : ''}`} role="toolbar" aria-label="Рисование"
       {...sort.container}>
@@ -65,18 +82,25 @@ export function DrawPanel({ editor, tool, pens }: { editor: Editor; tool: Tool; 
                     onChange={(c) => editor.setPenStyle(pen, set.active, { color: c })} />}
                 </div>
               </div>
-              {/* How opaque its lines really come out (a highlighter's see-through by default). */}
-              <input type="range" min={0} max={100} aria-label="Прозрачность, %" value={Math.round((set.presets[set.active].op ?? penOpacity(pen)) * 100)}
-                style={{ '--p': `${Math.round((set.presets[set.active].op ?? penOpacity(pen)) * 100)}%` } as React.CSSProperties}
-                onChange={(e) => { const v = Number(e.target.value) / 100; editor.setPenStyle(pen, set.active, { op: v === penOpacity(pen) ? undefined : v }); }} />
-              <div className="ink-sizes">
-                {INK_SIZES[pen].map((s) => (
-                  <button key={s} className={`ink-size ${set.presets[set.active].size === s ? 'on' : ''}`} aria-label={`Толщина ${s}`}
-                    onClick={() => editor.setPenStyle(pen, set.active, { size: s })}>
-                    <i style={{ width: dot(pen, s), height: dot(pen, s) }} />
-                  </button>
-                ))}
-              </div>
+              {/* How opaque its lines really come out (a highlighter's see-through by default), and how thick; kept for each set. */}
+              <Slider label="Прозрачность" unit="%" min={0} max={100} value={Math.round((set.presets[set.active].op ?? penOpacity(pen)) * 100)}
+                onChange={(n) => { const v = n / 100; editor.setPenStyle(pen, set.active, { op: v === penOpacity(pen) ? undefined : v }); }} />
+              <Slider label="Толщина" unit=" px" min={INK_RANGE[pen][0]} max={INK_RANGE[pen][1]} value={set.presets[set.active].size}
+                onChange={(v) => editor.setPenStyle(pen, set.active, { size: v })} />
+            </div>
+          )}
+        </>
+      )}
+      {erasing && (
+        <>
+          <div className="tsep" />
+          <button className="ink-preset on" title="Размер ластика" aria-label="Размер ластика" onClick={() => setEditing(!editing)}>
+            <i style={{ background: 'var(--ink)', width: Math.round(4 + (eraser.size / ERASER_SIZES[1]) * 18), height: Math.round(4 + (eraser.size / ERASER_SIZES[1]) * 18), opacity: eraser.whole ? 0.3 : 1 }} />
+          </button>
+          {editing && (
+            <div className="ink-style" role="dialog" aria-label="Ластик" data-nosort>
+              <Slider label="Размер" unit=" px" min={ERASER_SIZES[0]} max={ERASER_SIZES[1]} value={eraser.size} onChange={(v) => setEraserStyle({ size: v })} />
+              <label className="ink-check"><input type="checkbox" checked={!!eraser.whole} onChange={(e) => setEraserStyle({ whole: e.target.checked || undefined })} />Стирать линию целиком</label>
             </div>
           )}
         </>

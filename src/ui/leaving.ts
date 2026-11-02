@@ -5,7 +5,7 @@
  */
 // The same popups as moves.css lists (but the text panel, which fades out on its own), and the dim
 // behind a window (going with what's on it).
-const POPUPS = '.pop, .board-menu, .more-pop, .op-pop, .color-picker, .tf-menu, .tools-more, .draw-panel, .comment-menu, .tile-menu, .minimap, .modal, .peek, .comment-card, .labs-pill, .modal-dim, .peek-overlay, .labs-backdrop';
+const POPUPS = '.pop, .board-menu, .more-pop, .op-pop, .color-picker, .tf-menu, .tools-more, .draw-panel, .comment-menu, .tile-menu, .minimap, .modal, .peek, .comment-card, .labs-pill, .ink-style, .modal-dim, .peek-overlay, .labs-backdrop';
 
 function fadeOut(el: HTMLElement, parent: Node, next: Node | null): void {
   const ghost = el.cloneNode(true) as HTMLElement;

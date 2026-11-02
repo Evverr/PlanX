@@ -14,6 +14,7 @@ import { rotateCursor } from './cursors';
 import { MIND_TOPIC, type PenTool } from './tools';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
+import { eraseArea, eraserStyle } from '../labs/eraseArea';
 import { openSwap, swapKind } from '../labs/swap';
 import { pushedBelow } from '../labs/textPush';
 import { dayKey, dayOf, halfDay, TL_PAD, tlDays, tlStart } from '../canvas/timeline';
@@ -453,6 +454,8 @@ function addInk(ed: Editor, tool: PenTool, pts: Point[]): void {
 
 /** Removes every stroke the eraser touches between two points, checked at steps narrower than the eraser. */
 export function eraseAlong(ed: Editor, a: Point, b: Point): void {
+  // "Ластик кружком" (src/labs): only what's under its circle.
+  if (labOn('softEraser') && !eraserStyle().whole) { eraseArea(ed, a, b); return; }
   const tol = 8 / ed.cam.z, steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / tol));
   const gone = new Set<string>();
   for (const it of ed.board.list()) {

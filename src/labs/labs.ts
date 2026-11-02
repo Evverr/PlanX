@@ -7,7 +7,7 @@ import { readJSON, readText, writeJSON, writeText } from '../storage';
  * browser. Everything they need lives in this folder; the app only asks labOn() where a feature
  * changes what it does, so one that isn't kept comes out by deleting its file and those few lines.
  */
-export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'taskComponent' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib';
+export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'taskComponent' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib' | 'softEraser';
 
 export interface Lab { id: LabId; label: string; icon: string; hint: string }
 
@@ -18,6 +18,7 @@ export const LABS: Lab[] = [
   { id: 'tidy', label: 'Авторасположение', icon: 'apps', hint: 'Выделенное ровной сеткой; отступы между рядами и столбцами тянутся' },
   { id: 'align', label: 'Выравнивание', icon: 'align-items-left', hint: 'Выбрано несколько: кнопка на нижней панели, по краям и по центру' },
   { id: 'nib', label: 'Перо', icon: 'pen-nib', hint: 'В рисовании: фигура по вершинам; клик по первой — замкнуть, двойной клик или Enter — линия' },
+  { id: 'softEraser', label: 'Ластик кружком', icon: 'eraser', hint: 'Ластик стирает только то, что под кружком; его размер — в меню рисования' },
   { id: 'lock', label: 'Замок', icon: 'lock-l', hint: 'Закреплённое не сдвинуть и не удалить' },
   { id: 'search', label: 'Поиск по доске', icon: 'search', hint: 'Ctrl+F: найти текст на доске' },
   { id: 'timer', label: 'Общий таймер', icon: 'timer', hint: 'Отсчёт, который видят все на доске' },
