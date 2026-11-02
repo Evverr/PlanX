@@ -65,7 +65,7 @@
 .paint-target { gap: var(--s2); }
 .op-wrap { position: relative; display: flex; }
 /* As tall as the panel under it, with its shadow. */
-.op-pop { position: absolute; bottom: calc(100% + var(--s18)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: var(--s10); height: var(--e52); box-sizing: border-box; padding: 0 var(--s16); background: var(--surface); border-radius: var(--s12); box-shadow: var(--shadow); white-space: nowrap; animation: fade-in .12s ease-out; }
+.op-pop { position: absolute; bottom: calc(100% + var(--s18)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: var(--s10); height: var(--e52); box-sizing: border-box; padding: 0 var(--s16); background: var(--surface); border-radius: var(--s12); box-shadow: var(--shadow); white-space: nowrap; }
 /* The slider drawn by hand: a plain grey track (no outline), blue up to the knob, and a knob 2px
    bigger than the browser's. --p is how far along it is. */
 :is(.op-pop, .tf-any, .ink-style, .params-row, .params-opacity) input[type="range"] { -webkit-appearance: none; appearance: none; width: var(--e150); height: var(--e4); margin: 0; border-radius: var(--s2); cursor: pointer;

@@ -8,7 +8,12 @@ const EDGE = 8;
 
 function fit(el: HTMLElement): void {
   el.style.translate = '';
+  // Measured where it comes to, not on its way in (see "come-in" in moves.css): the slide is stopped
+  // for the measuring and starts again, still in its first frame.
+  const coming = el.getAnimations().some((a) => a.playState === 'running');
+  if (coming) el.style.animation = 'none';
   const r = el.getBoundingClientRect();
+  if (coming) el.style.animation = '';
   if (!r.width && !r.height) return;
   if (r.height > innerHeight - EDGE * 2) { el.style.maxHeight = `${innerHeight - EDGE * 2}px`; el.style.overflowY = 'auto'; }
   const h = Math.min(r.height, innerHeight - EDGE * 2), w = r.width;

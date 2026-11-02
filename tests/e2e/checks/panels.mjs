@@ -5,6 +5,13 @@ import { expect, sleep } from '../lib.mjs';
 const cursor = (p, q) => p.ev(`getComputedStyle(document.querySelector('${q}')).cursor`);
 
 export const checks = {
+  async 'menus come in out of nothing, sliding 8px from where they open'(p) {
+    await p.click(await p.at('.topbar button[aria-label="Меню"]'));
+    const r = await p.ev(`(() => { const m = document.querySelector('.board-menu'), cs = getComputedStyle(m);
+      return [cs.animationName.replace(', ', '+'), cs.getPropertyValue('--in-x').trim(), cs.getPropertyValue('--in-y').trim(), cs.animationComposition].join(); })()`);
+    expect(r, 'faded in, falling from the top bar').toBe('fade-in+come-in,0px,-8px,replace, add');
+  },
+
   async 'an edge shows its cursor after half a second, then at once on every panel'(p) {
     const top = await p.edge('.tools', 'top');
     await p.mouse('mouseMoved', top[0], top[1] + 30);
