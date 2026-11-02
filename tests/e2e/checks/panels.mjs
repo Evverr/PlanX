@@ -10,6 +10,11 @@ export const checks = {
     const r = await p.ev(`(() => { const m = document.querySelector('.board-menu'), cs = getComputedStyle(m);
       return [cs.animationName.replace(', ', '+'), cs.getPropertyValue('--in-x').trim(), cs.getPropertyValue('--in-y').trim(), cs.animationComposition].join(); })()`);
     expect(r, 'faded in, falling from the top bar').toBe('fade-in+come-in,0px,-8px,replace, add');
+    // The other popups alike: the map, "?" and the note at the bottom rise, a note at the top falls.
+    const ways = await p.ev(`['bar minimap', 'pop help', 'pop toast bottom', 'modal', 'pop toast', 'pop confirm'].map((c) => {
+      const d = document.createElement('div'); d.className = c; document.body.appendChild(d);
+      const cs = getComputedStyle(d), v = cs.animationName.includes('come-in') ? cs.getPropertyValue('--in-y').trim() : 'none'; d.remove(); return v; }).join()`);
+    expect(ways, 'rising, rising, rising, rising, falling, falling').toBe('8px,8px,8px,8px,-8px,-8px');
   },
 
   async 'an edge shows its cursor after half a second, then at once on every panel'(p) {
