@@ -43,7 +43,7 @@
 .tools-more { position: fixed; z-index: 5; left: calc(24px + var(--rail-w) + env(safe-area-inset-left, 0px));
   display: grid; grid-auto-flow: column; grid-auto-columns: var(--e30); gap: var(--s18); padding: var(--s21) var(--s15);
   background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: var(--s12); box-shadow: var(--fmt-shadow);
-  animation: fade-in .12s ease-out; }
+  }
 /* Panels whose buttons can be rearranged: holding one lifts it so it can be moved (see ui/sortable.ts). */
 .sortable { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .sortable.sorting, .sortable.sorting * { cursor: grabbing !important; }

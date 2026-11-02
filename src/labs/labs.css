@@ -14,7 +14,7 @@
 
 /* Their popups. */
 .labs-pop { top: 50%; transform: translateY(-50%); width: var(--e300); max-width: calc(100vw - var(--e96)); box-sizing: border-box;
-  max-height: calc(100vh - 32px); overflow-y: auto; animation: fade-in .12s ease-out; }
+  max-height: calc(100vh - 32px); overflow-y: auto; }
 .labs-pop h3, .labs-keys h3 { margin: 0 0 var(--s12); font: 700 var(--s13)/var(--s21) "Inter", var(--ui); }
 .labs-pop label { display: block; margin: var(--s12) 0 var(--s6); font-weight: 600; font-size: var(--s12); color: var(--muted); }
 .labs-pop .muted { color: var(--muted); font-size: var(--s12); line-height: 1.5; }

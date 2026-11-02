@@ -24,3 +24,18 @@
 :root[data-rail="right"] .tools.docked:not(.labs-rail) { left: calc(100% - var(--rail-w)); border-radius: var(--s12) 0 0 var(--s12); }
 :root[data-rail="right"] :is(.tools-more:not(.labs-more), .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(24px + var(--rail-w) + env(safe-area-inset-right, 0px)); }
 :root[data-rail="right"] .tools.docked ~ :is(.tools-more:not(.labs-more), .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(12px + var(--rail-w) + env(safe-area-inset-right, 0px)); }
+
+/* How menus and the panels opening from others come in: out of nothing, 8px on the way there, from
+   where they open: falling from the top, rising from the bottom, from the side beside a rail or a menu.
+   (The slide is added to their own place, so those centred by a transform keep it.) */
+:is(.board-menu, .more-pop, .op-pop, .color-picker, .tf-menu, .tools-more, .draw-panel, .labs-pop, .recorder, .icon-pick, .tfmt:not(.leaving), .comment-menu, .tile-menu) {
+  --in-x: 0px; --in-y: -8px;
+  animation: fade-in .16s ease-out, come-in .16s ease-out; animation-composition: replace, add; }
+@keyframes come-in { from { transform: translate(var(--in-x), var(--in-y)); } }
+:is(.op-pop, .color-picker, .tfmt, .more-pop.above) { --in-y: 8px; }
+:root[data-topbar="low"] .board-menu:not(.sub, .context-menu, .objects-menu, .shape-menu) { --in-y: 8px; }
+:is(.board-menu.sub, .board-menu.shape-menu, .objects-menu, .tools-more, .draw-panel, .recorder, .icon-pick) { --in-x: -8px; --in-y: 0px; }
+:is(.board-menu.sub.leftward, .labs-more, .labs-pop) { --in-x: 8px; --in-y: 0px; }
+:root[data-rail="right"] :is(.objects-menu, .board-menu.shape-menu, .tools-more:not(.labs-more), .draw-panel, .recorder, .icon-pick) { --in-x: 8px; }
+:root[data-labs="left"] :is(.labs-more, .labs-pop) { --in-x: -8px; }
+@media (prefers-reduced-motion: reduce) { :is(.board-menu, .more-pop, .op-pop, .color-picker, .tf-menu, .tools-more, .draw-panel, .labs-pop, .recorder, .icon-pick, .tfmt, .comment-menu, .tile-menu) { --in-x: 0px; --in-y: 0px; } }

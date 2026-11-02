@@ -1,7 +1,7 @@
 /* A bar's "more" button and the popover with what didn't fit, 8px outside the bar. */
 .more-wrap { position: relative; display: flex; flex: none; }
 .more-pop { position: absolute; right: calc(var(--s6) * -1); z-index: 6; display: flex; align-items: center; gap: var(--s4); padding: var(--s6); white-space: nowrap;
-  background: var(--surface); border-radius: var(--s12); box-shadow: var(--shadow); animation: fade-in .12s ease-out; }
+  background: var(--surface); border-radius: var(--s12); box-shadow: var(--shadow); }
 .more-pop.above { bottom: calc(100% + var(--s14)); }
 .more-pop.below { top: calc(100% + var(--s14)); }
 
@@ -11,7 +11,7 @@
 .menu-wrap { position: relative; display: flex; }
 .board-menu { position: absolute; left: round(calc(-6px * var(--k)), 1px); top: calc(100% + var(--s12)); z-index: 7; width: var(--e286); box-sizing: border-box;
   display: flex; flex-direction: column; gap: 0; padding: var(--s13) var(--s18) var(--s17) var(--s14);
-  background: var(--surface); border-radius: var(--s12); box-shadow: 0 6px 6px rgba(0, 0, 0, .15); animation: fade-in .12s ease-out; }
+  background: var(--surface); border-radius: var(--s12); box-shadow: 0 6px 6px rgba(0, 0, 0, .15); }
 .menu-item { position: relative; width: 100%; }
 .menu-row { position: relative; display: flex; align-items: center; gap: var(--s11); width: 100%; border: 0; background: none; padding: 0;
   font: 400 var(--s13)/normal "Inter", var(--ui); color: var(--menu-ink); text-align: left; white-space: nowrap; cursor: pointer; }
