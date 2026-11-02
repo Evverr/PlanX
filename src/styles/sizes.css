@@ -3,7 +3,7 @@
    (for what has an icon centred in it). The bars' height and the rail's width are made of them.
    Menus and popovers keep their own size whatever the panels' is: in them --k is 1 again (but for the
    bars' height and the rail's width, which they stand by). */
-:root, .board-menu, .pop, .op-pop, .tf-menu, .more-pop, .tools-more, .peek {
+:root, .board-menu, .pop, .op-pop:not(.align-pop), .tf-menu, .more-pop, .tools-more, .peek {
   --k: 1;
   --s2: round(calc(2px * var(--k)), 1px);
   --s3: round(calc(3px * var(--k)), 1px);

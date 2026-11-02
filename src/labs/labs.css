@@ -38,7 +38,7 @@
 /* Поиск */
 .search-pop { top: calc(16px + env(safe-area-inset-top, 0px)); transform: none; width: var(--e340); }
 .search-field { position: relative; }
-.search-field .search-icon { position: absolute; left: var(--s8); top: 50%; transform: translateY(-50%); width: var(--e20); height: var(--e20); color: var(--muted); pointer-events: none; }
+.search-field .search-icon { position: absolute; left: var(--s8); top: 50%; transform: translateY(-50%); width: var(--e20); height: var(--e20); color: var(--fmt-ink); pointer-events: none; }
 .search-pop .search-field input { padding-left: var(--s34); }
 .search-pop > .muted { margin: var(--s10) 0 var(--s4); }
 .search-list { list-style: none; margin: 0 calc(var(--s8) * -1); padding: 0; max-height: min(var(--e380), 60vh); overflow-y: auto; }
@@ -175,7 +175,7 @@
 .comment-head { display: flex; align-items: center; gap: 6px; }
 .comment-cat { width: 20px; height: 20px; }
 .comment-when { flex: 1; color: var(--muted); font-size: 12px; }
-.comment-solve, .comment-more { width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: none; cursor: pointer; color: var(--muted); }
+.comment-solve, .comment-more { width: 26px; height: 26px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 6px; background: none; cursor: pointer; color: var(--fmt-ink); }
 .comment-solve:hover, .comment-more:hover { background: var(--fmt-hover); }
 .comment-solve.on { color: #30A46C; }
 .comment-solve svg, .comment-more svg { width: 18px; height: 18px; }

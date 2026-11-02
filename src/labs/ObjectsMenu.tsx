@@ -1,7 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { Editor, Tool } from '../editor/editor';
 import { Glyph } from '../ui/glyphs';
-import dropIcon from '../ui/menu/drop.svg';
 
 /** The objects there are ("Объекты"): their tool, icon and name. */
 export const OBJECTS: Array<[Tool, string, string]> = [['timeline', 'timeline', 'Таймлайн']];
@@ -77,7 +76,7 @@ export function ObjectsMenu({ editor, tool, onPick, onClose }: { editor: Editor;
           <button className="menu-row" role="menuitem" aria-haspopup aria-expanded={open} onClick={() => setOpen(true)}>
             <Glyph id="maximize" className="menu-icon" />
             <span>Мои объекты</span>
-            <img className="menu-more" src={dropIcon} alt="" width={24} height={24} />
+            <i className="menu-more" aria-hidden="true" />
           </button>
           {open && (
             <div className={`board-menu sub objects-mine ${leftward ? 'leftward' : ''}`} role="menu" aria-label="Мои объекты">

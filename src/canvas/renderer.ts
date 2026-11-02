@@ -24,6 +24,8 @@ export interface Camera { x: number; y: number; z: number }
 
 export interface Theme {
   bg: string; link: string; ink: string; muted: string; line: string;
+  /** The panels' icon colour, for the buttons drawn on the board. */
+  icon: string;
   accent: string; frame: string; surface: string; stickyInk: string; shapeStroke: string;
   /** Board background gradient stops and the RGB of the grid lines. */
   grad: [string, string, string]; grid: string;
@@ -35,7 +37,7 @@ export function readTheme(): Theme {
   const cs = getComputedStyle(document.documentElement);
   const v = (n: string) => cs.getPropertyValue(n).trim();
   return {
-    bg: v('--bg'), link: v('--link'), ink: v('--ink'), muted: v('--muted'), line: v('--line'),
+    bg: v('--bg'), link: v('--link'), ink: v('--ink'), muted: v('--muted'), line: v('--line'), icon: v('--fmt-ink'),
     accent: v('--accent'), frame: v('--frame'), surface: v('--surface'),
     stickyInk: v('--sticky-ink'), shapeStroke: v('--shape-stroke'),
     grad: [v('--grad-1'), v('--grad-2'), v('--grad-3')], grid: v('--grid'),
@@ -737,7 +739,7 @@ function drawFolded(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: 
     }
     ctx.fillText(title, it.x + FOLD_PAD, it.y + it.h / 2);
   }
-  for (const b of frameButtons(it)) drawIcon(ctx, b.icon, b.x, b.y, b.s, theme.muted);
+  for (const b of frameButtons(it)) drawIcon(ctx, b.icon, b.x, b.y, b.s, theme.icon);
 }
 
 /** A grid on the panel colour with round corners and each cell's text; the cell being edited is

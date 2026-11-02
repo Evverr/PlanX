@@ -4,8 +4,8 @@
 .on .pi { background: var(--fmt-on-ink); }
 .ib:disabled { cursor: default; background: transparent; }
 .ib:disabled .pi { background: var(--fmt-off-ink); }
-.pi.caret { width: var(--e24); height: var(--e24); }
-.dock-chevron { transition: transform .25s ease; }
+.pi.caret { width: var(--e24); height: var(--e24); background: var(--icon-faint); }
+.pi.dock-chevron { background: var(--icon-faint); transition: transform .25s ease; }
 .fsep { flex: none; width: 5px; height: var(--e24); position: relative; }
 .fsep.line::after { content: ""; position: absolute; left: 50%; top: var(--s2); width: 1px; height: var(--e20); background: var(--fmt-line); }
 /* Text controls over the selected text or sticker; TextPanel in FormatPanel.tsx places it. */

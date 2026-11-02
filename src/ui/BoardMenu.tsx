@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Glyph } from './glyphs';
-import dropIcon from './menu/drop.svg';
 import { usePanelSize, type PanelSize } from './panels/size';
 
 /**
@@ -46,7 +45,7 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
     </div>
     );
   };
-  const arrow = <img className="menu-more" src={dropIcon} alt="" width={24} height={24} />;
+  const arrow = <i className="menu-more" aria-hidden="true" />;
   return (
     <div ref={ref} className={`board-menu ${level ? 'sub' : ''} ${leftward ? 'leftward' : ''} ${anyIcon ? '' : 'plain'}`} role="menu" data-nosort>
       {level === 0 && <>
