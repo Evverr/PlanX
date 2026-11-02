@@ -74,14 +74,18 @@ let flight = 0;
 export function flyTo(ed: Editor, to: Camera, ms = 380): void {
   cancelAnimationFrame(flight);
   const from = { ...ed.cam }, t0 = performance.now();
-  // The board point in the middle of the screen, and the zoom, go from one to the other.
-  const W = ed.canvas?.clientWidth ?? innerWidth, H = ed.canvas?.clientHeight ?? innerHeight;
-  const mid = (c: Camera) => ({ x: (W / 2 - c.x) / c.z, y: (H / 2 - c.y) / c.z });
-  const a = mid(from), b = mid(to);
+  // With the zoom changing, the one screen point showing the same board point before and after stays
+  // put, and the zoom grows about it: everything runs straight towards or away from it, nothing swerves.
+  // With the zoom as it was, the board just slides.
+  const dz = to.z - from.z, still = Math.abs(dz) > 1e-6 * from.z;
+  const w = still ? { x: (from.x - to.x) / dz, y: (from.y - to.y) / dz } : null;
+  const p = w && { x: from.x + w.x * from.z, y: from.y + w.y * from.z };
   const step = () => {
     const k = Math.min(1, (performance.now() - t0) / ms), e = 1 - (1 - k) ** 3;
-    const z = from.z * (to.z / from.z) ** e, m = { x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e };
-    ed.cam = { z, x: W / 2 - m.x * z, y: H / 2 - m.y * z };
+    if (w && p) {
+      const z = k < 1 ? from.z * (to.z / from.z) ** e : to.z;
+      ed.cam = k < 1 ? { z, x: p.x - w.x * z, y: p.y - w.y * z } : { ...to };
+    } else ed.cam = { z: to.z, x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e };
     ed.camChanged();
     if (k < 1) flight = requestAnimationFrame(step);
   };

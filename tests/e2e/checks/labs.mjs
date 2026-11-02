@@ -809,6 +809,14 @@ export const checks = {
     const r = await p.ev(`(() => { const a = planx.editor.toScreen({ x: 250, y: 250 }), b = planx.editor.toScreen({ x: 450, y: 450 }), W = planx.editor.canvas.clientWidth, H = planx.editor.canvas.clientHeight;
       return [Math.round(Math.min(W / (b.x - a.x), H / (b.y - a.y)) * 100) / 100, Math.round((a.x + b.x) / 2 - W / 2), Math.round((a.y + b.y) / 2 - H / 2), planx.editor.selection.size].join(); })()`);
     expect(r, 'the box fills the screen, centred, nothing picked').toBe('1,0,0,0');
+    // On the way, the box's middle only comes nearer the screen's, never off to a side and back.
+    const off = await p.ev(`(async () => { const e = planx.editor, z = await import('/src/labs/zoomBox.ts');
+      e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); const W = e.canvas.clientWidth / 2, H = e.canvas.clientHeight / 2;
+      z.zoomToBox(e, { x: 250, y: 250, w: 200, h: 200 }); const pts = [];
+      await new Promise((done) => { const t = () => { const c = e.toScreen({ x: 350, y: 350 }); pts.push(c); if (pts.length < 40) requestAnimationFrame(t); else done(); }; t(); });
+      const d = pts.map((c) => Math.hypot(c.x - W, c.y - H));
+      return Math.max(0, ...d.slice(1).map((v, i) => v - d[i])); })()`);
+    expect(off < 0.5, `only nearer and nearer (once ${off.toFixed(1)}px further)`).toBe(true);
   },
 
   async 'the board cleared takes its comments too; one Ctrl+Z brings both back'(p) {
