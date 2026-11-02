@@ -2,7 +2,7 @@ import type { Tool } from './tools';
 import { readPictures } from '../canvas/pictures';
 import type { Editor } from './editor';
 import { isLocked } from '../labs/labs';
-import { holdZoomBox, zoomBoxHeld } from '../labs/zoomBox';
+import { holdZoomBox } from '../labs/zoomBox';
 
 /** Keys a tool is picked with. */
 const TOOL_KEYS: Record<string, Tool> = { KeyV: 'select', KeyH: 'hand', KeyN: 'sticky', KeyS: 'sticky', KeyT: 'text', KeyR: 'rect', KeyO: 'ellipse', KeyC: 'link', KeyL: 'link', KeyF: 'frame', KeyP: 'pen', KeyM: 'marker', KeyE: 'eraser' };
@@ -42,7 +42,7 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
     return;
   }
   // Z held: a box drawn zooms to it ("Зум рамкой", src/labs).
-  if (e.code === 'KeyZ' && !e.altKey) { holdZoomBox(true); if (zoomBoxHeld() && ed.canvas) ed.canvas.style.cursor = 'zoom-in'; return; }
+  if (e.code === 'KeyZ' && !e.altKey) { holdZoomBox(true); return; }
   // Held down, it deletes once: what's left picked (a mind map node's parent) waits for the next press.
   if (e.key === 'Delete' || e.key === 'Backspace') { if (ed.selection.size) { e.preventDefault(); if (!e.repeat) ed.deleteSelection(); } return; }
   if (e.key === 'Escape' && ed.cells.length) { ed.cells = []; ed.emit(); ed.requestRender(); return; }

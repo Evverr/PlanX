@@ -9,7 +9,11 @@ import { labOn } from './labs';
  */
 let held = false;
 export const zoomBoxHeld = () => held && labOn('zoomBox');
-export const holdZoomBox = (on: boolean) => { held = on; };
+/** While Z is held the board's cursor is the magnifier, whatever's under the pointer (see labs.css). */
+export const holdZoomBox = (on: boolean) => {
+  held = on;
+  document.querySelector('.board-canvas')?.toggleAttribute('data-zoom-box', zoomBoxHeld());
+};
 
 /** The box let go of: the camera flies to show it whole, as big as the screen takes (a click or a twitch, nothing). */
 export function zoomToBox(ed: Editor, r: Rect | null): void {
