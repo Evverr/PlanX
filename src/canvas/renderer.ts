@@ -398,7 +398,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
           ctx.strokeStyle = COMPONENT_COLOR;
           ctx.lineWidth = 1.5 / cam.z;
         } else {
-          ctx.globalAlpha = it.sc ? it.so ?? 1 : 1;
+          ctx.globalAlpha = it.so ?? 1;
           ctx.strokeStyle = (it.sc ? strokeOf(it, theme) : null) ?? (it.sc === 'none' ? 'transparent' : theme.line);
           ctx.lineWidth = (it.sc ? 2 : 1) / cam.z;
         }
