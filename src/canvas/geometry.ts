@@ -85,10 +85,42 @@ const POLY: Record<PolyShape, Point[]> = (() => {
   };
 })();
 
-/** A polygon item's corners on the board. */
-export const polyPoints = (it: Item): Point[] =>
-  (it.vx && !it.shape ? Array.from({ length: it.vx.length >> 1 }, (_, i) => ({ x: it.vx![i * 2], y: it.vx![i * 2 + 1] })) : POLY[it.shape ?? 'triangle'] ?? POLY.triangle)
-    .map((p) => ({ x: it.x + p.x * it.w, y: it.y + p.y * it.h }));
+/** A corner of a path drawn with "Перо" and the handles of the curves either side of it (on it when
+ *  the corner is sharp). */
+export interface PathNode { p: Point; i: Point; o: Point }
+export const samePoint = (a: Point, b: Point) => Math.abs(a.x - b.x) < 1e-6 && Math.abs(a.y - b.y) < 1e-6;
+
+/** A path's outline as points: straight from corner to corner, or along the curve their handles make. */
+export function flattenPath(nodes: PathNode[], closed: boolean, steps = 16): Point[] {
+  const n = nodes.length, out: Point[] = n ? [nodes[0].p] : [];
+  for (let s = 0; s < (closed ? n : n - 1); s++) {
+    const a = nodes[s], b = nodes[(s + 1) % n];
+    if (samePoint(a.o, a.p) && samePoint(b.i, b.p)) { out.push(b.p); continue; }
+    for (let k = 1; k <= steps; k++) {
+      const t = k / steps, u = 1 - t, c0 = u * u * u, c1 = 3 * u * u * t, c2 = 3 * u * t * t, c3 = t * t * t;
+      out.push({ x: c0 * a.p.x + c1 * a.o.x + c2 * b.i.x + c3 * b.p.x, y: c0 * a.p.y + c1 * a.o.y + c2 * b.i.y + c3 * b.p.y });
+    }
+  }
+  if (closed && n > 1) out.pop();
+  return out;
+}
+
+/** A path's nodes from its corners (x0, y0, x1…) and their handles (in x, y, out x, y for each), through `at`. */
+export function pathNodes(pts: number[], hs: number[] | undefined, at: (x: number, y: number) => Point): PathNode[] {
+  return Array.from({ length: pts.length >> 1 }, (_, i) => {
+    const p = at(pts[i * 2], pts[i * 2 + 1]);
+    return hs ? { p, i: at(hs[i * 4], hs[i * 4 + 1]), o: at(hs[i * 4 + 2], hs[i * 4 + 3]) } : { p, i: p, o: p };
+  });
+}
+
+/** A polygon item's corners on the board (along its curves, for one drawn with "Перо" with some). */
+export function polyPoints(it: Item): Point[] {
+  if (it.vx && !it.shape) {
+    const nodes = pathNodes(it.vx, it.vh, (x, y) => ({ x: it.x + x * it.w, y: it.y + y * it.h }));
+    return it.vh ? flattenPath(nodes, true) : nodes.map((n) => n.p);
+  }
+  return (POLY[it.shape ?? 'triangle'] ?? POLY.triangle).map((p) => ({ x: it.x + p.x * it.w, y: it.y + p.y * it.h }));
+}
 
 export function pointInPolygon(p: Point, pts: Point[]): boolean {
   let inside = false;
@@ -409,6 +441,8 @@ export function onAudioButton(it: Item, p: Point): boolean {
 /** An ink stroke's points on the board. */
 export function inkPoints(it: Item): Point[] {
   const pts = it.pts ?? [], k = it.w / (it.iw || it.w || 1), out: Point[] = [];
+  // A line drawn with "Перо" with curves: along them.
+  if (it.ph) return flattenPath(pathNodes(pts, it.ph, (x, y) => ({ x: it.x + x * k, y: it.y + y * k })), false);
   for (let i = 0; i + 1 < pts.length; i += 2) out.push({ x: it.x + pts[i] * k, y: it.y + pts[i + 1] * k });
   return out;
 }

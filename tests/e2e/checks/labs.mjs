@@ -142,6 +142,31 @@ export const checks = {
     expect(await p.ev(`planx.board.list().filter((i) => i.type === 'ink').length`), 'one undo step').toBe(1);
   },
 
+  async '"Перо": pressed and dragged, a smooth corner with handles; a double click on the figure shows its nodes, dragged to change it'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('nib'); })()`);
+    await p.click([400, 300]); await sleep(450);
+    // Pressed and dragged: smooth, its handles along the drag.
+    await p.drag([600, 300], [600, 380]); await sleep(450);
+    await p.click([500, 460]); await sleep(450);
+    await p.click([401, 301]);
+    await sleep(200);
+    const fig = await p.ev(`(() => { const l = planx.board.list(); return l.length === 1 ? [l[0].type, l[0].vx.length, l[0].vh?.length].join() : l.length; })()`);
+    expect(fig, 'a figure of three corners, with handles').toBe('polygon,6,12');
+    // A double click on it: its nodes; a corner dragged changes it.
+    await p.ev(`planx.editor.setTool('select')`);
+    await p.click([480, 360]); await p.click([480, 360]);
+    await sleep(200);
+    expect(await p.ev(`(async () => (await import('/src/labs/paths.ts')).nodeEditing() === planx.board.list()[0].id)()`), 'its nodes shown').toBe(true);
+    const before = await p.ev(`planx.board.list()[0].h`);
+    await p.drag([500, 460], [500, 560]);
+    await sleep(100);
+    expect(await p.ev(`Math.round(planx.board.list()[0].h - ${before})`), 'taller by the corner dragged down').toBe(100);
+    await p.key('z', 'KeyZ', 90, 4);
+    expect(await p.ev(`Math.round(planx.board.list()[0].h)`), 'one undo step').toBe(Math.round(before));
+    await p.key('Escape', 'Escape', 27);
+    expect(await p.ev(`(async () => (await import('/src/labs/paths.ts')).nodeEditing())()`), 'done with Esc').toBe(null);
+  },
+
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {
     const ids = await stickers(p);
     await select(p, ids.a);

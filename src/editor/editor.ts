@@ -1,7 +1,7 @@
 import type { Board } from '../model/board';
 import type { Item, ItemType, Link, LinkStyle, Side } from '../model/types';
 import { DEFAULTS, EDITABLE, fillable, HAS_FONT, strokable, uid } from '../model/types';
-import type { Point, Rect } from '../canvas/geometry';
+import type { PathNode, Point, Rect } from '../canvas/geometry';
 import { boundsOf, boxOf, center, instanceBounds, pointInRect, resizedAt } from '../canvas/geometry';
 import { clearTextCache, drawScene, readTheme, type Camera, type Peer, type Scene, type Theme } from '../canvas/renderer';
 import { fitHeight, foldedSize, font, itemTextHeight, mindSize } from '../canvas/text';
@@ -34,6 +34,7 @@ import { clearComments } from '../labs/comments';
 import { isLocked, labOn, subscribeLabs } from '../labs/labs';
 import { keepMyObject, myObjects } from '../labs/myObjects';
 import { finishNib, nibPoints } from '../labs/nib';
+import { shapedBy } from '../labs/paths';
 
 export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -659,21 +660,15 @@ export class Editor {
     this.emit();
   }
 
-  /** "Перо" (src/labs): a figure through these board points, a polygon of its own in their box. */
-  addFigure(pts: Point[]): void {
-    const x1 = Math.min(...pts.map((p) => p.x)), y1 = Math.min(...pts.map((p) => p.y));
-    const w = Math.max(1, Math.max(...pts.map((p) => p.x)) - x1), h = Math.max(1, Math.max(...pts.map((p) => p.y)) - y1);
-    const r = (v: number) => Math.round(v * 10000) / 10000;
-    this.addItem(this.newItem('polygon', Math.round(x1), Math.round(y1), { w: Math.round(w), h: Math.round(h), shape: undefined, vx: pts.flatMap((p) => [r((p.x - x1) / w), r((p.y - y1) / h)]) }));
+  /** "Перо" (src/labs): a figure through these nodes, a polygon of its own boxed around its outline. */
+  addFigure(nodes: PathNode[]): void {
+    this.addItem(this.newItem('polygon', 0, 0, { shape: undefined, ...shapedBy({ type: 'polygon', w: 1 }, nodes) }));
   }
 
-  /** "Перо": a line through these board points, straight between them, as the pen ("Ручка") draws. */
-  addLine(pts: Point[]): void {
-    const style = this.penStyle('pen'), sw = style.size / this.cam.z;
-    const x = Math.floor(Math.min(...pts.map((p) => p.x)) - sw / 2), y = Math.floor(Math.min(...pts.map((p) => p.y)) - sw / 2);
-    const w = Math.ceil(Math.max(...pts.map((p) => p.x)) + sw / 2) - x, h = Math.ceil(Math.max(...pts.map((p) => p.y)) + sw / 2) - y;
-    const r = (v: number) => Math.round(v * 10) / 10;
-    this.addItem(this.newItem('ink', x, y, { w, h, iw: w, sw: r(sw), color: style.color, fo: style.op, sharp: true, pts: pts.flatMap((p) => [r(p.x - x), r(p.y - y)]) }));
+  /** "Перо": a line through these nodes (straight or curved between them), as the pen ("Ручка") draws. */
+  addLine(nodes: PathNode[]): void {
+    const style = this.penStyle('pen');
+    this.addItem(this.newItem('ink', 0, 0, { color: style.color, fo: style.op, sharp: true, ...shapedBy({ type: 'ink', w: 1, iw: 1, sw: style.size / this.cam.z }, nodes) }));
   }
 
   penStyle(tool: PenTool): InkStyle {

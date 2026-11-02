@@ -51,6 +51,10 @@ export interface Item {
   vx?: number[];
   /** An ink line through its points straight, corner to corner ("Перо"), not smoothed. */
   sharp?: boolean;
+  /** Handles of the curves at a figure's corners (`vx`, in the same box) or a line's points (`pts`, likewise):
+   *  in x, y, out x, y for each; none, all sharp. */
+  vh?: number[];
+  ph?: number[];
   /** How round a rectangle's or a polygon's corners are, in board units (a rectangle without it: 8). */
   rad?: number;
   /** Outline colour of shapes and tasks: a key of STROKE_COLORS, '#rrggbb', or 'none' for no outline;

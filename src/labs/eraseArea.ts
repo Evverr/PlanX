@@ -69,7 +69,7 @@ export function eraseArea(ed: Editor, a: Point, b: Point): void {
         const x = Math.floor(Math.min(...xs) - sw / 2), y = Math.floor(Math.min(...ys) - sw / 2);
         const w = Math.max(1, Math.ceil(Math.max(...xs) + sw / 2) - x), h = Math.max(1, Math.ceil(Math.max(...ys) + sw / 2) - y);
         const q = (v: number) => Math.round(v * 10) / 10;
-        added.push({ ...it, id: uid(), x, y, w, h, iw: w, sw: q(sw), rot: undefined, rx: undefined, pts: run.flatMap((p) => [q(p.x - x), q(p.y - y)]) });
+        added.push({ ...it, id: uid(), x, y, w, h, iw: w, sw: q(sw), rot: undefined, rx: undefined, ph: undefined, pts: run.flatMap((p) => [q(p.x - x), q(p.y - y)]) });
       }
       run = [];
     };
