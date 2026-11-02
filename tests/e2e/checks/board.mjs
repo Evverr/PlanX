@@ -369,6 +369,8 @@ export const checks = {
     await p.ev(`planx.editor.startEditing('tx')`);
     await sleep(100);
     await p.ev(`planx.editor.stopEditing()`);
+    // (Long enough after the first click not to make a double click of it.)
+    await sleep(500);
     await p.click([540, 383]);
     await sleep(600);
     const b0 = (await p.rect('.tfmt')).b;

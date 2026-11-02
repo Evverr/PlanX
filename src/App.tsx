@@ -38,7 +38,7 @@ type Pop = 'clear' | 'icons' | 'help' | 'name' | null;
 
 
 /** How long the text panel takes to fade out (format.css: half its fading in). */
-const PANEL_OUT = 105;
+const PANEL_OUT = 80;
 
 export function App({ boardId }: { boardId: string }) {
   const conn = useMemo(() => new Connection(boardId), [boardId]);

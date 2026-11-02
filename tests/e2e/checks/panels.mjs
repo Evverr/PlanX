@@ -10,6 +10,13 @@ export const checks = {
     const r = await p.ev(`(() => { const m = document.querySelector('.board-menu'), cs = getComputedStyle(m);
       return [cs.animationName.replace(', ', '+'), cs.getPropertyValue('--in-x').trim(), cs.getPropertyValue('--in-y').trim(), cs.animationComposition].join(); })()`);
     expect(r, 'faded in, falling from the top bar').toBe('fade-in+come-in,0px,-8px,replace, add');
+    // Closed: a copy where it was fades out in half the time, then goes.
+    await p.ev(`window.seenGone = 'none'; new MutationObserver((rs) => rs.forEach((r) => r.addedNodes.forEach((g) => { if (g.classList?.contains('gone')) { const cs = getComputedStyle(g); window.seenGone = [g.classList.contains('board-menu'), cs.animationName, cs.animationDuration, cs.pointerEvents].join(); } }))).observe(document.body, { childList: true, subtree: true })`);
+    await p.click(await p.at('.topbar button[aria-label="Меню"]'));
+    const out = await p.ev(`window.seenGone`);
+    expect(out, 'fading out, not in the way').toBe('true,fade-out,0.08s,none');
+    await sleep(300);
+    expect(await p.ev(`document.querySelectorAll('.board-menu').length`), 'then gone').toBe(0);
     // The other popups alike: the map, "?" and the note at the bottom rise, a note at the top falls.
     const ways = await p.ev(`['bar minimap', 'pop help', 'pop toast bottom', 'modal', 'pop toast', 'pop confirm'].map((c) => {
       const d = document.createElement('div'); d.className = c; document.body.appendChild(d);
