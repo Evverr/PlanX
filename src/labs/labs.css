@@ -214,3 +214,7 @@
 .layer-row i { font-style: normal; font-size: var(--s12); color: var(--muted); }
 .layer-here { height: var(--e24); padding: 0 var(--s8); border: 1px solid var(--btn-line); border-radius: var(--s6); background: var(--surface); color: var(--ink); font: inherit; font-size: var(--s12); cursor: pointer; }
 .layers-add { width: 100%; }
+.layer-delete { width: var(--e24); height: var(--e24); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--s4); background: none; color: var(--ink); cursor: pointer; visibility: hidden; }
+.layer-delete .pi { width: 18px; height: 18px; }
+.layer-delete:hover { background: var(--fmt-hover); }
+.layer-row:hover .layer-delete { visibility: visible; }
