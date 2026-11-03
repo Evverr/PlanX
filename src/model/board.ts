@@ -123,6 +123,16 @@ export class Board {
 
   add(item: Item): void {
     this.transact(() => {
+      // Its usual name told apart from the others of its kind already here (a copy's too): the next number.
+      const kind = (t: unknown, tl: unknown, doodle: unknown) => `${t}|${!!tl}|${!!doodle}`, own = kind(item.type, item.tl, item.doodle);
+      let taken = false, top = 0;
+      this.items.forEach((o) => {
+        if (kind(o.get('type'), o.get('tl'), o.get('doodle')) !== own) return;
+        const n = (o.get('nm') as number | undefined) ?? 0;
+        taken ||= n === (item.nm ?? 0);
+        top = Math.max(top, n);
+      });
+      if (taken) item = { ...item, nm: top + 1 };
       const m = new Y.Map<unknown>();
       for (const [k, v] of Object.entries(item)) if (k !== 'id' && v !== undefined) m.set(k, v);
       this.items.set(item.id, m);
