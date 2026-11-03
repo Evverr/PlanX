@@ -1,7 +1,7 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Point } from '../canvas/geometry';
-import { hitItem, hitLink } from '../canvas/geometry';
+import { center, hitItem, hitLink } from '../canvas/geometry';
 import { linkInTextAt } from '../canvas/renderer';
 import { alignOf, baseWeight, DEFAULTS, FILLS, fillable, HAS_FONT, ICON_COLORS, INK_COLORS, strokable, STROKE_COLORS, TEXT_COLORS, type Item, type LinkStyle } from '../model/types';
 import { fitHeight, FONTS } from '../canvas/text';
@@ -15,9 +15,29 @@ import { TL_STEPS } from '../canvas/timeline';
 import { startTidy } from './tidy';
 import { startComment } from './comments';
 
-/** Where the menu opened (on the screen and the board), what it's for, and whether it shows the
- *  picked item's parameters in place of its rows. */
-interface Open { x: number; y: number; w: Point; url: string | null; board: boolean; params: boolean; link?: string }
+/** Where the menu opened (on the screen and the board; the panel, from its button), what it's for, and
+ *  whether it shows the picked item's parameters in place of its rows. */
+interface Open { x: number; y: number; w: Point; url: string | null; board: boolean; params: boolean; link?: string; from?: DOMRect }
+
+/** Opened from a panel low on the screen, it goes above the panel. */
+const rising = (panel: DOMRect) => panel.top > innerHeight / 2;
+
+/* Whether the menu's open, for its button on the panels. */
+let menuShown = false;
+const shownListeners = new Set<() => void>();
+const setMenuShown = (v: boolean) => { menuShown = v; shownListeners.forEach((fn) => fn()); };
+const subscribeShown = (fn: () => void) => { shownListeners.add(fn); return () => { shownListeners.delete(fn); }; };
+
+/** Three dots at a panel's right end: the menu of the right click, for what's picked, opened from here. */
+export function ItemMenuButton({ className }: { className: string }) {
+  const on = useSyncExternalStore(subscribeShown, () => menuShown);
+  return (
+    <button className={`${className} item-menu ${on ? 'on' : ''}`} title="Действия" aria-label="Действия" aria-expanded={on} data-nosort
+      onClick={(e) => window.dispatchEvent(new CustomEvent('planx:item-menu', { detail: e.currentTarget.closest('.bar, .tfmt')!.getBoundingClientRect() }))}>
+      <PanelIcon name="more-vertical" />
+    </button>
+  );
+}
 
 /**
  * "Меню по правому клику": a right click on the board opens a menu there, as the board menu looks.
@@ -30,6 +50,9 @@ interface Open { x: number; y: number; w: Point; url: string | null; board: bool
 export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (text: string) => void }) {
   const [at, setAt] = useState<Open | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const opened = useRef(false);
+  opened.current = !!at;
+  useEffect(() => { setMenuShown(!!at); }, [at]);
   // Where the parameters' popup was dragged to (by its top), kept till the menu opens again.
   const placed = useRef<{ left: number; top: number } | null>(null);
 
@@ -61,13 +84,28 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
       placed.current = null;
       setAt({ x: e.clientX, y: e.clientY, w, url, board: !id, params: false });
     };
+    // From its button on a panel: the same menu, by the button, closed again by it. What's being typed
+    // in is what it's for, as with a right click on it.
+    const fromPanel = (e: Event) => {
+      if (opened.current) { setAt(null); return; }
+      const typing = editor.editingId;
+      if (typing && !editor.selection.has(typing)) editor.setSelection([typing]);
+      editor.stopEditing();
+      const it = editor.selectedItems()[0], link = !it ? editor.selectedLinks()[0] : undefined;
+      if (!it && !link) return;
+      const from = (e as CustomEvent<DOMRect>).detail, w = it ? center(it) : editor.toWorld(from.x, from.y);
+      placed.current = null;
+      setAt({ x: from.right, y: from.top, w, url: labOn('textLink') && editor.selection.size === 1 ? it?.url ?? null : null, board: false, params: false, link: link?.id, from });
+    };
     window.addEventListener('contextmenu', open);
-    return () => window.removeEventListener('contextmenu', open);
+    window.addEventListener('planx:item-menu', fromPanel);
+    return () => { window.removeEventListener('contextmenu', open); window.removeEventListener('planx:item-menu', fromPanel); };
   }, [editor]);
 
   useEffect(() => {
     if (!at) return;
-    const away = (e: Event) => { if (!ref.current?.contains(e.target as Node)) setAt(null); };
+    // (A press on its button is left to the button.)
+    const away = (e: Event) => { if (!ref.current?.contains(e.target as Node) && !(e.target as Element).closest?.('.item-menu')) setAt(null); };
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setAt(null); };
     window.addEventListener('pointerdown', away, true);
     window.addEventListener('wheel', away, true);
@@ -81,6 +119,13 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
     const el = ref.current;
     if (!el || !at) return;
     if (placed.current) { el.style.left = `${placed.current.left}px`; el.style.top = `${placed.current.top}px`; return; }
+    // By its panel: level with its right end, above it or below.
+    if (at.from) {
+      const gap = 8, h = el.offsetHeight;
+      el.style.left = `${Math.max(gap, Math.min(innerWidth - gap - el.offsetWidth, at.from.right - el.offsetWidth))}px`;
+      el.style.top = `${Math.max(gap, Math.min(innerHeight - gap - h, rising(at.from) ? at.from.top - gap - h : at.from.bottom + gap))}px`;
+      return;
+    }
     el.style.left = `${Math.max(8, at.x + el.offsetWidth > innerWidth - 8 ? at.x - el.offsetWidth : at.x)}px`;
     el.style.top = `${Math.max(8, Math.min(at.y, innerHeight - 8 - el.offsetHeight))}px`;
   });
@@ -104,6 +149,8 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
   };
+  // Rising, opened above its button.
+  const comes = at.from && rising(at.from) ? { '--in-y': '8px' } as React.CSSProperties : undefined;
   const gripBar = <div className="params-grip" onPointerDown={grip} title="Перетащить" aria-hidden="true" />;
   const run = (fn: () => void) => () => { fn(); setAt(null); };
   const row = (icon: string, label: string, fn: () => void) => (
@@ -117,7 +164,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
   const link = at.link ? editor.board.getLink(at.link) : undefined;
   if (link) {
     return (
-      <div ref={ref} className={`board-menu context-menu ${at.params ? 'params-pop' : ''}`} role={at.params ? 'dialog' : 'menu'} aria-label={at.params ? 'Параметры линии' : 'Линия'}
+      <div ref={ref} className={`board-menu context-menu ${at.params ? 'params-pop' : ''}`} role={at.params ? 'dialog' : 'menu'} aria-label={at.params ? 'Параметры линии' : 'Линия'} style={comes}
         onContextMenu={(e) => e.preventDefault()}>
         {at.params ? <>{gripBar}<LinkParams editor={editor} ids={editor.selectedLinks().map((l) => l.id)} /></> : <>
           {row('sign', 'Параметры', () => setAt({ ...at, params: true }))}
@@ -136,14 +183,14 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
   const tidy = labOn('tidy') && (editor.selection.size > 1 || tidyMind);
   if (at.params && params.length) {
     return (
-      <div ref={ref} className="board-menu context-menu params-pop" role="dialog" aria-label="Параметры" onContextMenu={(e) => e.preventDefault()}>
+      <div ref={ref} className="board-menu context-menu params-pop" role="dialog" aria-label="Параметры" style={comes} onContextMenu={(e) => e.preventDefault()}>
         {gripBar}
         <ParamsList editor={editor} items={params} />
       </div>
     );
   }
   return (
-    <div ref={ref} className="board-menu context-menu" role="menu" aria-label={at.board ? 'Доска' : 'Действия с выделенным'} onContextMenu={(e) => e.preventDefault()}>
+    <div ref={ref} className="board-menu context-menu" role="menu" aria-label={at.board ? 'Доска' : 'Действия с выделенным'} style={comes} onContextMenu={(e) => e.preventDefault()}>
       {at.board ? <>
         {row('glasses', 'Масштаб 100%', run(() => {
           // The point clicked stays where it is.
