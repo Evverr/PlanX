@@ -213,6 +213,10 @@
 .tfmt .item-menu.fb::before { inset: round(calc(-6px * var(--k)), 1px) round(calc(-3px * var(--k)), 1px); }
 .tfmt .item-menu.fb::after { content: ""; position: absolute; top: 50%; height: var(--bar-h); transform: translateY(-50%); left: calc(var(--gap) / -2); right: calc((var(--s18) - var(--s6)) * -1); }
 
+/* "Панель над элементом": placed by what's picked, not at the bottom. */
+.bar.panel.panel-over { position: fixed; bottom: auto; transform: none; transition: none; z-index: 5; }
+.panel-over.opens-down .op-pop { bottom: auto; top: calc(100% + var(--s18)); --in-y: -8px; }
+
 /* "Сплошная выбранная иконка": what's on on the tool rail, white on blue. */
 .fb.fb.solid-on::before, .fb.solid-on:hover:not(:disabled)::before { background: var(--fmt-on-ink); }
 .fb.solid-on .pi { background: #fff; }

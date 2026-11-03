@@ -19,7 +19,7 @@ export const checks = {
     await open('Настройки');
     expect(await p.ev(`document.querySelectorAll('.modal.settings .labs-list .settings-row .menu-switch').length`), 'switches').toBe(await p.ev(`(async () => (await import('/src/labs/labs.ts')).LABS.length)()`));
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.settings-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
-    expect(await p.ev(`document.querySelector('.labs-list .settings-row[aria-checked="false"] b')?.textContent`), 'switched off').toBe('Общий таймер');
+    expect(await p.ev(`[...document.querySelectorAll('.labs-list .settings-row')].find((r) => r.textContent.includes('Общий таймер')).getAttribute('aria-checked')`), 'switched off').toBe('false');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
     await p.escape();
     expect(await p.ev(`!!document.querySelector('.modal')`), 'Esc closes it').toBe(false);
@@ -338,6 +338,43 @@ export const checks = {
     expect(await kinds(), 'taken off').toBe('вручную');
     await p.ev(`document.querySelector('.history-delete').click()`);
     await sleep(300);
+  },
+
+  async '"Панель над элементом": the selection panel again over what\'s picked, the bottom one staying; under it near the top, what opens from it opening down; gone while it\'s moved'(p) {
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', true))()`);
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); b.add(e.newItem('rect', 480, 300, { id: 'a', w: 240, h: 140 })); e.setSelection(['a']); })()`);
+    await sleep(400);
+    const over = await p.rect('.panel-over'), under = await p.rect('.bar.panel:not(.panel-over)');
+    expect(over.b < 300, 'over the item').toBe(true);
+    expect(Math.round((over.l + over.r) / 2), 'in the middle of it').toBe(600);
+    expect(under.t > 600, 'the bottom one too').toBe(true);
+    // It works the same: a button there does what it does below.
+    await p.click(await p.at('.panel-over button[aria-label^="Дублировать"]'));
+    expect(await p.ev(`planx.board.list().filter((i) => i.type === 'rect').length`), 'duplicated').toBe(2);
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; b.remove(b.list().filter((i) => i.id !== 'a').map((i) => i.id)); e.setSelection(['a']); e.cam = { x: 0, y: -290, z: 1 }; e.camChanged(); })()`);
+    await sleep(300);
+    const near = await p.rect('.panel-over');
+    expect(near.t > 150, 'near the top: under the item').toBe(true);
+    expect(await p.ev(`document.querySelector('.panel-over').classList.contains('opens-down')`), 'opening down').toBe(true);
+    await p.click(await p.at('.panel-over button[aria-label="Цвет"]'));
+    await sleep(200);
+    expect((await p.rect('.panel-over .op-pop')).t > near.b, 'its palette below it').toBe(true);
+    await p.click(await p.at('.panel-over button[aria-label="Цвет"]'));
+    await sleep(100);
+    // Moved, it's out of the way.
+    await p.mouse('mouseMoved', 600, 80);
+    await p.mouse('mousePressed', 600, 80);
+    await p.mouse('mouseMoved', 640, 90);
+    await p.mouse('mouseMoved', 660, 95);
+    await sleep(100);
+    expect(!!(await p.rect('.panel-over')), 'while it moves: not there').toBe(false);
+    await p.mouse('mouseReleased', 660, 95);
+    await sleep(200);
+    expect(!!(await p.rect('.panel-over')), 'let go: back').toBe(true);
+    // Switched off, only the one at the bottom.
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
+    await sleep(150);
+    expect(await p.ev(`document.querySelectorAll('.bar.panel').length`), 'switched off').toBe(1);
   },
 
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {

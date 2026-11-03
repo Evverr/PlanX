@@ -11,6 +11,8 @@ import { crowds, EDGE, shownRects } from '../layout';
 import { useLabs } from '../labs/labs';
 import { AlignButton, LockButton, ReactButton, TidyButton } from '../labs/SelectionLabs';
 import { ItemMenuButton, LinkParams } from '../labs/ContextMenu';
+import { boxOf, instanceBounds } from '../canvas/geometry';
+import { placeOver } from './FormatPanel';
 
 
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
@@ -271,7 +273,9 @@ function selectionRoom(): number {
   return innerWidth - EDGE * 2 - (rail ? rail.width + EDGE : 0);
 }
 
-export function SelectionPanel({ editor, items, cells, linkCount, docked }: { editor: Editor; items: Item[]; cells: number[]; linkCount: number; docked: boolean }) {
+export function SelectionPanel({ editor, items, cells, linkCount, docked, over }: { editor: Editor; items: Item[]; cells: number[]; linkCount: number; docked: boolean;
+  /** The second one, over what's picked as the text panel is over what's typed in ("Панель над элементом", src/labs). */
+  over?: boolean }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
   const sort = useSortable('planx-order-selection', ORDER, 'x');
   const labs = useLabs();
@@ -279,6 +283,8 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
   // there (wherever it's been moved), it goes up above it instead.
   const [place, setPlace] = useState<{ left: number; bottom: number | null }>({ left: 0, bottom: null });
   const [, redraw] = useReducer((n: number) => n + 1, 0);
+  // Over what's picked but with no room there, it stands under it, and what opens from it opens down.
+  const [down, setDown] = useState(false);
   // It finds its place again when the window changes size, a panel opens or closes beside the rail,
   // another panel is moved, or one has slid to a new place.
   useEffect(() => {
@@ -295,6 +301,14 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
   useLayoutEffect(() => {
     const el = sort.ref.current;
     if (!el) return;
+    if (over) {
+      const all = editor.board.list(), boxes = items.map((i) => (i.inst ? instanceBounds(i, all) : boxOf(i)));
+      if (!boxes.length) return;
+      const x = Math.min(...boxes.map((b) => b.x)), y = Math.min(...boxes.map((b) => b.y));
+      const under = placeOver(editor, el, { x, y, w: Math.max(...boxes.map((b) => b.x + b.w)) - x, h: Math.max(...boxes.map((b) => b.y + b.h)) - y });
+      if (under !== down) setDown(under);
+      return;
+    }
     // Its width, from what's in it.
     const kids = [...el.children] as HTMLElement[];
     const outer = (k: HTMLElement) => { const cs = getComputedStyle(k); return k.offsetWidth + parseFloat(cs.marginLeft) + parseFloat(cs.marginRight); };
@@ -319,15 +333,15 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
     const next = { left: Math.round(left - centred), bottom: bottom === base ? null : Math.round(bottom) };
     if (next.left !== place.left || next.bottom !== place.bottom) setPlace(next);
   });
-  if (!items.length && !linkCount) return null;
+  if (!items.length && (over || !linkCount)) return null;
   const tables = items.filter((i) => i.type === 'table'), links = editor.selectedLinks();
   const colored = items.some((i) => fillable(i) || i.type === 'icon' || i.type === 'ink');
   const btn = (icon: PanelIconName, title: string, fn: () => void) => (
     <button className="ib" title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
   );
   return (
-    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${docked ? 'docked' : ''} ${place.bottom !== null ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
-      style={{ transform: `translateX(calc(-50% + ${place.left}px))`, ...(place.bottom !== null && { bottom: place.bottom }) }}
+    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${over ? `panel-over ${down ? 'opens-down' : ''}` : docked ? 'docked' : ''} ${!over && place.bottom !== null ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
+      style={over ? undefined : { transform: `translateX(calc(-50% + ${place.left}px))`, ...(place.bottom !== null && { bottom: place.bottom }) }}
       role="toolbar" aria-label="Выделенное" {...sort.container}>
       {sort.renderFit({
         // All the colours are under the palette: a table's own when it's selected alone.
@@ -375,7 +389,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
         lock: labs.lock && items.length > 0 ? <LockButton editor={editor} items={items} /> : undefined,
         react: labs.reactions && items.length > 0 ? <ReactButton editor={editor} items={items} /> : undefined,
         trash: btn('trashcan', 'Удалить (Del)', () => editor.deleteSelection()),
-      }, selectionRoom() - (labs.contextMenu ? MENU_BUTTON : 0), 'above')}
+      }, selectionRoom() - (labs.contextMenu ? MENU_BUTTON : 0), over && down ? 'below' : 'above')}
       {/* The right click's menu, always at the right end ("Меню по правому клику", src/labs). */}
       {labs.contextMenu && <ItemMenuButton className="ib" />}
     </div>
