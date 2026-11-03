@@ -10,24 +10,27 @@ import { labOn } from './labs';
  * Layers (src/labs): the board's items in named sets, shared with everyone; each shown or hidden for
  * oneself alone (kept per board in this browser), the hidden ones neither seen nor picked. New items
  * go in the layer picked (shown again if it was hidden); "Сюда" puts the picked items in a layer.
- * The first layer holds everything not put in another (items without `ly`, or with a layer since gone).
+ * Every item is in a layer: the first one ("Слой 1", 'base') holds everything from before there were
+ * layers (items without `ly`); an item whose layer isn't on this board (pasted from another) is in the
+ * top one. Any layer can be deleted with all it holds; the last one gone, a new empty "Слой 1" is there.
  */
 export interface Layer { id: string; name: string; n: number }
 export const BASE = 'base';
 
-const map = (b: Board) => b.doc.getMap<{ name: string; n: number }>('layers');
+// (The first layer is there until it's written down as gone.)
+const map = (b: Board) => b.doc.getMap<{ name: string; n: number; gone?: boolean }>('layers');
 
-/** The layers in the order they were made, the first one always among them. */
+/** The layers in the order they were made. */
 export function layersOf(b: Board): Layer[] {
   const out: Layer[] = [];
-  map(b).forEach((l, id) => out.push({ id, ...l }));
-  if (!out.some((l) => l.id === BASE)) out.push({ id: BASE, name: 'Слой 1', n: 1 });
+  map(b).forEach((l, id) => { if (!l.gone) out.push({ id, name: l.name, n: l.n }); });
+  if (!map(b).has(BASE)) out.push({ id: BASE, name: 'Слой 1', n: 1 });
   return out.sort((a, c) => a.n - c.n);
 }
 
 /** A new layer, "Слой" with the next number; gives back its id. */
 export function addLayer(b: Board): string {
-  const n = Math.max(...layersOf(b).map((l) => l.n)) + 1, id = uid();
+  const n = Math.max(0, ...layersOf(b).map((l) => l.n)) + 1, id = uid();
   map(b).set(id, { name: `Слой ${n}`, n });
   return id;
 }
@@ -37,19 +40,26 @@ export function renameLayer(b: Board, id: string, name: string): void {
   if (l && name.trim()) map(b).set(id, { name: name.trim(), n: l.n });
 }
 
-/** A layer and everything in it gone, at once (one undo step brings both back); not the first. */
+/** A layer and everything in it gone, at once (one undo step brings both back); the last one, a new
+ *  empty "Слой 1" in its place. */
 export function deleteLayer(ed: Editor, id: string): void {
-  if (id === BASE) return;
-  const m = map(ed.board);
+  const m = map(ed.board), at = placing(ed.board);
   ed.board.undoManager.addToScope(m);
-  const gone = ed.board.list().filter((it) => it.ly === id).map((it) => it.id);
-  ed.board.transact(() => { ed.board.remove(gone); m.delete(id); });
+  const gone = ed.board.list().filter((it) => at(it) === id).map((it) => it.id);
+  ed.board.transact(() => {
+    ed.board.remove(gone);
+    if (id === BASE) m.set(BASE, { name: '', n: 1, gone: true }); else m.delete(id);
+    if (!layersOf(ed.board).length) m.set(uid(), { name: 'Слой 1', n: 1 });
+  });
   ed.setSelection([...ed.selection].filter((s) => !gone.includes(s)));
-  if (mine.active === id || mine.hidden.includes(id)) setMine({ hidden: mine.hidden.filter((h) => h !== id), active: mine.active === id ? BASE : mine.active });
+  if (mine.active === id || mine.hidden.includes(id)) setMine({ hidden: mine.hidden.filter((h) => h !== id), active: mine.active === id ? '' : mine.active });
 }
 
-/** Which layer an item is in. */
-const layerOf = (it: Item, ids: Set<string>) => (it.ly && ids.has(it.ly) ? it.ly : BASE);
+/** Which layer each item is in, by this board's layers now. */
+function placing(b: Board): (it: Item) => string {
+  const layers = layersOf(b), ids = new Set(layers.map((l) => l.id)), first = layers[0]?.id ?? BASE;
+  return (it) => (it.ly && ids.has(it.ly) ? it.ly : !it.ly && ids.has(BASE) ? BASE : first);
+}
 
 /* What's hidden and which layer is picked, here alone. */
 const KEY = `planx-layers-${boardIdFromUrl() ?? ''}`;
@@ -80,14 +90,14 @@ export function pickLayer(id: string): void { setMine({ ...mine, active: id }); 
 /** The items in hidden layers. */
 export function hiddenByLayers(b: Board, items: Item[]): Set<string> {
   if (!labOn('layers') || !mine.hidden.length) return new Set();
-  const ids = new Set(layersOf(b).map((l) => l.id)), hidden = new Set(mine.hidden);
-  return new Set(items.filter((it) => hidden.has(layerOf(it, ids))).map((it) => it.id));
+  const at = placing(b), hidden = new Set(mine.hidden);
+  return new Set(items.filter((it) => hidden.has(at(it))).map((it) => it.id));
 }
 
 /** The layer a new item goes in (none for the first), shown if it was hidden. */
 export function newItemLayer(b: Board): string | undefined {
   if (!labOn('layers')) return undefined;
-  const id = layersOf(b).some((l) => l.id === mine.active) ? mine.active : BASE;
+  const layers = layersOf(b), id = layers.some((l) => l.id === mine.active) ? mine.active : layers[0].id;
   if (mine.hidden.includes(id)) setMine({ ...mine, hidden: mine.hidden.filter((h) => h !== id) });
   return id === BASE ? undefined : id;
 }
@@ -100,7 +110,7 @@ export function moveToLayer(ed: Editor, id: string): void {
 
 /** How many items each layer holds. */
 export function layerCounts(b: Board): Map<string, number> {
-  const ids = new Set(layersOf(b).map((l) => l.id)), out = new Map<string, number>();
-  for (const it of b.list()) { const l = layerOf(it, ids); out.set(l, (out.get(l) ?? 0) + 1); }
+  const at = placing(b), out = new Map<string, number>();
+  for (const it of b.list()) { const l = at(it); out.set(l, (out.get(l) ?? 0) + 1); }
   return out;
 }
