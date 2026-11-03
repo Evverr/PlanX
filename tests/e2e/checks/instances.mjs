@@ -266,6 +266,20 @@ export const checks = {
     expect(await p.ev(`[...planx.editor.selection].join()`), 'and that one picked').toBe('o');
   },
 
+  async 'something let go over where a put-away component stands stays in sight, not taken into it'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 300, 300, { id: 's', w: 100, h: 100 })); b.add(e.newItem('mind', 800, 500, { id: 'm', w: 120, h: 48 }));
+      e.setSelection(['s']); e.makeComponent(); e.stopEditing();
+      const c = b.list().find((i) => i.comp); e.addInstance(c.id);
+      const i = b.list().find((i) => i.inst); b.update(i.id, { x: 700, y: 100 }); e.setSelection([]); })()`);
+    await sleep(200);
+    await p.drag([860, 524], [350, 350]);
+    expect(await p.ev(`Math.round(planx.board.get('m').x + 60)`), 'let go there').toBe(350);
+    expect(await p.ev(`planx.editor.hidden().has('m')`), 'still in sight').toBe(false);
+    expect(await p.ev(`planx.board.list().filter((f) => f.members?.includes('m')).length`), 'in nothing').toBe(0);
+    expect(await p.ev(`planx.board.list().find((i) => i.comp).members.join()`), 'the component holds what it did').toBe('s');
+  },
+
   async 'the title of a picked instance stays visible when a turned child extends into view from offscreen'(p) {
     const titleY = await p.ev(`(async () => {
       const e = planx.editor, b = planx.board;
