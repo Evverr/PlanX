@@ -139,7 +139,8 @@ function apply(ed: Editor): void {
 type Line = { axis: 'col' | 'row'; at: number; from: number; to: number; gap: number; level: number; out: boolean };
 
 /** The handles' lines (board units): across the gap out to each level (from the node, or the level
- *  before), over that level's first quarter; and across the widest gap along each level with one. */
+ *  before), over that level's first quarter; and across the widest gap along each level with one, as
+ *  long as that, whatever the size of the nodes either side. */
 function lines(ed: Editor): Line[] {
   const n = mt && ed.board.get(mt.id), lv = n && levels(ed);
   if (!n || !lv) return [];
@@ -150,8 +151,8 @@ function lines(ed: Editor): Line[] {
     const before = level ? rows[level - 1] : [n];
     const edge = forth ? Math.max(...before.map((k) => k[out] + k[deep])) : Math.min(...before.map((k) => k[out]));
     const near = forth ? Math.min(...row.map((k) => k[out])) : Math.max(...row.map((k) => k[out] + k[deep]));
-    const lo = Math.min(...row.map((k) => k[along])), hi = Math.max(...row.map((k) => k[along] + k[size]));
-    res.push({ axis: up ? 'row' : 'col', at: (edge + near) / 2, from: lo, to: lo + Math.max(24, (hi - lo) / 4), gap: Math.abs(near - edge), level, out: true });
+    const lo = Math.min(...row.map((k) => k[along])), hi = Math.max(...row.map((k) => k[along] + k[size])), long = Math.max(24, (hi - lo) / 4);
+    res.push({ axis: up ? 'row' : 'col', at: (edge + near) / 2, from: lo, to: lo + long, gap: Math.abs(near - edge), level, out: true });
     // Along it: its widest gap (where it first was, while those two still stand side by side).
     if (row.length < 2) return;
     const gapAt = (i: number) => row[i][along] - row[i - 1][along] - row[i - 1][size];
@@ -162,8 +163,8 @@ function lines(ed: Editor): Line[] {
       for (let i = 2; i < row.length; i++) if (gapAt(i) > gapAt(best)) best = i;
       pairs.set(level, [row[best - 1].id, row[best].id]);
     }
-    const a = row[best - 1], b = row[best], g = gapAt(best);
-    res.push({ axis: up ? 'col' : 'row', at: a[along] + a[size] + g / 2, from: Math.min(a[out], b[out]), to: Math.max(a[out] + a[deep], b[out] + b[deep]), gap: g, level, out: false });
+    const a = row[best - 1], b = row[best], g = gapAt(best), mid = (Math.min(a[out], b[out]) + Math.max(a[out] + a[deep], b[out] + b[deep])) / 2;
+    res.push({ axis: up ? 'col' : 'row', at: a[along] + a[size] + g / 2, from: mid - long / 2, to: mid + long / 2, gap: g, level, out: false });
   });
   return res;
 }
