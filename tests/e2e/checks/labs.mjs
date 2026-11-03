@@ -1095,6 +1095,34 @@ export const checks = {
     expect((await stored()).length, 'gone').toBe(0);
   },
 
+  async '"Зум рамкой": with Z held any tool gives way to it, a box zooms and a double click shows all; Z let go, the tool\'s back'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 300, 300, { id: 's', w: 150, h: 150 })); e.setSelection([]); })()`);
+    const z = (type) => p.cdp('Input.dispatchKeyEvent', { type, key: 'z', code: 'KeyZ', windowsVirtualKeyCode: 90 });
+    for (const tool of ['rect', 'pen', 'hand', 'sticky', 'eraser']) {
+      await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('${tool}'); })()`);
+      const n = await p.ev(`planx.board.list().length`);
+      await z('keyDown');
+      await p.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 600, y: 600 });
+      expect(await p.ev(`getComputedStyle(planx.editor.canvas).cursor`), `${tool}: the magnifier`).toBe('zoom-in');
+      await p.drag([250, 250], [500, 500]);
+      await sleep(550);
+      expect(await p.ev(`planx.board.list().length`), `${tool}: nothing made or rubbed out`).toBe(n);
+      expect(await p.ev(`planx.editor.cam.z > 1.5`), `${tool}: zoomed to the box`).toBe(true);
+      await p.click([1000, 650]); await p.click([1000, 650]);
+      await sleep(100);
+      expect(await p.ev(`Math.round(planx.editor.toScreen({ x: 375, y: 375 }).x) > 0 && planx.editor.toScreen({ x: 375, y: 375 }).x < 1200 && planx.editor.toScreen({ x: 375, y: 375 }).y < 800`), `${tool}: a double click, all in view`).toBe(true);
+      expect(await p.ev(`planx.board.list().length`), `${tool}: and nothing made by it`).toBe(n);
+      await z('keyUp');
+      expect(await p.ev(`planx.editor.tool`), `${tool}: Z let go, back`).toBe(tool);
+      expect(await p.ev(`getComputedStyle(planx.editor.canvas).cursor !== 'zoom-in'`), `${tool}: no magnifier`).toBe(true);
+    }
+    // And it works as itself again.
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('rect'); })()`);
+    await p.drag([600, 300], [800, 500]);
+    expect(await p.ev(`planx.board.list().filter((i) => i.type === 'rect').length`), 'a rectangle').toBe(1);
+  },
+
   async '"Зум рамкой": a box drawn with Z held fills the screen, nothing picked'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('sticky', 300, 300, { id: 's', w: 150, h: 150 })); e.setSelection([]); })()`);

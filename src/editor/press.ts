@@ -100,7 +100,7 @@ export function press(ed: Editor, e: PointerEvent): void {
   const empty = ed.tool === 'select' && e.button === 0 && !ed.spaceDown && !e.shiftKey && !hit && !link && !onControl
     && !grabbableLine(ed, w, hit, e.pointerType) && !ed.editingId
     // With Z held ("Зум рамкой"), anywhere is as the empty board.
-    || (ed.tool === 'select' && e.button === 0 && zoomBoxHeld());
+    || (e.button === 0 && !ed.spaceDown && zoomBoxHeld());
   // Pressed twice on the empty board: everything on it comes into view, as with the "show all" button.
   if (empty) {
     const now = performance.now(), last = ed.lastEmpty;
@@ -112,13 +112,19 @@ export function press(ed: Editor, e: PointerEvent): void {
     }
   }
   const touchPan = e.pointerType === 'touch' && ed.tool === 'select' && !hit && !link && !onControl && !grabbableLine(ed, w, hit, e.pointerType);
-  if (e.button === 1 || ed.spaceDown || ed.tool === 'hand' || touchPan) {
+  if (e.button === 1 || ed.spaceDown || (ed.tool === 'hand' && !(zoomBoxHeld() && e.button === 0)) || touchPan) {
     // A finger on the empty board pans it; let go without moving, it's a tap that drops the selection.
     ed.gesture = { type: 'pan', sx: sp.x, sy: sp.y, cx: ed.cam.x, cy: ed.cam.y, tap: touchPan };
     ed.canvas!.classList.add('panning');
     return;
   }
   if (e.button !== 0) return;
+
+  // Z held, whatever the tool (which it's back to once Z's let go): a box from anywhere, to zoom to ("Зум рамкой", src/labs).
+  if (zoomBoxHeld()) {
+    ed.gesture = { type: 'marquee', start: w, base: new Set(ed.selection), rect: null, zoom: true };
+    return;
+  }
 
   switch (ed.tool) {
     case 'sticky':
@@ -180,11 +186,6 @@ export function press(ed: Editor, e: PointerEvent): void {
   // Select tool.
   // A path's nodes being changed ("Перо", src/labs): a corner or handle taken, or, elsewhere, that's over.
   if (nodeEditing() && e.button === 0 && pressNode(ed, sp, w)) return;
-  // Z held: a box from anywhere, to zoom to ("Зум рамкой", src/labs).
-  if (zoomBoxHeld() && e.button === 0) {
-    ed.gesture = { type: 'marquee', start: w, base: new Set(ed.selection), rect: null, zoom: true };
-    return;
-  }
   const single = ed.selection.size === 1 ? board.get([...ed.selection][0]) : undefined;
   // A mind map node's buttons: the picked one's, or those of the one the pointer rests on.
   const node = ed.editingId && ed.editingId !== single?.id ? undefined : ed.plusNode(), plus = node && plusAt(ed, node, w);
