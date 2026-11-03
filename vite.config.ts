@@ -10,6 +10,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/ws': { target: `ws://localhost:${SYNC_PORT}`, ws: true },
+      '/history': { target: `http://localhost:${SYNC_PORT}` },
     },
   },
   test: {

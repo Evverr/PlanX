@@ -17,6 +17,7 @@ import * as encoding from 'lib0/encoding';
 import * as decoding from 'lib0/decoding';
 import { Board } from '../src/model/board';
 import { sampleBoard } from '../src/model/sample';
+import { addPoint, isPointId, isPointKind, listPoints, readPoint, removePoint } from './history';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT ?? process.env.PLANX_PORT ?? 1234);
@@ -28,6 +29,8 @@ const MSG_SYNC = 0;
 const MSG_AWARENESS = 1;
 const SAVE_DELAY = 1000;
 const PING_EVERY = 30_000;
+/** How long at least between a board's points made by themselves ("История", src/labs), where it's set to. */
+const AUTO_POINT_EVERY = 30 * 60_000;
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -37,6 +40,8 @@ interface Room {
   awareness: awarenessProtocol.Awareness;
   conns: Map<WebSocket, Set<number>>;
   saveTimer: NodeJS.Timeout | null;
+  /** Changed since its last point. */
+  changed: boolean;
 }
 
 const rooms = new Map<string, Room>();
@@ -61,7 +66,7 @@ function getRoom(name: string): Room {
   }
   const awareness = new awarenessProtocol.Awareness(doc);
   awareness.setLocalState(null);
-  const r: Room = { name, doc, awareness, conns: new Map(), saveTimer: null };
+  const r: Room = { name, doc, awareness, conns: new Map(), saveTimer: null, changed: false };
   room = r;
 
   doc.on('update', (update: Uint8Array, origin: unknown) => {
@@ -71,6 +76,7 @@ function getRoom(name: string): Room {
     const msg = encoding.toUint8Array(enc);
     r.conns.forEach((_, conn) => { if (conn !== origin) send(r, conn, msg); });
     r.saveTimer ??= setTimeout(() => save(r), SAVE_DELAY);
+    r.changed = true;
   });
 
   awareness.on('update', ({ added, updated, removed }: { added: number[]; updated: number[]; removed: number[] }, origin: unknown) => {
@@ -91,6 +97,16 @@ function getRoom(name: string): Room {
   return r;
 }
 
+/** A point made by itself, if the board's set to that and has changed since its last. */
+function autoPoint(room: Room, wait: number): void {
+  if (!room.changed || room.doc.getMap('labs').get('historyAuto') !== true) return;
+  const last = listPoints(DATA_DIR, room.name)[0]?.t ?? 0;
+  if (Date.now() - last < wait) return;
+  addPoint(DATA_DIR, room.name, Y.encodeStateAsUpdate(room.doc), 'auto');
+  room.changed = false;
+}
+setInterval(() => rooms.forEach((r) => autoPoint(r, AUTO_POINT_EVERY)), 60_000).unref();
+
 function send(room: Room, conn: WebSocket, msg: Uint8Array): void {
   if (conn.readyState !== WebSocket.OPEN) { close(room, conn); return; }
   conn.send(msg, (err) => { if (err) close(room, conn); });
@@ -102,6 +118,8 @@ function close(room: Room, conn: WebSocket): void {
   room.conns.delete(conn);
   awarenessProtocol.removeAwarenessStates(room.awareness, [...ids], null);
   if (room.conns.size === 0) {
+    // (Everyone's gone: what's been done since the last point isn't left without one.)
+    autoPoint(room, 0);
     save(room);
     room.doc.destroy();
     rooms.delete(room.name);
@@ -159,8 +177,35 @@ const TYPES: Record<string, string> = {
   '.svg': 'image/svg+xml', '.json': 'application/json', '.png': 'image/png', '.ico': 'image/x-icon',
 };
 
+/** "История" (src/labs): GET a board's points, POST a new one (?kind=), GET or DELETE one by its id. */
+function history(req: http.IncomingMessage, res: http.ServerResponse, url: URL): boolean {
+  const m = /^\/history\/([A-Za-z0-9_-]{1,64})(?:\/([^/]+))?\/?$/.exec(url.pathname);
+  if (!m) return false;
+  const [, board, id] = m, headers = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, DELETE' };
+  const json = (data: unknown) => { res.writeHead(200, { ...headers, 'content-type': 'application/json' }); res.end(JSON.stringify(data)); };
+  const fail = (code: number) => { res.writeHead(code, headers); res.end(); };
+  if (req.method === 'OPTIONS') { fail(204); return true; }
+  if (id !== undefined && !isPointId(id)) { fail(400); return true; }
+  if (req.method === 'GET' && !id) json(listPoints(DATA_DIR, board));
+  else if (req.method === 'GET') {
+    const bytes = readPoint(DATA_DIR, board, id);
+    if (!bytes) fail(404);
+    else { res.writeHead(200, { ...headers, 'content-type': 'application/octet-stream' }); res.end(bytes); }
+  } else if (req.method === 'DELETE' && id) { removePoint(DATA_DIR, board, id); json({ ok: true }); }
+  else if (req.method === 'POST' && !id) {
+    const kind = url.searchParams.get('kind'), room = rooms.get(board), file = fileFor(board);
+    const state = room ? Y.encodeStateAsUpdate(room.doc) : fs.existsSync(file) ? fs.readFileSync(file) : null;
+    if (!state) { fail(404); return true; }
+    const point = addPoint(DATA_DIR, board, state, isPointKind(kind) ? kind : 'manual');
+    if (room) room.changed = false;
+    json(point);
+  } else fail(405);
+  return true;
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
+  if (history(req, res, url)) return;
   if (url.pathname === '/health') {
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify({ ok: true, boards: rooms.size }));

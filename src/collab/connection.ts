@@ -103,6 +103,9 @@ export class Connection implements Presence {
   }
 }
 
+/** Where the sync server answers ordinary requests (its /ws address made http, without the /ws). */
+export const serverHttpUrl = (): string => defaultServerUrl().replace(/^ws/, 'http').replace(/\/ws\/?$/, '');
+
 export function defaultServerUrl(): string {
   const env = import.meta.env.VITE_SYNC_URL as string | undefined;
   if (env) return env;
