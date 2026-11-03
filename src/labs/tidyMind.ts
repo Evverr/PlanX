@@ -138,23 +138,33 @@ function apply(ed: Editor): void {
 
 type Line = { axis: 'col' | 'row'; at: number; from: number; to: number; gap: number; level: number; out: boolean };
 
-/** The handles' lines (board units), all as long whatever the size of the nodes: a quarter of the longest
- *  level, 24 at least. Across the gap out to each level (from the node, or the level before), from the
- *  level's start; and across the widest gap along each level with one, from the nodes' near edge (the
- *  left, or the top). */
+/** How far short a line along a level stops of the line across the gap beside it. */
+const CLEAR = 8;
+
+/** The handles' lines (board units), all as long whatever the size of the nodes or how far apart they've
+ *  been stretched: a quarter of the longest level as it comes out, its nodes 16 apart, 24 at least. Across
+ *  the gap out to each level (from the node, or the level before), from the level's start; and across the
+ *  widest gap along each level with one, from the nodes' near edge (the left, or the top), stopping short
+ *  of the line across the gap on that side, so they don't cross. */
 function lines(ed: Editor): Line[] {
   const n = mt && ed.board.get(mt.id), lv = n && levels(ed);
   if (!n || !lv) return [];
   const { way, rows } = lv, up = upright(way), along = up ? 'x' : 'y', size = up ? 'w' : 'h', out = up ? 'y' : 'x', deep = up ? 'h' : 'w';
   const forth = way === 'right' || way === 'down', res: Line[] = [];
-  const LINE = Math.max(24, ...rows.map((row) => (Math.max(...row.map((k) => k[along] + k[size])) - Math.min(...row.map((k) => k[along]))) / 4));
+  const LINE = Math.max(24, ...rows.map((row) => (row.reduce((t, k) => t + k[size], 0) + (row.length - 1) * 16) / 4));
+  // Where the line across the gap out to a level stands.
+  const gapLine = (level: number) => {
+    const before = level ? rows[level - 1] : [n], row = rows[level];
+    const edge = forth ? Math.max(...before.map((k) => k[out] + k[deep])) : Math.min(...before.map((k) => k[out]));
+    return (edge + (forth ? Math.min(...row.map((k) => k[out])) : Math.max(...row.map((k) => k[out] + k[deep])))) / 2;
+  };
   rows.forEach((row, level) => {
     // Out to it: from the furthest edge of the level before (the node, for the first) to its nearest.
     const before = level ? rows[level - 1] : [n];
     const edge = forth ? Math.max(...before.map((k) => k[out] + k[deep])) : Math.min(...before.map((k) => k[out]));
     const near = forth ? Math.min(...row.map((k) => k[out])) : Math.max(...row.map((k) => k[out] + k[deep]));
     const lo = Math.min(...row.map((k) => k[along]));
-    res.push({ axis: up ? 'row' : 'col', at: (edge + near) / 2, from: lo, to: lo + LINE, gap: Math.abs(near - edge), level, out: true });
+    res.push({ axis: up ? 'row' : 'col', at: gapLine(level), from: lo, to: lo + LINE, gap: Math.abs(near - edge), level, out: true });
     // Along it: its widest gap (where it first was, while those two still stand side by side).
     if (row.length < 2) return;
     const gapAt = (i: number) => row[i][along] - row[i - 1][along] - row[i - 1][size];
@@ -166,7 +176,9 @@ function lines(ed: Editor): Line[] {
       pairs.set(level, [row[best - 1].id, row[best].id]);
     }
     const a = row[best - 1], b = row[best], g = gapAt(best), start = Math.min(a[out], b[out]);
-    res.push({ axis: up ? 'col' : 'row', at: a[along] + a[size] + g / 2, from: start, to: start + LINE, gap: g, level, out: false });
+    // Running on from the near edge, the next line across is that out to the next level, or back towards the root this one's own.
+    const beside = forth ? (rows[level + 1] ? gapLine(level + 1) : Infinity) : gapLine(level);
+    res.push({ axis: up ? 'col' : 'row', at: a[along] + a[size] + g / 2, from: start, to: Math.min(start + LINE, beside - CLEAR), gap: g, level, out: false });
   });
   return res;
 }
