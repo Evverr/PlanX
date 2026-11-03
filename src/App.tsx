@@ -387,6 +387,8 @@ export function App({ boardId }: { boardId: string }) {
 
       {/* Hidden while typing, but for a mind map node, which opens for typing on a single click. */}
       {(!editing || editing.type === 'mind') && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={linkCount} docked={docked} />}
+      {/* "Панель над элементом" (src/labs): the same over what's picked, out of the way while it's moved. */}
+      {labs.panelOver && !ui.moving && (!editing || editing.type === 'mind') && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={0} docked={false} over />}
       {/* A table cell is typed into as if it were an item of its own, the size of the cell. */}
       {editing && (editing.type === 'table' && ui.editingCell !== null
         ? <TextEditor key={`${editing.id}:${ui.editingCell}`} editor={editor} item={cellItem(editing, ui.editingCell)} />

@@ -5,7 +5,7 @@ import { useEffect, useLayoutEffect, useReducer, useState, type ReactNode } from
 import type { Editor } from '../editor/editor';
 import { alignOf, baseWeight, DEFAULTS, MARK_COLORS, TEXT_COLORS, type Item, type ListKind, type TextAlign } from '../model/types';
 import { DOT_GAP, DOT_R } from '../canvas/renderer';
-import { boxOf } from '../canvas/geometry';
+import { boxOf, type Rect } from '../canvas/geometry';
 import { FONTS } from '../canvas/text';
 import { PanelIcon as Icon, type PanelIconName as IconName } from './PanelIcon';
 import { useSortable } from './sortable';
@@ -121,28 +121,33 @@ function textRoom(): number {
 }
 
 /** Hung 20px over the top dot of the selected text or sticker (under the bottom dot when there's no room above). */
+/** Puts a panel over this box on the board, if it fits under the top bar (when level with it), otherwise
+ *  under it, clear of the tool rail; gives back whether it's under. */
+export function placeOver(editor: Editor, box: HTMLElement, b: Rect): boolean {
+  const w = box.offsetWidth, h = box.offsetHeight;
+  const top = editor.toScreen({ x: b.x + b.w / 2, y: b.y });
+  const bottom = editor.toScreen({ x: 0, y: b.y + b.h }).y;
+  const reach = DOT_GAP + DOT_R + GAP;
+  const bar = document.querySelector('.topbar')?.getBoundingClientRect();
+  const underBar = bar && top.x - w / 2 < bar.right && top.x + w / 2 > bar.left;
+  const over = top.y - reach - h >= (underBar ? bar.bottom : 0) + EDGE;
+  const y = over ? top.y - reach - h : bottom + reach;
+  // Stay clear of the tool rail when level with it.
+  const rail = document.querySelector('.tools')?.getBoundingClientRect();
+  const minX = rail && rail.top < y + h && rail.bottom > y ? rail.right + EDGE : EDGE;
+  box.style.left = `${Math.max(minX, Math.min(top.x - w / 2, innerWidth - w - EDGE))}px`;
+  box.style.top = `${y}px`;
+  return !over;
+}
+
 export function TextPanel({ editor, item, leaving }: { editor: Editor; item: Item; leaving?: boolean }) {
   const sort = useSortable('planx-order-text', ORDER, 'x');
   const labs = useLabs();
   const el = sort.ref;
   const [menu, setMenu] = useState<Menu | null>(null);
   useLayoutEffect(() => {
-    const box = el.current!;
-    const w = box.offsetWidth, h = box.offsetHeight;
     // A turned item's box square to the screen.
-    const b = boxOf(item);
-    const top = editor.toScreen({ x: b.x + b.w / 2, y: b.y });
-    const bottom = editor.toScreen({ x: 0, y: b.y + b.h }).y;
-    const reach = DOT_GAP + DOT_R + GAP;
-    // Above the item if it fits under the top bar (when level with it), otherwise below.
-    const bar = document.querySelector('.topbar')?.getBoundingClientRect();
-    const underBar = bar && top.x - w / 2 < bar.right && top.x + w / 2 > bar.left;
-    const y = top.y - reach - h >= (underBar ? bar.bottom : 0) + EDGE ? top.y - reach - h : bottom + reach;
-    // Stay clear of the tool rail when level with it.
-    const rail = document.querySelector('.tools')?.getBoundingClientRect();
-    const minX = rail && rail.top < y + h && rail.bottom > y ? rail.right + EDGE : EDGE;
-    box.style.left = `${Math.max(minX, Math.min(top.x - w / 2, innerWidth - w - EDGE))}px`;
-    box.style.top = `${y}px`;
+    placeOver(editor, el.current!, boxOf(item));
   });
   // Its bottom stays that far over the item whatever size it turns (the panels' size, fonts coming in).
   const [, redraw] = useReducer((n: number) => n + 1, 0);

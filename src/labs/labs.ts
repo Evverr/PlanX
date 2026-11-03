@@ -7,7 +7,7 @@ import { readJSON, readText, writeJSON, writeText } from '../storage';
  * browser. Everything they need lives in this folder; the app only asks labOn() where a feature
  * changes what it does, so one that isn't kept comes out by deleting its file and those few lines.
  */
-export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'taskComponent' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib' | 'softEraser' | 'layers' | 'solidTool' | 'history';
+export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'taskComponent' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib' | 'softEraser' | 'layers' | 'solidTool' | 'history' | 'panelOver';
 
 export interface Lab { id: LabId; label: string; icon: string; hint: string }
 
@@ -19,6 +19,7 @@ export const LABS: Lab[] = [
   { id: 'align', label: 'Выравнивание', icon: 'align-items-left', hint: 'Выбрано несколько: кнопка на нижней панели, по краям и по центру' },
   { id: 'nib', label: 'Перо', icon: 'pen-nib', hint: 'В рисовании: фигура по вершинам; клик по первой — замкнуть, двойной клик или Enter — линия' },
   { id: 'softEraser', label: 'Ластик кружком', icon: 'eraser', hint: 'Ластик стирает только то, что под кружком; его размер — в меню рисования' },
+  { id: 'panelOver', label: 'Панель над элементом', icon: 'more-vertical-m', hint: 'Панель выделенного ещё и над ним, как панель текста; нижняя остаётся, чтобы сравнить' },
   { id: 'solidTool', label: 'Сплошная выбранная иконка', icon: 'palette', hint: 'На левой панели: выбранный инструмент белой сплошной иконкой на синем' },
   { id: 'history', label: 'История', icon: 'clock-l', hint: 'Кнопка на правой панели: точки вручную или сами раз в 30 минут; доску можно вернуть к любой' },
   { id: 'layers', label: 'Слои', icon: 'layers', hint: 'Кнопка на правой панели: слои с галочками, скрытое не видно только вам; новое — в выбранный слой' },
