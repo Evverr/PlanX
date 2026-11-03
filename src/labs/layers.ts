@@ -37,6 +37,17 @@ export function renameLayer(b: Board, id: string, name: string): void {
   if (l && name.trim()) map(b).set(id, { name: name.trim(), n: l.n });
 }
 
+/** A layer and everything in it gone, at once (one undo step brings both back); not the first. */
+export function deleteLayer(ed: Editor, id: string): void {
+  if (id === BASE) return;
+  const m = map(ed.board);
+  ed.board.undoManager.addToScope(m);
+  const gone = ed.board.list().filter((it) => it.ly === id).map((it) => it.id);
+  ed.board.transact(() => { ed.board.remove(gone); m.delete(id); });
+  ed.setSelection([...ed.selection].filter((s) => !gone.includes(s)));
+  if (mine.active === id || mine.hidden.includes(id)) setMine({ hidden: mine.hidden.filter((h) => h !== id), active: mine.active === id ? BASE : mine.active });
+}
+
 /** Which layer an item is in. */
 const layerOf = (it: Item, ids: Set<string>) => (it.ly && ids.has(it.ly) ? it.ly : BASE);
 
