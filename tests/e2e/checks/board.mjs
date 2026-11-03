@@ -649,4 +649,20 @@ export const checks = {
     await sleep(50);
     expect(await cursor() === 'col-resize', 'off it a second: not at once again').toBe(false);
   },
+
+  async 'a shape being drawn moves along with the pointer while Space is held, and goes on growing once it\'s let go'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('rect'); })()`);
+    const space = (type) => p.cdp('Input.dispatchKeyEvent', { type, key: ' ', code: 'Space', windowsVirtualKeyCode: 32 });
+    const to = async (x, y) => { await p.mouse('mouseMoved', x, y); await sleep(30); };
+    await to(300, 300);
+    await p.mouse('mousePressed', 300, 300);
+    for (const [x, y] of [[350, 340], [400, 380]]) await to(x, y);
+    await space('keyDown');
+    for (const [x, y] of [[450, 430], [500, 480]]) await to(x, y);
+    await space('keyUp');
+    await to(520, 500);
+    await p.mouse('mouseReleased', 520, 500);
+    await sleep(200);
+    expect(await p.ev(`(() => { const r = planx.board.list().find((i) => i.type === 'rect'); return [r.x, r.y, r.w, r.h].join(); })()`), 'moved by 100, 100, then 20 bigger').toBe('400,400,120,100');
+  },
 };
