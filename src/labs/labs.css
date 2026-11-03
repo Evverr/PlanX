@@ -141,7 +141,8 @@
 /* A rectangle's parameters, opened from the right click's menu. */
 .params-title { padding: var(--s4) var(--s4) var(--s8); font-size: var(--s13, 13px); font-weight: 600; color: var(--ink); }
 .params-colors { display: flex; flex-wrap: wrap; gap: var(--s8); padding: 0 var(--s4) var(--s8); }
-.params-colors .sw { margin: 0; }
+/* (no side margins, the scaled sizes' either: the gap does it) */
+:root .params-group .params-colors .sw { margin: 0; }
 .params-pop { max-height: calc(100vh - 16px); overflow-y: auto; }
 .params-row .menu-input input[type="range"] { width: var(--e110, 110px); padding: 0; border: 0; }
 .params-row .menu-input i { min-width: 3.2em; text-align: right; }
@@ -200,7 +201,7 @@
 .comment-writer textarea:focus { border-color: var(--accent); }
 .comment-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
 /* The lines' parameters on the selection panel: a column, as in «Параметры», not the palette's row. */
-.op-pop.palette-pop:has(.params-list) { height: auto; flex-direction: column; align-items: stretch; gap: 0; width: 300px; padding: var(--s12) var(--s16); white-space: normal; }
+.op-pop.palette-pop:has(.params-list) { height: auto; flex-direction: column; align-items: stretch; gap: 0; width: round(calc(352px * var(--k)), 2px); padding: var(--s12) var(--s16); white-space: normal; }
 .op-pop .params-list .menu-row { width: 100%; }
 
 /* "Слои": a row a layer, the picked one tinted; its tick, name, how many it holds, "Сюда". */
