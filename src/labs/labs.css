@@ -145,7 +145,8 @@
 .params-pop { max-height: calc(100vh - 16px); overflow-y: auto; }
 .params-row .menu-input input[type="range"] { width: var(--e110, 110px); padding: 0; border: 0; }
 .params-row .menu-input i { min-width: 3.2em; text-align: right; }
-.params-pop { width: var(--e320, 320px); }
+/* Wide enough for a row of nine colours (the usual ones, none, any) in one line. */
+.board-menu.params-pop { width: round(calc(352px * var(--k)), 2px); }
 /* Any colour, floating over the popup (fixed: not cut off by its scrolling), from the circle it opened from. */
 .params-group > .color-picker.floating { position: fixed; bottom: auto; transform: none; z-index: 41; --in-y: -8px; }
 .params-group > .color-picker.floating.above { --in-y: 8px; }
