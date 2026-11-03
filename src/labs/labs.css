@@ -204,9 +204,14 @@
 .op-pop.palette-pop:has(.params-list) { height: auto; flex-direction: column; align-items: stretch; gap: 0; width: round(calc(352px * var(--k)), 2px); padding: var(--s12) var(--s16); white-space: normal; }
 .op-pop .params-list .menu-row { width: 100%; }
 
-/* The right click's menu from a panel: three dots at its right end, answering right up to the panel's edge. */
-.bar.panel .item-menu::after { right: calc(var(--s16) * -1); }
-.tfmt .item-menu.fb::after { content: ""; position: absolute; top: 50%; height: var(--bar-h); transform: translateY(-50%); left: calc(var(--gap) / -2); right: calc(var(--s18) * -1); }
+/* The right click's menu from a panel: three dots at its right end, answering right up to the panel's edge.
+   The panel ends 6 sooner for them: its padding 3 less, their highlight 6 narrower, 3 off each side, where they stand. */
+.bar.panel:has(> .item-menu) { padding-right: calc(var(--s16) - var(--s3)); }
+.bar.panel .item-menu { width: calc(var(--e40) - var(--s6)); margin-left: var(--s3); }
+.bar.panel .item-menu::after { left: calc(var(--gap) / -2 - var(--s3)); right: calc((var(--s16) - var(--s3)) * -1); }
+.tfmt:has(> .item-menu) { padding-right: calc(var(--s18) - var(--s6)); }
+.tfmt .item-menu.fb::before { inset: round(calc(-6px * var(--k)), 1px) round(calc(-3px * var(--k)), 1px); }
+.tfmt .item-menu.fb::after { content: ""; position: absolute; top: 50%; height: var(--bar-h); transform: translateY(-50%); left: calc(var(--gap) / -2); right: calc((var(--s18) - var(--s6)) * -1); }
 
 /* "Слои": a row a layer, the picked one tinted; its tick, name, how many it holds, "Сюда". */
 .layers-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--s12); }
