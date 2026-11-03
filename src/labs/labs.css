@@ -148,6 +148,8 @@
 .params-pop { width: var(--e320, 320px); }
 .params-group > .color-picker { position: static; transform: none; margin: 0 auto var(--s8); box-shadow: 0 0 0 1px var(--line); }
 .params-group { padding: var(--s4) var(--s4) var(--s8); }
+/* A gap between groups (colours, rounding, text…), so each stands apart. */
+.params-group + .params-group { margin-top: var(--s12); }
 .params-label { margin-bottom: var(--s6); font-size: var(--s12); color: var(--muted); }
 .params-inline { display: flex; align-items: center; justify-content: space-between; }
 .params-inline .params-label { margin: 0; }
