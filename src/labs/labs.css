@@ -213,6 +213,10 @@
 .tfmt .item-menu.fb::before { inset: round(calc(-6px * var(--k)), 1px) round(calc(-3px * var(--k)), 1px); }
 .tfmt .item-menu.fb::after { content: ""; position: absolute; top: 50%; height: var(--bar-h); transform: translateY(-50%); left: calc(var(--gap) / -2); right: calc((var(--s18) - var(--s6)) * -1); }
 
+/* "Сплошная выбранная иконка": what's on on the tool rail, white on blue. */
+.fb.fb.solid-on::before, .fb.solid-on:hover:not(:disabled)::before { background: var(--fmt-on-ink); }
+.fb.solid-on .pi { background: #fff; }
+
 /* "Слои": a row a layer, the picked one tinted; its tick, name, how many it holds, "Сюда". */
 .layers-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--s12); }
 .layer-row { display: flex; align-items: center; gap: var(--s8); height: var(--e32); padding: 0 var(--s8); border-radius: var(--s6); cursor: pointer; font-size: var(--s13); color: var(--ink); }
