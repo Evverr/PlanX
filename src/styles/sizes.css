@@ -91,4 +91,3 @@
 :root[data-compact] .confirm p { max-width: round(calc(207px * var(--k)), 2px); }
 :root[data-compact] .emoji-grid .pick-emoji { width: round(calc(27px * var(--k)), 2px); }
 :root[data-compact] .emoji-grid .pick-emoji { height: round(calc(27px * var(--k)), 2px); }
-:root[data-compact] .menu-line { width: round(calc(259px * var(--k)), 2px); }
