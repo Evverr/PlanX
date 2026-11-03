@@ -199,6 +199,44 @@ export const checks = {
     expect(await p.ev(`(async () => (await import('/src/labs/layers.ts')).layerCounts(planx.board).get(planx.board.get('m').ly))()`), 'a new item in it').toBe(1);
   },
 
+  async 'three dots at the right end of the bottom and the text panel open the right click\'s menu; half as wide, answering up to the panel\'s edge'(p) {
+    const ids = await stickers(p);
+    await select(p, ids.a);
+    await sleep(300);
+    const edge = (q) => p.ev(`(() => { const r = document.querySelector('${q}').getBoundingClientRect(); return !!document.elementFromPoint(r.right - 2, r.top + r.height / 2)?.closest('.item-menu'); })()`);
+    const rows = () => p.ev(`[...document.querySelectorAll('.context-menu .menu-row')].map((b) => b.textContent).join()`);
+    expect(await p.ev(`document.querySelector('.bar.panel .item-menu').offsetWidth * 2 === document.querySelector('.bar.panel .ib:not(.item-menu)').offsetWidth`), 'half as wide as its neighbours').toBe(true);
+    expect(await edge('.bar.panel'), 'answers at the panel\'s very edge').toBe(true);
+    await p.click(await p.at('.bar.panel .item-menu'));
+    expect((await rows()).includes('Параметры,'), 'the menu').toBe(true);
+    expect((await rows()).endsWith('Удалить'), 'all of it').toBe(true);
+    const menu = await p.rect('.context-menu'), bar = await p.rect('.bar.panel');
+    expect(menu.b <= bar.t, 'above the panel').toBe(true);
+    expect(menu.r, 'level with its right end').toBe(bar.r);
+    expect(await p.ev(`document.querySelector('.bar.panel .item-menu').classList.contains('on')`), 'its button lit').toBe(true);
+    await p.click(await p.at('.bar.panel .item-menu'));
+    await sleep(150);
+    expect(await rows(), 'pressed again: closed').toBe('');
+    // Its rows do what they do from a right click.
+    await p.click(await p.at('.bar.panel .item-menu'));
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Удалить').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    expect(await p.ev(`!!planx.board.get('${ids.a}')`), 'deleted').toBe(false);
+    // While typing: at the text panel's end, for what's typed in.
+    await p.ev(`planx.editor.setSelection(['${ids.c}']); planx.editor.startEditing('${ids.c}')`);
+    await sleep(400);
+    expect(await edge('.tfmt'), 'answers at the text panel\'s very edge').toBe(true);
+    await p.click(await p.at('.tfmt .item-menu'));
+    await sleep(150);
+    expect((await rows()).includes('Скопировать'), 'the menu').toBe(true);
+    expect(await p.ev(`planx.editor.editingId`), 'typing over').toBe(null);
+    await p.escape();
+    // A link alone: its own menu.
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; b.add(e.newItem('sticky', 200, 500, { id: 'z' })); b.addLink({ id: 'l', from: '${ids.c}', to: 'z' }); e.setSelection(['l']); })()`);
+    await sleep(300);
+    await p.click(await p.at('.bar.panel .item-menu'));
+    expect(await rows(), 'a link\'s').toBe('Параметры,Удалить');
+  },
+
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {
     const ids = await stickers(p);
     await select(p, ids.a);

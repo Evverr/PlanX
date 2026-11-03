@@ -11,6 +11,7 @@ import { PanelIcon as Icon, type PanelIconName as IconName } from './PanelIcon';
 import { useSortable } from './sortable';
 import { EDGE } from '../layout';
 import { useLabs } from '../labs/labs';
+import { ItemMenuButton } from '../labs/ContextMenu';
 import { ColorPicker } from './ColorPicker';
 import { linkPartPatch, linkPatch } from '../labs/textLink';
 
@@ -109,6 +110,9 @@ type Menu = 'font' | 'style' | 'size' | 'color' | 'mark' | 'align' | 'list' | 'l
 
 /** Gap between the selected item's top dot and the text panel, and the panel's margin to the screen edge. */
 const GAP = 20;
+
+/** The room the menu's button takes at the right end. */
+const MENU_BUTTON = 44;
 
 /** How wide the text panel may be: the screen less its margins, and the tool rail beside it. */
 function textRoom(): number {
@@ -250,7 +254,9 @@ export function TextPanel({ editor, item, leaving }: { editor: Editor; item: Ite
         }} />}>
           <Btn icon="link" label="Ссылка" on={!!item.url || menu === 'link'} onClick={() => { setPart(pickedPart(editor, item)); toggle('link'); }} />
         </Drop></span> : undefined,
-      }, textRoom(), 'above')}
+      }, textRoom() - (labs.contextMenu ? MENU_BUTTON : 0), 'above')}
+      {/* The right click's menu, always at the right end ("Меню по правому клику", src/labs). */}
+      {labs.contextMenu && <ItemMenuButton className="fb" />}
     </div>
   );
 }

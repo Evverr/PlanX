@@ -10,7 +10,7 @@ import { ColorPicker } from './ColorPicker';
 import { crowds, EDGE, shownRects } from '../layout';
 import { useLabs } from '../labs/labs';
 import { AlignButton, LockButton, ReactButton, TidyButton } from '../labs/SelectionLabs';
-import { LinkParams } from '../labs/ContextMenu';
+import { ItemMenuButton, LinkParams } from '../labs/ContextMenu';
 
 
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
@@ -262,6 +262,9 @@ function TableColors({ editor, table, cells }: { editor: Editor; table: Item; ce
 }
 
 
+/** The room the menu's button takes at the right end. */
+const MENU_BUTTON = 44;
+
 /** How wide the panel may be: the screen less its margins and the tool rail. */
 function selectionRoom(): number {
   const rail = document.querySelector('.tools')?.getBoundingClientRect();
@@ -372,7 +375,9 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
         lock: labs.lock && items.length > 0 ? <LockButton editor={editor} items={items} /> : undefined,
         react: labs.reactions && items.length > 0 ? <ReactButton editor={editor} items={items} /> : undefined,
         trash: btn('trashcan', 'Удалить (Del)', () => editor.deleteSelection()),
-      }, selectionRoom(), 'above')}
+      }, selectionRoom() - (labs.contextMenu ? MENU_BUTTON : 0), 'above')}
+      {/* The right click's menu, always at the right end ("Меню по правому клику", src/labs). */}
+      {labs.contextMenu && <ItemMenuButton className="ib" />}
     </div>
   );
 }
