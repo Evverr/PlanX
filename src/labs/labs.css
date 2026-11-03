@@ -222,9 +222,17 @@
 .labs-pop > .muted { margin: var(--s10) 0 0; }
 .history-list { display: flex; flex-direction: column; margin-top: var(--s12); max-height: 50vh; overflow-y: auto; }
 .history-row { display: flex; align-items: center; gap: var(--s6); padding: var(--s6) 0; border-top: 1px solid var(--line); font-size: var(--s13); color: var(--ink); }
-.history-row span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.history-row b { font-weight: 500; }
-.history-row i { font-style: normal; font-size: var(--s12); color: var(--muted); }
+.history-when { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; padding: var(--s4) var(--s6); border: 0; border-radius: var(--s6); background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.history-when:hover { background: var(--fmt-hover); }
+.history-when b { font-weight: 500; }
+.history-when i { font-style: normal; font-size: var(--s12); color: var(--muted); }
+.history-row.on .history-when { background: var(--fmt-on); }
+.history-pill { height: auto; padding: var(--s6) var(--s6) var(--s6) var(--s14); gap: var(--s10); font-size: var(--s13); color: var(--ink); white-space: nowrap; }
+.history-pill b { font-weight: 600; }
+/* A point on the canvas: nothing's to be done on it, so nothing to do it with. */
+:root[data-looking] :is(.tools, .tools-more, .draw-panel, .recorder, .icon-pick) { visibility: hidden; }
+:root[data-looking] .topbar { pointer-events: none; opacity: .45; }
+
 .history-delete { width: var(--e24); height: var(--e24); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--s4); background: none; cursor: pointer; visibility: hidden; }
 .history-delete .pi { width: 18px; height: 18px; }
 .history-delete:hover { background: var(--fmt-hover); }

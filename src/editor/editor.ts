@@ -85,7 +85,7 @@ export interface UIState {
  * mindOps, keys, camera, copies); the fields and methods marked "shared" are for them, not the UI.
  */
 export class Editor {
-  readonly board: Board;
+  board: Board;
   presence?: Presence;
   cam: Camera = { x: 0, y: 0, z: 1 };
   tool: Tool = 'select';
@@ -221,6 +221,38 @@ export class Editor {
     if (this.moving === moving) return;
     this.moving = moving;
     this.emit();
+  }
+
+  /* "История" (src/labs): another board (a point in this one's history) on the canvas in this one's place, to
+     look at: all that reads the board reads that, and what might change it changes only that. The camera,
+     tool and selection are back as they were afterwards. */
+  private own: { board: Board; cam: Camera; tool: Tool; selection: string[] } | null = null;
+  get looking(): boolean { return !!this.own; }
+
+  /** Shows this board in place of the real one, or (none) the real one again. */
+  showBoard(other: Board | null): void {
+    if (other && !this.own) {
+      this.stopEditing();
+      this.gesture = null;
+      this.own = { board: this.board, cam: this.cam, tool: this.tool, selection: [...this.selection] };
+    }
+    const was = this.own;
+    if (!was) return;
+    this.board = other ?? was.board;
+    this.sight = null;
+    if (other) {
+      this.selection = new Set();
+      this.setTool('hand');
+    } else {
+      this.own = null;
+      this.cam = was.cam;
+      this.camChanged();
+      this.selection = new Set(was.selection.filter((id) => this.board.get(id) || this.board.getLink(id)));
+      this.setTool(was.tool);
+    }
+    document.documentElement.toggleAttribute('data-looking', !!this.own);
+    this.emit();
+    this.requestRender();
   }
 
   /** Shared: tells the UI what's changed. */

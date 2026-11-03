@@ -16,7 +16,7 @@ import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
 import { SwapPop } from './SwapPop';
 import { LayersPop } from './LayersPop';
-import { HistoryPop } from './HistoryPop';
+import { HistoryLookBar, HistoryPop } from './HistoryPop';
 import { zoomHelp } from './wheelZoom';
 import { ContextMenu } from './ContextMenu';
 import { CommentsLayer } from './CommentsLayer';
@@ -29,7 +29,7 @@ import './labs.css';
 type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'keys' | 'layers' | 'history';
 
 /** Popups that close on a press anywhere but in them (the cheat sheet has its own backdrop). */
-const AWAY = '.labs-pop, .labs-rail, .labs-more';
+const AWAY = '.labs-pop, .labs-rail, .labs-more, .history-pill, .confirm';
 
 /**
  * The features on trial that live outside the board's own panels: a rail of their buttons at the
@@ -40,6 +40,8 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
   const labs = useLabs();
   const [pop, setPop] = useState<LabPop | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // The real board's, also while a point in its history's on the canvas.
+  const realBoard = useMemo(() => editor.board, [editor]);
   const [laserOn, setLaserOn] = useState(false);
   const presence = useMemo(() => new LabsPresence(editor, conn, setToast), [editor, conn]);
   useEffect(() => () => presence.destroy(), [presence]);
@@ -120,9 +122,11 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     };
     const onDown = (e: PointerEvent) => {
       if (e.target !== canvas()) {
-        if (!(e.target as Element | null)?.closest?.(AWAY)) setPop((p) => (p === 'keys' ? p : null));
+        // (A point in the history being looked at: its list stays, for the next one.)
+        if (!editor.looking && !(e.target as Element | null)?.closest?.(AWAY)) setPop((p) => (p === 'keys' ? p : null));
         return;
       }
+      if (editor.looking) return;
       setPop(null);
       if (presence.followingId !== null) { presence.stopFollowing(); stopFlight(); }
       const mh = e.button === 0 && labOn('tidy') ? mindGapAt(editor, local(e)) : null;
@@ -244,13 +248,14 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       {pop === 'pdf' && <ExportPop editor={editor} format="pdf" onCancel={() => setPop(null)} onDone={(ok) => { setPop(null); setToast(ok ? 'PDF сохранён' : 'На доске пока пусто'); }} />}
       {pop === 'search' && <SearchPop editor={editor} />}
       {pop === 'layers' && <LayersPop editor={editor} />}
-      {pop === 'history' && <HistoryPop editor={editor} onToast={setToast} />}
+      {pop === 'history' && <HistoryPop editor={editor} board={realBoard} onToast={setToast} />}
       {pop === 'timer' && <TimerPop onStart={(min) => { startTimer(editor.board.doc, min * 60000, conn.me.name); setPop(null); }} />}
       {pop === 'keys' && <KeysSheet onClose={() => setPop(null)} />}
       {labs.swap && <SwapPop editor={editor} />}
       <ContextMenu editor={editor} onToast={setToast} />
       {labs.comments && <CommentsLayer editor={editor} name={conn.me.name} />}
       <div className="labs-top">
+        <HistoryLookBar editor={editor} onToast={setToast} />
         {labs.timer && <TimerPill editor={editor} />}
         {following && labs.follow && (
           <div className="labs-pill follow-pill" style={{ borderColor: following.color }}>
