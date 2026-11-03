@@ -271,15 +271,50 @@ export const checks = {
     await sleep(300);
     expect(await p.ev(`document.querySelector('.history-list').textContent`), 'none yet').toBe('Точек пока нет.');
     expect(await p.ev(`document.querySelector('.history-pop .labs-seg .on').textContent`), 'by hand at first').toBe('Вручную');
-    const kinds = () => p.ev(`[...document.querySelectorAll('.history-row span i')].map((e) => e.textContent).join()`);
+    const kinds = () => p.ev(`[...document.querySelectorAll('.history-when i')].map((e) => e.textContent).join()`);
     await p.click(await p.at('.history-add'));
     await sleep(400);
     expect(await kinds(), 'a point').toBe('вручную');
     // Then the board's changed: something added, something gone, something moved, a new layer.
     await p.ev(`(async () => { const b = planx.board, e = planx.editor, l = await import('/src/labs/layers.ts'); b.add(e.newItem('sticky', 0, 0, { id: 'later' })); b.remove(['${ids.a}']); b.update('${ids.c}', { x: 5, text: 'Другое' }); l.addLayer(b); b.setTitle('Другая'); })()`);
     await sleep(300);
-    await p.click(await p.at('.history-row .layer-here'));
-    await sleep(150);
+    // A press on its time: the board as it was, on the canvas, the real one left as it is.
+    const real = () => p.ev(`planx.board.list().map((i) => i.text).sort().join('|')`);
+    const onCanvas = () => p.ev(`planx.editor.shown().map((i) => i.text).sort().join('|')`);
+    const was = await real(), cam0 = await p.ev(`planx.editor.cam`);
+    await p.click(await p.at('.history-when'));
+    await sleep(400);
+    expect(await p.ev(`planx.editor.looking`), 'looking').toBe(true);
+    expect(await onCanvas(), 'on the canvas, as it was').toBe('Купить молоко|Позвонить Ёжику');
+    expect((await p.ev(`document.querySelector('.history-pill').textContent`)).startsWith('Как было: '), 'says so').toBe(true);
+    expect(await p.ev(`getComputedStyle(document.querySelector('.tools')).visibility`), 'no tools').toBe('hidden');
+    // Dragged, it moves; keys do nothing to it; the real board's as it is.
+    const n = await p.ev(`planx.editor.cam.x`);
+    await p.drag([700, 500], [760, 500]);
+    expect(Math.round((await p.ev(`planx.editor.cam.x`)) - n), 'a drag moves the view').toBe(60);
+    await p.key('a', 'KeyA', 65, 4);
+    await p.key('Delete', 'Delete', 46);
+    await p.key('z', 'KeyZ', 90, 4);
+    expect(await onCanvas(), 'keys leave it').toBe('Купить молоко|Позвонить Ёжику');
+    expect(await p.ev(`planx.editor.selection.size`), 'nothing picked').toBe(0);
+    expect(await real(), 'the real board as it is').toBe(was);
+    expect(await p.ev(`document.querySelector('.history-row').classList.contains('on')`), 'its row lit, the list still open').toBe(true);
+    await p.escape();
+    await sleep(200);
+    expect(await p.ev(`planx.editor.looking`), 'Esc: over').toBe(false);
+    expect(await onCanvas(), 'the real board back').toBe(was);
+    expect((await p.ev(`planx.editor.cam.x`)), 'where it was').toBe(cam0.x);
+    expect(await p.ev(`planx.editor.tool`), 'its tool').toBe('select');
+    // Pressed again: off; going back from the bar, asked as ever.
+    await p.click(await p.at('.history-when'));
+    await sleep(300);
+    await p.click(await p.at('.history-when'));
+    await sleep(300);
+    expect(await p.ev(`planx.editor.looking`), 'pressed again: over').toBe(false);
+    await p.click(await p.at('.history-when'));
+    await sleep(400);
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.history-pill .btn')].find((b) => b.textContent === 'Откатиться').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(200);
     expect((await p.ev(`document.querySelector('.confirm p').textContent`)).startsWith('Вернуть доску к '), 'asked first').toBe(true);
     await p.click(await p.at('.confirm .btn.primary'));
     await sleep(700);

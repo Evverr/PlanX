@@ -15,6 +15,8 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
   if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
   const mod = e.ctrlKey || e.metaKey;
   if (e.code === 'Space') { e.preventDefault(); ed.setSpace(true); return; }
+  // A point in the history being looked at ("История", src/labs): nothing to do on it.
+  if (ed.looking) return;
   // A figure being drawn with "Перо" (src/labs): Enter leaves it a line, Backspace takes its last corner off, Esc lets it go.
   if (nibPoints() && !mod) {
     if (e.key === 'Enter') { e.preventDefault(); finishNib(ed); return; }

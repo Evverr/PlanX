@@ -62,6 +62,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
       const canvas = editor.canvas;
       if (!canvas || e.target !== canvas || !labOn('contextMenu')) return;
       e.preventDefault();
+      if (editor.looking) return;
       const r = canvas.getBoundingClientRect(), w = editor.toWorld(e.clientX - r.left, e.clientY - r.top);
       const hit = hitItem(editor.shown(), w, editor.cam.z);
       // A link (where no item but a frame is over it, as a press would find it): its own menu.
