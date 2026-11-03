@@ -182,13 +182,21 @@ export const checks = {
     await p.ev(`planx.board.add(planx.editor.newItem('sticky', 0, 0, { id: 'n' }))`);
     expect(await p.ev(`planx.board.get('n').ly === planx.board.get('${ids.a}').ly && planx.editor.shown().length`), 'a new one in the picked layer, shown again').toBe(3);
     // Its bin: asked, then the layer gone with what it holds; one undo brings both back.
-    await p.ev(`document.querySelectorAll('.layers-pop .layer-delete')[0].click()`);
+    await p.ev(`document.querySelectorAll('.layers-pop .layer-delete')[1].click()`);
     await sleep(150);
     expect(await p.ev(`document.querySelector('.confirm p')?.textContent`), 'asked first').toBe('Удалить «Слой 2» и всё, что в нём (2), у всех участников? Отменить можно через Ctrl+Z');
     await p.click(await p.at('.confirm .btn.primary'));
     expect(await p.ev(`planx.board.list().map((i) => i.id).join()`), 'it and what it held gone').toBe(ids.c);
     await p.key('z', 'KeyZ', 90, 4);
     expect(await p.ev(`(async () => planx.board.list().length + ' ' + (await import('/src/labs/layers.ts')).layersOf(planx.board).map((l) => l.name).join())()`), 'back with one undo').toBe('3 Слой 1,Слой 2');
+    // The first one too; the last one gone, a new empty "Слой 1".
+    const names = () => p.ev(`(async () => planx.board.list().length + ' ' + (await import('/src/labs/layers.ts')).layersOf(planx.board).map((l) => l.name).join())()`);
+    await p.ev(`(async () => { const m = await import('/src/labs/layers.ts'); m.deleteLayer(planx.editor, 'base'); })()`);
+    expect(await names(), 'the first gone with what it held').toBe('2 Слой 2');
+    await p.ev(`(async () => { const m = await import('/src/labs/layers.ts'); m.deleteLayer(planx.editor, m.layersOf(planx.board)[0].id); })()`);
+    expect(await names(), 'the last gone: an empty "Слой 1"').toBe('0 Слой 1');
+    await p.ev(`planx.board.add(planx.editor.newItem('sticky', 0, 0, { id: 'm' }))`);
+    expect(await p.ev(`(async () => (await import('/src/labs/layers.ts')).layerCounts(planx.board).get(planx.board.get('m').ly))()`), 'a new item in it').toBe(1);
   },
 
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {
