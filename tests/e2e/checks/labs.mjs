@@ -264,6 +264,47 @@ export const checks = {
     expect(await p.ev(`getComputedStyle(document.querySelector('.tools .fb.on'), '::before').backgroundColor`), 'the pale one back').toBe('rgba(75, 145, 255, 0.14)');
   },
 
+  async '"История": a point set by hand, the board changed, gone back to it (asked, what it was kept as a point, one undo step); the switch is the board\'s'(p) {
+    const ids = await stickers(p);
+    await sleep(300);
+    await p.click(await p.at('.labs-rail button[aria-label="История"]'));
+    await sleep(300);
+    expect(await p.ev(`document.querySelector('.history-list').textContent`), 'none yet').toBe('Точек пока нет.');
+    expect(await p.ev(`document.querySelector('.history-pop .labs-seg .on').textContent`), 'by hand at first').toBe('Вручную');
+    const kinds = () => p.ev(`[...document.querySelectorAll('.history-row span i')].map((e) => e.textContent).join()`);
+    await p.click(await p.at('.history-add'));
+    await sleep(400);
+    expect(await kinds(), 'a point').toBe('вручную');
+    // Then the board's changed: something added, something gone, something moved, a new layer.
+    await p.ev(`(async () => { const b = planx.board, e = planx.editor, l = await import('/src/labs/layers.ts'); b.add(e.newItem('sticky', 0, 0, { id: 'later' })); b.remove(['${ids.a}']); b.update('${ids.c}', { x: 5, text: 'Другое' }); l.addLayer(b); b.setTitle('Другая'); })()`);
+    await sleep(300);
+    await p.click(await p.at('.history-row .layer-here'));
+    await sleep(150);
+    expect((await p.ev(`document.querySelector('.confirm p').textContent`)).startsWith('Вернуть доску к '), 'asked first').toBe(true);
+    await p.click(await p.at('.confirm .btn.primary'));
+    await sleep(700);
+    const state = () => p.ev(`(async () => { const b = planx.board, l = await import('/src/labs/layers.ts'); return [b.list().map((i) => i.text).sort().join('|'), l.layersOf(b).length, b.meta.get('title') ?? ''].join(' ; '); })()`);
+    expect(await state(), 'as it was').toBe('Купить молоко|Позвонить Ёжику ; 1 ; ');
+    expect(await p.ev(`document.querySelector('.labs-toast')?.textContent?.startsWith('Доска возвращена')`), 'said so').toBe(true);
+    expect(await p.ev(`(async () => (await (await fetch('/history/' + new URLSearchParams(location.search).get('board'))).json()).map((p) => p.kind).join())()`), 'what it was, kept').toBe('before,manual');
+    await p.ev(`planx.editor.undo()`);
+    await sleep(200);
+    expect(await state(), 'one undo: back again').toBe('|Другое ; 2 ; Другая');
+    // The switch, for the whole board; a point's bin.
+    await p.click(await p.at('.labs-rail button[aria-label="История"]'));
+    await sleep(100);
+    if (!(await p.rect('.history-pop'))) { await p.click(await p.at('.labs-rail button[aria-label="История"]')); await sleep(300); }
+    await p.click(await p.ev(`(() => { const r = document.querySelector('.history-pop .labs-seg button').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(150);
+    expect(await p.ev(`planx.board.doc.getMap('labs').get('historyAuto')`), 'set on the board').toBe(true);
+    expect(!!(await p.rect('.history-add')), 'no button then').toBe(false);
+    await p.ev(`document.querySelector('.history-delete').click()`);
+    await sleep(400);
+    expect(await kinds(), 'taken off').toBe('вручную');
+    await p.ev(`document.querySelector('.history-delete').click()`);
+    await sleep(300);
+  },
+
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {
     const ids = await stickers(p);
     await select(p, ids.a);
@@ -351,7 +392,7 @@ export const checks = {
     expect((await p.rect('.labs-rail')).r, 'at the right edge').toBe(1200 - 12);
     const keys = () => p.ev(`[...document.querySelectorAll('.labs-rail > [data-key]')].map((e) => { const r = e.getBoundingClientRect(); return [e.dataset.key, Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)]; })`);
     const k0 = await keys();
-    expect(k0.map((k) => k[0]).join(), 'in order').toBe('export,pdf,search,layers,timer,laser,follow,keys');
+    expect(k0.map((k) => k[0]).join(), 'in order').toBe('export,pdf,search,layers,history,timer,laser,follow,keys');
     // Brought to the fourth one's middle, it passes the two before that, as on the tool rail.
     await carry(p, k0[0].slice(1), [k0[3].slice(1)]);
     const k1 = (await keys()).map((k) => k[0]);

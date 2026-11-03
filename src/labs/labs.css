@@ -217,6 +217,19 @@
 .fb.fb.solid-on::before, .fb.solid-on:hover:not(:disabled)::before { background: var(--fmt-on-ink); }
 .fb.solid-on .pi { background: #fff; }
 
+/* "История": how points are made, then the points, the latest first. */
+.history-add { width: 100%; margin-top: var(--s12); }
+.labs-pop > .muted { margin: var(--s10) 0 0; }
+.history-list { display: flex; flex-direction: column; margin-top: var(--s12); max-height: 50vh; overflow-y: auto; }
+.history-row { display: flex; align-items: center; gap: var(--s6); padding: var(--s6) 0; border-top: 1px solid var(--line); font-size: var(--s13); color: var(--ink); }
+.history-row span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.history-row b { font-weight: 500; }
+.history-row i { font-style: normal; font-size: var(--s12); color: var(--muted); }
+.history-delete { width: var(--e24); height: var(--e24); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--s4); background: none; cursor: pointer; visibility: hidden; }
+.history-delete .pi { width: 18px; height: 18px; }
+.history-delete:hover { background: var(--fmt-hover); }
+.history-row:hover .history-delete { visibility: visible; }
+
 /* "Слои": a row a layer, the picked one tinted; its tick, name, how many it holds, "Сюда". */
 .layers-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--s12); }
 .layer-row { display: flex; align-items: center; gap: var(--s8); height: var(--e32); padding: 0 var(--s8); border-radius: var(--s6); cursor: pointer; font-size: var(--s13); color: var(--ink); }
