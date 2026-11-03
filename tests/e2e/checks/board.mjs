@@ -500,6 +500,29 @@ export const checks = {
     expect(await p.ev(`!!document.querySelector('.params-pop .color-picker:not(.gone)')`), 'put away').toBe(false);
   },
 
+  async 'no outline: its opacity reads 0; a colour given, it jumps to 100; drawn up from 0, the usual outline'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('rect', 200, 200, { id: 'a', w: 200, h: 120, sc: 'none', so: 0.5 })); e.setSelection(['a']); })()`);
+    await sleep(150);
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: 300, y: 260, button: 'right', buttons: 2, clickCount: 1 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 300, y: 260, button: 'right', buttons: 0, clickCount: 1 });
+    await sleep(200);
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Параметры').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(150);
+    const reads = () => p.ev(`document.querySelector('input[aria-label="Обводка: непрозрачность, %"]').value`);
+    expect(await reads(), 'none: 0').toBe('0');
+    await p.click(await p.at('button[aria-label="Обводка: red"]'));
+    expect(await reads(), 'a colour: 100').toBe('100');
+    expect(await p.ev(`planx.board.get('a').sc + ' ' + planx.board.get('a').so`), 'the colour, fully there').toBe('red undefined');
+    await p.click(await p.at('button[aria-label="Обводка: нет"]'));
+    expect(await reads(), 'none again: 0').toBe('0');
+    // Through the bottom panel's way too; the slider off 0 brings the usual outline.
+    await p.ev(`planx.editor.setOpacity('stroke', 0.4)`);
+    expect(await p.ev(`planx.board.get('a').sc + ' ' + planx.board.get('a').so`), 'drawn up from 0').toBe('undefined 0.4');
+    await p.ev(`(() => { planx.editor.setStroke('none'); planx.editor.setStroke('blue'); })()`);
+    expect(await p.ev(`planx.board.get('a').sc + ' ' + planx.board.get('a').so`), 'a colour after none: fully there').toBe('blue undefined');
+  },
+
   async 'items of a kind are told apart in the parameters by a number: Прямоугольник, Прямоугольник 1'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('rect', 200, 200, { id: 'a', w: 200, h: 120 })); b.add(e.newItem('rect', 450, 200, { id: 'c', w: 200, h: 120 })); e.setSelection(['a', 'c']); })()`);

@@ -109,6 +109,16 @@ export const objectArrowAt = (ed: Editor, w: Point): Item | null => !labOn('obje
   return Math.hypot(w.x - p.x, w.y - p.y) <= Math.max(p.r * 1.3, ed.reach(0));
 }) ?? null;
 
+/** Whether a press is off the component being changed here: not on it, on what it holds or on the controls there. */
+export function offComponent(ed: Editor, w: Point, hit: Item | null): boolean {
+  const c = ed.compHere ? ed.board.get(ed.compHere) : undefined;
+  if (!c?.comp || c.stowed) return false;
+  if ((hit && ed.carried([c]).has(hit.id)) || pointInRect(toLocal(c, w), c)) return false;
+  const picked = ed.selection.size === 1 ? ed.board.get([...ed.selection][0]) : undefined;
+  return !tickAt(ed, w) && !objectArrowAt(ed, w) && frameButtonUnder(ed, w)?.id !== c.id
+    && !(picked && (onHandle(ed, picked, w) || onTopLeft(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!sideAt(ed, picked, w)));
+}
+
 /** The folded mind map node whose count is under the point, picked or not, and the way it's on. */
 export function foldBadgeAt(ed: Editor, w: Point): { id: string; way: Way } | null {
   const pad = ed.reach(4);

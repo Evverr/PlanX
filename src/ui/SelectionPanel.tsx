@@ -172,7 +172,7 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
     ? Object.entries(FILLS).filter(([k]) => k !== 'none' || allowNone)
     : [...Object.entries(STROKE_COLORS).map(([k, v]): [string, string] => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--shape-stroke)')]), ['none', '']];
   const opacity = Number(same(target === 'fill' ? colorable.map((i) => String(fillOpacity(i))) : target === 'text' ? colorable.map((i) => String(i.to ?? 1))
-    : strokable.map((i) => String(i.so ?? 1))) ?? 1);
+    : strokable.map((i) => String(i.sc === 'none' ? 0 : i.so ?? 1))) ?? 1);
   const iconColor = same(icons.map((i) => i.color ?? 'ink')), inks = items.filter((i) => i.type === 'ink'), inkColor = same(inks.map((i) => i.color ?? 'ink'));
   const seeThrough = (list: Item[]) => Number(same(list.map((i) => String(fillOpacity(i)))) ?? 1);
   return (

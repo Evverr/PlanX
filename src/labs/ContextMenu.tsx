@@ -343,7 +343,9 @@ function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch
       {canFill && <ColorRow editor={editor} label={it.type === 'mind' ? 'Цвет' : 'Заливка'} colors={fills} current={it.color} opacity={fillOpacity(it)}
         onColor={(c) => set({ color: c })} onOpacity={(v) => set({ fo: v ?? (it.type === 'mind' || it.type === 'frame' ? 1 : undefined) })} />}
       {canStroke && <ColorRow editor={editor} label="Обводка" colors={Object.fromEntries(Object.entries(STROKE_COLORS).filter(([k]) => k !== 'none').map(([k, v]) => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--shape-stroke)')]))} none
-        current={it.sc ?? 'gray'} opacity={it.so ?? 1} onColor={(c) => set({ sc: c === 'gray' ? undefined : c })} onOpacity={(v) => set({ so: v })} />}
+        current={it.sc ?? 'gray'} opacity={it.sc === 'none' ? 0 : it.so ?? 1}
+        onColor={(c) => set({ sc: c === 'gray' ? undefined : c, ...(it.sc === 'none' && c !== 'none' && { so: undefined }) })}
+        onOpacity={(v) => set({ so: v, ...(it.sc === 'none' && v !== 0 && { sc: undefined }) })} />}
       {own && <ColorRow editor={editor} label="Цвет" colors={own} current={it.color ?? 'ink'} opacity={it.fo ?? 1}
         onColor={(c) => set({ color: c })} onOpacity={(v) => set({ fo: v })} />}
       {!canFill && !own && !texted && (

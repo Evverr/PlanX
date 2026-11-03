@@ -4,7 +4,7 @@ import { center, hitItem, hitLink, instanceBounds, linkShape, onAudioButton, onT
 import { copyId } from '../model/components';
 import { TASK_STATES } from '../model/builtins';
 import { toggleAudio } from '../canvas/audio';
-import { anyDotAt, dotAt, linkHandleAt, foldBadgeAt, frameButtonUnder, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, plusAt, tickAt, objectArrowAt } from './hover';
+import { anyDotAt, dotAt, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, plusAt, tickAt, objectArrowAt } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -30,6 +30,7 @@ export function press(ed: Editor, e: PointerEvent): void {
   ed.pointers.set(e.pointerId, sp);
 
   if (ed.pointers.size === 2) {
+    ed.offComponent = null;
     cancelGesture(ed);
     const [p, q] = [...ed.pointers.values()];
     ed.gesture = { type: 'pinch', d0: Math.hypot(p.x - q.x, p.y - q.y) || 1, z0: ed.cam.z, anchor: ed.toWorld((p.x + q.x) / 2, (p.y + q.y) / 2) };
@@ -43,6 +44,8 @@ export function press(ed: Editor, e: PointerEvent): void {
   let hit = hitItem(ed.shown(), w, ed.cam.z);
   const link = hit && hit.type !== 'frame' ? null : hitLink(ed.shownLinks(), (id) => board.get(id), w, ed.cam.z);
   if (link) hit = null;
+  // Off the component being changed here: a click ends that once let go (see Editor.onPointerUp).
+  ed.offComponent = ed.tool === 'select' && e.button === 0 && !ed.spaceDown && !zoomBoxHeld() && offComponent(ed, w, hit) ? sp : null;
   // An arrowhead taken hold of leads its arrow to another item, let go on it.
   // A picked link's node is moved, or a new one pulled out of a stretch's middle; a node pressed twice
   // quickly goes.
