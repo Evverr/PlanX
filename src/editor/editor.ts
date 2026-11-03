@@ -34,7 +34,7 @@ import { clearComments } from '../labs/comments';
 import { isLocked, labOn, subscribeLabs } from '../labs/labs';
 import { keepMyObject, myObjects } from '../labs/myObjects';
 import { finishNib, nibPoints } from '../labs/nib';
-import { shapedBy } from '../labs/paths';
+import { nodeEditing, shapedBy } from '../labs/paths';
 
 export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -526,6 +526,7 @@ export class Editor {
       dpr: this.dpr,
       selection: this.selection,
       editingId: this.editingId,
+      nodesOf: nodeEditing(),
       marquee: g?.type === 'marquee' ? g.rect : null,
       linkPreview,
       // Other people's cursors, unless switched off ("Нововведения").
