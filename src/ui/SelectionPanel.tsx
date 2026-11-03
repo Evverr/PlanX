@@ -16,7 +16,7 @@ import { LinkParams } from '../labs/ContextMenu';
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['colors', 'align', 'tidy', 'rows', 'cols', 'lines', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+const ORDER = ['colors', 'align', 'tidy', 'rows', 'cols', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -358,6 +358,8 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked }: { ed
             ))}
           </div>
         ) : undefined,
+        // What's picked made a component (one already isn't made one again).
+        component: items.length > 0 && !(items.length === 1 && items[0].comp) ? btn('component', 'Компонент из выделенного', () => editor.makeComponent()) : undefined,
         // An instance can be cut loose from its component.
         detach: items.some((i) => i.inst) ? btn('component-off', 'Отвязать от компонента (Ctrl+Alt+B)', () => editor.detachInstances()) : undefined,
         front: items.length > 0 ? btn('to-front', 'На передний план', () => editor.bringToFront()) : undefined,
