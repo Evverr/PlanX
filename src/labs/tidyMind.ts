@@ -1,6 +1,7 @@
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
+import { drawGapPill } from './gapPill';
 import { descendants, mindWay, upright, type Way } from '../model/mind';
 
 /**
@@ -208,14 +209,7 @@ export function drawMindTidy(ctx: CanvasRenderingContext2D, ed: Editor): void {
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
     ctx.stroke();
-    const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, [pw, ph] = g.axis === 'col' ? [4, 16] : [16, 4];
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = strong ? color : '#fff';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.roundRect(m.x - pw / 2, m.y - ph / 2, pw, ph, 2);
-    ctx.fill();
-    ctx.stroke();
+    drawGapPill(ctx, ed, `mind:${key(g)}`, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, g.axis, strong, color);
   }
   ctx.restore();
 }

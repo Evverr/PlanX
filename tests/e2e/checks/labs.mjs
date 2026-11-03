@@ -353,6 +353,34 @@ export const checks = {
     expect(await p.ev(`planx.board.get('t2').y`), 'the component itself not pushed').toBe(s0);
   },
 
+  async '"Авторасположение": a gap\'s pill under the pointer takes its colour and grows smoothly, twice as thick, 1.3 times as long; and goes back so'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.transact(() => { b.add(e.newItem('rect', 300, 300, { id: 'a', w: 200, h: 200 })); b.add(e.newItem('rect', 560, 300, { id: 'c', w: 200, h: 200 })); }); e.setSelection(['a', 'c']); })()`);
+    await sleep(300);
+    await p.click(await p.at('.bar.panel button[aria-label="Авторасположение"]'));
+    await sleep(200);
+    const m = await p.ev(`(() => { const a = planx.board.get('a'), c = planx.board.get('c'), s = planx.editor.toScreen({ x: (a.x + a.w + c.x) / 2, y: (a.y + a.y + a.h) / 2 }); return [Math.round(s.x), Math.round(s.y)]; })()`);
+    // How many solid red dots across its middle and along it just off its middle line.
+    const size = () => p.ev(`(() => { const k = devicePixelRatio, c = document.querySelector('canvas').getContext('2d'), red = (x, y) => { const d = c.getImageData(x * k, y * k, 1, 1).data; return d[0] > 200 && d[1] < 110 && d[2] < 110; };
+      let across = 0, along = 0; for (let i = -14; i <= 14; i++) { if (red(${m[0]} + i, ${m[1]})) across++; if (red(${m[0]} + 3, ${m[1]} + i)) along++; } return [across, along]; })()`);
+    const rest = await size();
+    expect(rest[1], 'at rest: 3 off its middle is off it').toBe(0);
+    await p.mouse('mouseMoved', m[0], m[1] + 40);
+    await sleep(40);
+    const mid = await size();
+    await sleep(350);
+    const big = await size();
+    expect(big[0] > mid[0], `grows little by little: ${mid[0]} on the way to ${big[0]}`).toBe(true);
+    expect(big[0], 'twice as thick, filled').toBeNear(9, 2);
+    expect(big[1], '1.3 times as long (21, its round ends taking 3 here; 16 long would read 13)').toBeNear(18, 1);
+    await p.mouse('mouseMoved', 900, 700);
+    await sleep(40);
+    const back = await size();
+    await sleep(350);
+    expect(back[0] > rest[0], `goes back little by little: ${back[0]} on the way to ${rest[0]}`).toBe(true);
+    expect((await size()).join(), 'as it was').toBe(rest.join());
+  },
+
   async '"Авторасположение" on one mind map node lays out what grows from it as a mind map does; one Ctrl+Z puts it back'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.transact(() => {

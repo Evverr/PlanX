@@ -1,6 +1,7 @@
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { instanceBounds, type Point } from '../canvas/geometry';
+import { drawGapPill } from './gapPill';
 
 /**
  * "Авторасположение": what's selected laid out in an even grid, a little apart, rows and columns as
@@ -230,16 +231,8 @@ export function drawTidy(ctx: CanvasRenderingContext2D, ed: Editor): void {
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
     ctx.stroke();
-    // The pill, 4 across and 16 along, in the middle.
-    const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, [pw, ph] = g.axis === 'col' ? [4, 16] : [16, 4];
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = strong ? '#E5484D' : '#fff';
-    ctx.strokeStyle = '#E5484D';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.roundRect(m.x - pw / 2, m.y - ph / 2, pw, ph, 2);
-    ctx.fill();
-    ctx.stroke();
+    // The pill in the middle.
+    drawGapPill(ctx, ed, `grid:${g.axis}`, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, g.axis, strong, '#E5484D');
   }
   ctx.restore();
 }
