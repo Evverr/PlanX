@@ -4,8 +4,9 @@ import { cameraFor, flyTo, MAX_Z } from '../editor/camera';
 import { labOn } from './labs';
 
 /**
- * "Зум рамкой" (src/labs): Z held down, a box drawn on the board (from anywhere, over items too) and let
- * go: what's in it fills the screen.
+ * "Зум рамкой" (src/labs): Z held down, whatever the tool, a box drawn on the board (from anywhere, over
+ * items too) and let go: what's in it fills the screen; a double click: all of the board. Z let go, the
+ * tool's as it was.
  */
 let held = false;
 export const zoomBoxHeld = () => held && labOn('zoomBox');

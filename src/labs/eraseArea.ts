@@ -1,3 +1,4 @@
+import { zoomBoxHeld } from './zoomBox';
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { uid } from '../model/types';
@@ -86,7 +87,8 @@ export function eraseArea(ed: Editor, a: Point, b: Point): void {
 /** The eraser's circle around the pointer, while it's the tool. */
 export function drawEraser(ctx: CanvasRenderingContext2D, ed: Editor): void {
   const at = ed.pointerAt;
-  if (ed.tool !== 'eraser' || !at || style.whole) return;
+  // (Z held, the pointer's for zooming: see zoomBox.ts.)
+  if (ed.tool !== 'eraser' || !at || style.whole || zoomBoxHeld()) return;
   ctx.save();
   ctx.beginPath();
   ctx.arc(at.x, at.y, style.size / 2, 0, Math.PI * 2);
