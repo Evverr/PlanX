@@ -146,11 +146,13 @@
 .params-row .menu-input input[type="range"] { width: var(--e110, 110px); padding: 0; border: 0; }
 .params-row .menu-input i { min-width: 3.2em; text-align: right; }
 .params-pop { width: var(--e320, 320px); }
-.params-group > .color-picker { position: static; transform: none; margin: 0 auto var(--s8); box-shadow: 0 0 0 1px var(--line); }
+/* Any colour, floating over the popup (fixed: not cut off by its scrolling), from the circle it opened from. */
+.params-group > .color-picker.floating { position: fixed; bottom: auto; transform: none; z-index: 41; --in-y: -8px; }
+.params-group > .color-picker.floating.above { --in-y: 8px; }
 .params-group { padding: var(--s4) var(--s4) var(--s8); }
 /* Between one item's parameters and the next one's title, more room under the line. */
 /* (as wide as the parameters, the same way in from either side) */
-.params-pop .params-list .params-item > .menu-line { width: auto; margin-bottom: calc(var(--s7) + var(--s12)); }
+.params-pop .params-list .params-item > .menu-line { width: auto; margin-bottom: calc(var(--s7) + var(--s16)); }
 .params-label { margin-bottom: var(--s6); font-size: var(--s12); color: var(--muted); }
 .params-inline { display: flex; align-items: center; justify-content: space-between; }
 .params-inline .params-label { margin: 0; }

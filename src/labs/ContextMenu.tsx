@@ -274,6 +274,21 @@ function ColorRow({ editor, label, colors, current, none, opacity, onColor, onOp
 }) {
   const [picking, setPicking] = useState(false);
   const custom = current?.startsWith('#') && !colors[current] ? current : null, pct = Math.round(opacity * 100);
+  // Any colour floats under its circle (over it when there's no room below), past the popup's edges
+  // if it must; a press elsewhere or the popup scrolled puts it away.
+  const swatch = useRef<HTMLButtonElement>(null), box = useRef<HTMLDivElement>(null);
+  const [spot, setSpot] = useState<{ x: number; y: number; above: boolean } | null>(null);
+  useLayoutEffect(() => {
+    if (!picking) { setSpot(null); return; }
+    const b = swatch.current!.getBoundingClientRect(), f = box.current!.getBoundingClientRect(), gap = 8;
+    const x = Math.max(gap, Math.min(innerWidth - f.width - gap, b.left + b.width / 2 - f.width / 2));
+    const above = b.bottom + gap + f.height > innerHeight - gap && b.top - gap - f.height >= gap;
+    setSpot({ x: Math.round(x), y: Math.round(above ? b.top - gap - f.height : b.bottom + gap), above });
+    const away = (e: Event) => { const t = e.target as Node; if (!box.current?.contains(t) && !swatch.current?.contains(t)) setPicking(false); };
+    window.addEventListener('pointerdown', away, true);
+    window.addEventListener('scroll', away, true);
+    return () => { window.removeEventListener('pointerdown', away, true); window.removeEventListener('scroll', away, true); };
+  }, [picking]);
   return (
     <div className="params-group">
       <div className="params-label">{label}</div>
@@ -283,11 +298,10 @@ function ColorRow({ editor, label, colors, current, none, opacity, onColor, onOp
             aria-label={`${label}: ${k}`} onClick={() => onColor(k)} />
         ))}
         {none && <button className={`sw none ${current === 'none' ? 'on' : ''}`} aria-label={`${label}: нет`} onClick={() => onColor('none')} />}
-        <button className={`sw custom ${custom || picking ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет" aria-label={`${label}: свой цвет`}
+        <button ref={swatch} className={`sw custom ${custom || picking ? 'on' : ''}`} style={custom ? { background: custom } : undefined} title="Свой цвет" aria-label={`${label}: свой цвет`}
           onClick={() => setPicking(!picking)} />
       </div>
-      {/* Under the swatches, in the popup's own flow: not cut off by its edges. */}
-      {picking && <ColorPicker value={custom ?? '#3E7BFA'} onChange={onColor} onStart={() => editor.beginChange()} onEnd={() => editor.endChange()} />}
+      {picking && <ColorPicker value={custom ?? '#3E7BFA'} onChange={onColor} onStart={() => editor.beginChange()} onEnd={() => editor.endChange()} at={spot} box={box} />}
       <div className="params-opacity">
         <input type="range" min={0} max={100} value={pct} aria-label={`${label}: непрозрачность, %`} style={{ '--p': `${pct}%` } as React.CSSProperties}
           onPointerDown={() => { editor.beginChange(); window.addEventListener('pointerup', () => editor.endChange(), { once: true }); }}

@@ -491,6 +491,13 @@ export const checks = {
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Параметры').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     await sleep(150);
     expect(await p.ev(`[...document.querySelectorAll('.params-pop .params-title, .params-pop .params-label')].map((e) => e.textContent).slice(0, 3).join(' | ')`), 'its parameters').toBe('Группа «Фрейм» | Заливка | Обводка');
+    // Any colour floats over the parameters, not pushing them down; a press elsewhere puts it away.
+    const tall = await p.ev(`document.querySelector('.params-pop').scrollHeight`);
+    await p.click(await p.at('.params-pop .sw.custom'));
+    await sleep(200);
+    expect(await p.ev(`getComputedStyle(document.querySelector('.params-pop .color-picker')).position + ' ' + (document.querySelector('.params-pop').scrollHeight - ${tall})`), 'floating').toBe('fixed 0');
+    await p.click(await p.ev(`(() => { const r = document.querySelector('.params-pop .params-title').getBoundingClientRect(); return [r.x + 10, r.y + r.height / 2]; })()`));
+    expect(await p.ev(`!!document.querySelector('.params-pop .color-picker:not(.gone)')`), 'put away').toBe(false);
   },
 
   async 'an item is stretched by its left and top sides too, the other side staying put'(p) {

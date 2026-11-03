@@ -21,8 +21,10 @@ function toHsv(hex: string): Hsv {
  * Any colour, the way the browser's own picker offers it (a saturation/brightness square, a hue strip
  * and the colour's code), in a popover of the app's style. Dragging is one change (onStart … onEnd).
  */
-export function ColorPicker({ value, onChange, onStart, onEnd }: {
+export function ColorPicker({ value, onChange, onStart, onEnd, at, box }: {
   value: string; onChange: (hex: string) => void; onStart?: () => void; onEnd?: () => void;
+  /** Floating where given, on the screen (over what it opened from, and past its edges). */
+  at?: { x: number; y: number; above: boolean } | null; box?: React.Ref<HTMLDivElement>;
 }) {
   const [hsv, setHsv] = useState(() => toHsv(/^#[0-9a-f]{6}$/i.test(value) ? value : '#ffe27a'));
   const [code, setCode] = useState(toHex(hsv));
@@ -43,7 +45,8 @@ export function ColorPicker({ value, onChange, onStart, onEnd }: {
   const square = useRef<HTMLDivElement>(null), strip = useRef<HTMLDivElement>(null);
   const hue = `hsl(${hsv.h}, 100%, 50%)`;
   return (
-    <div className="color-picker" data-nosort onPointerDown={(e) => e.stopPropagation()}>
+    <div ref={box} className={`color-picker ${at !== undefined ? 'floating' : ''} ${at?.above ? 'above' : ''}`} data-nosort onPointerDown={(e) => e.stopPropagation()}
+      style={at !== undefined ? { left: at?.x ?? 0, top: at?.y ?? 0, visibility: at ? undefined : 'hidden' } : undefined}>
       <div ref={square} className="cp-square" style={{ background: hue }}
         onPointerDown={(e) => drag(square.current!, e, (fx, fy) => ({ h: hsv.h, s: fx, v: 1 - fy }))}>
         <i style={{ left: `${hsv.s * 100}%`, top: `${(1 - hsv.v) * 100}%`, background: toHex(hsv) }} />
