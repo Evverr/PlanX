@@ -1,10 +1,17 @@
 import type { Editor } from '../editor/editor';
-import type { Point } from '../canvas/geometry';
+import { hitItem, type Point } from '../canvas/geometry';
 
 /** How long a pill takes to grow or go back, in ms. */
 const MS = 140;
 /** How far each pill has grown (0…1), by its handle, and when that was. */
 const grown = new Map<string, { v: number; t: number }>();
+
+/** How far from a gap's line, either side, it answers for the point `w` (on the board): 12 on the screen,
+ *  but 6 over an item (a mind map's node, say), that being there to be taken hold of itself. */
+export function gapReach(ed: Editor, w: Point): number {
+  const under = hitItem(ed.shown(), w, ed.cam.z);
+  return (under && under.type !== 'frame' ? 6 : 12) / ed.cam.z;
+}
 
 /** How far a gap's handle has grown (0…1, smoothly), under the pointer or being dragged, or going back. */
 function growth(ed: Editor, key: string, on: boolean): number {

@@ -403,7 +403,7 @@ export const checks = {
     expect(await p.ev(`planx.board.get('t2').y`), 'the component itself not pushed').toBe(s0);
   },
 
-  async '"Авторасположение": a gap\'s pill under the pointer takes its colour and grows smoothly, twice as thick, 1.3 times as long, its line a tenth longer; and goes back so'(p) {
+  async '"Авторасположение": a gap\'s pill under the pointer takes its colour and grows smoothly, twice as thick, 1.3 times as long, its line a tenth longer; and goes back so; it answers further off but over an item'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.transact(() => { b.add(e.newItem('rect', 300, 300, { id: 'a', w: 200, h: 200 })); b.add(e.newItem('rect', 560, 300, { id: 'c', w: 200, h: 200 })); }); e.setSelection(['a', 'c']); })()`);
     await sleep(300);
@@ -433,6 +433,18 @@ export const checks = {
     expect(back[0] > rest[0], `goes back little by little: ${back[0]} on the way to ${rest[0]}`).toBe(true);
     expect((await size()).join(), 'as it was').toBe(rest.join());
     expect(await beyond(), 'its line, back').toBe(0);
+    // It answers 12 either side of its line (the gap made wide enough to look), but 6 over an item there.
+    await p.drag(m, [m[0] + 40, m[1]]);
+    await sleep(200);
+    const wide = await p.ev(`(() => { const a = planx.board.get('a'), c = planx.board.get('c'), s = planx.editor.toScreen({ x: (a.x + a.w + c.x) / 2, y: a.y + a.h / 2 }); return [s.x, s.y, c.x - a.x - a.w]; })()`);
+    expect(wide[2] >= 30, `the gap wide: ${wide[2]}`).toBe(true);
+    const at = (dx) => p.ev(`(async () => (await import('/src/labs/tidy.ts')).gapAt(planx.editor, { x: ${wide[0]} + ${dx}, y: ${wide[1]} }))()`);
+    expect(await at(10), '10 off: answers').toBe('col');
+    expect(await at(14), '14 off: no').toBe(null);
+    await p.ev(`(() => { const e = planx.editor, w = e.toWorld(${wide[0]} + 8, ${wide[1]} - 20); planx.board.add(e.newItem('sticky', w.x, w.y, { id: 'over', w: 40, h: 40 })); })()`);
+    await sleep(100);
+    expect(await at(10), 'an item under the pointer, 10 off: no').toBe(null);
+    expect(await at(5), 'nearer than 6: still').toBe('col');
   },
 
   async '"Авторасположение" on one mind map node lays out what grows from it as a mind map does; one Ctrl+Z puts it back'(p) {

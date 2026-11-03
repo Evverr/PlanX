@@ -22,7 +22,7 @@ interface Open { x: number; y: number; w: Point; url: string | null; board: bool
 /** Opened from a panel low on the screen, it goes above the panel. */
 const rising = (panel: DOMRect) => panel.top > innerHeight / 2;
 
-/* Whether the menu's open, for its button on the panels. */
+/* Whether the menu's open from its button on the panels, for that to show. */
 let menuShown = false;
 const shownListeners = new Set<() => void>();
 const setMenuShown = (v: boolean) => { menuShown = v; shownListeners.forEach((fn) => fn()); };
@@ -52,7 +52,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
   const ref = useRef<HTMLDivElement>(null);
   const opened = useRef(false);
   opened.current = !!at;
-  useEffect(() => { setMenuShown(!!at); }, [at]);
+  useEffect(() => { setMenuShown(!!at?.from); }, [at]);
   // Where the parameters' popup was dragged to (by its top), kept till the menu opens again.
   const placed = useRef<{ left: number; top: number } | null>(null);
 

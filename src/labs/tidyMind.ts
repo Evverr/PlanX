@@ -1,7 +1,7 @@
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
-import { drawGapHandle } from './gapPill';
+import { drawGapHandle, gapReach } from './gapPill';
 import { descendants, mindWay, upright, type Way } from '../model/mind';
 
 /**
@@ -171,7 +171,7 @@ function lines(ed: Editor): Line[] {
 /** Which handle's line is under the screen point. */
 export function mindGapAt(ed: Editor, sp: Point): MindGap | null {
   if (!holds(ed)) return null;
-  const w = ed.toWorld(sp.x, sp.y), near = 6 / ed.cam.z, lv = levels(ed)!;
+  const w = ed.toWorld(sp.x, sp.y), near = gapReach(ed, w), lv = levels(ed)!;
   for (const g of lines(ed)) {
     const across = g.axis === 'col' ? w.x : w.y, alongP = g.axis === 'col' ? w.y : w.x;
     if (Math.abs(across - g.at) <= near && alongP >= g.from && alongP <= g.to) {
