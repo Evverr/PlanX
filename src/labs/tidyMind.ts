@@ -1,7 +1,7 @@
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
-import { drawGapPill } from './gapPill';
+import { drawGapHandle } from './gapPill';
 import { descendants, mindWay, upright, type Way } from '../model/mind';
 
 /**
@@ -201,15 +201,7 @@ export function drawMindTidy(ctx: CanvasRenderingContext2D, ed: Editor): void {
     const a = ed.toScreen(g.axis === 'col' ? { x: g.at, y: g.from } : { x: g.from, y: g.at });
     const b = ed.toScreen(g.axis === 'col' ? { x: g.at, y: g.to } : { x: g.to, y: g.at });
     // The first ones (for every level) red, the levels' own grey.
-    const strong = hot === key(g), color = g.level ? '#8B8D98' : '#E5484D';
-    ctx.strokeStyle = color;
-    ctx.globalAlpha = strong ? 0.7 : 0.35;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-    drawGapPill(ctx, ed, `mind:${key(g)}`, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, g.axis, strong, color);
+    drawGapHandle(ctx, ed, `mind:${key(g)}`, a, b, g.axis, hot === key(g), g.level ? '#8B8D98' : '#E5484D');
   }
   ctx.restore();
 }

@@ -403,7 +403,7 @@ export const checks = {
     expect(await p.ev(`planx.board.get('t2').y`), 'the component itself not pushed').toBe(s0);
   },
 
-  async '"Авторасположение": a gap\'s pill under the pointer takes its colour and grows smoothly, twice as thick, 1.3 times as long; and goes back so'(p) {
+  async '"Авторасположение": a gap\'s pill under the pointer takes its colour and grows smoothly, twice as thick, 1.3 times as long, its line a tenth longer; and goes back so'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.transact(() => { b.add(e.newItem('rect', 300, 300, { id: 'a', w: 200, h: 200 })); b.add(e.newItem('rect', 560, 300, { id: 'c', w: 200, h: 200 })); }); e.setSelection(['a', 'c']); })()`);
     await sleep(300);
@@ -423,12 +423,16 @@ export const checks = {
     expect(big[0] > mid[0], `grows little by little: ${mid[0]} on the way to ${big[0]}`).toBe(true);
     expect(big[0], 'twice as thick, filled').toBeNear(9, 2);
     expect(big[1], '1.3 times as long (21, its round ends taking 3 here; 16 long would read 13)').toBeNear(18, 1);
+    // Its line, a tenth longer than the 200 it runs (dots of it, its colour, past the top end).
+    const beyond = () => p.ev(`(() => { const k = devicePixelRatio, c = document.querySelector('canvas').getContext('2d'); let n = 0; for (let i = 3; i <= 14; i++) { const d = c.getImageData(${m[0]} * k, (${m[1]} - 100 - i) * k, 1, 1).data; if (d[0] > d[1] + 30) n++; } return n; })()`);
+    expect(await beyond(), 'its line, 10 further at each end').toBeNear(8, 2);
     await p.mouse('mouseMoved', 900, 700);
     await sleep(40);
     const back = await size();
     await sleep(350);
     expect(back[0] > rest[0], `goes back little by little: ${back[0]} on the way to ${rest[0]}`).toBe(true);
     expect((await size()).join(), 'as it was').toBe(rest.join());
+    expect(await beyond(), 'its line, back').toBe(0);
   },
 
   async '"Авторасположение" on one mind map node lays out what grows from it as a mind map does; one Ctrl+Z puts it back'(p) {

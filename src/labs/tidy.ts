@@ -1,7 +1,7 @@
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { instanceBounds, type Point } from '../canvas/geometry';
-import { drawGapPill } from './gapPill';
+import { drawGapHandle } from './gapPill';
 
 /**
  * "Авторасположение": what's selected laid out in an even grid, a little apart, rows and columns as
@@ -223,16 +223,7 @@ export function drawTidy(ctx: CanvasRenderingContext2D, ed: Editor): void {
   for (const g of gapLines(tidyItems(ed, tidy), tidy)) {
     const a = ed.toScreen(g.axis === 'col' ? { x: g.at, y: g.from } : { x: g.from, y: g.at });
     const b = ed.toScreen(g.axis === 'col' ? { x: g.at, y: g.to } : { x: g.to, y: g.at });
-    const strong = hot === g.axis;
-    ctx.strokeStyle = '#E5484D';
-    ctx.globalAlpha = strong ? 0.7 : 0.35;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-    // The pill in the middle.
-    drawGapPill(ctx, ed, `grid:${g.axis}`, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, g.axis, strong, '#E5484D');
+    drawGapHandle(ctx, ed, `grid:${g.axis}`, a, b, g.axis, hot === g.axis, '#E5484D');
   }
   ctx.restore();
 }
