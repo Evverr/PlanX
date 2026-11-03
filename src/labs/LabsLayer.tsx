@@ -15,6 +15,7 @@ import { drawTidy, endTidyDrag, gapAt, moveTidyDrag, setGaps, setHotGap, startTi
 import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
 import { SwapPop } from './SwapPop';
+import { LayersPop } from './LayersPop';
 import { ContextMenu } from './ContextMenu';
 import { CommentsLayer } from './CommentsLayer';
 import { drawNib } from './nib';
@@ -23,7 +24,7 @@ import { drawEraser, eraserStyle, subscribeEraser } from './eraseArea';
 import { drawGroup, endGroupScale, groupScaling, moveGroupScale, onGroupHandle, startGroupScale } from './multi';
 import './labs.css';
 
-type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'keys';
+type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'keys' | 'layers';
 
 /** Popups that close on a press anywhere but in them (the cheat sheet has its own backdrop). */
 const AWAY = '.labs-pop, .labs-rail, .labs-more';
@@ -221,10 +222,11 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
 
   const toggle = (p: LabPop) => setPop((cur) => (cur === p ? null : p));
   const summon = () => setToast(presence.summon() ? 'Все участники перенесены к вам' : 'На доске пока никого нет. Откройте ссылку на доску во втором окне');
-  const all: Record<'export' | 'pdf' | 'search' | 'timer' | 'laser' | 'follow' | 'keys', RailButton> = {
+  const all: Record<'export' | 'pdf' | 'search' | 'layers' | 'timer' | 'laser' | 'follow' | 'keys', RailButton> = {
     export: { icon: 'cloud-download', title: 'Экспорт в PNG', on: pop === 'export', onClick: () => toggle('export') },
     pdf: { icon: 'file', title: 'Экспорт в PDF', on: pop === 'pdf', onClick: () => toggle('pdf') },
     search: { icon: 'search', title: 'Поиск по доске (Ctrl+F)', on: pop === 'search', onClick: () => toggle('search') },
+    layers: { icon: 'layers', title: 'Слои', on: pop === 'layers', onClick: () => toggle('layers') },
     timer: { icon: 'timer', title: 'Общий таймер', on: pop === 'timer', onClick: () => toggle('timer') },
     laser: { icon: 'magic-wand', title: 'Лазерная указка (K)', on: laserOn, onClick: () => setLaserOn(!laserOn) },
     follow: { icon: 'meeting-point', title: 'Позвать всех ко мне', onClick: summon },
@@ -238,6 +240,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       {pop === 'export' && <ExportPop editor={editor} format="png" onCancel={() => setPop(null)} onDone={(ok) => { setPop(null); setToast(ok ? 'Картинка сохранена' : 'На доске пока пусто'); }} />}
       {pop === 'pdf' && <ExportPop editor={editor} format="pdf" onCancel={() => setPop(null)} onDone={(ok) => { setPop(null); setToast(ok ? 'PDF сохранён' : 'На доске пока пусто'); }} />}
       {pop === 'search' && <SearchPop editor={editor} />}
+      {pop === 'layers' && <LayersPop editor={editor} />}
       {pop === 'timer' && <TimerPop onStart={(min) => { startTimer(editor.board.doc, min * 60000, conn.me.name); setPop(null); }} />}
       {pop === 'keys' && <KeysSheet onClose={() => setPop(null)} />}
       {labs.swap && <SwapPop editor={editor} />}

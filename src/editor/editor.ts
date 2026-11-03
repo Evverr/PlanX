@@ -35,6 +35,7 @@ import { isLocked, labOn, subscribeLabs } from '../labs/labs';
 import { keepMyObject, myObjects } from '../labs/myObjects';
 import { finishNib, nibPoints } from '../labs/nib';
 import { nodeEditing, shapedBy } from '../labs/paths';
+import { hiddenByLayers, layersVersion, newItemLayer } from '../labs/layers';
 
 export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -176,7 +177,7 @@ export class Editor {
   private plusTimer = 0;
   /** What's in sight, worked out once for each change of the board (it's asked for on every move
    *  of the pointer and every frame drawn). */
-  private sight: { version: number; hidden: Set<string>; folded: Map<string, Map<Way, number>>; shown: Item[]; links: Link[] } | null = null;
+  private sight: { version: number; lv: number; hidden: Set<string>; folded: Map<string, Map<Way, number>>; shown: Item[]; links: Link[] } | null = null;
   /** Steps undone along with the board's though they aren't on it (the panels put back as by
    *  default), each at the place in the board's history it was taken. */
   private outside: Array<{ undo: () => void; depth: number; along?: boolean }> = [];
@@ -736,7 +737,9 @@ export class Editor {
     const z = type === 'frame' && !extra.inst ? this.board.minZ() - 1 : this.board.maxZ() + 1;
     // Shapes come out as set under the gear of their panel.
     const shape = type === 'rect' || type === 'ellipse' || type === 'polygon' ? shapePatch(type, shapeStyle()) : {};
-    return { ...d, ...shape, id: uid(), type, x: Math.round(x), y: Math.round(y), z, ...extra } as Item;
+    // In the layer picked ("Слои", src/labs).
+    const ly = newItemLayer(this.board);
+    return { ...d, ...shape, id: uid(), type, x: Math.round(x), y: Math.round(y), z, ...(ly ? { ly } : {}), ...extra } as Item;
   }
 
   /** Puts an icon in the middle of the screen (fanned out a little so several don't stack),
@@ -1431,9 +1434,12 @@ export class Editor {
   /* ---------- frames and what's in sight ---------- */
 
   private inSight() {
-    const version = this.board.getVersion();
-    if (this.sight?.version !== version) {
+    const version = this.board.getVersion(), lv = layersVersion();
+    if (this.sight?.version !== version || this.sight.lv !== lv) {
       const items = this.board.list(), hidden = hiddenIn(this.board, items);
+      // Hidden layers ("Слои", src/labs): out of sight, their links too.
+      const layered = hiddenByLayers(this.board, items);
+      for (const id of layered) hidden.add(id);
       // How many nodes each folded mind map node hides, each way.
       const get = (id: string) => this.board.get(id), folded = new Map<string, Map<Way, number>>();
       for (const i of items) {
@@ -1441,7 +1447,8 @@ export class Editor {
         folded.set(i.id, new Map([...foldedAway(i, items, get)].map(([way, ids]) => [way, ids.length])));
       }
       const shown = stacked(this.board, hidden.size ? items.filter((i) => !hidden.has(i.id)) : items);
-      this.sight = { version, hidden, folded, shown, links: linksIn(this.board, items, hidden) };
+      const links = linksIn(this.board, items, hidden);
+      this.sight = { version, lv, hidden, folded, shown, links: layered.size ? links.filter((l) => !layered.has(l.from) && !layered.has(l.to)) : links };
     }
     return this.sight;
   }

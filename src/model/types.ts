@@ -60,6 +60,8 @@ export interface Item {
   /** The number in its usual name ("Прямоугольник 2"): items of a kind numbered as they come on the
    *  board, the first without one (see Board.add). */
   nm?: number;
+  /** The layer it's in ("Слои", src/labs); none, the first. */
+  ly?: string;
   /** Outline colour of shapes and tasks: a key of STROKE_COLORS, '#rrggbb', or 'none' for no outline;
    *  unset is the usual grey (see strokeOf in the renderer). */
   sc?: string;
