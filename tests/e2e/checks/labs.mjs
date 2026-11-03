@@ -205,7 +205,9 @@ export const checks = {
     await sleep(300);
     const edge = (q) => p.ev(`(() => { const r = document.querySelector('${q}').getBoundingClientRect(); return !!document.elementFromPoint(r.right - 2, r.top + r.height / 2)?.closest('.item-menu'); })()`);
     const rows = () => p.ev(`[...document.querySelectorAll('.context-menu .menu-row')].map((b) => b.textContent).join()`);
-    expect(await p.ev(`document.querySelector('.bar.panel .item-menu').offsetWidth === document.querySelector('.bar.panel .ib:not(.item-menu)').offsetWidth`), 'as wide as its neighbours').toBe(true);
+    expect(await p.ev(`document.querySelector('.bar.panel .ib:not(.item-menu)').offsetWidth - document.querySelector('.bar.panel .item-menu').offsetWidth`), 'its highlight 6 narrower').toBe(6);
+    // From the dots' middle to the panel's edge 6 less than from another button's to its right.
+    expect(await p.ev(`(() => { const b = document.querySelector('.bar.panel .item-menu').getBoundingClientRect(), n = document.querySelector('.bar.panel').getBoundingClientRect(); return Math.round(n.right - (b.left + b.width / 2)); })()`), 'the panel 6 shorter past them').toBe(30);
     expect(await edge('.bar.panel'), 'answers at the panel\'s very edge').toBe(true);
     await p.click(await p.at('.bar.panel .item-menu'));
     expect((await rows()).includes('Параметры,'), 'the menu').toBe(true);
