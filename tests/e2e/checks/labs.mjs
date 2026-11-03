@@ -251,6 +251,19 @@ export const checks = {
     expect(await rows(), 'a link\'s').toBe('Параметры,Удалить');
   },
 
+  async '"Сплошная выбранная иконка": the tool that\'s on, white on blue, solid where there\'s a solid one; switched off, as it was'(p) {
+    const on = () => p.ev(`(() => { const b = document.querySelector('.tools .fb.solid-on'); if (!b) return null; const i = getComputedStyle(b.querySelector('.pi')), f = getComputedStyle(b, '::before'); return [b.dataset.key, i.backgroundColor, f.backgroundColor, i.maskImage.includes('solid')].join(); })()`);
+    await sleep(200);
+    expect(await on(), 'the cursor: no solid one, in white').toBe('select,rgb(255, 255, 255),rgb(0, 128, 255),false');
+    await p.ev(`planx.editor.setTool('sticky')`);
+    await sleep(200);
+    expect(await on(), 'a sticker: solid').toBe('sticky,rgb(255, 255, 255),rgb(0, 128, 255),true');
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('solidTool', false))()`);
+    await sleep(200);
+    expect(await on(), 'switched off').toBe(null);
+    expect(await p.ev(`getComputedStyle(document.querySelector('.tools .fb.on'), '::before').backgroundColor`), 'the pale one back').toBe('rgba(75, 145, 255, 0.14)');
+  },
+
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {
     const ids = await stickers(p);
     await select(p, ids.a);

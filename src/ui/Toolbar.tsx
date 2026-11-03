@@ -27,6 +27,13 @@ const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
 /** Buttons from the mockup that have no feature behind them yet. */
 const LATER: Partial<Record<string, [PanelIconName, string]>> = {};
 
+/** The solid versions of the rail's icons, shown while the button's on ("Сплошная выбранная иконка", src/labs);
+ *  those without one stay as they are, in white. */
+const SOLID: Partial<Record<PanelIconName, PanelIconName>> = {
+  sticker: 'sticker-solid', 'circle-check': 'circle-check-solid', columns: 'columns-solid', branch: 'branch-solid',
+  package: 'package-solid', 'pen-nib': 'pen-nib-solid', image: 'image-solid', smile: 'smile-solid', path: 'path-solid', comment: 'comment-solid',
+};
+
 /** Everything on the rail, top to bottom, until someone rearranges it. */
 const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'table', 'mind', 'objects', 'frames', 'draw', 'image', 'audio', 'smile', 'lines', 'comments'];
 
@@ -159,10 +166,10 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
   const moreZone = sort.moreZone(hidden);
   /** A rail button; in the "more" row (`inMenu`) it closes the row when used. */
   const railButton = (key: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}, inMenu = false): ReactNode => (
-    <button key={key} {...(inMenu ? sort.moreItem(key) : sort.item(key))} className={`fb ${on ? 'on' : ''} ${sort.lifted(key) ? 'lifted' : ''}`}
+    <button key={key} {...(inMenu ? sort.moreItem(key) : sort.item(key))} className={`fb ${on ? 'on' : ''} ${on && labs.solidTool ? 'solid-on' : ''} ${sort.lifted(key) ? 'lifted' : ''}`}
       title={label} aria-label={label.replace(/ \(.*\)$/, '')} {...extra}
       onClick={() => { onClick?.(); if (inMenu) setMoreOpen(false); }}>
-      <PanelIcon name={icon} />
+      <PanelIcon name={on && labs.solidTool ? SOLID[icon] ?? icon : icon} />
     </button>
   );
   const item = (key: string, inMenu = false): ReactNode => {
