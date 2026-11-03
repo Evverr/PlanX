@@ -67,6 +67,8 @@ export interface Scene {
   dpr: number;
   selection: Set<string>;
   editingId: string | null;
+  /** The figure or line whose nodes are being changed ("Перо", src/labs): its nodes in place of the frame. */
+  nodesOf?: string | null;
   marquee: Rect | null;
   linkPreview: { from: Item; fromSide: Side | null; to: Point; target: Item | null; style?: LinkStyle } | null;
   peers: Peer[];
@@ -1233,7 +1235,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   if (leaving) drawMindButtons(ctx, leaving, { ...s, plusFade: s.plusLeaving!.fade, hotPlus: null, chevronless: null });
   for (const id of s.selection) {
     const it = s.get(id);
-    if (!it) continue;
+    if (!it || s.nodesOf === id) continue;
     // A mind map node shows it's picked by its "+" buttons alone, which a few picked together don't get.
     // An instance keeps its red title alone, without a selection frame.
     if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) outline(ctx, it, cam.z, SELECT_COLOR);
