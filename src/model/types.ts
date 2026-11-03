@@ -57,6 +57,9 @@ export interface Item {
   ph?: number[];
   /** How round a rectangle's or a polygon's corners are, in board units (a rectangle without it: 8). */
   rad?: number;
+  /** The number in its usual name ("Прямоугольник 2"): items of a kind numbered as they come on the
+   *  board, the first without one (see Board.add). */
+  nm?: number;
   /** Outline colour of shapes and tasks: a key of STROKE_COLORS, '#rrggbb', or 'none' for no outline;
    *  unset is the usual grey (see strokeOf in the renderer). */
   sc?: string;

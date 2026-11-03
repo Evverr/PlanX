@@ -24,6 +24,15 @@ describe('Board', () => {
     expect(b.get('top')).toMatchObject({ x: 40, color: 'pink' });
   });
 
+  it('numbers the items of a kind as they come, the first without a number, a copy too', () => {
+    const b = new Board();
+    b.add(sticky('a'));
+    b.add(sticky('b'));
+    b.add({ ...sticky('c'), type: 'rect' });
+    b.transact(() => { b.add(sticky('d')); b.add({ ...b.get('b')!, id: 'e' }); });
+    expect(['a', 'b', 'c', 'd', 'e'].map((id) => b.get(id)!.nm)).toEqual([undefined, 1, undefined, 2, 3]);
+  });
+
   it('removes links whose ends are deleted', () => {
     const b = new Board();
     b.add(sticky('a'));

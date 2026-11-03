@@ -250,7 +250,7 @@ function ParamsList({ editor, items }: { editor: Editor; items: Item[] }) {
         return (
           <div key={it.id} className="params-item">
             {i > 0 && <div className="menu-line" />}
-            <div className="params-title">{now.tl ? 'Таймлайн' : now.doodle ? 'Стикер' : NAMES[now.type]}{now.tl ? '' : snippet}</div>
+            <div className="params-title">{now.tl ? 'Таймлайн' : now.doodle ? 'Стикер' : NAMES[now.type]}{now.nm ? ` ${now.nm}` : ''}{now.tl ? '' : snippet}</div>
             <ItemParams editor={editor} it={now} set={set} />
           </div>
         );
