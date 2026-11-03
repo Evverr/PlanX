@@ -306,4 +306,32 @@ export const checks = {
     await sleep(200);
     expect((await p.ev('planx.editor.cam')).z > cam1.z, 'zoomed in').toBeTruthy();
   },
+
+  async '"Зум с Cmd" in the settings: the wheel alone scrolls up and down, with Cmd or Ctrl it zooms; off, as ever'(p) {
+    await p.click(await p.at('.topbar button[aria-label="Меню"]'));
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.board-menu .menu-row')].find((b) => b.textContent === 'Настройки').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(150);
+    const row = () => p.ev(`(() => { const r = document.querySelector('.modal.settings .settings-list:not(.labs-list) .settings-row'); return r.querySelector('b').textContent.startsWith('Зум с') + ' ' + r.getAttribute('aria-checked'); })()`);
+    expect(await row(), 'off at first').toBe('true false');
+    await p.click(await p.at('.modal.settings .settings-list:not(.labs-list) .settings-row'));
+    expect(await row(), 'switched on').toBe('true true');
+    await p.escape();
+    await sleep(150);
+    const turn = async (modifiers) => {
+      const a = await p.ev('planx.editor.cam');
+      await p.cdp('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 600, y: 400, deltaX: 0, deltaY: -100, modifiers });
+      await sleep(200);
+      const b = await p.ev('planx.editor.cam');
+      return { z: b.z - a.z, y: b.y - a.y };
+    };
+    const alone = await turn(0);
+    expect(alone.z, 'alone: no zoom').toBe(0);
+    expect(alone.y, 'alone: scrolled').toBe(100);
+    expect((await turn(4)).z > 0, 'with Cmd: zoomed').toBe(true);
+    expect((await turn(2)).z > 0, 'with Ctrl: zoomed').toBe(true);
+    await p.reload();
+    expect((await turn(0)).z, 'kept after a reload').toBe(0);
+    await p.ev(`(async () => (await import('/src/labs/wheelZoom.ts')).setZoomsWithKey(false))()`);
+    expect((await turn(0)).z > 0, 'off: the wheel zooms').toBe(true);
+  },
 };

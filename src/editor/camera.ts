@@ -46,9 +46,17 @@ export function freeArea(W: number, H: number, at: { left: number; top: number }
   return free.w < W * 0.5 || free.h < H * 0.5 ? { x: 0, y: 0, w: W, h: H } : free;
 }
 
-/** What a wheel or trackpad turn does: scroll the board by (dx, dy), or zoom by a factor. */
-export function wheelMove(e: WheelEvent, cam: Camera): { pan: [number, number] } | { zoom: number } {
+/** What a wheel or trackpad turn does: scroll the board by (dx, dy), or zoom by a factor. With
+ *  `zoomByKey` (see labs/wheelZoom.ts) the wheel zooms with Cmd or Ctrl and scrolls without. */
+export function wheelMove(e: WheelEvent, cam: Camera, zoomByKey = false): { pan: [number, number] } | { zoom: number } {
   const mouseWheel = e.deltaMode !== 0 || (e.deltaX === 0 && Math.abs(e.deltaY) >= 50 && Number.isInteger(e.deltaY));
+  if (zoomByKey) {
+    if (e.shiftKey) return { pan: [e.deltaX || e.deltaY, 0] };
+    if (e.ctrlKey && !mouseWheel) return { zoom: Math.exp(-e.deltaY * 0.004) };
+    if (!e.metaKey && !e.ctrlKey) return { pan: [e.deltaX, e.deltaY] };
+    const step = mouseWheel ? Math.sign(e.deltaY) * WHEEL_STEP : (e.deltaY / 100) * WHEEL_STEP;
+    return { zoom: (cam.z - step) / cam.z };
+  }
   // Cmd + wheel scrolls up and down, Shift + wheel sideways; a sideways swipe moves sideways.
   if (e.metaKey) return { pan: [e.deltaX, e.deltaY] };
   if (e.shiftKey) return { pan: [e.deltaX || e.deltaY, 0] };

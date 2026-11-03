@@ -21,6 +21,7 @@
 @media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } }
 
 /* Settings: each feature on trial, its name and what it does, its switch. */
+.modal.settings .settings-list + .settings-title { margin-top: 16px; }
 .settings-title { margin: 4px 0 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
 .modal.settings { width: min(820px, 100%); }
 .settings-list { display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; }

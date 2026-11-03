@@ -84,13 +84,12 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
       placed.current = null;
       setAt({ x: e.clientX, y: e.clientY, w, url, board: !id, params: false });
     };
-    // From its button on a panel: the same menu, by the button, closed again by it. What's being typed
-    // in is what it's for, as with a right click on it.
+    // From its button on a panel: the same menu, by the panel, closed again by it. What's being typed
+    // in is what it's for; the typing, and so the text panel, goes on till a row's pressed.
     const fromPanel = (e: Event) => {
       if (opened.current) { setAt(null); return; }
       const typing = editor.editingId;
       if (typing && !editor.selection.has(typing)) editor.setSelection([typing]);
-      editor.stopEditing();
       const it = editor.selectedItems()[0], link = !it ? editor.selectedLinks()[0] : undefined;
       if (!it && !link) return;
       const from = (e as CustomEvent<DOMRect>).detail, w = it ? center(it) : editor.toWorld(from.x, from.y);
@@ -106,11 +105,12 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
     if (!at) return;
     // (A press on its button is left to the button.)
     const away = (e: Event) => { if (!ref.current?.contains(e.target as Node) && !(e.target as Element).closest?.('.item-menu')) setAt(null); };
-    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setAt(null); };
+    // (Opened from a panel, Esc only closes it: what's being typed goes on.)
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (at.from) e.stopPropagation(); setAt(null); } };
     window.addEventListener('pointerdown', away, true);
     window.addEventListener('wheel', away, true);
-    window.addEventListener('keydown', key);
-    return () => { window.removeEventListener('pointerdown', away, true); window.removeEventListener('wheel', away, true); window.removeEventListener('keydown', key); };
+    window.addEventListener('keydown', key, true);
+    return () => { window.removeEventListener('pointerdown', away, true); window.removeEventListener('wheel', away, true); window.removeEventListener('keydown', key, true); };
   }, [at]);
 
   // Kept on the screen: where it would run off the right, it opens to the left of the pointer; off

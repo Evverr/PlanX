@@ -204,14 +204,8 @@
 .op-pop.palette-pop:has(.params-list) { height: auto; flex-direction: column; align-items: stretch; gap: 0; width: round(calc(352px * var(--k)), 2px); padding: var(--s12) var(--s16); white-space: normal; }
 .op-pop .params-list .menu-row { width: 100%; }
 
-/* The right click's menu from a panel: three dots at its right end, half as wide a highlight, answering
-   right up to the panel's edge. */
-.item-menu { display: flex; align-items: center; justify-content: center; }
-.item-menu .pi { flex: none; }
-.bar.panel .item-menu { width: var(--e20); }
+/* The right click's menu from a panel: three dots at its right end, answering right up to the panel's edge. */
 .bar.panel .item-menu::after { right: calc(var(--s16) * -1); }
-.tfmt .item-menu.fb { min-width: var(--e20); width: var(--e20); }
-.tfmt .item-menu.fb::before { inset: round(calc(-6px * var(--k)), 1px) 0; }
 .tfmt .item-menu.fb::after { content: ""; position: absolute; top: 50%; height: var(--bar-h); transform: translateY(-50%); left: calc(var(--gap) / -2); right: calc(var(--s18) * -1); }
 
 /* "Слои": a row a layer, the picked one tinted; its tick, name, how many it holds, "Сюда". */
