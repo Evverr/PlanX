@@ -16,6 +16,7 @@ import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
 import { SwapPop } from './SwapPop';
 import { LayersPop } from './LayersPop';
+import { zoomHelp } from './wheelZoom';
 import { ContextMenu } from './ContextMenu';
 import { CommentsLayer } from './CommentsLayer';
 import { drawNib } from './nib';
@@ -428,7 +429,7 @@ const KEYS: Array<[string, Array<[string, string]>]> = [
 
 function KeysSheet({ onClose }: { onClose: () => void }) {
   const mac = /Mac|iPhone|iPad/.test(navigator.platform);
-  const keyText = (k: string) => (mac ? k.replace(/Ctrl/g, '⌘').replace(/Alt/g, '⌥') : k);
+  const keyText = (k: string) => (k === 'Колесо, щипок' ? zoomHelp() : mac ? k.replace(/Ctrl/g, '⌘').replace(/Alt/g, '⌥') : k);
   const keys = (k: string) => keyText(k).split(/(\[[^\]]+\])/).filter(Boolean)
     .map((part, i) => (part.startsWith('[') ? <kbd key={i}>{part.slice(1, -1)}</kbd> : <span key={i}>{part}</span>));
   return (

@@ -27,6 +27,7 @@ import { useBar } from './ui/panels/bar';
 import type { Item, Link } from './model/types';
 import { Labs } from './labs/LabsLayer';
 import { useLabs } from './labs/labs';
+import { zoomHelp } from './labs/wheelZoom';
 import { useFollowing } from './labs/presence';
 import { readJSON, readText, writeJSON, writeText } from './storage';
 import { shelfUrlFor, useShelfTracking } from './shelf/track';
@@ -431,7 +432,7 @@ export function App({ boardId }: { boardId: string }) {
           <h3>Управление</h3>
           <dl>
             <dt>Двигать доску</dt><dd>Пробел + тянуть</dd>
-            <dt>Масштаб</dt><dd>Колесо, щипок</dd>
+            <dt>Масштаб</dt><dd>{zoomHelp()}</dd>
             <dt>Редактировать текст</dt><dd>Двойной клик</dd>
             <dt>Выделить несколько</dt><dd>Shift + клик</dd>
             <dt>Стикер любой формы, фигура в пропорции</dt><dd>Shift + тянуть за угол</dd>

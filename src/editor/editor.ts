@@ -36,6 +36,7 @@ import { keepMyObject, myObjects } from '../labs/myObjects';
 import { finishNib, nibPoints } from '../labs/nib';
 import { nodeEditing, shapedBy } from '../labs/paths';
 import { hiddenByLayers, layersVersion, newItemLayer } from '../labs/layers';
+import { zoomsWithKey } from '../labs/wheelZoom';
 
 export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -663,7 +664,7 @@ export class Editor {
 
   wheel(e: WheelEvent, sp: Point = this.local(e)): void {
     e.preventDefault();
-    const m = wheelMove(e, this.cam);
+    const m = wheelMove(e, this.cam, zoomsWithKey());
     if ('zoom' in m) this.zoomAt(sp.x, sp.y, m.zoom);
     else {
       this.cam = { ...this.cam, x: this.cam.x - m.pan[0], y: this.cam.y - m.pan[1] };

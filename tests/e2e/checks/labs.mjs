@@ -17,9 +17,9 @@ export const checks = {
       await sleep(150);
     };
     await open('Настройки');
-    expect(await p.ev(`document.querySelectorAll('.modal.settings .settings-row .menu-switch').length`), 'switches').toBe(await p.ev(`(async () => (await import('/src/labs/labs.ts')).LABS.length)()`));
+    expect(await p.ev(`document.querySelectorAll('.modal.settings .labs-list .settings-row .menu-switch').length`), 'switches').toBe(await p.ev(`(async () => (await import('/src/labs/labs.ts')).LABS.length)()`));
     await p.click(await p.ev(`(() => { const e = [...document.querySelectorAll('.settings-row')].find((r) => r.textContent.includes('Общий таймер')); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
-    expect(await p.ev(`document.querySelector('.settings-row[aria-checked="false"] b')?.textContent`), 'switched off').toBe('Общий таймер');
+    expect(await p.ev(`document.querySelector('.labs-list .settings-row[aria-checked="false"] b')?.textContent`), 'switched off').toBe('Общий таймер');
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'its button gone').toBeFalsy();
     await p.escape();
     expect(await p.ev(`!!document.querySelector('.modal')`), 'Esc closes it').toBe(false);
@@ -199,13 +199,13 @@ export const checks = {
     expect(await p.ev(`(async () => (await import('/src/labs/layers.ts')).layerCounts(planx.board).get(planx.board.get('m').ly))()`), 'a new item in it').toBe(1);
   },
 
-  async 'three dots at the right end of the bottom and the text panel open the right click\'s menu; half as wide, answering up to the panel\'s edge'(p) {
+  async 'three dots at the right end of the bottom and the text panel open the right click\'s menu, the panel staying; answering up to its edge'(p) {
     const ids = await stickers(p);
     await select(p, ids.a);
     await sleep(300);
     const edge = (q) => p.ev(`(() => { const r = document.querySelector('${q}').getBoundingClientRect(); return !!document.elementFromPoint(r.right - 2, r.top + r.height / 2)?.closest('.item-menu'); })()`);
     const rows = () => p.ev(`[...document.querySelectorAll('.context-menu .menu-row')].map((b) => b.textContent).join()`);
-    expect(await p.ev(`document.querySelector('.bar.panel .item-menu').offsetWidth * 2 === document.querySelector('.bar.panel .ib:not(.item-menu)').offsetWidth`), 'half as wide as its neighbours').toBe(true);
+    expect(await p.ev(`document.querySelector('.bar.panel .item-menu').offsetWidth === document.querySelector('.bar.panel .ib:not(.item-menu)').offsetWidth`), 'as wide as its neighbours').toBe(true);
     expect(await edge('.bar.panel'), 'answers at the panel\'s very edge').toBe(true);
     await p.click(await p.at('.bar.panel .item-menu'));
     expect((await rows()).includes('Параметры,'), 'the menu').toBe(true);
@@ -228,8 +228,20 @@ export const checks = {
     await p.click(await p.at('.tfmt .item-menu'));
     await sleep(150);
     expect((await rows()).includes('Скопировать'), 'the menu').toBe(true);
-    expect(await p.ev(`planx.editor.editingId`), 'typing over').toBe(null);
+    expect(await p.ev(`planx.editor.editingId`), 'still typing').toBe(ids.c);
+    expect(!!(await p.rect('.tfmt:not(.leaving)')), 'the panel staying').toBe(true);
     await p.escape();
+    await sleep(150);
+    expect(await rows(), 'Esc: closed').toBe('');
+    expect(await p.ev(`planx.editor.editingId`), 'and still typing').toBe(ids.c);
+    expect(!!(await p.rect('.tfmt:not(.leaving)')), 'the panel too').toBe(true);
+    // A row pressed does it, the typing over.
+    await p.click(await p.at('.tfmt .item-menu'));
+    await sleep(150);
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Переместить вниз').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(150);
+    expect(await rows(), 'done: closed').toBe('');
+    expect(await p.ev(`planx.editor.editingId`), 'typing over').toBe(null);
     // A link alone: its own menu.
     await p.ev(`(() => { const e = planx.editor, b = planx.board; b.add(e.newItem('sticky', 200, 500, { id: 'z' })); b.addLink({ id: 'l', from: '${ids.c}', to: 'z' }); e.setSelection(['l']); })()`);
     await sleep(300);
