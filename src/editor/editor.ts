@@ -101,6 +101,9 @@ export class Editor {
   gesture: Gesture | null = null;
   pointers = new Map<number, Point>();
   spaceDown = false;
+  /** The component being changed here, and where a press off it was (see press.ts). */
+  compHere: string | null = null;
+  offComponent: Point | null = null;
   lastTap = { id: '', t: 0 };
   /** The last press on the empty board, for a double one there to show everything. */
   lastEmpty = { t: 0, x: 0, y: 0 };
@@ -336,8 +339,24 @@ export class Editor {
   componentInEdit(): Item | undefined {
     const out = this.board.list().filter((c) => c.comp && !c.stowed && !isBuiltin(c.id));
     if (!out.length) return undefined;
-    const sel = this.selectedItems();
-    return out.find((c) => sel.some((s) => s.id === c.id || this.carried([c]).has(s.id))) ?? out.find((c) => c.standsIn) ?? out[out.length - 1];
+    return this.pickedComponent(out) ?? out.find((c) => c.standsIn) ?? out[out.length - 1];
+  }
+
+  /** Of these components, the one picked or holding what's picked. */
+  private pickedComponent(out: Item[]): Item | undefined {
+    if (!this.selection.size) return undefined;
+    return out.find((c) => { const held = this.carried([c]); return [...this.selection].some((id) => held.has(id)); });
+  }
+
+  /** A click off the component being changed here: done with it, as by its tick; what the click picked stays picked. */
+  private finishComponentHere(): void {
+    const c = this.compHere ? this.board.get(this.compHere) : undefined;
+    this.compHere = null;
+    if (!c?.comp || c.stowed) return;
+    const held = this.carried([c]), keep = [...this.selection].filter((id) => !held.has(id));
+    if (this.editingId) this.stopEditing();
+    this.addInstance(c.id);
+    this.setSelection(keep);
   }
 
   /** Esc or Cmd+Enter while a component's being changed (wherever the focus is): done with it, as by its tick. */
@@ -711,6 +730,10 @@ export class Editor {
   setSelection(ids: Iterable<string>): void {
     const was = [...this.selection];
     this.selection = new Set(ids);
+    // The component being changed here is the last one worked in; someone else's stays theirs.
+    const here = this.pickedComponent(this.board.list().filter((c) => c.comp && !c.stowed && !isBuiltin(c.id)));
+    if (here) this.compHere = here.id;
+    else if (this.compHere && this.board.get(this.compHere)?.stowed !== undefined) this.compHere = null;
     if (this.cells.length && (this.selection.size !== 1 || !this.selection.has(was[0]))) { this.cells = []; this.cellAnchor = null; }
     this.presence?.setSelection([...this.selection]);
     this.emit();
@@ -851,7 +874,8 @@ export class Editor {
   /** Outline colour of the selected shapes and tasks; 'gray' is the usual outline. */
   setStroke(color: string): void {
     this.board.transact(() => {
-      for (const it of this.selectedItems()) if (strokable(it)) this.board.update(it.id, { sc: color === 'gray' ? undefined : color });
+      // Given a colour after none, it's fully there.
+      for (const it of this.selectedItems()) if (strokable(it)) this.board.update(it.id, { sc: color === 'gray' ? undefined : color, ...(it.sc === 'none' && color !== 'none' && { so: undefined }) });
     });
   }
 
@@ -866,7 +890,8 @@ export class Editor {
         // (A highlighter's line is see-through by default: fully opaque is kept as such.)
         if (of === 'icon' && (it.type === 'icon' || it.type === 'ink')) this.board.update(it.id, { fo: it.hl ? Math.max(0, Math.round(value * 100) / 100) : v });
         if (of === 'fill' && fillable(it)) this.board.update(it.id, { fo: it.type === 'mind' || it.type === 'frame' ? Math.max(0, Math.round(value * 100) / 100) : v });
-        if (of === 'stroke' && (strokable(it) || it.type === 'mind')) this.board.update(it.id, { so: v });
+        // (No outline, at 0: drawn up from there, it gets the usual one.)
+        if (of === 'stroke' && (strokable(it) || it.type === 'mind')) this.board.update(it.id, { so: v, ...(it.sc === 'none' && value > 0 && { sc: undefined }) });
       }
     });
   }
@@ -1598,14 +1623,18 @@ export class Editor {
   private onPointerUp(e: PointerEvent): void {
     if (!this.pointers.has(e.pointerId)) return;
     this.pointers.delete(e.pointerId);
-    const g = this.gesture;
-    if (!g) return;
+    const g = this.gesture, off = this.offComponent;
+    this.offComponent = null;
     // A pinch ends when the last finger is off.
-    if (g.type === 'pinch') { if (!this.pointers.size) this.gesture = null; return; }
-    this.gesture = null;
-    this.canvas?.classList.remove('panning');
-    this.setMoving(false);
-    endGesture(this, g, e);
+    if (g?.type === 'pinch') { if (!this.pointers.size) this.gesture = null; return; }
+    if (g) {
+      this.gesture = null;
+      this.canvas?.classList.remove('panning');
+      this.setMoving(false);
+      endGesture(this, g, e);
+    }
+    // Let go where it was pressed, off the component being changed: done with it (a drag isn't, to bring something into it).
+    if (off) { const sp = this.local(e); if (Math.hypot(sp.x - off.x, sp.y - off.y) < 4) this.finishComponentHere(); }
   }
 
   private sendCursor(w: Point): void {

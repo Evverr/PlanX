@@ -237,6 +237,35 @@ export const checks = {
     }
   },
 
+  async 'a click off the component being changed finishes it; a drag or a press on it doesn\'t, nor is someone else\'s finished'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 300, 300, { id: 's', w: 100, h: 100 })); b.add(e.newItem('sticky', 800, 500, { id: 'o', w: 100, h: 100 }));
+      e.setSelection(['s']); e.makeComponent(); e.stopEditing(); e.setSelection([]); e.compHere = null; })()`);
+    await sleep(200);
+    const out = () => p.ev(`!planx.board.list().find((i) => i.comp).stowed`);
+    // Not worked in here: it may be someone else's.
+    await p.click([1000, 150]);
+    expect(await out(), 'not touched here: left as it is').toBe(true);
+    await p.click([350, 350]);
+    await p.click([350, 350]);
+    await sleep(100);
+    expect(await out(), 'a press on it: still being changed').toBe(true);
+    await p.ev(`planx.editor.stopEditing()`);
+    // Something dragged, here or into it, leaves it being changed.
+    await p.drag([850, 550], [850, 600]);
+    expect(await out(), 'a drag off it: still being changed').toBe(true);
+    await p.click([1000, 150]);
+    expect(await out(), 'a click off it: done').toBe(false);
+    expect(await p.ev(`planx.board.list().filter((i) => i.inst && !i.stowed).length + ' ' + planx.editor.selection.size`), 'an instance in its place, nothing picked').toBe('1 0');
+    // A click on something else picks that.
+    await p.ev(`(() => { const e = planx.editor, c = planx.board.list().find((i) => i.inst); e.editComponentAt(c.id); })()`);
+    await sleep(100);
+    expect(await out(), 'out again').toBe(true);
+    await p.click([850, 600]);
+    expect(await out(), 'a click on another item: done').toBe(false);
+    expect(await p.ev(`[...planx.editor.selection].join()`), 'and that one picked').toBe('o');
+  },
+
   async 'the title of a picked instance stays visible when a turned child extends into view from offscreen'(p) {
     const titleY = await p.ev(`(async () => {
       const e = planx.editor, b = planx.board;
