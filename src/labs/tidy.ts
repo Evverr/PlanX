@@ -1,7 +1,7 @@
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { instanceBounds, type Point } from '../canvas/geometry';
-import { drawGapHandle } from './gapPill';
+import { drawGapHandle, gapReach } from './gapPill';
 
 /**
  * "Авторасположение": what's selected laid out in an even grid, a little apart, rows and columns as
@@ -205,10 +205,10 @@ export function tidyHolds(ed: Editor): boolean {
 let hot: 'col' | 'row' | null = null;
 export const setHotGap = (h: 'col' | 'row' | null) => { hot = h; };
 
-/** The gap line near a screen point (6px either side, along the grid), and which way it runs. */
+/** The gap line near a screen point (see gapReach; along the grid), and which way it runs. */
 export function gapAt(ed: Editor, sp: Point): 'col' | 'row' | null {
   if (!tidy || !tidyHolds(ed)) return null;
-  const w = ed.toWorld(sp.x, sp.y), near = 6 / ed.cam.z;
+  const w = ed.toWorld(sp.x, sp.y), near = gapReach(ed, w);
   for (const g of gapLines(tidyItems(ed, tidy), tidy)) {
     const along = g.axis === 'col' ? w.y : w.x, across = g.axis === 'col' ? w.x : w.y;
     if (Math.abs(across - g.at) <= near && along >= g.from && along <= g.to) return g.axis;
