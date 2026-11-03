@@ -499,6 +499,23 @@ export const checks = {
     expect(Math.round(c2[0] - a2[0] - a2[1]), 'next gap out, in proportion').toBe(Math.round(gx * kx));
   },
 
+  async '"Авторасположение" on a mind map node: the line along a level is as long as the one out to it, whatever the size of the nodes'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.transact(() => {
+        b.add(e.newItem('mind', 100, 300, { id: 'r', w: 100, h: 40, text: 'Центр' }));
+        for (const [id, y] of [['a', 200], ['c', 300], ['d', 400], ['f', 500]]) b.add(e.newItem('mind', 300, y, { id, w: 500, h: 40, parent: 'r', text: id }));
+      }); e.setSelection(['r']); })()`);
+    await sleep(300);
+    await p.ev(`planx.editor.tidyMind('r')`);
+    await sleep(200);
+    // Across the first gap along the level, off its middle by so much (the level some 200 long: 50 the line, so 25 either way).
+    const g = await p.ev(`(() => { const [a, c] = ['a', 'c'].map((k) => planx.board.get(k)); return { x: a.x + a.w / 2, y: (a.y + a.h + c.y) / 2 }; })()`);
+    const at = (dx) => p.ev(`(async () => { const h = (await import('/src/labs/tidyMind.ts')).mindGapAt(planx.editor, planx.editor.toScreen({ x: ${g.x} + ${dx}, y: ${g.y} })); return h ? h.axis + ' ' + h.out : null; })()`);
+    expect(await at(0), 'at its middle').toBe('row false');
+    expect(await at(20), 'within the length').toBe('row false');
+    expect(await at(120), 'not all the way along the nodes').toBe(null);
+  },
+
   async '"Авторасположение" on a mind map node: no "+" buttons meanwhile; picked again, an ordinary node; pressed again untouched, all as it was'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.transact(() => {
