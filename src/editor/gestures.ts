@@ -464,6 +464,8 @@ export function cancelGesture(ed: Editor): void {
 /** Turns a drawn line into an ink item boxed around it, its points kept relative to the box. */
 function addInk(ed: Editor, tool: PenTool, pts: Point[]): void {
   const style = ed.penStyle(tool), sw = style.size / ed.cam.z;
+  // Fully see-through, nothing would show: no line left lying about unseen.
+  if (style.op === 0) return;
   let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
   for (const p of pts) { x1 = Math.min(x1, p.x); y1 = Math.min(y1, p.y); x2 = Math.max(x2, p.x); y2 = Math.max(y2, p.y); }
   const x = Math.floor(x1 - sw / 2), y = Math.floor(y1 - sw / 2);
