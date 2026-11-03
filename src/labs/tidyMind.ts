@@ -138,17 +138,16 @@ function apply(ed: Editor): void {
 
 type Line = { axis: 'col' | 'row'; at: number; from: number; to: number; gap: number; level: number; out: boolean };
 
-/** How long the handles' lines are, in board units, whatever the size of the nodes and levels. */
-const LINE = 48;
-
-/** The handles' lines (board units): across the gap out to each level (from the node, or the level
- *  before), from the level's start; and across the widest gap along each level with one, from the
- *  nodes' near edge (the left, or the top). */
+/** The handles' lines (board units), all as long whatever the size of the nodes: a quarter of the longest
+ *  level, 24 at least. Across the gap out to each level (from the node, or the level before), from the
+ *  level's start; and across the widest gap along each level with one, from the nodes' near edge (the
+ *  left, or the top). */
 function lines(ed: Editor): Line[] {
   const n = mt && ed.board.get(mt.id), lv = n && levels(ed);
   if (!n || !lv) return [];
   const { way, rows } = lv, up = upright(way), along = up ? 'x' : 'y', size = up ? 'w' : 'h', out = up ? 'y' : 'x', deep = up ? 'h' : 'w';
   const forth = way === 'right' || way === 'down', res: Line[] = [];
+  const LINE = Math.max(24, ...rows.map((row) => (Math.max(...row.map((k) => k[along] + k[size])) - Math.min(...row.map((k) => k[along]))) / 4));
   rows.forEach((row, level) => {
     // Out to it: from the furthest edge of the level before (the node, for the first) to its nearest.
     const before = level ? rows[level - 1] : [n];

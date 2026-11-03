@@ -499,25 +499,26 @@ export const checks = {
     expect(Math.round(c2[0] - a2[0] - a2[1]), 'next gap out, in proportion').toBe(Math.round(gx * kx));
   },
 
-  async '"Авторасположение" on a mind map node: the lines are all as long, whatever the size of the nodes; the ones along a level from the nodes\' left edge'(p) {
+  async '"Авторасположение" on a mind map node: the lines are all as long, a quarter of the longest level, whatever the size of the nodes; the ones along a level from the nodes\' left edge'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.transact(() => {
         b.add(e.newItem('mind', 100, 300, { id: 'r', w: 100, h: 40, text: 'Центр' }));
         for (const [id, y] of [['a', 200], ['c', 300], ['d', 400], ['f', 500]]) b.add(e.newItem('mind', 300, y, { id, w: 500, h: 40, parent: 'r', text: id }));
+        b.add(e.newItem('mind', 900, 200, { id: 'g', w: 100, h: 40, parent: 'a', text: 'g' }));
       }); e.setSelection(['r']); })()`);
     await sleep(300);
     await p.ev(`planx.editor.tidyMind('r')`);
     await sleep(200);
-    // Across the first gap along the level, so far from the nodes' left edge.
-    const g = await p.ev(`(() => { const [a, c] = ['a', 'c'].map((k) => planx.board.get(k)); return { x: a.x, y: (a.y + a.h + c.y) / 2, top: a.y, outX: (planx.board.get('r').x + planx.board.get('r').w + a.x) / 2 }; })()`);
+    const g = await p.ev(`(() => { const [r, a, c, f, l] = ['r', 'a', 'c', 'f', 'g'].map((k) => planx.board.get(k)); return { x: a.x, y: (a.y + a.h + c.y) / 2, top: a.y, outX: (r.x + r.w + a.x) / 2, leafX: (a.x + a.w + l.x) / 2, leafTop: l.y, long: (f.y + f.h - a.y) / 4 }; })()`);
     const at = (x, y) => p.ev(`(async () => { const h = (await import('/src/labs/tidyMind.ts')).mindGapAt(planx.editor, planx.editor.toScreen({ x: ${x}, y: ${y} })); return h ? h.axis + ' ' + h.out : null; })()`);
-    expect(await at(g.x + 2, g.y), 'from the left edge').toBe('row false');
-    expect(await at(g.x + 46, g.y), 'to 48 along').toBe('row false');
-    expect(await at(g.x + 52, g.y), 'no further').toBe(null);
+    expect(await at(g.x + 2, g.y), 'along: from the left edge').toBe('row false');
+    expect(await at(g.x + g.long - 2, g.y), 'to a quarter of the level').toBe('row false');
+    expect(await at(g.x + g.long + 4, g.y), 'no further').toBe(null);
     expect(await at(g.x - 4, g.y), 'nor before it').toBe(null);
-    // The one out to the level as long.
-    expect(await at(g.outX, g.top + 46), 'out: 48 long too').toBe('col true');
-    expect(await at(g.outX, g.top + 52), 'and no further').toBe(null);
+    expect(await at(g.outX, g.top + g.long - 2), 'out: as long').toBe('col true');
+    expect(await at(g.outX, g.top + g.long + 4), 'and no further').toBe(null);
+    expect(await at(g.leafX, g.leafTop + g.long - 2), 'out to a level of one node: as long too').toBe('col true');
+    expect(await at(g.leafX, g.leafTop + g.long + 4), 'and no further').toBe(null);
   },
 
   async '"Авторасположение" on a mind map node: no "+" buttons meanwhile; picked again, an ordinary node; pressed again untouched, all as it was'(p) {
