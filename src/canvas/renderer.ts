@@ -17,7 +17,7 @@ import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
 import { autoInk } from '../model/color';
 import cursorUrl from './cursor.svg';
-import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, linkHandles, spreadElbows, polyPoints, linkShape, nearestSide, pointInRect, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
+import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, pathNodes, flattenPath, linkHandles, spreadElbows, polyPoints, linkShape, nearestSide, pointInRect, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -507,6 +507,7 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
 
 /** Adds a polygon item's outline to the current path. */
 function outlinePolygon(ctx: CanvasPath, it: Item) {
+  if (it.vx && it.vh && !it.shape && it.rad) { outlineCurved(ctx, it, it.rad); return; }
   const pts = polyPoints(it), n = pts.length, rad = it.rad ?? 0;
   if (!rad) {
     ctx.moveTo(pts[0].x, pts[0].y);
@@ -523,6 +524,48 @@ function outlinePolygon(ctx: CanvasPath, it: Item) {
     const la = Math.hypot(a.x - p.x, a.y - p.y), lb = Math.hypot(b.x - p.x, b.y - p.y);
     const cos = ((a.x - p.x) * (b.x - p.x) + (a.y - p.y) * (b.y - p.y)) / (la * lb), half = Math.acos(Math.max(-1, Math.min(1, cos))) / 2;
     ctx.arcTo(p.x, p.y, b.x, b.y, Math.max(0, Math.min(rad, (Math.min(la, lb) / 2) * Math.tan(half))));
+  }
+  ctx.closePath();
+}
+
+/** A figure drawn with "Перо" with curves, its corners rounded as in Figma: wherever the outline turns
+ *  at a corner (curves either side of it or not), it's cut back on both sides, as far as the radius
+ *  takes it at that angle (no more than halfway along either side), and the cut joined by an arc
+ *  following on from both; the handles stay as they are. */
+function outlineCurved(ctx: CanvasPath, it: Item, rad: number) {
+  const nodes = pathNodes(it.vx!, it.vh, (x, y) => ({ x: it.x + x * it.w, y: it.y + y * it.h })), n = nodes.length;
+  // Each side from its corner to the next, as points, and how far along it each of them is.
+  const sides = nodes.map((_, s) => flattenPath([nodes[s], nodes[(s + 1) % n]], false, 32));
+  const along = sides.map((pts) => pts.reduce<number[]>((d, p, i) => [...d, i ? d[i - 1] + Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y) : 0], []));
+  const len = (s: number) => along[s][along[s].length - 1];
+  // The point `d` along side `s`, and which way the side runs there.
+  const at = (s: number, d: number): [Point, Point] => {
+    const pts = sides[s], ds = along[s];
+    let k = 1;
+    while (k < pts.length - 1 && ds[k] < d) k++;
+    const a = pts[k - 1], b = pts[k], l = ds[k] - ds[k - 1] || 1, t = Math.max(0, Math.min(1, (d - ds[k - 1]) / l));
+    return [{ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }, { x: (b.x - a.x) / l, y: (b.y - a.y) / l }];
+  };
+  const unit = (v: Point) => { const l = Math.hypot(v.x, v.y) || 1; return { x: v.x / l, y: v.y / l }; };
+  const turn = (a: Point, b: Point) => Math.acos(Math.max(-1, Math.min(1, a.x * b.x + a.y * b.y)));
+  // How far back each corner is cut: none where the outline runs on smoothly through it.
+  const cut = nodes.map((_, i) => {
+    const s0 = (i + n - 1) % n, a = turn(unit(at(s0, len(s0) - 1e-3)[1]), unit(at(i, 1e-3)[1]));
+    return a < 0.02 ? 0 : Math.min(rad * Math.tan(Math.min(a, 3.1) / 2), len(s0) / 2, len(i) / 2);
+  });
+  const [start] = at(0, cut[0]);
+  ctx.moveTo(start.x, start.y);
+  for (let s = 0; s < n; s++) {
+    const next = (s + 1) % n, end = len(s) - cut[next];
+    for (let k = 1; k < sides[s].length - 1; k++) if (along[s][k] > cut[s] && along[s][k] < end) ctx.lineTo(sides[s][k].x, sides[s][k].y);
+    const [a, da] = at(s, end);
+    ctx.lineTo(a.x, a.y);
+    if (!cut[next]) continue;
+    // The arc: a curve leaving along the side it comes from and arriving along the next one, with
+    // handles as long as a circle's for that turn.
+    const [b, db] = at(next, cut[next]), u = unit(da), v = unit(db), t = turn(u, v);
+    const h = t < 1e-3 ? 0 : (4 / 3) * Math.tan(t / 4) * (Math.hypot(b.x - a.x, b.y - a.y) / 2 / Math.sin(t / 2));
+    ctx.bezierCurveTo(a.x + u.x * h, a.y + u.y * h, b.x - v.x * h, b.y - v.y * h, b.x, b.y);
   }
   ctx.closePath();
 }
