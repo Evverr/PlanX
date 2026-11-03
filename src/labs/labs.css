@@ -202,3 +202,15 @@
 /* The lines' parameters on the selection panel: a column, as in «Параметры», not the palette's row. */
 .op-pop.palette-pop:has(.params-list) { height: auto; flex-direction: column; align-items: stretch; gap: 0; width: 300px; padding: var(--s12) var(--s16); white-space: normal; }
 .op-pop .params-list .menu-row { width: 100%; }
+
+/* "Слои": a row a layer, the picked one tinted; its tick, name, how many it holds, "Сюда". */
+.layers-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: var(--s12); }
+.layer-row { display: flex; align-items: center; gap: var(--s8); height: var(--e32); padding: 0 var(--s8); border-radius: var(--s6); cursor: pointer; font-size: var(--s13); color: var(--ink); }
+.layer-row:hover { background: var(--fmt-hover); }
+.layer-row.on { background: var(--fmt-on); }
+.labs-pop .layer-row input[type="checkbox"] { width: auto; margin: 0; cursor: pointer; accent-color: var(--accent); }
+.layer-row .layer-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.labs-pop .layer-row input.layer-name { padding: 2px var(--s6); border-radius: var(--s4); }
+.layer-row i { font-style: normal; font-size: var(--s12); color: var(--muted); }
+.layer-here { height: var(--e24); padding: 0 var(--s8); border: 1px solid var(--btn-line); border-radius: var(--s6); background: var(--surface); color: var(--ink); font: inherit; font-size: var(--s12); cursor: pointer; }
+.layers-add { width: 100%; }

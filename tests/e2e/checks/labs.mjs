@@ -167,6 +167,22 @@ export const checks = {
     expect(await p.ev(`(async () => (await import('/src/labs/paths.ts')).nodeEditing())()`), 'done with Esc').toBe(null);
   },
 
+  async '"Слои": a new layer, the picked items put in it, hidden by its tick (not seen, not picked); new items go in the layer picked'(p) {
+    const ids = await stickers(p);
+    await select(p, ids.a);
+    await p.click(await p.at('.labs-rail button[aria-label="Слои"]'));
+    const rows = () => p.ev(`[...document.querySelectorAll('.layers-pop .layer-row')].map((r) => r.querySelector('.layer-name').textContent + ':' + r.querySelector('i').textContent + (r.classList.contains('on') ? '*' : '')).join()`);
+    expect(await rows(), 'one layer, the first').toBe('Слой 1:2*');
+    await p.click(await p.at('.layers-pop .layers-add'));
+    expect(await rows(), 'a new one, picked').toBe('Слой 1:2,Слой 2:0*');
+    await p.click(await p.ev(`(() => { const r = document.querySelectorAll('.layers-pop .layer-here')[1].getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    expect(await rows(), 'the sticker put in it').toBe('Слой 1:1,Слой 2:1*');
+    await p.click(await p.ev(`(() => { const r = document.querySelectorAll('.layers-pop .layer-row input[type=checkbox]')[1].getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    expect(await p.ev(`planx.editor.shown().map((i) => i.id).join() + ' | ' + planx.editor.selection.size`), 'hidden, and no longer picked').toBe(`${ids.c} | 0`);
+    await p.ev(`planx.board.add(planx.editor.newItem('sticky', 0, 0, { id: 'n' }))`);
+    expect(await p.ev(`planx.board.get('n').ly === planx.board.get('${ids.a}').ly && planx.editor.shown().length`), 'a new one in the picked layer, shown again').toBe(3);
+  },
+
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {
     const ids = await stickers(p);
     await select(p, ids.a);
