@@ -122,6 +122,9 @@ export function settled(board: Board, ids: Iterable<string>, fresh?: string): Ma
   // Worked out on one look at the board (it reads back stale within a change).
   const items = board.list(), frames = items.filter((f) => f.type === 'frame');
   const held = new Map(frames.map((f) => [f.id, f.id === fresh ? [] : membersOf(board, f, items)]));
+  // Out of sight (a component put away, what it holds, a folded frame's): takes nothing in, loses nothing,
+  // or what's let go over the place it stood would go out of sight with it.
+  const away = hiddenIn(board, items);
   const changed = new Set<string>();
   for (const id of ids) {
     const it = board.get(id);
@@ -130,9 +133,10 @@ export function settled(board: Board, ids: Iterable<string>, fresh?: string): Ma
     const c = center(it);
     const inside = it.type === 'frame' ? new Set(carried(board, [it], items).keys()) : new Set([id]);
     const home = frames
-      .filter((f) => !f.fold && !f.inst && !inside.has(f.id) && pointInRect(toLocal(f, c), f) && (it.type !== 'frame' || f.w * f.h > it.w * it.h))
+      .filter((f) => !f.fold && !f.inst && !away.has(f.id) && !inside.has(f.id) && pointInRect(toLocal(f, c), f) && (it.type !== 'frame' || f.w * f.h > it.w * it.h))
       .sort((a, b) => a.w * a.h - b.w * b.h)[0];
     for (const f of frames) {
+      if (away.has(f.id)) continue;
       const list = held.get(f.id)!, has = list.includes(id);
       if (f === home && (!has || !f.members)) { held.set(f.id, has ? list : [...list, id]); changed.add(f.id); }
       else if (f !== home && has) { held.set(f.id, list.filter((m) => m !== id)); changed.add(f.id); }
