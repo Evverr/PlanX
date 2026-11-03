@@ -29,7 +29,7 @@ export type Gesture =
   | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]> }
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' | 'tl' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
-  | { type: 'create'; id: string; origin: Point }
+  | { type: 'create'; id: string; origin: Point; last?: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline' }
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
@@ -197,6 +197,9 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       return;
     }
     case 'create': {
+      // With Space held, what's being drawn moves along with the pointer instead (as in Figma).
+      if (ed.spaceDown && g.last) g.origin = { x: g.origin.x + w.x - g.last.x, y: g.origin.y + w.y - g.last.y };
+      g.last = w;
       let r = normRect(g.origin, w);
       // Square with Shift, or, shapes set to come out square, free with it.
       const it = board.get(g.id), square = !!it && ['rect', 'ellipse', 'polygon'].includes(it.type) && shapeStyle().square;
