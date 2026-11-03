@@ -69,6 +69,15 @@ function hiddenBy(board: Board, f: Item, items: Item[]): string[] {
   return [];
 }
 
+/** Whether nothing of an item shows: a line or an icon at no opacity, a shape or a sticker with no fill,
+ *  outline or text to it. Not seen, it can't be taken hold of either. */
+export function unseen(it: Item): boolean {
+  if (it.type === 'ink' || it.type === 'icon') return it.fo === 0;
+  if (it.type !== 'rect' && it.type !== 'ellipse' && it.type !== 'polygon' && it.type !== 'sticky') return false;
+  const noFill = it.color === 'none' || it.fo === 0, noLine = it.type === 'sticky' || it.sc === 'none' || it.so === 0;
+  return noFill && noLine && (!it.text?.trim() || it.to === 0);
+}
+
 /** Of these items, everything folded frames hold and folded mind map nodes hide, and components put
  *  away with what they hold. */
 export function hiddenIn(board: Board, items: Item[]): Set<string> {

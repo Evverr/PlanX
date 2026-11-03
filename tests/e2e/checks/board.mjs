@@ -500,6 +500,41 @@ export const checks = {
     expect(await p.ev(`!!document.querySelector('.params-pop .color-picker:not(.gone)')`), 'put away').toBe(false);
   },
 
+  async 'what can\'t be seen can\'t be taken: by a box, a click or Cmd+A, nor is it in "show all"; a pen at no opacity leaves nothing'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setSelection([]);
+      b.add(e.newItem('ink', 300, 300, { id: 'line', w: 100, h: 100, iw: 100, sw: 4, pts: [0, 0, 100, 100], fo: 0 }));
+      b.add(e.newItem('rect', 450, 300, { id: 'bare', w: 100, h: 100, color: 'none', sc: 'none' }));
+      b.add(e.newItem('rect', 600, 300, { id: 'worded', w: 100, h: 100, color: 'none', sc: 'none', text: 'Слово' }));
+      b.add(e.newItem('sticky', 750, 300, { id: 'seen', w: 100, h: 100 }));
+      b.add(e.newItem('ink', 9000, 9000, { id: 'far', w: 100, h: 100, iw: 100, sw: 4, pts: [0, 0, 100, 100], fo: 0 })); })()`);
+    await sleep(100);
+    const picked = () => p.ev(`[...planx.editor.selection].sort().join()`);
+    await p.drag([250, 250], [900, 450]);
+    expect(await picked(), 'by a box').toBe('seen,worded');
+    await p.click([1000, 700]);
+    await p.click([350, 350]);
+    expect(await picked(), 'a click on the line').toBe('');
+    await p.click([500, 350]);
+    expect(await picked(), 'a click on the bare shape').toBe('');
+    await p.key('a', 'KeyA', 65, 4);
+    expect(await picked(), 'Cmd+A').toBe('seen,worded');
+    await p.ev(`planx.editor.setSelection([]); planx.editor.fit()`);
+    await sleep(100);
+    expect(await p.ev(`planx.editor.cam.z > 0.5`), 'show all: not reaching out to it').toBe(true);
+    // Made so while picked, it's still in hand till let go.
+    await p.ev(`(() => { const e = planx.editor; e.setSelection(['seen']); e.setOpacity('fill', 0); })()`);
+    expect(await p.ev(`planx.editor.selectedItems().length + ' ' + planx.editor.shown().some((i) => i.id === 'seen')`), 'picked, out of sight').toBe('1 false');
+    await p.ev(`(() => { const e = planx.editor; e.setOpacity('fill', 1); e.setSelection([]); e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); })()`);
+    // A pen at no opacity leaves no line.
+    const n = await p.ev(`planx.board.list().length`);
+    await p.ev(`(() => { const e = planx.editor; e.setPenStyle('pen', e.pens.pen.active, { op: 0 }); e.setTool('pen'); })()`);
+    await p.drag([300, 600], [500, 650]);
+    expect(await p.ev(`planx.board.list().length`), 'nothing added').toBe(n);
+    await p.ev(`(() => { const e = planx.editor; e.setPenStyle('pen', e.pens.pen.active, { op: undefined }); })()`);
+    await p.drag([300, 600], [500, 650]);
+    expect(await p.ev(`planx.board.list().length`), 'as usual, a line').toBe(n + 1);
+  },
+
   async 'no outline: its opacity reads 0; a colour given, it jumps to 100; drawn up from 0, the usual outline'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('rect', 200, 200, { id: 'a', w: 200, h: 120, sc: 'none', so: 0.5 })); e.setSelection(['a']); })()`);

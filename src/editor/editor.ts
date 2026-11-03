@@ -13,7 +13,7 @@ import { addChild, descendants, foldedAway, folding, makeRoom, mindDepth, tidyBr
 import { readJSON, writeJSON } from '../storage';
 import { cameraFor, clamp, fittedTo, flyTo, freeArea, minZoomFor, wheelMove, zoomedAt } from './camera';
 import { copiesOf } from './copies';
-import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked } from './frames';
+import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked, unseen } from './frames';
 import { around, contents, copyId, firstInstance, hasComponents, stretched, syncOps } from '../model/components';
 import { BUILTINS, isBuiltin, nextTaskState, TASK_STATES } from '../model/builtins';
 import { remapLinks } from '../model/textLinks';
@@ -690,6 +690,7 @@ export class Editor {
   /** "Перо": a line through these nodes (straight or curved between them), as the pen ("Ручка") draws. */
   addLine(nodes: PathNode[]): void {
     const style = this.penStyle('pen');
+    if (style.op === 0) return;
     this.addItem(this.newItem('ink', 0, 0, { color: style.color, fo: style.op, sharp: true, ...shapedBy({ type: 'ink', w: 1, iw: 1, sw: style.size / this.cam.z }, nodes) }));
   }
 
@@ -1472,7 +1473,8 @@ export class Editor {
         if (i.type !== 'mind' || (!i.collapsed && !i.foldedWays)) continue;
         folded.set(i.id, new Map([...foldedAway(i, items, get)].map(([way, ids]) => [way, ids.length])));
       }
-      const shown = stacked(this.board, hidden.size ? items.filter((i) => !hidden.has(i.id)) : items);
+      // (What can't be seen isn't in sight either: not picked, by a click or a box, nor shown all of.)
+      const shown = stacked(this.board, items.filter((i) => !hidden.has(i.id) && !unseen(i)));
       const links = linksIn(this.board, items, hidden);
       this.sight = { version, lv, hidden, folded, shown, links: layered.size ? links.filter((l) => !layered.has(l.from) && !layered.has(l.to)) : links };
     }
@@ -1509,7 +1511,7 @@ export class Editor {
   }
 
 
-  /** The items in sight: all but what folded frames hold and folded mind map nodes hide. */
+  /** The items in sight: all but what folded frames hold and folded mind map nodes hide, and what can't be seen. */
   shown(): Item[] { return this.inSight().shown; }
 
   /** Shared: the links as they're seen, those into folded frames led to their bars. */
