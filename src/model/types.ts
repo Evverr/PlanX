@@ -70,6 +70,8 @@ export interface Item {
   /** Opacity of the fill and of the outline, 0…1; unset is solid (an icon's and a drawing's: theirs). */
   fo?: number;
   so?: number;
+  /** Put into a line ("Узел на линии", src/labs): its lines stop a little short of it. */
+  joint?: boolean;
   /** Tables: the colour (as sc) and opacity of the lines down between columns; unset, as sc and so. */
   vc?: string;
   vo?: number;

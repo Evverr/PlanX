@@ -24,6 +24,7 @@ import { drawNib } from './nib';
 import { drawEditedPath } from './paths';
 import { drawEraser, eraserStyle, subscribeEraser } from './eraseArea';
 import { drawGroup, endGroupScale, groupScaling, moveGroupScale, onGroupHandle, startGroupScale } from './multi';
+import { afterUp as afterJoinUp, beforeUp as beforeJoinUp, drawJoint, notePress as noteJoinPress } from './linkJoint';
 import { drawGrips, endGrip, gripAt, gripDragging, moveGrip, pressedForGrips, pressPlus, setHotGrip, setHotPlus, startGrip, tablePlusAt } from './tableMove';
 import './labs.css';
 
@@ -59,7 +60,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
   // Their drawing over the board, redrawn whenever one is switched on or off (the editor asks about
   // locks as it goes, so its handles change too).
   useEffect(() => {
-    const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) { drawTidy(ctx, editor); drawMindTidy(ctx, editor); } if (labOn('tableMove')) drawGrips(ctx, editor); drawGroup(ctx, editor); drawNib(ctx, editor); if (labOn('nib')) drawEditedPath(ctx, editor); if (labOn('softEraser')) drawEraser(ctx, editor); return more; };
+    const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) { drawTidy(ctx, editor); drawMindTidy(ctx, editor); } if (labOn('tableMove')) drawGrips(ctx, editor); if (labOn('linkJoint')) drawJoint(ctx, editor); drawGroup(ctx, editor); drawNib(ctx, editor); if (labOn('nib')) drawEditedPath(ctx, editor); if (labOn('softEraser')) drawEraser(ctx, editor); return more; };
     editor.overlays.add(draw);
     editor.requestRender();
     const off = subscribeLabs(() => { editor.emit(); editor.requestRender(); });
@@ -129,6 +130,8 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       }
       if (editor.looking) return;
       setPop(null);
+      // "Узел на линии": a line picked as something's taken up waits for it on its middles.
+      if (labOn('linkJoint')) noteJoinPress(editor);
       if (presence.followingId !== null) { presence.stopFollowing(); stopFlight(); }
       const mh = e.button === 0 && labOn('tidy') ? mindGapAt(editor, local(e)) : null;
       if (mh) {
@@ -235,16 +238,23 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       if (mindGap) { mindGap = null; setHotMindGap(null); editor.board.endGesture(); editor.requestRender(); }
       if (gap) { gap = null; setHotGap(null); editor.board.endGesture(); editor.requestRender(); }
     };
+    // "Узел на линии": whether what's let go goes into the line is seen before the editor lets go, and done after.
+    const onUpFirst = () => { if (labOn('linkJoint')) beforeJoinUp(editor); };
+    const onUpLast = () => { if (labOn('linkJoint')) afterJoinUp(editor); };
     const onWheel = (e: WheelEvent) => { if (e.target === canvas() && presence.followingId !== null) { presence.stopFollowing(); stopFlight(); } };
     window.addEventListener('pointerdown', onDown, true);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointerup', onUpFirst, true);
+    window.addEventListener('pointerup', onUpLast);
     window.addEventListener('pointercancel', onUp);
     window.addEventListener('wheel', onWheel, { capture: true, passive: true });
     return () => {
       window.removeEventListener('pointerdown', onDown, true);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointerup', onUpFirst, true);
+      window.removeEventListener('pointerup', onUpLast);
       window.removeEventListener('pointercancel', onUp);
       window.removeEventListener('wheel', onWheel, true);
     };
