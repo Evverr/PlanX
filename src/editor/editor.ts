@@ -1259,6 +1259,8 @@ export class Editor {
       data.links = data.links.map((l) => (l.via ? { ...l, via: l.via.map((p) => ({ x: p.x + dx, y: p.y + dy })) } : l));
       offset = 0;
     }
+    // Into the layer picked ("Слои", src/labs), wherever they were cut or copied from.
+    if (labOn('layers')) { const ly = newItemLayer(this.board); data.items = data.items.map((i) => ({ ...i, ly })); }
     const { items, links } = this.insertCopies(data.items, data.links, offset);
     // Copies land in the frame they're pasted into, unless they came with their own.
     const held = new Set(items.flatMap((i) => i.members ?? []));
