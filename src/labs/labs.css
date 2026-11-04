@@ -273,7 +273,10 @@
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 
 /* «Кнопка T» (textButton.ts): a panel turning into another shows only what's on it, over a body like
-   theirs that slides and stretches from the one's box to the other's. */
+   theirs that takes the one's width and then the other's; the other comes in unseen, its coming in
+   done at once, till its buttons fade in. */
+:root[data-morph-in="tfmt"] .tfmt:not(.gone), :root[data-morph-in="panel"] .bar.panel:not(.gone) {
+  opacity: 0 !important; animation-duration: 1ms !important; animation-delay: 0s !important; }
 [data-morph] { background-color: transparent !important; box-shadow: none !important; border-color: transparent !important; }
 [data-morph]::before { opacity: 0 !important; }
 .panel-shell { position: fixed; z-index: 4; pointer-events: none; background: var(--surface); box-shadow: var(--shadow);

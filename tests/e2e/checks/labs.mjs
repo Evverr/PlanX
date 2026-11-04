@@ -431,14 +431,16 @@ export const checks = {
     await p.click(await p.at('.panel-over button[aria-label="Текст и шрифт"]'));
     await sleep(50);
     expect(await p.ev(`window.seen.join()`), 'a body going from one to the other, from the panel\'s width').toBe(`${from.w}px`);
-    await sleep(400);
+    await sleep(700);
     expect([!!(await p.rect('.tfmt:not(.leaving)')), !!(await p.rect('.panel-over:not(.gone)'))].join(), 'the text panel instead').toBe('true,false');
+    const to = await p.rect('.tfmt:not(.leaving)');
+    expect(to.b, 'standing where the panel stood').toBe(from.b);
     expect(!!(await p.rect('.panel-shell')), 'the body gone once there').toBe(false);
     await p.click(await p.at('.tfmt button[aria-label="Жирный"]'));
     expect(await p.ev(`planx.board.get('s').fw`), 'its text bold').toBe(700);
     const s = await p.ev(`planx.editor.toScreen({ x: 600, y: 400 })`);
     await p.click([s.x, s.y]);
-    await sleep(400);
+    await sleep(700);
     expect([!!(await p.rect('.tfmt:not(.leaving)')), !!(await p.rect('.panel-over:not(.gone)'))].join(), 'back to the selection panel').toBe('false,true');
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
   },
