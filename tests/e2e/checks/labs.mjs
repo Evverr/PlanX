@@ -487,6 +487,15 @@ export const checks = {
     expect(!!(await p.ev(`planx.board.get('t')`)), 'the table stays').toBe(true);
   },
 
+  async '"Кнопка T" on a mind map node: its text formatted from the text panel'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.add(e.newItem('mind', 400, 300, { id: 'm', text: 'Тема', w: 160, h: 60 })); e.setSelection(['m']); })()`);
+    await sleep(400);
+    await p.click(await p.at('.bar.panel button[aria-label="Текст и шрифт"]'));
+    await sleep(700);
+    await p.click(await p.at('.tfmt button[aria-label="Курсив"]'));
+    expect(await p.ev(`planx.board.get('m').fi`), 'its text in italics').toBe(true);
+  },
+
   async '"Перестановка в таблице": a column dragged by its pill takes its cells along'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [100, 120, 140], rows: [40, 40, 40], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] })); e.setSelection(['t']); })()`);
