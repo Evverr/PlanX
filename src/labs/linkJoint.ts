@@ -82,6 +82,15 @@ export function afterUp(ed: Editor): void {
   if (link && it) joinLine(ed, link, it, at, p);
 }
 
+/** Something just made by a rail button dropped on the board, a line `linkId` picked as it was: put
+ *  into the line if it was dropped on one of its middles. */
+export function joinDropped(ed: Editor, linkId: string | null, it: Item | undefined): void {
+  const link = linkId ? ed.board.getLink(linkId) : undefined;
+  if (!link || !it || !JOINABLE.has(it.type)) return;
+  const hit = over(ed, link, it);
+  if (hit) joinLine(ed, link, it, hit.at, hit.p);
+}
+
 /** Puts `it` into the line at its middle `p` on stretch `at`: the line made two, through it. */
 export function joinLine(ed: Editor, link: Link, it: Item, at: number, p: Point): void {
   const b = ed.board, x = p.x - it.w / 2, y = p.y - it.h / 2, mid = { ...it, x, y };
