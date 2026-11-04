@@ -24,6 +24,7 @@ import { drawNib } from './nib';
 import { drawEditedPath } from './paths';
 import { drawEraser, eraserStyle, subscribeEraser } from './eraseArea';
 import { drawGroup, endGroupScale, groupScaling, moveGroupScale, onGroupHandle, startGroupScale } from './multi';
+import { drawGrips, endGrip, gripAt, gripDragging, moveGrip, setHotGrip, startGrip } from './tableMove';
 import './labs.css';
 
 type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'keys' | 'layers' | 'history';
@@ -58,7 +59,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
   // Their drawing over the board, redrawn whenever one is switched on or off (the editor asks about
   // locks as it goes, so its handles change too).
   useEffect(() => {
-    const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) { drawTidy(ctx, editor); drawMindTidy(ctx, editor); } drawGroup(ctx, editor); drawNib(ctx, editor); if (labOn('nib')) drawEditedPath(ctx, editor); if (labOn('softEraser')) drawEraser(ctx, editor); return more; };
+    const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) { drawTidy(ctx, editor); drawMindTidy(ctx, editor); } if (labOn('tableMove')) drawGrips(ctx, editor); drawGroup(ctx, editor); drawNib(ctx, editor); if (labOn('nib')) drawEditedPath(ctx, editor); if (labOn('softEraser')) drawEraser(ctx, editor); return more; };
     editor.overlays.add(draw);
     editor.requestRender();
     const off = subscribeLabs(() => { editor.emit(); editor.requestRender(); });
@@ -138,6 +139,16 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
         editor.board.beginGesture();
         return;
       }
+      // A table's row or column taken by its pill ("Перестановка в таблице").
+      const grip = e.button === 0 && labOn('tableMove') ? gripAt(editor, local(e)) : null;
+      if (grip) {
+        e.stopPropagation();
+        canvas()!.setPointerCapture(e.pointerId);
+        const p = local(e);
+        startGrip(editor, grip, editor.toWorld(p.x, p.y));
+        canvas()!.style.cursor = 'grabbing';
+        return;
+      }
       const along = e.button === 0 && labOn('tidy') ? gapAt(editor, local(e)) : null, t = tidyNow();
       if (along && t) {
         e.stopPropagation();
@@ -178,6 +189,12 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     };
     const onMove = (e: PointerEvent) => {
       if (drawing) addPoint(e);
+      if (gripDragging()) { const p = local(e); moveGrip(editor, editor.toWorld(p.x, p.y)); return; }
+      if (e.target === canvas() && !e.buttons && labOn('tableMove')) {
+        const g = gripAt(editor, local(e));
+        setHotGrip(editor, g);
+        if (g) { canvas()!.style.cursor = 'grab'; return; }
+      }
       if (tidyDragging()) { const p = local(e); moveTidyDrag(editor, editor.toWorld(p.x, p.y)); return; }
       if (groupScaling()) { const p = local(e); moveGroupScale(editor, editor.toWorld(p.x, p.y)); return; }
       if (e.target === canvas() && !e.buttons && onGroupHandle(editor, local(e))) canvas()!.style.cursor = 'nwse-resize';
@@ -205,6 +222,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       }
     };
     const onUp = (e: PointerEvent) => {
+      if (gripDragging()) endGrip(editor);
       if (tidyDragging()) { const p = local(e); endTidyDrag(editor, editor.toWorld(p.x, p.y)); }
       if (groupScaling()) endGroupScale(editor);
       if (drawing) { drawing = false; presence.shareLaser(); }

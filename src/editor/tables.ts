@@ -96,9 +96,14 @@ export function grabbableLine(ed: Editor, w: Point, hit: Item | null, pointer: s
   return ed.lineRest?.armed && sameLine(ed.lineRest.line, tl) ? tl : null;
 }
 
+/** Zoomed out further than this, a table's lines can't be taken hold of (the table's taken instead):
+ *  half its size and less. */
+export const LINES_FROM_Z = 0.5;
+
 /** The table line under the point: of the table there, or just past a table's right or bottom edge. */
 export function tableLineAt(ed: Editor, w: Point, hit: Item | null): TableLine | null {
   if (hit && hit.type !== 'table' && hit.type !== 'frame') return null;
+  if (ed.cam.z < LINES_FROM_Z) return null;
   // A finger gets a wider band, but not so wide a small cell is all lines.
   const tol = (ed.byFinger ? 10 : 5) / ed.cam.z, items = ed.shown();
   for (let i = items.length - 1; i >= 0; i--) {

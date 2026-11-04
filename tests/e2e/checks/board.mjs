@@ -364,6 +364,17 @@ export const checks = {
     expect(t.cols[0], 'the column widened after 0.7 s').toBeNear(180, 2);
   },
 
+  async 'zoomed out to under half, a table\'s lines aren\'t taken: the table is'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 0.4 }; e.camChanged();
+      b.add(e.newItem('table', 1000, 1000, { id: 't', w: 360, h: 120, cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill('') })); e.setSelection(['t']); })()`);
+    await sleep(200);
+    const line = await screen(p, 1120, 1020);
+    await p.drag(line, [line[0] + 40, line[1] + 40], { rest: 700 });
+    const t = await p.ev(`planx.board.get('t')`);
+    expect(t.cols[0], 'no resize').toBe(120);
+    expect(t.x, 'the table moved').toBeNear(1100, 2);
+  },
+
   async 'the selection panel goes up above a bar beneath it, and back down'(p) {
     await p.make('sticky', [600, 350]);
     await p.click([600, 350]);

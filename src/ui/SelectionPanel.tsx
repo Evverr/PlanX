@@ -289,6 +289,9 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   const [down, setDown] = useState(false);
   // Whether it came in waiting for the text panel to go (as it showed up).
   const wait = useRef(false), had = useRef(false);
+  // Over what's picked, it stays where it is while rows or columns are being added or taken away (the
+  // table growing under it), till the pointer leaves it or the board's scrolled.
+  const hold = useRef(false);
   if (over && items.length && !had.current) wait.current = !!after;
   had.current = items.length > 0;
   // It finds its place again when the window changes size, a panel opens or closes beside the rail,
@@ -298,7 +301,10 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
     window.addEventListener('resize', redraw);
     window.addEventListener('planx:side-panels', redraw);
     window.addEventListener('transitionend', slid);
+    const free = () => { if (hold.current) { hold.current = false; redraw(); } };
+    window.addEventListener('wheel', free, { passive: true });
     return () => {
+      window.removeEventListener('wheel', free);
       window.removeEventListener('resize', redraw);
       window.removeEventListener('planx:side-panels', redraw);
       window.removeEventListener('transitionend', slid);
@@ -308,6 +314,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
     const el = sort.ref.current;
     if (!el) return;
     if (over) {
+      if (hold.current) return;
       const all = editor.board.list(), boxes = items.map((i) => (i.inst ? instanceBounds(i, all) : boxOf(i)));
       if (!boxes.length) return;
       const x = Math.min(...boxes.map((b) => b.x)), y = Math.min(...boxes.map((b) => b.y));
@@ -348,7 +355,8 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   return (
     <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${over ? `panel-over ${down ? 'opens-down' : ''} ${wait.current ? 'after-gone' : ''}` : docked ? 'docked' : ''} ${!over && place.bottom !== null ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
       style={over ? undefined : { transform: `translateX(calc(-50% + ${place.left}px))`, ...(place.bottom !== null && { bottom: place.bottom }) }}
-      role="toolbar" aria-label="Выделенное" {...sort.container}>
+      role="toolbar" aria-label="Выделенное" {...sort.container}
+      onPointerLeave={() => { if (hold.current) { hold.current = false; redraw(); } }}>
       {sort.renderFit({
         // All the colours are under the palette: a table's own when it's selected alone.
         // (Picking something else closes the palette: the key changes with the selection.)
@@ -360,15 +368,15 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
         rows: tables.length > 0 ? (
           <div className="sw-group table-count">
             <span>Строки</span>
-            {btn('minus-s', 'Убрать строку', () => editor.changeTable('row', -1))}
-            {btn('plus-s', 'Добавить строку', () => editor.changeTable('row', 1))}
+            {btn('minus-s', 'Убрать строку', () => { hold.current = !!over; editor.changeTable('row', -1); })}
+            {btn('plus-s', 'Добавить строку', () => { hold.current = !!over; editor.changeTable('row', 1); })}
           </div>
         ) : undefined,
         cols: tables.length > 0 ? (
           <div className="sw-group table-count">
             <span>Столбцы</span>
-            {btn('minus-s', 'Убрать столбец', () => editor.changeTable('col', -1))}
-            {btn('plus-s', 'Добавить столбец', () => editor.changeTable('col', 1))}
+            {btn('minus-s', 'Убрать столбец', () => { hold.current = !!over; editor.changeTable('col', -1); })}
+            {btn('plus-s', 'Добавить столбец', () => { hold.current = !!over; editor.changeTable('col', 1); })}
           </div>
         ) : undefined,
         // How the selected links run: straight, in right angles, smooth; each way any of them runs lit,
