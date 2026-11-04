@@ -150,8 +150,8 @@
 /* Wide enough for a row of ten colours (the usual eight, none, any) in one line. */
 .board-menu.params-pop { width: round(calc(376px * var(--k)), 2px); }
 /* Any colour, floating over the popup (fixed: not cut off by its scrolling), from the circle it opened from. */
-.params-group > .color-picker.floating { position: fixed; bottom: auto; transform: none; z-index: 41; --in-y: -8px; }
-.params-group > .color-picker.floating.above { --in-y: 8px; }
+.params-group > .color-picker.floating { position: fixed; bottom: auto; transform: none; z-index: 41; --in-y: calc(-1 * var(--slide)); }
+.params-group > .color-picker.floating.above { --in-y: var(--slide); }
 .params-group { padding: var(--s4) var(--s4) var(--s8); }
 /* Between one item's parameters and the next one's title, more room under the line. */
 /* (as wide as the parameters, the same way in from either side) */
@@ -216,7 +216,7 @@
 
 /* "Панель над элементом": placed by what's picked, not at the bottom. */
 .bar.panel.panel-over { position: fixed; bottom: auto; transform: none; transition: none; z-index: 5; }
-.panel-over.opens-down .op-pop, .op-pop.down { bottom: auto; top: calc(100% + var(--s18)); --in-y: -8px; }
+.panel-over.opens-down .op-pop, .op-pop.down { bottom: auto; top: calc(100% + var(--s18)); --in-y: calc(-1 * var(--slide)); }
 
 /* "Сплошная выбранная иконка": what's on on the tool rail, white on blue. */
 .fb.fb.solid-on::before, .fb.solid-on:hover:not(:disabled)::before { background: var(--fmt-on-ink); }

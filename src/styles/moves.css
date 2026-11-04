@@ -25,24 +25,26 @@
 :root[data-rail="right"] :is(.tools-more:not(.labs-more), .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(24px + var(--rail-w) + env(safe-area-inset-right, 0px)); }
 :root[data-rail="right"] .tools.docked ~ :is(.tools-more:not(.labs-more), .draw-panel, .recorder, .icon-pick) { left: auto; right: calc(12px + var(--rail-w) + env(safe-area-inset-right, 0px)); }
 
+/* How far a popup slides as it comes in (two thirds of the 8px it was). */
+:root { --slide: 5.33px; }
 /* How every popup comes in (menus, the panels opening from others, popovers, notes, windows): out of
-   nothing, 8px on the way there, from where it opens: falling from the top, rising from the bottom and
+   nothing, --slide on the way there, from where it opens: falling from the top, rising from the bottom and
    in the middle of the screen, from the side beside a rail or a menu. (The slide is added to their own
    place, so those centred by a transform keep it.) Anything new that pops up goes in this list. */
 :is(.pop, .board-menu, .more-pop, .op-pop, .color-picker, .tf-menu, .tools-more, .draw-panel, .tfmt:not(.leaving), .comment-menu, .tile-menu,
   .minimap, .modal, .peek, .comment-card, .labs-pill, .ink-style, .panel-over) {
-  --in-x: 0px; --in-y: -8px;
+  --in-x: 0px; --in-y: calc(-1 * var(--slide));
   animation: fade-in .16s ease-out, come-in .16s ease-out; animation-composition: replace, add; }
 @keyframes come-in { from { transform: translate(var(--in-x), var(--in-y)); } }
 /* Rising: from the bottom (or the bars there), and in the middle of the screen. */
-:is(.op-pop, .color-picker, .tfmt, .panel-over:not(.opens-down), .more-pop.above, .minimap, .help, .namepop, .toast.bottom, .shelf-toast, .modal, .peek, .labs-keys) { --in-y: 8px; }
-:root[data-topbar="low"] :is(.board-menu:not(.sub, .context-menu, .objects-menu, .shape-menu), .confirm) { --in-y: 8px; }
-:root[data-zoom="high"] :is(.minimap, .help, .namepop) { --in-y: -8px; }
+:is(.op-pop, .color-picker, .tfmt, .panel-over:not(.opens-down), .more-pop.above, .minimap, .help, .namepop, .toast.bottom, .shelf-toast, .modal, .peek, .labs-keys) { --in-y: var(--slide); }
+:root[data-topbar="low"] :is(.board-menu:not(.sub, .context-menu, .objects-menu, .shape-menu), .confirm) { --in-y: var(--slide); }
+:root[data-zoom="high"] :is(.minimap, .help, .namepop) { --in-y: calc(-1 * var(--slide)); }
 /* From the side. */
-:is(.board-menu.sub, .board-menu.shape-menu, .objects-menu, .tools-more, .draw-panel, .recorder, .icon-pick, .ink-style) { --in-x: -8px; --in-y: 0px; }
-:is(.board-menu.sub.leftward, .labs-more, .labs-pop) { --in-x: 8px; --in-y: 0px; }
-:root[data-rail="right"] :is(.objects-menu, .board-menu.shape-menu, .tools-more:not(.labs-more), .draw-panel, .recorder, .icon-pick, .ink-style) { --in-x: 8px; }
-:root[data-labs="left"] :is(.labs-more, .labs-pop) { --in-x: -8px; }
+:is(.board-menu.sub, .board-menu.shape-menu, .objects-menu, .tools-more, .draw-panel, .recorder, .icon-pick, .ink-style) { --in-x: calc(-1 * var(--slide)); --in-y: 0px; }
+:is(.board-menu.sub.leftward, .labs-more, .labs-pop) { --in-x: var(--slide); --in-y: 0px; }
+:root[data-rail="right"] :is(.objects-menu, .board-menu.shape-menu, .tools-more:not(.labs-more), .draw-panel, .recorder, .icon-pick, .ink-style) { --in-x: var(--slide); }
+:root[data-labs="left"] :is(.labs-more, .labs-pop) { --in-x: calc(-1 * var(--slide)); }
 /* The text panel and the selection panel over what's picked ("Панель над элементом", src/labs), coming in
    where the other's going, wait till it's gone (see App). */
 :is(.tfmt:not(.leaving), .panel-over).after-gone { animation-delay: .08s; animation-fill-mode: backwards; }
