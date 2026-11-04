@@ -527,6 +527,18 @@ export const checks = {
     expect(!!(await p.ev(`planx.board.get('t')`)), 'the table stays').toBe(true);
   },
 
+  async 'with no room over the panel over what\'s picked, its palette opens down'(p) {
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', true))()`);
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.add(e.newItem('rect', 480, 170, { id: 'a', w: 240, h: 140 })); e.setSelection(['a']); })()`);
+    await sleep(400);
+    const bar = await p.rect('.panel-over');
+    expect(bar.b < 170, 'the panel over it').toBe(true);
+    await p.click(await p.at('.panel-over button[aria-label="Цвет"]'));
+    await sleep(300);
+    expect((await p.rect('.panel-over .op-pop')).t > bar.b, 'its palette under it').toBe(true);
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
+  },
+
   async 'typing in a mind map node, its panel follows it, one panel only'(p) {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', true))()`);
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.add(e.newItem('mind', 400, 300, { id: 'm', text: 'Т', w: 120, h: 50 })); e.setSelection(['m']); })()`);
