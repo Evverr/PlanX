@@ -489,6 +489,10 @@ export const checks = {
     expect((await p.ev(`planx.board.get('t')`)).cols.length, '30 off its side: kept').toBe(3);
     await p.drag([360, 293], [670, 300]);
     expect((await p.ev(`planx.board.get('t')`)).cols.length, 'just past the right edge: gone').toBe(2);
+    // The plus inside by the right edge: a column more.
+    const t2 = await p.ev(`planx.board.get('t')`), c = await p.ev(`planx.editor.toScreen({ x: ${t2.x + t2.w}, y: ${t2.y + t2.h / 2} })`);
+    await p.click([c.x - 14, c.y]);
+    expect((await p.ev(`planx.board.get('t')`)).cols.length, 'the plus: a column more').toBe(3);
   },
 
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {

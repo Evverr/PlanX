@@ -47,10 +47,18 @@ export function morphPanel(from: string, to: 'tfmt' | 'panel', swap: () => void)
       const b = document.querySelector<HTMLElement>(to === 'tfmt' ? '.tfmt:not(.gone):not(.leaving)' : '.bar.panel:not(.gone)');
       if (!b) { if (++tries < 10) requestAnimationFrame(find); else done(); return; }
       b.dataset.morph = '';
-      const q = settledRect(b);
-      // (The two are alike but for their width: only that changes.)
-      Object.assign(shell.style, { left: `${q.left}px`, width: `${q.width}px` });
-      setTimeout(() => {
+      // Its width once it's found it (a panel measures what fits it first, a frame or two): only then
+      // does the body take it, in one go. (The two are alike but for their width: only that changes.)
+      let last = '', still = 0, frames = 0;
+      const settle = () => {
+        const q = settledRect(b), now = `${q.left}|${q.width}`;
+        still = now === last ? still + 1 : 0;
+        last = now;
+        if (still < 2 && ++frames < 12) { requestAnimationFrame(settle); return; }
+        Object.assign(shell.style, { left: `${q.left}px`, width: `${q.width}px` });
+        setTimeout(reveal, WIDEN);
+      };
+      const reveal = () => {
         // What's on it fades in; then it's itself again.
         b.style.opacity = '0';
         delete root.dataset.morphIn;
@@ -63,7 +71,8 @@ export function morphPanel(from: string, to: 'tfmt' | 'panel', swap: () => void)
           delete b.dataset.morph;
           done();
         }, IN + 10);
-      }, WIDEN);
+      };
+      settle();
     };
     requestAnimationFrame(find);
   }, OUT);

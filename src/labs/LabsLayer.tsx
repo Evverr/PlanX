@@ -24,7 +24,7 @@ import { drawNib } from './nib';
 import { drawEditedPath } from './paths';
 import { drawEraser, eraserStyle, subscribeEraser } from './eraseArea';
 import { drawGroup, endGroupScale, groupScaling, moveGroupScale, onGroupHandle, startGroupScale } from './multi';
-import { drawGrips, endGrip, gripAt, gripDragging, moveGrip, pressedForGrips, setHotGrip, startGrip } from './tableMove';
+import { drawGrips, endGrip, gripAt, gripDragging, moveGrip, pressedForGrips, pressPlus, setHotGrip, setHotPlus, startGrip, tablePlusAt } from './tableMove';
 import './labs.css';
 
 type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'keys' | 'layers' | 'history';
@@ -141,6 +141,8 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       }
       // A table's row or column taken by its pill ("Перестановка в таблице"); a second click on the
       // table puts them out.
+      const plus = e.button === 0 && labOn('tableMove') ? tablePlusAt(editor, local(e)) : null;
+      if (plus) { e.stopPropagation(); pressPlus(editor, plus); return; }
       const grip = e.button === 0 && labOn('tableMove') ? gripAt(editor, local(e)) : null;
       if (!grip && e.button === 0 && labOn('tableMove')) pressedForGrips(editor, editor.toWorld(local(e).x, local(e).y));
       if (grip) {
@@ -193,9 +195,11 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       if (drawing) addPoint(e);
       if (gripDragging()) { const p = local(e); moveGrip(editor, editor.toWorld(p.x, p.y)); return; }
       if (e.target === canvas() && !e.buttons && labOn('tableMove')) {
-        const g = gripAt(editor, local(e));
+        const g = gripAt(editor, local(e)), plus = g ? null : tablePlusAt(editor, local(e));
         setHotGrip(editor, g);
+        setHotPlus(editor, plus);
         if (g) { canvas()!.style.cursor = 'grab'; return; }
+        if (plus) { canvas()!.style.cursor = 'pointer'; return; }
       }
       if (tidyDragging()) { const p = local(e); moveTidyDrag(editor, editor.toWorld(p.x, p.y)); return; }
       if (groupScaling()) { const p = local(e); moveGroupScale(editor, editor.toWorld(p.x, p.y)); return; }

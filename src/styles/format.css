@@ -12,6 +12,8 @@
 /* Its body the panels' (panels.css), as high as the bars; only its width its own. */
 .tfmt { position: fixed; z-index: 5; display: flex; flex-wrap: nowrap; align-items: center; column-gap: var(--s14); box-sizing: border-box; height: var(--panel-h); padding: 0 var(--s18) 0 var(--s22); width: max-content;
   color: var(--fmt-ink); }
+/* With the arrow back at its start, as far from the edge as "more" is at the end. */
+.tfmt.has-back { padding-left: var(--s18); }
 .tfmt .caret { margin: 0 round(calc(-10px * var(--k)), 1px); }
 /* The text panel fades in when it shows up, and out twice as fast when it goes. */
 .tfmt.leaving { animation: fade-out .08s ease forwards; pointer-events: none; }
