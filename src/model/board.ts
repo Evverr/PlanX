@@ -84,7 +84,8 @@ export class Board {
         const fromSide = m.get('fromSide') as Side | undefined, toSide = m.get('toSide') as Side | undefined, style = m.get('style') as LinkStyle | undefined;
         const look: Partial<Link> = {};
         for (const k of ['color', 'lo', 'dash', 'heads', 'via', 'fromAt', 'toAt'] as const) if (m.has(k)) (look as Record<string, unknown>)[k] = m.get(k);
-        out.push({ id, from, to, ...(fromSide && toSide && { fromSide, toSide }), ...(style && { style }), ...look });
+        // (Pinned by both sides, or one, a smooth one through nodes: the other end going free.)
+        out.push({ id, from, to, ...(fromSide && { fromSide }), ...(toSide && { toSide }), ...(style && { style }), ...look });
       });
       this.linkCache = out;
     }
@@ -181,7 +182,8 @@ export class Board {
         const m = new Y.Map<unknown>();
         m.set('from', l.from);
         m.set('to', l.to);
-        if (l.fromSide && l.toSide) { m.set('fromSide', l.fromSide); m.set('toSide', l.toSide); }
+        if (l.fromSide) m.set('fromSide', l.fromSide);
+        if (l.toSide) m.set('toSide', l.toSide);
         if (l.style) m.set('style', l.style);
         this.links.set(l.id, m);
       }
@@ -209,7 +211,8 @@ export class Board {
       const m = new Y.Map<unknown>();
       m.set('from', link.from);
       m.set('to', link.to);
-      if (link.fromSide && link.toSide) { m.set('fromSide', link.fromSide); m.set('toSide', link.toSide); }
+      if (link.fromSide) m.set('fromSide', link.fromSide);
+      if (link.toSide) m.set('toSide', link.toSide);
       if (link.style) m.set('style', link.style);
       for (const k of ['color', 'lo', 'dash', 'heads', 'via', 'fromAt', 'toAt'] as const) if (link[k] !== undefined) m.set(k, link[k]);
       this.links.set(link.id, m);

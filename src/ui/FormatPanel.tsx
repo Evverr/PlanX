@@ -103,15 +103,16 @@ function textRoom(): number {
 
 /** Hung 20px over the top dot of the selected text or sticker (under the bottom dot when there's no room above). */
 /** Puts a panel over this box on the board, if it fits under the top bar (when level with it), otherwise
- *  under it, clear of the tool rail; gives back whether it's under. */
-export function placeOver(editor: Editor, box: HTMLElement, b: Rect, dots = DOT_GAP): boolean {
+ *  under it, clear of the tool rail (or, with `under` given, there whatever); gives back whether it
+ *  should be under. */
+export function placeOver(editor: Editor, box: HTMLElement, b: Rect, dots = DOT_GAP, under?: boolean): boolean {
   const w = box.offsetWidth, h = box.offsetHeight;
   const top = editor.toScreen({ x: b.x + b.w / 2, y: b.y });
   const bottom = editor.toScreen({ x: 0, y: b.y + b.h }).y;
   const reach = dots + DOT_R + GAP;
   const bar = document.querySelector('.topbar')?.getBoundingClientRect();
   const underBar = bar && top.x - w / 2 < bar.right && top.x + w / 2 > bar.left;
-  const over = top.y - reach - h >= (underBar ? bar.bottom : 0) + EDGE;
+  const fits = top.y - reach - h >= (underBar ? bar.bottom : 0) + EDGE, over = under === undefined ? fits : !under;
   const y = over ? top.y - reach - h : bottom + reach;
   // Stay clear of the tool rail when level with it.
   const rail = document.querySelector('.tools')?.getBoundingClientRect();
@@ -119,7 +120,7 @@ export function placeOver(editor: Editor, box: HTMLElement, b: Rect, dots = DOT_
   box.style.left = `${Math.max(minX, Math.min(top.x - w / 2, innerWidth - w - EDGE))}px`;
   // Under something taller than the screen: at the screen's bottom.
   box.style.top = `${Math.min(y, innerHeight - h - EDGE)}px`;
-  return !over;
+  return !fits;
 }
 
 export function TextPanel({ editor, item, leaving, after, dock, onBack }: { editor: Editor; item: Item; leaving?: boolean;

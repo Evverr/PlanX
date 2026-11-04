@@ -75,7 +75,7 @@ export interface Scene {
   /** The figure or line whose nodes are being changed ("Перо", src/labs): its nodes in place of the frame. */
   nodesOf?: string | null;
   marquee: Rect | null;
-  linkPreview: { from: Item; fromSide: Side | null; to: Point; target: Item | null; style?: LinkStyle } | null;
+  linkPreview: { from: Item; fromSide: Side | null; fromAt?: number; to: Point; target: Item | null; style?: LinkStyle } | null;
   peers: Peer[];
   showHandle: boolean;
   /** The last press was a finger's: the resize handle is drawn bigger, to be seen under it. */
@@ -114,6 +114,8 @@ export interface Scene {
   guides: Guide[];
   /** The table cell being edited, its text left to the overlay. */
   editingCell: number | null;
+  /** The board being worked on (not a picture of it): what's unpicked fades out. */
+  live?: boolean;
   /** Left see-through where nothing is drawn (a picture saved without the board's background). */
   noBackground?: boolean;
 }
@@ -167,8 +169,14 @@ const dotLit = (t: { hot: boolean; from: number; at: number }, now: number) => {
 /** Whether a link dot is still growing or shrinking (and wants another frame). */
 export const dotsMoving = (): boolean => {
   const now = performance.now();
-  return [...dotTurns.values()].some((t) => now - t.at < DOT_GROW) || [...pillTurns.values()].some((t) => now - t.at < PILLS_SLIDE);
+  return [...dotTurns.values()].some((t) => now - t.at < DOT_GROW) || [...pillTurns.values()].some((t) => now - t.at < PILLS_SLIDE)
+    || [...unpicked.values()].some((u) => now - u.at < PICK_OUT);
 };
+/** What's no longer picked fades out (its frame, its handle and dots) as a panel does, in this long. */
+const PICK_OUT = 80;
+/** What was picked at the last frame, and since when each no longer is (with whether it had its dots). */
+let picked = new Set<string>(), pickedAlone: string | null = null;
+const unpicked = new Map<string, { at: number; dots: boolean }>();
 /** Selection outlines and handles, the link dots and selected links. */
 const SELECT_COLOR = '#4DA3FF';
 
@@ -745,8 +753,8 @@ function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
     const [a, c1, c2, b] = branchCurve(up, it, edges);
     // In the colour of the node it leads to.
     ctx.strokeStyle = shade(branchColor(it, s.get), s.theme.dim);
-    // (Out of a central topic twice as thick as further on; both 1.7 times what they were.)
-    ctx.lineWidth = (up.parent ? 1.125 : 2.25) * 1.7;
+    // (Out of a central topic as thick as further on.)
+    ctx.lineWidth = 1.125 * 1.7;
     ctx.beginPath();
     // Straight from its parent's own edge to its row's, and from its row's to its own (see branchEdges).
     if (a.x > up.x + up.w) { ctx.moveTo(up.x + up.w, a.y); ctx.lineTo(a.x, a.y); } else ctx.moveTo(a.x, a.y);
@@ -1170,7 +1178,7 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
 }
 
 /** An item's four link dots, beside its sides; the one under the pointer bigger. */
-function drawDots(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
+function drawDots(ctx: CanvasRenderingContext2D, it: Item, s: Scene, fade = 1) {
   const { cam } = s;
   ctx.fillStyle = s.theme.pick;
   ctx.strokeStyle = '#fff';
@@ -1183,7 +1191,7 @@ function drawDots(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     else if (t.hot !== hot) dotTurns.set(key, (t = { hot, from: dotLit(t, now), at: now }));
     const k = dotLit(t, now);
     ctx.beginPath();
-    ctx.globalAlpha = DOT_FADE + (DOT_HOT_FADE - DOT_FADE) * k;
+    ctx.globalAlpha = (DOT_FADE + (DOT_HOT_FADE - DOT_FADE) * k) * fade;
     ctx.arc(p.x, p.y, (DOT_R + (DOT_HOT_R - DOT_R) * k) / cam.z, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
@@ -1302,6 +1310,32 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   if (resting) drawMindButtons(ctx, resting, s);
   const leaving = s.plusLeaving && s.get(s.plusLeaving.id);
   if (leaving) drawMindButtons(ctx, leaving, { ...s, plusFade: s.plusLeaving!.fade, hotPlus: null, chevronless: null });
+  // Just unpicked: its frame, handle and dots going.
+  const now = performance.now();
+  if (s.live) for (const id of picked) if (!s.selection.has(id) && !unpicked.has(id)) unpicked.set(id, { at: now, dots: id === pickedAlone });
+  for (const id of s.selection) unpicked.delete(id);
+  if (s.live) picked = new Set(s.selection);
+  if (s.live) pickedAlone = s.selection.size === 1 && s.showHandle ? [...s.selection][0] : null;
+  if (s.live) for (const [id, u] of unpicked) {
+    const k = (now - u.at) / PICK_OUT, it = s.get(id);
+    if (k >= 1 || !it) { unpicked.delete(id); continue; }
+    if (it.type === 'mind' || it.inst || it.host) continue;
+    ctx.globalAlpha = PICK_FRAME * (1 - k);
+    outline(ctx, it, cam.z, theme.pick, [], PICK_LINE, PICK_RAD);
+    if (u.dots) {
+      const hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z;
+      ctx.fillStyle = theme.surface;
+      ctx.strokeStyle = theme.pick;
+      ctx.lineWidth = PICK_LINE / cam.z;
+      ctx.beginPath();
+      turned(ctx, it, () => ctx.roundRect(it.x + it.w + off - hs / 2, it.y + it.h + off - hs / 2, hs, hs, 3 / cam.z));
+      ctx.globalAlpha = PICK_FADE * (1 - k);
+      ctx.fill();
+      ctx.stroke();
+      drawDots(ctx, it, s, 1 - k);
+    }
+    ctx.globalAlpha = 1;
+  }
   for (const id of s.selection) {
     const it = s.get(id);
     if (!it || s.nodesOf === id) continue;
@@ -1355,22 +1389,23 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   }
 
   if (s.linkPreview) {
-    const { from, fromSide, to, target, style } = s.linkPreview;
+    const { from, fromSide, fromAt, to, target, style } = s.linkPreview;
     if (target) outline(ctx, target, cam.z, SELECT_COLOR, [4, 4]);
     let curve: Bezier;
     // Drawn the way it will run: straight or in right angles, as the last one was made to.
     // Pulled from a link dot, it starts at the dot (and ends on what it's led to, as it'll be made).
-    const dot = fromSide ? dotGap(from, fromSide) / cam.z : 0;
+    // (Where along its side it starts, a link led on from a place of its own there.)
+    const dot = fromSide ? dotGap(from, fromSide) / cam.z : 0, along = fromAt ?? 0.5;
     // Over an item: the side it's going into, and where along it (its middle when near that).
     const anchor = target ? anchorAt(target, to, 10 / cam.z) : null;
     if (style) {
       const ps = fromSide ?? nearestSide(from, target ? center(target) : to);
       const qs = anchor ? anchor.side : facing(sidePoint(from, ps, dot), to);
-      const p = sidePoint(from, ps, dot), q = target && anchor ? sidePoint(target, anchor.side, 0, anchor.at) : to;
+      const p = sidePoint(from, ps, dot, fromSide ? along : 0.5), q = target && anchor ? sidePoint(target, anchor.side, 0, anchor.at) : to;
       linkArrow(ctx, { pts: style === 'straight' ? [p, q] : elbowRoute(p, ps, q, qs) }, SELECT_COLOR, cam.z, [6, 6]);
     } else if (fromSide || (anchor && anchor.at !== 0.5)) {
       const ps = fromSide ?? nearestSide(from, target ? center(target) : to);
-      curve = curveBetween(sidePoint(from, ps, dot), ps, target && anchor ? sidePoint(target, anchor.side, 0, anchor.at) : to, anchor?.side ?? null, angleOf(from), target ? angleOf(target) : 0);
+      curve = curveBetween(sidePoint(from, ps, dot, fromSide ? along : 0.5), ps, target && anchor ? sidePoint(target, anchor.side, 0, anchor.at) : to, anchor?.side ?? null, angleOf(from), target ? angleOf(target) : 0);
     } else {
       const end = target ? edgePoint(target, center(from)) : to, start = edgePoint(from, end);
       curve = [start, start, end, end];

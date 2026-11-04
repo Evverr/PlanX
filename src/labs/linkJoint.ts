@@ -9,8 +9,9 @@ import { center, linkHandles, linkShape, nearestSide, type Point } from '../canv
  * (see linkShape), and moving it moves the line.
  */
 
-/** What can be put into a line. */
+/** What can be put into a line: those, and the game stickers (pictures). */
 const JOINABLE = new Set(['text', 'sticky', 'rect', 'ellipse', 'polygon', 'emoji', 'icon']);
+const joinable = (it: Item) => JOINABLE.has(it.type) || (it.type === 'image' && !!it.doodle);
 /** How near a middle circle (on the screen) the dragged thing's middle takes it. */
 const NEAR = 28;
 
@@ -35,7 +36,7 @@ function middles(ed: Editor, link: Link): Array<{ p: Point; at: number }> {
 function dragged(ed: Editor): { link: Link; it: Item } | null {
   if (!picked || !ed.moving || ed.selection.size !== 1) return null;
   const link = ed.board.getLink(picked), it = ed.selectedItems()[0];
-  if (!link || !it || !JOINABLE.has(it.type) || it.joint || it.id === link.from || it.id === link.to) return null;
+  if (!link || !it || !joinable(it) || it.joint || it.id === link.from || it.id === link.to) return null;
   return { link, it };
 }
 
@@ -86,9 +87,29 @@ export function afterUp(ed: Editor): void {
  *  into the line if it was dropped on one of its middles. */
 export function joinDropped(ed: Editor, linkId: string | null, it: Item | undefined): void {
   const link = linkId ? ed.board.getLink(linkId) : undefined;
-  if (!link || !it || !JOINABLE.has(it.type)) return;
+  if (!link || !it || !joinable(it)) return;
   const hit = over(ed, link, it);
   if (hit) joinLine(ed, link, it, hit.at, hit.p);
+}
+
+/** Things put into lines going: each line through one is made one again, as it was (from the start of
+ *  the one into it to the end of the one out of it, its nodes, sides and heads theirs). The links made,
+ *  to be added once they're gone (the two halves go with them). */
+export function rejoined(ed: Editor, gone: Set<string>): Link[] {
+  const links = ed.board.linkList(), out: Link[] = [];
+  for (const id of gone) {
+    if (!ed.board.get(id)?.joint) continue;
+    const into = links.filter((l) => l.to === id), from = links.filter((l) => l.from === id);
+    if (into.length !== 1 || from.length !== 1) continue;
+    const a = into[0], z = from[0];
+    if (gone.has(a.from) || gone.has(z.to) || a.from === z.to) continue;
+    const startHead = a.heads === 'start' || a.heads === 'both', endHead = z.heads === undefined || z.heads === 'both';
+    const via = [...(a.via ?? []), ...(z.via ?? [])], sided = !!(a.fromSide && z.toSide);
+    out.push({ id: uid(), from: a.from, to: z.to, style: a.style, color: a.color, lo: a.lo, dash: a.dash,
+      ...(startHead ? { heads: endHead ? 'both' as const : 'start' as const } : endHead ? {} : { heads: 'none' as const }),
+      ...(via.length && { via }), ...(sided && { fromSide: a.fromSide, toSide: z.toSide, fromAt: a.fromAt, toAt: z.toAt }) });
+  }
+  return out;
 }
 
 /** Puts `it` into the line at its middle `p` on stretch `at`: the line made two, through it. */
@@ -96,16 +117,23 @@ export function joinLine(ed: Editor, link: Link, it: Item, at: number, p: Point)
   const b = ed.board, x = p.x - it.w / 2, y = p.y - it.h / 2, mid = { ...it, x, y };
   const a = b.get(link.from), z = b.get(link.to);
   if (!a || !z) return;
-  // Its nodes go with the stretches they're on (a right-angled one finds its own way afresh).
-  const via = link.style === 'elbow' ? undefined : link.via, before = via?.slice(0, at), after = via?.slice(at);
+  // Its nodes go with the stretches they're on (a right-angled one finds its own way afresh). A smooth
+  // one without any: each half gets one, a quarter of the way along it, so the two run as it ran.
+  const via = link.style === 'elbow' ? undefined : link.via;
+  let before = via?.slice(0, at), after = via?.slice(at), free = false;
+  if (!link.style && !via?.length) {
+    const pts = linkShape(link, (id) => b.get(id))?.pts;
+    // (Into and out of it they then go free, the way the line ran, not pinned to its sides.)
+    if (pts) { before = [along(pts, 0.25)]; after = [along(pts, 0.75)]; free = true; }
+  }
   // The heads it had at its start and end, on the two.
   const h = link.heads, startHead = h === 'start' || h === 'both', endHead = h === undefined || h === 'both';
   const look = { style: link.style, color: link.color, lo: link.lo, dash: link.dash };
   // Pinned to its ends' sides, each meets the thing in the middle by the side facing the other end.
   const first: Link = { id: uid(), from: link.from, to: it.id, ...look, heads: startHead ? 'start' : 'none',
-    ...(before?.length && { via: before }), ...(link.fromSide && { fromSide: link.fromSide, toSide: nearestSide(mid, before?.length ? before[before.length - 1] : center(a)) }) };
+    ...(before?.length && { via: before }), ...(link.fromSide && { fromSide: link.fromSide, fromAt: link.fromAt, ...(!free && { toSide: nearestSide(mid, before?.length ? before[before.length - 1] : center(a)) }) }) };
   const second: Link = { id: uid(), from: it.id, to: link.to, ...look, ...(endHead ? {} : { heads: 'none' as const }),
-    ...(after?.length && { via: after }), ...(link.toSide && { fromSide: nearestSide(mid, after?.length ? after[0] : center(z)), toSide: link.toSide }) };
+    ...(after?.length && { via: after }), ...(link.toSide && { toSide: link.toSide, toAt: link.toAt, ...(!free && { fromSide: nearestSide(mid, after?.length ? after[0] : center(z)) }) }) };
   b.transact(() => {
     b.update(it.id, { x, y, joint: true });
     b.remove([link.id]);
@@ -113,4 +141,15 @@ export function joinLine(ed: Editor, link: Link, it: Item, at: number, p: Point)
     b.addLink(second);
   });
   ed.requestRender();
+}
+
+/** The point that far (0…1) along a line through the points. */
+function along(pts: Point[], k: number): Point {
+  const lengths = pts.slice(1).map((q, i) => Math.hypot(q.x - pts[i].x, q.y - pts[i].y));
+  let left = lengths.reduce((a, l) => a + l, 0) * k;
+  for (let i = 0; i < lengths.length; i++) {
+    if (left <= lengths[i]) { const t = lengths[i] ? left / lengths[i] : 0; return { x: Math.round(pts[i].x + (pts[i + 1].x - pts[i].x) * t), y: Math.round(pts[i].y + (pts[i + 1].y - pts[i].y) * t) }; }
+    left -= lengths[i];
+  }
+  return pts[pts.length - 1];
 }
