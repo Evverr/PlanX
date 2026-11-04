@@ -745,7 +745,8 @@ function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
     const [a, c1, c2, b] = branchCurve(up, it, edges);
     // In the colour of the node it leads to.
     ctx.strokeStyle = shade(branchColor(it, s.get), s.theme.dim);
-    ctx.lineWidth = up.parent ? 1.125 : 2.25;
+    // (Out of a central topic twice as thick as further on; both 1.7 times what they were.)
+    ctx.lineWidth = (up.parent ? 1.125 : 2.25) * 1.7;
     ctx.beginPath();
     // Straight from its parent's own edge to its row's, and from its row's to its own (see branchEdges).
     if (a.x > up.x + up.w) { ctx.moveTo(up.x + up.w, a.y); ctx.lineTo(a.x, a.y); } else ctx.moveTo(a.x, a.y);
