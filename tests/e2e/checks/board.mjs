@@ -235,6 +235,13 @@ export const checks = {
     await p.drag(end, await screen(p, d.x + 155, d.y + 5));
     l = await p.ev(`planx.board.getLink('L2')`);
     expect(`${l.to === ids.d} ${l.toAt ?? 'middle'}`, 'snapped to the middle').toBe('true middle');
+    // Its arrow at its start: led on by its other end, the arrow goes there all the same.
+    await p.ev(`planx.board.updateLink('L2', { heads: 'start' })`);
+    const tip = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'); const s = planx.editor.toScreen(g.linkShape(planx.board.getLink('L2'), (k) => planx.board.get(k)).pts.at(-1)); return [s.x, s.y]; })()`);
+    const a = await p.ev(`planx.board.get('${ids.a}')`);
+    await p.drag(tip, await screen(p, a.x + 50, a.y + 50));
+    l = await p.ev(`planx.board.getLink('L2')`);
+    expect(`${l.from === ids.c} ${l.to === ids.a} ${l.heads ?? 'end'}`, 'the arrow into what it was led to').toBe('true true end');
   },
 
   async 'Esc and Cmd+Enter are done with a component being changed, as its tick'(p) {

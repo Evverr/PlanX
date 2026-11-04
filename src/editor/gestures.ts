@@ -503,8 +503,8 @@ export function eraseAlong(ed: Editor, a: Point, b: Point): void {
 
 /**
  * A link's end let go on `target` at `p`: led there, to the side it's let go by and as far along it
- * (its middle within 10 px of it). Its start taken, it turns round: from its other end to there, the
- * arrow going there. Pinned by its sides only when it was, or now that it's let go off a side's middle.
+ * (its middle within 10 px of it). Its start taken, it turns round: from its other end to there; its
+ * one arrowhead (wherever it was) going there. Pinned by its sides only when it was, or now that it's let go off a side's middle.
  */
 function relinkTo(ed: Editor, l: Link, target: Item, p: Point, start: boolean): void {
   const board = ed.board, from = start ? l.to : l.from;
@@ -522,11 +522,15 @@ function relinkTo(ed: Editor, l: Link, target: Item, p: Point, start: boolean): 
   // (The end staying keeps its side and place, as the start if it was the end.)
   const fromSide = start ? l.toSide : l.fromSide, fromAt = start ? l.toAt : l.fromAt;
   const sided = !!l.fromSide || at !== 0.5;
-  board.relink(l.id, {
-    from, to: target.id,
-    fromSide: sided ? fromSide ?? (keep ? nearestSide(keep, center(target)) : undefined) : undefined,
-    toSide: sided ? side : undefined,
-    fromAt: sided ? fromAt : undefined,
-    toAt: sided && at !== 0.5 ? at : undefined,
+  // One arrowhead goes with the end that's led on (at the end now): the arrow goes into what it's led to.
+  board.transact(() => {
+    if (l.heads === 'start') board.updateLink(l.id, { heads: undefined });
+    board.relink(l.id, {
+      from, to: target.id,
+      fromSide: sided ? fromSide ?? (keep ? nearestSide(keep, center(target)) : undefined) : undefined,
+      toSide: sided ? side : undefined,
+      fromAt: sided ? fromAt : undefined,
+      toAt: sided && at !== 0.5 ? at : undefined,
+    });
   });
 }
