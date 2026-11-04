@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from 'react';
 import { SHAPE_TOOLS, type Editor, type Pens, type Tool } from '../editor/editor';
 import { readPictures } from '../canvas/pictures';
 import { DrawPanel, isDrawTool } from './DrawPanel';
@@ -160,6 +160,21 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
   const moreRows = Math.max(1, Math.min(hidden.length, Math.floor((railBottom - rail.clear - col.pad + col.gap) / (col.size + col.gap))));
   // The selection panel keeps clear of what opens beside the rail.
   useEffect(() => { window.dispatchEvent(new Event('planx:side-panels')); }, [moreOpen, variants]);
+  // The variants stand level with the button they open from (on the rail or in "more"), kept on the
+  // screen; first put there at once, then gliding as they change size.
+  const placed = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (!variants) { placed.current = null; return; }
+    const btn = document.querySelector(`:is(.tools, .tools-more) [data-key="${variants}"]`)?.getBoundingClientRect();
+    const el = document.querySelector<HTMLElement>('.draw-panel');
+    if (!btn || !el) return;
+    const h = el.offsetHeight, y = Math.max(h / 2 + 12, Math.min(innerHeight - h / 2 - 12, btn.top + btn.height / 2));
+    const first = placed.current !== variants;
+    if (first) el.style.transition = 'none';
+    el.style.top = `${y}px`;
+    if (first) { void el.offsetHeight; el.style.transition = ''; }
+    placed.current = variants;
+  });
   // Held and then pulled away, the button is dragged, and its variants close.
   if (variants && sort.sorting) setVariants(null);
 
