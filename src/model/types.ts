@@ -149,10 +149,11 @@ export type ListKind = 'bullet' | 'number';
 export const baseWeight = (type: ItemType): number => (type === 'text' || type === 'table' ? 400 : type === 'sticky' ? 500 : 600);
 /** Inset of the text in stickers and shapes; figures without square corners keep it further in. */
 export const textPad = (it: Item): number =>
-  it.type === 'sticky' ? 14 : it.type === 'rect' || it.type === 'task' ? 10 : it.type === 'table' ? 8 : it.type === 'mind' ? (it.parent ? 15 : 32)
+  it.type === 'sticky' ? 14 : it.type === 'rect' || it.type === 'task' ? 10 : it.type === 'table' ? 16 : it.type === 'mind' ? (it.parent ? 15 : 32)
     : it.type === 'ellipse' ? Math.min(it.w, it.h) * 0.15 + 6 : it.type === 'polygon' ? Math.min(it.w, it.h) * 0.22 + 6 : 0;
-/** Room above and below the text: the same as to the sides, but for a central topic (15, not 32). */
-export const textPadY = (it: Item): number => (it.type === 'mind' ? 15 : textPad(it));
+/** Room above and below the text: the same as to the sides, but for a central topic (15, not 32) and a
+ *  table's cells (8, not 16: a row's 40 high). */
+export const textPadY = (it: Item): number => (it.type === 'mind' ? 15 : it.type === 'table' ? 8 : textPad(it));
 export const alignOf = (it: Item): TextAlign => it.ta ?? (it.type === 'text' || it.type === 'table' || it.type === 'mind' ? 'left' : 'center');
 
 /** Text colours; "ink" is the item's usual text colour. */
