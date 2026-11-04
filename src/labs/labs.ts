@@ -7,7 +7,7 @@ import { readJSON, readText, writeJSON, writeText } from '../storage';
  * browser. Everything they need lives in this folder; the app only asks labOn() where a feature
  * changes what it does, so one that isn't kept comes out by deleting its file and those few lines.
  */
-export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'taskComponent' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib' | 'softEraser' | 'layers' | 'solidTool' | 'history' | 'panelOver' | 'zoomFade' | 'zoomKeys';
+export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'keys' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'taskComponent' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib' | 'softEraser' | 'layers' | 'solidTool' | 'history' | 'panelOver' | 'zoomFade' | 'zoomKeys' | 'tableMove';
 
 export interface Lab { id: LabId; label: string; icon: string; hint: string }
 
@@ -19,6 +19,7 @@ export const LABS: Lab[] = [
   { id: 'align', label: 'Выравнивание', icon: 'align-items-left', hint: 'Выбрано несколько: кнопка на нижней панели, по краям и по центру' },
   { id: 'nib', label: 'Перо', icon: 'pen-nib', hint: 'В рисовании: фигура по вершинам; клик по первой — замкнуть, двойной клик или Enter — линия' },
   { id: 'softEraser', label: 'Ластик кружком', icon: 'eraser', hint: 'Ластик стирает только то, что под кружком; его размер — в меню рисования' },
+  { id: 'tableMove', label: 'Перестановка в таблице', icon: 'table', hint: 'Выбранная таблица: потяните за ползунок над столбцом или слева от строки, чтобы переставить его' },
   { id: 'zoomKeys', label: 'Зум на 1 и 2', icon: 'zoom-in', hint: '1 — показать всё, 2 — показать выбранное' },
   { id: 'zoomFade', label: 'Мелочи при отдалении', icon: 'zoom-out', hint: 'Реакции, замки, кнопки компонента и счётчики свёрнутых веток пропадают, когда доска сильно отдалена; у выбранного остаются' },
   { id: 'panelOver', label: 'Панель над элементом', icon: 'more-vertical-m', hint: 'Панель выделенного над ним, как панель текста; внизу, если выбранное большое, далеко разбросано, за краем экрана или видны ручки авторасположения' },

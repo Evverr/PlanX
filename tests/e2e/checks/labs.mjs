@@ -400,6 +400,42 @@ export const checks = {
     expect(await p.ev(`document.querySelectorAll('.bar.panel').length`), 'switched off').toBe(1);
   },
 
+  async 'with the panel over a table, it stays put while columns are added, till the pointer leaves it'(p) {
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', true))()`);
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('table', 420, 300, { id: 't', w: 360, h: 120, cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill('') })); e.setSelection(['t']); })()`);
+    await sleep(400);
+    const before = await p.rect('.panel-over'), plus = await p.at('.panel-over button[aria-label="Добавить столбец"]');
+    await p.click(plus);
+    await sleep(100);
+    await p.click(plus);
+    await sleep(200);
+    expect(await p.ev(`planx.board.get('t').cols.length`), 'two columns added').toBe(5);
+    expect((await p.rect('.panel-over')).l, 'the panel stayed').toBe(before.l);
+    await p.mouse('mouseMoved', 600, 700);
+    await sleep(200);
+    expect((await p.rect('.panel-over')).l > before.l, 'over the middle again, once left').toBe(true);
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
+  },
+
+  async '"Перестановка в таблице": a column dragged by its pill takes its cells along'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [100, 120, 140], rows: [40, 40, 40], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] })); e.setSelection(['t']); })()`);
+    await sleep(300);
+    // The first column's pill, on the top edge over its middle, to the last column.
+    await p.mouse('mouseMoved', 350, 300);
+    await p.drag([350, 300], [700, 310]);
+    await sleep(100);
+    let t = await p.ev(`planx.board.get('t')`);
+    expect(t.cells.join(''), 'the column went last').toBe('bcaefdhig');
+    expect(t.cols.join(), 'its width with it').toBe('120,140,100');
+    expect(t.x, 'the table stayed').toBe(300);
+    // A row's pill, on the left edge.
+    await p.drag([300, 400], [310, 305]);
+    t = await p.ev(`planx.board.get('t')`);
+    expect(t.cells.join(''), 'the last row went first').toBe('higbcaefd');
+  },
+
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {
     const ids = await stickers(p);
     await select(p, ids.a);

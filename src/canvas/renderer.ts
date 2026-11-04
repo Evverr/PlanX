@@ -138,7 +138,7 @@ export const DOT_GAP = 12;
 const DOT_FADE = 0.3, DOT_HOT_FADE = 0.8, DOT_HOT_R = 7.5, DOT_GROW = 160 / 3;
 /** What's picked: its frame's strength; its handle's, and with the pointer on it; their line and the
  *  frame's least corner radius. */
-const PICK_FRAME = 0.8, PICK_FADE = 0.3, PICK_HOT_FADE = 0.8, PICK_LINE = 1.5, PICK_RAD = 4;
+export const PICK_FRAME = 0.8; const PICK_FADE = 0.3, PICK_HOT_FADE = 0.8, PICK_LINE = 1.5, PICK_RAD = 4;
 /** How far each dot is on its way to lit (1) or not (0), and since when, by item and side. */
 const dotTurns = new Map<string, { hot: boolean; from: number; at: number }>();
 const dotLit = (t: { hot: boolean; from: number; at: number }, now: number) => {

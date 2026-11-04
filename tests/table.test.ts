@@ -57,3 +57,24 @@ describe('table', () => {
     expect(cellItem({ ...italic, ...withCellFormat(italic, 0, { fi: undefined }) } as Item, 0).fi).toBeUndefined();
   });
 });
+
+describe('table rows and columns moved ("Перестановка в таблице")', () => {
+  it('takes a column with its width, text and formatting', async () => {
+    const { withMoved } = await import('../src/labs/tableMove');
+    const t = table({ cols: [100, 120, 140], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'], cellFmt: [{ fw: 700 }, null, null, null, null, null, null, null, null] });
+    const p = withMoved(t, 'col', 0, 2);
+    expect(p.cols).toEqual([120, 140, 100]);
+    expect(p.cells).toEqual(['b', 'c', 'a', 'e', 'f', 'd', 'h', 'i', 'g']);
+    expect(p.cellFmt?.[2]).toEqual({ fw: 700 });
+    expect(p.cellFmt?.[0]).toBeNull();
+  });
+
+  it('takes a row back over the others', async () => {
+    const { withMoved } = await import('../src/labs/tableMove');
+    const t = table({ rows: [40, 50, 60], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] });
+    const p = withMoved(t, 'row', 2, 0);
+    expect(p.rows).toEqual([60, 40, 50]);
+    expect(p.cells).toEqual(['g', 'h', 'i', 'a', 'b', 'c', 'd', 'e', 'f']);
+    expect(p.cellFmt).toBeUndefined();
+  });
+});
