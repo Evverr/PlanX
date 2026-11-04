@@ -3,7 +3,7 @@ import type { Item, ItemType, Link, LinkStyle, Side } from '../model/types';
 import { DEFAULTS, EDITABLE, fillable, HAS_FONT, strokable, uid } from '../model/types';
 import type { PathNode, Point, Rect } from '../canvas/geometry';
 import { boundsOf, boxOf, center, instanceBounds, pointInRect, resizedAt } from '../canvas/geometry';
-import { clearTextCache, drawScene, readTheme, type Camera, type Peer, type Scene, type Theme } from '../canvas/renderer';
+import { clearTextCache, dotsMoving, drawScene, readTheme, type Camera, type Peer, type Scene, type Theme } from '../canvas/renderer';
 import { fitHeight, foldedSize, font, itemTextHeight, mindSize } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
@@ -175,6 +175,8 @@ export class Editor {
   /** Shared: the mind map node the pointer is on (or on its buttons); its buttons fade in as a picked
    *  one's do, after the same wait (see hover.ts). */
   mindHover: string | null = null;
+  /** The picked item the pointer is on, or on its link dots (see Scene.pickHover). */
+  pickHover: string | null = null;
   /** The node whose buttons were last drawn and how far faded in; those going away as they fade out. */
   private plusShown: { id: string; fade: number } | null = null;
   private plusLeaving: { id: string; from: number; at: number } | null = null;
@@ -280,7 +282,7 @@ export class Editor {
     on(canvas, 'pointerleave', () => {
       this.presence?.setCursor(null);
       restOn(this, null);
-      if (this.hotDot || this.hotLine || this.linkDots) { this.hotDot = null; this.hotLine = null; this.linkDots = null; this.requestRender(); }
+      if (this.hotDot || this.hotLine || this.linkDots || this.pickHover) { this.hotDot = null; this.hotLine = null; this.linkDots = null; this.pickHover = null; this.requestRender(); }
     });
     on(canvas, 'wheel', (e) => this.wheel(e), { passive: false });
     on(window, 'keydown', (e) => onKeyDown(this, e));
@@ -587,6 +589,7 @@ export class Editor {
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]) && !isLocked(this.board.get([...this.selection][0])),
       byFinger: this.byFinger,
       hotDot: this.hotDot,
+      pickHover: this.pickHover,
       linkDots: this.tool === 'link' && !this.gesture ? this.linkDots : null,
       hotPlus: this.hotPlus,
       plusFade,
@@ -608,7 +611,7 @@ export class Editor {
       if (draw(this.ctx)) again = true;
       this.ctx.restore();
     }
-    if (again) this.requestRender();
+    if (again || dotsMoving()) this.requestRender();
   }
 
   /** The mind map node the pointer rests on, when it isn't the one picked alone. */

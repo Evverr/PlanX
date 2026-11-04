@@ -182,6 +182,8 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if (dot !== ed.hotDot) { ed.hotDot = dot; ed.requestRender(); }
   let cursor = '';
   const over = hitItem(ed.shown(), w, ed.cam.z), near = ed.editingId || dot ? null : tableLineAt(ed, w, over);
+  const onPicked = dot ? single!.id : over && ed.selection.has(over.id) ? over.id : null;
+  if (onPicked !== ed.pickHover) { ed.pickHover = onPicked; ed.requestRender(); }
   // (Whether it's still ready is asked before it's kept ready by the pointer being on it.)
   restOn(ed, near);
   warmTable(ed, near?.id ?? (over?.type === 'table' ? over.id : undefined));

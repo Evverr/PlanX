@@ -81,6 +81,8 @@ export interface Scene {
   byFinger: boolean;
   /** The dot under the pointer, drawn larger and at full strength; the others are faint. */
   hotDot: Side | null;
+  /** The picked item the pointer is on (or on its link dots): its frame stronger. */
+  pickHover?: string | null;
   /** With the line tool, the item whose link dots show. */
   linkDots?: string | null;
   /** The mind map node button under the pointer, drawn full size and strength; the others are smaller and faint. */
@@ -130,8 +132,19 @@ export const HANDLE = 12;
 /** Link dots around a single selected item: radius (7 across) and distance from its side, in screen pixels. */
 export const DOT_R = 3.5;
 export const DOT_GAP = 16;
-/** The dots' strength, and the one under the pointer's (15 across). */
-const DOT_FADE = 0.1, DOT_HOT_FADE = 0.8, DOT_HOT_R = 7.5;
+/** The dots' strength, and the one under the pointer's (15 across), which it grows to (and back from)
+ *  three times as fast as a popup comes in. */
+const DOT_FADE = 0.1, DOT_HOT_FADE = 0.8, DOT_HOT_R = 7.5, DOT_GROW = 160 / 3;
+/** The frame of what's picked: its strength, with the pointer on it, and its least corner radius. */
+const PICK_FADE = 0.2, PICK_HOT_FADE = 0.8, PICK_RAD = 4;
+/** How far each dot is on its way to lit (1) or not (0), and since when, by item and side. */
+const dotTurns = new Map<string, { hot: boolean; from: number; at: number }>();
+const dotLit = (t: { hot: boolean; from: number; at: number }, now: number) => {
+  const k = Math.min(1, (now - t.at) / DOT_GROW), e = 1 - (1 - k) * (1 - k);
+  return t.from + ((t.hot ? 1 : 0) - t.from) * e;
+};
+/** Whether a link dot is still growing or shrinking (and wants another frame). */
+export const dotsMoving = (): boolean => { const now = performance.now(); return [...dotTurns.values()].some((t) => now - t.at < DOT_GROW); };
 /** Selection outlines and handles, the link dots and selected links. */
 const SELECT_COLOR = '#4DA3FF';
 
@@ -989,7 +1002,7 @@ function linkLook(l: Link, theme: Theme): { color: string; dash: number[]; heads
   };
 }
 
-function outline(ctx: CanvasRenderingContext2D, it: Item, z: number, color: string, dash: number[] = [], width = 2) {
+function outline(ctx: CanvasRenderingContext2D, it: Item, z: number, color: string, dash: number[] = [], width = 2, least = 0) {
   const off = 3 / z;
   ctx.strokeStyle = color;
   ctx.lineWidth = width / z;
@@ -997,7 +1010,7 @@ function outline(ctx: CanvasRenderingContext2D, it: Item, z: number, color: stri
   // Follows the item's corners, pushed out by the same gap.
   const r = corner(it);
   ctx.beginPath();
-  turned(ctx, it, () => ctx.roundRect(it.x - off, it.y - off, it.w + off * 2, it.h + off * 2, r ? r + off : 0));
+  turned(ctx, it, () => ctx.roundRect(it.x - off, it.y - off, it.w + off * 2, it.h + off * 2, Math.max(r ? r + off : 0, least / z)));
   ctx.stroke();
   ctx.setLineDash([]);
 }
@@ -1128,11 +1141,16 @@ function drawDots(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
   ctx.fillStyle = s.theme.pick;
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 2 / cam.z;
+  const now = performance.now();
   for (const side of SIDES) {
-    const p = sidePoint(it, side, DOT_GAP / cam.z);
+    const p = sidePoint(it, side, DOT_GAP / cam.z), key = `${it.id}:${side}`, hot = side === s.hotDot;
+    let t = dotTurns.get(key);
+    if (!t) dotTurns.set(key, (t = { hot, from: hot ? 1 : 0, at: 0 }));
+    else if (t.hot !== hot) dotTurns.set(key, (t = { hot, from: dotLit(t, now), at: now }));
+    const k = dotLit(t, now);
     ctx.beginPath();
-    ctx.globalAlpha = side === s.hotDot ? DOT_HOT_FADE : DOT_FADE;
-    ctx.arc(p.x, p.y, (side === s.hotDot ? DOT_HOT_R : DOT_R) / cam.z, 0, Math.PI * 2);
+    ctx.globalAlpha = DOT_FADE + (DOT_HOT_FADE - DOT_FADE) * k;
+    ctx.arc(p.x, p.y, (DOT_R + (DOT_HOT_R - DOT_R) * k) / cam.z, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
   }
@@ -1255,7 +1273,11 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     if (!it || s.nodesOf === id) continue;
     // A mind map node shows it's picked by its "+" buttons alone, which a few picked together don't get.
     // An instance keeps its red title alone, without a selection frame.
-    if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) outline(ctx, it, cam.z, theme.pick, [], 1);
+    if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) {
+      ctx.globalAlpha = s.pickHover === id ? PICK_HOT_FADE : PICK_FADE;
+      outline(ctx, it, cam.z, theme.pick, [], 1, PICK_RAD);
+      ctx.globalAlpha = 1;
+    }
     // A mind map node sizes itself and links by its branches: instead of the handle and dots it
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && it.type === 'mind') {
