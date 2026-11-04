@@ -5,7 +5,7 @@ import { boxOf } from '../canvas/geometry';
 import { font } from '../canvas/text';
 import { drawEmoji } from '../emoji/emoji';
 import { labOn, myId } from './labs';
-import { zoomFade } from './zoomFade';
+import { zoomFade, zoomFading } from './zoomFade';
 
 /**
  * What the features on trial draw over the board, at screen scale: a lock on locked items, the
@@ -173,5 +173,5 @@ export function drawLabs(ctx: CanvasRenderingContext2D, ed: Editor): boolean {
     if (drawTrail(ctx, ed, laser.mine, LASER_COLOR, now)) moving = true;
     else laser.mine = [];
   }
-  return moving;
+  return moving || zoomFading();
 }
