@@ -4,7 +4,8 @@ import { labOn } from './labs';
  * "Мелочи при отдалении" (src/labs): the small things drawn the same size on screen whatever the zoom
  * shrink as the board is zoomed out from twice their zoom (1 = 100%), down to half their size at it,
  * then go past it and come back, fading as a popup does (in .16s, out .08s, as in styles/moves.css);
- * while gone they can't be pressed. On what's picked they stay as they are.
+ * while gone they can't be pressed. A component's buttons and a fold's count stay as they are on
+ * what's picked.
  */
 export const ZOOM_GONE = {
   /** A component's tick and its arrow ("Объекты"). */
