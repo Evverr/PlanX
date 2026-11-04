@@ -81,7 +81,7 @@ export interface Scene {
   byFinger: boolean;
   /** The dot under the pointer, drawn larger and at full strength; the others are faint. */
   hotDot: Side | null;
-  /** The picked item the pointer is on (or on its link dots or handle): its frame and handle stronger. */
+  /** The picked item the pointer is on (or on its link dots or handle): its handle stronger. */
   pickHover?: string | null;
   /** With the line tool, the item whose link dots show. */
   linkDots?: string | null;
@@ -129,15 +129,16 @@ const DONE_COLOR = '#15C674';
 
 /** Size of the resize handle in screen pixels. */
 export const HANDLE = 12;
-/** Link dots around a single selected item: radius (7 across) and distance from its side, in screen pixels. */
+/** Link dots around a single selected item: radius (7 across) and distance from its side, in screen
+ *  pixels (half as far off its frame as they were). */
 export const DOT_R = 3.5;
-export const DOT_GAP = 16;
+export const DOT_GAP = 12;
 /** The dots' strength, and the one under the pointer's (15 across), which it grows to (and back from)
  *  three times as fast as a popup comes in. */
 const DOT_FADE = 0.3, DOT_HOT_FADE = 0.8, DOT_HOT_R = 7.5, DOT_GROW = 160 / 3;
-/** The frame of what's picked and its handle: their strength, with the pointer on it, their line and
- *  the frame's least corner radius. */
-const PICK_FADE = 0.3, PICK_HOT_FADE = 0.8, PICK_LINE = 1.5, PICK_RAD = 4;
+/** What's picked: its frame's strength; its handle's, and with the pointer on it; their line and the
+ *  frame's least corner radius. */
+const PICK_FRAME = 0.8, PICK_FADE = 0.3, PICK_HOT_FADE = 0.8, PICK_LINE = 1.5, PICK_RAD = 4;
 /** How far each dot is on its way to lit (1) or not (0), and since when, by item and side. */
 const dotTurns = new Map<string, { hot: boolean; from: number; at: number }>();
 const dotLit = (t: { hot: boolean; from: number; at: number }, now: number) => {
@@ -1275,7 +1276,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     // A mind map node shows it's picked by its "+" buttons alone, which a few picked together don't get.
     // An instance keeps its red title alone, without a selection frame.
     if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) {
-      ctx.globalAlpha = s.pickHover === id ? PICK_HOT_FADE : PICK_FADE;
+      ctx.globalAlpha = PICK_FRAME;
       outline(ctx, it, cam.z, theme.pick, [], PICK_LINE, PICK_RAD);
       ctx.globalAlpha = 1;
     }
