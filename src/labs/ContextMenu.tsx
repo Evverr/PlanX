@@ -168,7 +168,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
       <div ref={ref} className={`board-menu context-menu ${at.params ? 'params-pop' : ''}`} role={at.params ? 'dialog' : 'menu'} aria-label={at.params ? 'Параметры линии' : 'Линия'} style={comes}
         onContextMenu={(e) => e.preventDefault()}>
         {at.params ? <>{gripBar}<LinkParams editor={editor} ids={editor.selectedLinks().map((l) => l.id)} /></> : <>
-          {row('sign', 'Параметры', () => setAt({ ...at, params: true }))}
+          {row('settings-l', 'Параметры', () => setAt({ ...at, params: true }))}
           <div className="menu-line" />
           {row('trashcan', 'Удалить', run(() => editor.deleteSelection()))}
         </>}
@@ -206,7 +206,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
           <div className="menu-line" />
         </>}
         {params.length > 0 && <>
-          {row('sign', 'Параметры', () => setAt({ ...at, params: true }))}
+          {row('settings-l', 'Параметры', () => setAt({ ...at, params: true }))}
           <div className="menu-line" />
         </>}
         {labOn('comments') && <>
@@ -316,7 +316,7 @@ function restyle(it: Item, patch: Partial<Item>): Partial<Item> {
 }
 
 /** A colour row: the colours to pick from (the one now marked), any colour, and how see-through. */
-function ColorRow({ editor, label, colors, current, none, opacity, onColor, onOpacity }: {
+export function ColorRow({ editor, label, colors, current, none, opacity, onColor, onOpacity }: {
   editor: Editor; label: string; colors: Record<string, string>; current: string | undefined; none?: boolean;
   opacity: number; onColor: (c: string) => void; onOpacity: (v: number | undefined) => void;
 }) {
