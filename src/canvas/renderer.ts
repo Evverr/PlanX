@@ -75,7 +75,9 @@ export interface Scene {
   /** The figure or line whose nodes are being changed ("Перо", src/labs): its nodes in place of the frame. */
   nodesOf?: string | null;
   marquee: Rect | null;
-  linkPreview: { from: Item; fromSide: Side | null; fromAt?: number; to: Point; target: Item | null; style?: LinkStyle } | null;
+  linkPreview: { from: Item; fromSide: Side | null; fromAt?: number; to: Point; target: Item | null; style?: LinkStyle;
+    /** Its arrowheads as they'll be (from the start drawn here to where it's led); unset, at its end. */
+    heads?: Heads } | null;
   peers: Peer[];
   showHandle: boolean;
   /** The last press was a finger's: the resize handle is drawn bigger, to be seen under it. */
@@ -1389,7 +1391,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   }
 
   if (s.linkPreview) {
-    const { from, fromSide, fromAt, to, target, style } = s.linkPreview;
+    const { from, fromSide, fromAt, to, target, style, heads = END } = s.linkPreview;
     if (target) outline(ctx, target, cam.z, SELECT_COLOR, [4, 4]);
     let curve: Bezier;
     // Drawn the way it will run: straight or in right angles, as the last one was made to.
@@ -1402,7 +1404,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       const ps = fromSide ?? nearestSide(from, target ? center(target) : to);
       const qs = anchor ? anchor.side : facing(sidePoint(from, ps, dot), to);
       const p = sidePoint(from, ps, dot, fromSide ? along : 0.5), q = target && anchor ? sidePoint(target, anchor.side, 0, anchor.at) : to;
-      linkArrow(ctx, { pts: style === 'straight' ? [p, q] : elbowRoute(p, ps, q, qs) }, SELECT_COLOR, cam.z, [6, 6]);
+      linkArrow(ctx, { pts: style === 'straight' ? [p, q] : elbowRoute(p, ps, q, qs) }, SELECT_COLOR, cam.z, [6, 6], heads);
     } else if (fromSide || (anchor && anchor.at !== 0.5)) {
       const ps = fromSide ?? nearestSide(from, target ? center(target) : to);
       curve = curveBetween(sidePoint(from, ps, dot, fromSide ? along : 0.5), ps, target && anchor ? sidePoint(target, anchor.side, 0, anchor.at) : to, anchor?.side ?? null, angleOf(from), target ? angleOf(target) : 0);
@@ -1410,7 +1412,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       const end = target ? edgePoint(target, center(from)) : to, start = edgePoint(from, end);
       curve = [start, start, end, end];
     }
-    if (!style) arrow(ctx, curve!, SELECT_COLOR, cam.z, [6, 6]);
+    if (!style) arrow(ctx, curve!, SELECT_COLOR, cam.z, [6, 6], heads);
   }
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
