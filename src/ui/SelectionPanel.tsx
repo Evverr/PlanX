@@ -369,7 +369,15 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
     <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${over ? `panel-over ${down ? 'opens-down' : ''} ${wait.current ? 'after-gone' : ''}` : docked ? 'docked' : ''} ${!over && place.bottom !== null ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
       style={over ? undefined : { transform: `translateX(calc(-50% + ${place.left}px))`, ...(place.bottom !== null && { bottom: place.bottom }) }}
       role="toolbar" aria-label="Выделенное" {...sort.container}
-      onPointerLeave={() => { if (hold.current) { hold.current = false; redraw(); } }}>
+      onPointerLeave={(e) => {
+        if (!hold.current) return;
+        // Over the table again, gliding there.
+        const el = e.currentTarget;
+        hold.current = false;
+        el.style.transition = 'left .2s ease, top .2s ease';
+        setTimeout(() => { el.style.transition = ''; }, 220);
+        redraw();
+      }}>
       {sort.renderFit({
         // All the colours are under the palette: a table's own when it's selected alone.
         // (Picking something else closes the palette: the key changes with the selection.)

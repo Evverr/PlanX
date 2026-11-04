@@ -7,8 +7,8 @@ import { isLocked } from './labs';
 import { PICK_FRAME } from '../canvas/renderer';
 
 /**
- * "Перестановка в таблице": on the selected table, a pill on its top edge over each column and on its
- * left edge by each row; one dragged along takes its column or row there, the others making room.
+ * "Перестановка в таблице": on the selected table, a pill just out over its top edge by each column and
+ * out left of its left edge by each row; one dragged along takes its column or row there, the others making room.
  */
 
 /** A pill: of which table, a column's or a row's, which one. */
@@ -45,7 +45,16 @@ function tableOf(ed: Editor): Item | null {
   return it?.type === 'table' && !isLocked(it) && !it.rot && ed.editingId !== it.id ? it : null;
 }
 
-/** Each pill's middle, on the board: over the middle of its column, by the middle of its row. */
+/** How far past the table's edge a pill stands, on the screen: clear of the selection frame by 1. */
+const OUT = 1.75;
+
+/** A pill's middle on the screen, `k` times its size: just out over its column's top, out left of its row. */
+function gripScreen(ed: Editor, g: Grip & Point, k = 1): Point {
+  const p = ed.toScreen(g), off = OUT + (THICK * k) / 2;
+  return g.axis === 'col' ? { x: p.x, y: p.y - off } : { x: p.x - off, y: p.y };
+}
+
+/** Each pill's foot, on the board: on the top edge over the middle of its column, on the left edge by the middle of its row. */
 function grips(it: Item): Array<Grip & Point> {
   const cols = colsOf(it), rows = rowsOf(it);
   return [
@@ -59,7 +68,7 @@ export function gripAt(ed: Editor, sp: Point): Grip | null {
   const it = tableOf(ed);
   if (!it || drag) return null;
   for (const g of grips(it)) {
-    const p = ed.toScreen(g), [w, h] = g.axis === 'col' ? [LONG, THICK] : [THICK, LONG];
+    const p = gripScreen(ed, g), [w, h] = g.axis === 'col' ? [LONG, THICK] : [THICK, LONG];
     if (Math.abs(sp.x - p.x) <= w / 2 + REACH && Math.abs(sp.y - p.y) <= h / 2 + REACH) return { id: g.id, axis: g.axis, index: g.index };
   }
   return null;
@@ -147,9 +156,9 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
   for (const g of grips(it)) {
     const dragged = drag?.grip.axis === g.axis && drag.grip.index === g.index;
     const shift = dragged && drag ? (g.axis === 'col' ? { x: (drag.at.x - drag.from.x) * z, y: 0 } : { x: 0, y: (drag.at.y - drag.from.y) * z }) : { x: 0, y: 0 };
-    const p = ed.toScreen(g), on = dragged || (hot?.axis === g.axis && hot.index === g.index);
+    const on = dragged || (hot?.axis === g.axis && hot.index === g.index);
     // Under the pointer or dragged: 1.2 × 1.4 times as big, in the selection frame's blue.
-    const k = on ? HOT : 1, [w, h] = g.axis === 'col' ? [LONG * k, THICK * k] : [THICK * k, LONG * k];
+    const k = on ? HOT : 1, p = gripScreen(ed, g, k), [w, h] = g.axis === 'col' ? [LONG * k, THICK * k] : [THICK * k, LONG * k];
     const cx = p.x + shift.x, cy = p.y + shift.y;
     ctx.beginPath();
     ctx.roundRect(cx - w / 2, cy - h / 2, w, h, (THICK * k) / 2);
