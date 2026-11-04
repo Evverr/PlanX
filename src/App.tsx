@@ -415,7 +415,8 @@ export function App({ boardId }: { boardId: string }) {
 
       {/* Typing in a table cell, the panel shows and sets that cell's own formatting. */}
       {/* A basic sticker's panel once its text is being typed, not on just picking it. */}
-      {panelItem && <TextPanel editor={editor} item={panelItem} leaving={!panelOn} after={performance.now() - overWent.current.at < PANEL_OUT} dock={tMode ? textMode?.dock : undefined} />}
+      {panelItem && <TextPanel editor={editor} item={panelItem} leaving={!panelOn} after={performance.now() - overWent.current.at < PANEL_OUT} dock={tMode ? textMode?.dock : undefined}
+        onBack={tMode ? () => morphPanel('.tfmt', 'panel', () => setTextMode(null)) : undefined} />}
 
       {/* Hidden while typing, but for a mind map node, which opens for typing on a single click. */}
       {/* "Панель над элементом" (src/labs): over what's picked instead, but where it'd be in the way there (see panelPlace). */}
