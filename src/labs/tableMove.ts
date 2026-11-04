@@ -71,6 +71,9 @@ function show(ed: Editor, id: string | null): void {
   fns.forEach((f) => f());
   ed.requestRender();
 }
+/** A new table put on the board: its pills out at once. */
+export const showGrips = (ed: Editor, id: string) => show(ed, id);
+
 /** The gear: the selected table's pills out, or away. */
 export function toggleGrips(ed: Editor): void {
   const it = ed.selectedItems()[0];

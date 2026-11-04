@@ -487,6 +487,12 @@ export const checks = {
     expect(`${st.joint} ${st.ls}`, 'in the line').toBe(`true ${[`a>${st.s}`, `${st.s}>c`].sort().join()}`);
   },
 
+  async '"Перестановка в таблице": a table dropped on the board has its pills out at once'(p) {
+    await p.ev(`planx.editor.dropItem('table', { x: 500, y: 350 })`);
+    await sleep(100);
+    expect(await p.ev(`(async () => { const t = planx.board.list().find((i) => i.type === 'table'); return (await import('/src/labs/tableMove.ts')).gripsOn(t.id); })()`), 'pills out').toBe(true);
+  },
+
   async '"Удаление строк и столбцов": Delete takes a whole column\'s text, then the column'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       planx.board.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [120, 120, 120], rows: [40, 40, 40], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] }));

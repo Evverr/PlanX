@@ -30,6 +30,7 @@ import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, ty
 import { pushedBelow } from '../labs/textPush';
 import { holdZoomBox } from '../labs/zoomBox';
 import { rejoined } from '../labs/linkJoint';
+import { showGrips } from '../labs/tableMove';
 import { holds as mindTidyOn, mindTidyKept, restartMindTidy, resumeMindTidy } from '../labs/tidyMind';
 import { clearComments } from '../labs/comments';
 import { isLocked, labOn, subscribeLabs } from '../labs/labs';
@@ -1022,6 +1023,8 @@ export class Editor {
     this.addItem(it);
     this.setTool('select');
     this.setSelection([it.id]);
+    // A new table comes with its pills out ("Перестановка в таблице", src/labs).
+    if (type === 'table' && labOn('tableMove')) showGrips(this, it.id);
     if (type === 'text' || type === 'task' || type === 'frame' || type === 'mind') this.startEditing(it.id);
   }
 

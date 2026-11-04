@@ -9,6 +9,7 @@ import { shapeStyle } from './shapeStyle';
 import { branchCrosses, canMoveTo, foldedWays, folding, mindWay, moveBranch } from '../model/mind';
 import { clamp, MAX_Z } from './camera';
 import { zoomToBox } from '../labs/zoomBox';
+import { showGrips } from '../labs/tableMove';
 import { noteMindMoved } from '../labs/tidyMind';
 import { rotateCursor } from './cursors';
 import { MIND_TOPIC, type PenTool } from './tools';
@@ -377,6 +378,8 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       ed.addItem(it);
       ed.setTool('select');
       ed.setSelection([it.id]);
+      // A new table comes with its pills out ("Перестановка в таблице", src/labs).
+      if (it.type === 'table' && labOn('tableMove')) showGrips(ed, it.id);
       ed.startEditing(it.id);
       return;
     }
