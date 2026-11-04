@@ -4,7 +4,7 @@ import { center, hitItem, hitLink, instanceBounds, linkShape, onAudioButton, onT
 import { copyId } from '../model/components';
 import { TASK_STATES } from '../model/builtins';
 import { toggleAudio } from '../canvas/audio';
-import { anyDotAt, dotAt, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, plusAt, tickAt, objectArrowAt } from './hover';
+import { anyDotAt, dotAt, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, tickAt, objectArrowAt } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -95,7 +95,7 @@ export function press(ed: Editor, e: PointerEvent): void {
   // resize handle, link dots, turning corner, mind map buttons), on a folded mind map node's count
   // or on a table's line.
   const picked = ed.selection.size === 1 ? board.get([...ed.selection][0]) : undefined;
-  const onControl = (!!picked && !ed.editingId && !isLocked(picked) && (onHandle(ed, picked, w) || onTopLeft(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!sideAt(ed, picked, w))) || (!!ed.plusNode() && !!plusAt(ed, ed.plusNode()!, w))
+  const onControl = (!!picked && !ed.editingId && !isLocked(picked) && (onHandle(ed, picked, w) || onTopLeft(ed, picked, w) || onBottomLeft(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!sideAt(ed, picked, w))) || (!!ed.plusNode() && !!plusAt(ed, ed.plusNode()!, w))
     || !!foldBadgeAt(ed, w) || !!tickAt(ed, w) || !!objectArrowAt(ed, w);
   const empty = ed.tool === 'select' && e.button === 0 && !ed.spaceDown && !e.shiftKey && !hit && !link && !onControl
     && !grabbableLine(ed, w, hit, e.pointerType) && !ed.editingId
@@ -228,9 +228,10 @@ export function press(ed: Editor, e: PointerEvent): void {
   // A side stretches it one way only (see sideAt).
   const side = single && !isLocked(single) ? sideAt(ed, single, w) : null;
   const topLeft = single && !isLocked(single) && !side && onTopLeft(ed, single, w);
-  if (single && !isLocked(single) && (side || topLeft || onHandle(ed, single, w))) {
+  const bottomLeft = single && !isLocked(single) && !side && !topLeft && onBottomLeft(ed, single, w);
+  if (single && !isLocked(single) && (side || topLeft || bottomLeft || onHandle(ed, single, w))) {
     board.beginGesture();
-    ed.gesture = { type: 'resize', id: single.id, start: w, orig: { ...single }, box: single.inst ? instanceBounds(single, items) : undefined, only: side ?? (topLeft ? 'tl' : undefined) };
+    ed.gesture = { type: 'resize', id: single.id, start: w, orig: { ...single }, box: single.inst ? instanceBounds(single, items) : undefined, only: side ?? (topLeft ? 'tl' : bottomLeft ? 'bl' : undefined) };
     ed.setMoving(true);
     return;
   }

@@ -24,13 +24,14 @@ export function onHandle(ed: Editor, it: Item, w: Point): boolean {
   return pointInRect(it.inst ? w : toLocal(it, w), { x: b.x + b.w + off - hs / 2, y: b.y + b.h + off - hs / 2, w: hs, h: hs });
 }
 
-/** Whether the point is on the picked item's top left corner: stretched from there as by its handle
- *  (nothing drawn there, the pointer says so). */
-export function onTopLeft(ed: Editor, it: Item, w: Point): boolean {
+/** Whether the point is on the picked item's top left corner (or with `bottom`, its bottom left one):
+ *  stretched from there as by its handle (nothing drawn there, the pointer says so). */
+export function onTopLeft(ed: Editor, it: Item, w: Point, bottom = false): boolean {
   if (it.type === 'mind' || it.fold || it.host || it.inst || ed.editingId) return false;
-  const hs = ed.reach((HANDLE + 6) / 2) * 2, off = 3 / ed.cam.z;
-  return pointInRect(toLocal(it, w), { x: it.x - off - hs / 2, y: it.y - off - hs / 2, w: hs, h: hs });
+  const hs = ed.reach((HANDLE + 6) / 2) * 2, off = 3 / ed.cam.z, y = bottom ? it.y + it.h + off : it.y - off;
+  return pointInRect(toLocal(it, w), { x: it.x - off - hs / 2, y: y - hs / 2, w: hs, h: hs });
 }
+export const onBottomLeft = (ed: Editor, it: Item, w: Point): boolean => onTopLeft(ed, it, w, true);
 
 /** Which side of the picked item the point is on, to stretch it one way only: its right side across
  *  ('w'), its bottom down ('h'), a timeline's left side to start it on another day ('l'); the corner
@@ -117,7 +118,7 @@ export function offComponent(ed: Editor, w: Point, hit: Item | null): boolean {
   if ((hit && ed.carried([c]).has(hit.id)) || pointInRect(toLocal(c, w), c)) return false;
   const picked = ed.selection.size === 1 ? ed.board.get([...ed.selection][0]) : undefined;
   return !tickAt(ed, w) && !objectArrowAt(ed, w) && frameButtonUnder(ed, w)?.id !== c.id
-    && !(picked && (onHandle(ed, picked, w) || onTopLeft(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!sideAt(ed, picked, w)));
+    && !(picked && (onHandle(ed, picked, w) || onTopLeft(ed, picked, w) || onBottomLeft(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!sideAt(ed, picked, w)));
 }
 
 /** The folded mind map node whose count is under the point, picked or not, and the way it's on. */
@@ -182,7 +183,8 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if (dot !== ed.hotDot) { ed.hotDot = dot; ed.requestRender(); }
   let cursor = '';
   const over = hitItem(ed.shown(), w, ed.cam.z), near = ed.editingId || dot ? null : tableLineAt(ed, w, over);
-  const onPicked = dot || (single && onHandle(ed, single, w)) ? single!.id : over && ed.selection.has(over.id) ? over.id : null;
+  // (On its link dots, not: the handle answers the item and itself.)
+  const onPicked = dot ? null : single && onHandle(ed, single, w) ? single.id : over && ed.selection.has(over.id) ? over.id : null;
   if (onPicked !== ed.pickHover) { ed.pickHover = onPicked; ed.requestRender(); }
   // (Whether it's still ready is asked before it's kept ready by the pointer being on it.)
   restOn(ed, near);
@@ -207,6 +209,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   else if (linkHandleAt(ed, w)) cursor = 'move';
   else if (dot) cursor = 'crosshair';
   else if (single && (onHandle(ed, single, w) || onTopLeft(ed, single, w))) cursor = 'nwse-resize';
+  else if (single && onBottomLeft(ed, single, w)) cursor = 'nesw-resize';
   else if (single && sideAt(ed, single, w)) cursor = sideAt(ed, single, w) === 'h' || sideAt(ed, single, w) === 't' ? 'ns-resize' : 'ew-resize';
   else if (single && onRotate(ed, single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);
   else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
