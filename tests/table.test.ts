@@ -96,3 +96,17 @@ describe('a table as one is drawn', () => {
     expect(t).toMatchObject({ sc: 'ink', so: 0.08, vc: 'ink', vo: 0.04, w: 480, h: 200 });
   });
 });
+
+describe('whole rows and columns picked ("Удаление строк и столбцов")', () => {
+  it('finds them, and takes them away', async () => {
+    const { wholeLines, withoutLines } = await import('../src/labs/tableCut');
+    const t = table({ cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] });
+    expect(wholeLines(t, [1, 4, 7])).toEqual({ axis: 'col', lines: [1] });
+    expect(wholeLines(t, [0, 2, 3, 5, 6, 8])).toEqual({ axis: 'col', lines: [0, 2] });
+    expect(wholeLines(t, [3, 4, 5, 6, 7, 8])).toEqual({ axis: 'row', lines: [1, 2] });
+    expect(wholeLines(t, [0, 1, 4])).toBeNull();
+    // Every cell: neither way leaves any.
+    expect(wholeLines(t, [0, 1, 2, 3, 4, 5, 6, 7, 8])).toBeNull();
+    expect(withoutLines(t, 'col', [0, 2])).toMatchObject({ cols: [120], w: 120, cells: ['b', 'e', 'h'] });
+  });
+});

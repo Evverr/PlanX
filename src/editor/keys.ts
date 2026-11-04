@@ -6,6 +6,7 @@ import { holdZoomBox } from '../labs/zoomBox';
 import { zoomKey } from '../labs/zoomKeys';
 import { cancelNib, finishNib, nibPoints, undoNibCorner } from '../labs/nib';
 import { nodeEditing, stopNodeEdit } from '../labs/paths';
+import { cutLines } from '../labs/tableCut';
 
 /** Keys a tool is picked with. */
 const TOOL_KEYS: Record<string, Tool> = { KeyV: 'select', KeyH: 'hand', KeyN: 'sticky', KeyS: 'sticky', KeyT: 'text', KeyR: 'rect', KeyO: 'ellipse', KeyC: 'link', KeyL: 'link', KeyF: 'frame', KeyP: 'pen', KeyM: 'marker', KeyE: 'eraser' };
@@ -48,8 +49,10 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
     return;
   }
   if ((e.key === 'Delete' || e.key === 'Backspace') && ed.cells.length) {
-    // With cells picked, their text goes, not the table.
+    // With cells picked, their text goes, not the table; pressed again with whole rows or columns
+    // picked, those go ("Удаление строк и столбцов", src/labs).
     e.preventDefault();
+    if (labOn('tableCut') && !e.repeat && cutLines(ed)) return;
     const it = ed.selectedItems()[0];
     if (it?.type === 'table') ed.board.update(it.id, { cells: (it.cells ?? []).map((c, i) => (ed.cells.includes(i) ? '' : c)) });
     return;
