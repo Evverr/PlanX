@@ -76,7 +76,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           <Switch on={byKey} />
         </button>
         <button className="settings-row" role="menuitemcheckbox" aria-checked={glass} onClick={() => setGlass(!glass)}>
-          <span><b>Стекло</b><i>Панели и попапы полупрозрачные (80%), доска за ними размыта</i></span>
+          <span><b>Стекло</b><i>Панели и попапы полупрозрачные (88%), доска за ними размыта</i></span>
           <Switch on={glass} />
         </button>
       </div>
