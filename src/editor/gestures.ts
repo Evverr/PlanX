@@ -27,7 +27,7 @@ export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
   | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]> }
-  | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' | 'tl' }
+  | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' | 'tl' | 'bl' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point; last?: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline' }
@@ -132,16 +132,17 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       const min = it.type === 'frame' ? 80 : it.type === 'ink' ? 4 : it.type === 'audio' ? 32 : it.type === 'icon' || it.type === 'emoji' || it.type === 'image' ? 16 : 40;
       // A turned item is stretched along its own sides.
       const { w: w0, h: h0 } = g.orig, d = turn({ x: w.x - g.start.x, y: w.y - g.start.y }, { x: 0, y: 0 }, -angleOf(g.orig));
-      // Which way each side goes: by a side one way only, by the top left corner both back, by the handle
-      // both on; what's across stays put. With Alt, as in Figma, from the middle: both sides as far.
-      const sx = g.only === 'h' || g.only === 't' ? 0 : g.only === 'l' || g.only === 'tl' ? -1 : 1;
+      // Which way each side goes: by a side one way only, by the top left corner both back (the bottom left
+      // one, across back and down on), by the handle both on; what's across stays put. With Alt, as in
+      // Figma, from the middle: both sides as far.
+      const sx = g.only === 'h' || g.only === 't' ? 0 : g.only === 'l' || g.only === 'tl' || g.only === 'bl' ? -1 : 1;
       const sy = g.only === 'w' || g.only === 'l' ? 0 : g.only === 't' || g.only === 'tl' ? -1 : 1, both = e.altKey ? 2 : 1;
       let nw = sx ? Math.max(min, Math.round(w0 + sx * d.x * both)) : w0;
       let nh = sy ? Math.max(min, Math.round(h0 + sy * d.y * both)) : h0;
       // A timeline holds whole days.
       if (it.tl) nw = TL_PAD * 2 + Math.max(7, Math.round((nw - TL_PAD * 2) / dayOf(it))) * dayOf(it);
       // Stickers, icons, emoji, drawings and pictures keep their proportions; Shift flips that: a sticker of any shape, or a shape kept in proportion.
-      const keep = (!g.only || g.only === 'tl') && (it.type === 'sticky' || it.type === 'image' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || it.type === 'ink' || it.type === 'audio' || e.shiftKey);
+      const keep = (!g.only || g.only === 'tl' || g.only === 'bl') && (it.type === 'sticky' || it.type === 'image' ? !e.shiftKey : it.type === 'icon' || it.type === 'emoji' || it.type === 'ink' || it.type === 'audio' || e.shiftKey);
       if (keep) {
         const k = Math.max(nw / w0, nh / h0);
         nw = Math.round(w0 * k);
