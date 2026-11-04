@@ -16,6 +16,8 @@ export interface Grip { id: string; axis: 'col' | 'row'; index: number }
 
 /** A pill's size on the screen, and how far past it it still answers the pointer. */
 const LONG = 16, THICK = 6, REACH = 4;
+/** How far off the table (on the screen) a dragged column or row is let go to be taken away. */
+const OFF = 24;
 /** How much bigger one is under the pointer or dragged. */
 const HOT = 1.68;
 
@@ -38,6 +40,22 @@ export function withMoved(it: Item, axis: 'col' | 'row', from: number, to: numbe
   };
 }
 
+/** Fields without column (or row) `index`: its size, cells' text and formatting gone with it; a table
+ *  keeps at least one of each. */
+export function withRemoved(it: Item, axis: 'col' | 'row', index: number): Partial<Item> {
+  const cols = colsOf(it), rows = rowsOf(it), n = cols.length, size = n * rows.length;
+  if ((axis === 'col' ? n : rows.length) < 2) return {};
+  const keep = (i: number) => (axis === 'col' ? i % n !== index : Math.floor(i / n) !== index);
+  const all = Array.from({ length: size }, (_, i) => i).filter(keep);
+  const fmt = all.map((i) => it.cellFmt?.[i] ?? null);
+  const next = (axis === 'col' ? cols : rows).filter((_, i) => i !== index);
+  return {
+    ...(axis === 'col' ? { cols: next, w: sum(next) } : { rows: next, h: sum(next) }),
+    cells: all.map((i) => cellText(it, i)),
+    cellFmt: fmt.some(Boolean) ? fmt : undefined,
+  };
+}
+
 /** The table whose pills are out: the one selected alone, not locked, typed in or turned, close enough. */
 function tableOf(ed: Editor): Item | null {
   if (ed.selection.size !== 1 || ed.cam.z < LINES_FROM_Z) return null;
@@ -45,8 +63,8 @@ function tableOf(ed: Editor): Item | null {
   return it?.type === 'table' && !isLocked(it) && !it.rot && ed.editingId !== it.id ? it : null;
 }
 
-/** How far past the table's edge a pill stands, on the screen: clear of the selection frame by 1. */
-const OUT = 1.75;
+/** How far past the table's edge a pill stands, on the screen: clear of the selection frame by 2. */
+const OUT = 2.75;
 
 /** A pill's middle on the screen, `k` times its size: just out over its column's top, out left of its row. */
 function gripScreen(ed: Editor, g: Grip & Point, k = 1): Point {
@@ -98,6 +116,18 @@ export function moveGrip(ed: Editor, w: Point): void {
   ed.requestRender();
 }
 
+/** Whether the column or row being dragged is off the table, to be taken away when let go. */
+function off(ed: Editor, it: Item): boolean {
+  if (!drag) return false;
+  const m = OFF / ed.cam.z, p = drag.at;
+  return p.x < it.x - m || p.x > it.x + it.w + m || p.y < it.y - m || p.y > it.y + it.h + m;
+}
+
+/** Puffs where columns or rows were taken away: at the screen point, since when. */
+const puffs: Array<{ x: number; y: number; t: number }> = [];
+/** How long a puff lasts, in ms. */
+const PUFF = 420;
+
 /** Where the column or row being dragged would go: the one under the pointer. */
 function target(it: Item): number {
   if (!drag) return -1;
@@ -111,11 +141,13 @@ function target(it: Item): number {
 export function endGrip(ed: Editor): void {
   if (!drag) return;
   const it = ed.board.get(drag.grip.id), { axis, index } = drag.grip;
-  const to = it ? target(it) : -1;
+  const to = it ? target(it) : -1, gone = !!it && off(ed, it), at = drag.at;
   drag = null;
   hot = null;
-  if (it && to >= 0 && to !== index) {
-    ed.board.update(it.id, withMoved(it, axis, index, to));
+  const patch = !it ? null : gone ? withRemoved(it, axis, index) : to >= 0 && to !== index ? withMoved(it, axis, index, to) : null;
+  if (it && patch && Object.keys(patch).length) {
+    ed.board.update(it.id, patch);
+    if (gone) puffs.push({ ...ed.toScreen(at), t: performance.now() });
     ed.cells = [];
     ed.cellAnchor = null;
     ed.pickedLines = [];
@@ -129,6 +161,7 @@ const pick = () => getComputedStyle(document.documentElement).getPropertyValue('
 /** The pills, at screen scale; while one's dragged, its column or row going along with the pointer
  *  and a line where it would go. */
 export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
+  drawPuffs(ctx, ed);
   const it = tableOf(ed);
   if (!it) return;
   const color = pick(), z = ed.cam.z;
@@ -140,11 +173,14 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
     const band = axis === 'col'
       ? { x: it.x + start + d, y: it.y, w: sizes[index], h: it.h }
       : { x: it.x, y: it.y + start + d, w: it.w, h: sizes[index] };
-    const a = ed.toScreen(band);
-    ctx.globalAlpha = 0.12;
+    const a = ed.toScreen(band), away = off(ed, it);
+    // Off the table: red, to go when let go.
+    ctx.globalAlpha = away ? 0.18 : 0.12;
+    if (away) ctx.fillStyle = '#E5484D';
     ctx.fillRect(a.x, a.y, band.w * z, band.h * z);
+    ctx.fillStyle = color;
     const to = target(it);
-    if (to !== index) {
+    if (to !== index && !away) {
       // Past the one under the pointer when going on, before it when going back.
       const at = sum(sizes.slice(0, to + (to > index ? 1 : 0)));
       const p = ed.toScreen(axis === 'col' ? { x: it.x + at, y: it.y } : { x: it.x, y: it.y + at });
@@ -181,4 +217,28 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
     ctx.fill();
   }
   ctx.restore();
+}
+
+/** The puffs, as when something's dropped off the macOS Dock: a few grey clouds swelling and fading. */
+function drawPuffs(ctx: CanvasRenderingContext2D, ed: Editor): void {
+  const now = performance.now();
+  while (puffs.length && now - puffs[0].t > PUFF) puffs.shift();
+  if (!puffs.length) return;
+  ctx.save();
+  ctx.fillStyle = document.documentElement.dataset.theme === 'dark' ? '#C9CED6' : '#9AA0AA';
+  for (const p of puffs) {
+    const k = (now - p.t) / PUFF, e = 1 - (1 - k) ** 2;
+    ctx.globalAlpha = 0.55 * (1 - k);
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2 + 0.4, d = 6 + 22 * e, r = (4 + (i % 3) * 2) * (1 + 1.2 * e);
+      ctx.beginPath();
+      ctx.arc(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 8 * (1 + e), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+  ed.requestRender();
 }
