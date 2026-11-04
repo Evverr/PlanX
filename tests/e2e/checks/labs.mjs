@@ -340,7 +340,7 @@ export const checks = {
     await sleep(300);
   },
 
-  async '"Панель над элементом": the selection panel over what\'s picked, not at the bottom; under it near the top, what opens from it opening down; gone while it\'s moved, staying by it while the board is; at the bottom for what\'s picked big or partly off the screen'(p) {
+  async '"Панель над элементом": the selection panel over what\'s picked, not at the bottom; under it near the top, what opens from it opening down; staying by it while it\'s moved or the board is; at the bottom for what\'s picked big or partly off the screen'(p) {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', true))()`);
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); b.add(e.newItem('rect', 480, 300, { id: 'a', w: 240, h: 140 })); e.setSelection(['a']); })()`);
     await sleep(400);
@@ -361,16 +361,16 @@ export const checks = {
     expect((await p.rect('.panel-over .op-pop')).t > near.b, 'its palette below it').toBe(true);
     await p.click(await p.at('.panel-over button[aria-label="Цвет"]'));
     await sleep(100);
-    // Moved, it's out of the way.
+    // Moved, it stays by it.
     await p.mouse('mouseMoved', 600, 80);
     await p.mouse('mousePressed', 600, 80);
     await p.mouse('mouseMoved', 640, 90);
     await p.mouse('mouseMoved', 660, 95);
     await sleep(100);
-    expect(!!(await p.rect('.panel-over')), 'while it moves: not there').toBe(false);
+    expect(!!(await p.rect('.panel-over:not(.gone)')), 'while it moves: there').toBe(true);
     await p.mouse('mouseReleased', 660, 95);
     await sleep(200);
-    expect(!!(await p.rect('.panel-over')), 'let go: back').toBe(true);
+    expect(!!(await p.rect('.panel-over:not(.gone)')), 'let go: still there').toBe(true);
     // The board moved: it stays, by the item.
     const was = await p.rect('.panel-over:not(.gone)');
     await p.ev(`(() => { const e = planx.editor; e.cam = { ...e.cam, x: e.cam.x + 20 }; e.camChanged(); })()`);

@@ -252,7 +252,7 @@ export function App({ boardId }: { boardId: string }) {
   const labs = useLabs();
   // "Панель над элементом" (src/labs); it and the text panel, coming in where the other's going, wait for it to go.
   const place = usePanelPlace(editor, selItems);
-  const overOn = labs.panelOver && !ui.moving && (!editing || editing.type === 'mind'), overShown = overOn && place === 'over' && selItems.length > 0;
+  const overOn = labs.panelOver && (!editing || editing.type === 'mind'), overShown = overOn && place === 'over' && selItems.length > 0;
   const overWent = useRef({ shown: false, at: 0 });
   if (overWent.current.shown && !overShown) overWent.current.at = performance.now();
   overWent.current.shown = overShown;
