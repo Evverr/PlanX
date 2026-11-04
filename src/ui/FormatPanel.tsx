@@ -141,11 +141,13 @@ export function placeOver(editor: Editor, box: HTMLElement, b: Rect, dots = DOT_
   return !over;
 }
 
-export function TextPanel({ editor, item, leaving, after, dock }: { editor: Editor; item: Item; leaving?: boolean;
+export function TextPanel({ editor, item, leaving, after, dock, onBack }: { editor: Editor; item: Item; leaving?: boolean;
   /** Coming in where the panel over what's picked is going ("Панель над элементом", src/labs): once it's gone. */
   after?: boolean;
   /** Standing where the selection panel at the bottom stood ("Кнопка T", src/labs): its middle and bottom. */
-  dock?: { cx: number; bottom: number } }) {
+  dock?: { cx: number; bottom: number };
+  /** Opened from another panel ("Кнопка T"): an arrow at the start goes back to it. */
+  onBack?: () => void }) {
   const [wait] = useState(!!after);
   const sort = useSortable('planx-order-text', ORDER, 'x');
   const labs = useLabs();
@@ -194,6 +196,7 @@ export function TextPanel({ editor, item, leaving, after, dock }: { editor: Edit
     // components can't take the ref, so each sits in a wrapper.
     <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`tfmt sortable ${sort.sorting ? 'sorting' : ''} ${leaving ? 'leaving' : ''} ${wait ? 'after-gone' : ''}`} role="toolbar" aria-label="Форматирование текста"
       {...sort.container} onPointerDown={(e) => { if (!(e.target as Element).closest('input')) e.preventDefault(); sort.container.onPointerDown(e); }}>
+      {onBack && <><span className="back-wrap" data-nosort><Btn icon="chevron-left" label="Назад" onClick={onBack} /></span><div className="fsep line" /></>}
       {sort.renderFit({
         font: <span className="sort-wrap"><Drop open={menu === 'font'} menu={Object.entries(FONTS).map(([k, f]) => (
           <button key={k} className={`tf-item ${(item.ff ?? 'onest') === k ? 'on' : ''}`} style={{ fontFamily: f.css }}

@@ -438,6 +438,12 @@ export const checks = {
     expect(!!(await p.rect('.panel-shell')), 'the body gone once there').toBe(false);
     await p.click(await p.at('.tfmt button[aria-label="Жирный"]'));
     expect(await p.ev(`planx.board.get('s').fw`), 'its text bold').toBe(700);
+    // Its arrow takes it back.
+    await p.click(await p.at('.tfmt button[aria-label="Назад"]'));
+    await sleep(700);
+    expect([!!(await p.rect('.tfmt:not(.leaving)')), !!(await p.rect('.panel-over:not(.gone)'))].join(), 'back by its arrow').toBe('false,true');
+    await p.click(await p.at('.panel-over button[aria-label="Текст и шрифт"]'));
+    await sleep(700);
     const s = await p.ev(`planx.editor.toScreen({ x: 600, y: 400 })`);
     await p.click([s.x, s.y]);
     await sleep(700);

@@ -89,8 +89,8 @@ function tableOf(ed: Editor): Item | null {
   return it?.type === 'table' && !isLocked(it) && !it.rot && ed.editingId !== it.id ? it : null;
 }
 
-/** How far past the table's edge a pill stands, on the screen: clear of the selection frame by 2. */
-const OUT = 2.75;
+/** How far past the table's edge a pill stands, on the screen: clear of the selection frame by 3. */
+const OUT = 3.75;
 
 /** A pill's middle on the screen, `k` times its size: just out over its column's top, out left of its row. */
 function gripScreen(ed: Editor, g: Grip & Point, k = 1): Point {
