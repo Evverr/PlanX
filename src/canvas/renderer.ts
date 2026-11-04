@@ -83,6 +83,8 @@ export interface Scene {
   hotDot: Side | null;
   /** The picked item the pointer is on (or on its link dots or handle): its handle stronger. */
   pickHover?: string | null;
+  /** The pointer on the picked item's handle (or a little round it): the handle at full strength, its line thicker. */
+  hotHandle?: boolean;
   /** With the line tool, the item whose link dots show. */
   linkDots?: string | null;
   /** The mind map node button under the pointer, drawn full size and strength; the others are smaller and faint. */
@@ -1280,7 +1282,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       outline(ctx, it, cam.z, theme.pick, [], PICK_LINE, PICK_RAD);
       ctx.globalAlpha = 1;
     }
-    const handleFade = s.pickHover === id ? PICK_HOT_FADE : PICK_FADE;
+    const handleFade = s.hotHandle ? 1 : s.pickHover === id ? PICK_HOT_FADE : PICK_FADE;
     // A mind map node sizes itself and links by its branches: instead of the handle and dots it
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && it.type === 'mind') {
@@ -1292,7 +1294,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       const b = instanceBounds(it, s.items), hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z;
       ctx.fillStyle = theme.surface;
       ctx.strokeStyle = theme.pick;
-      ctx.lineWidth = PICK_LINE / cam.z;
+      ctx.lineWidth = (s.hotHandle ? 2 : PICK_LINE) / cam.z;
       ctx.beginPath();
       ctx.roundRect(b.x + b.w + off - hs / 2, b.y + b.h + off - hs / 2, hs, hs, 3 / cam.z);
       ctx.globalAlpha = handleFade;
@@ -1303,7 +1305,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       const hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z;
       ctx.fillStyle = theme.surface;
       ctx.strokeStyle = theme.pick;
-      ctx.lineWidth = PICK_LINE / cam.z;
+      ctx.lineWidth = (s.hotHandle ? 2 : PICK_LINE) / cam.z;
       ctx.beginPath();
       turned(ctx, it, () => ctx.roundRect(it.x + it.w + off - hs / 2, it.y + it.h + off - hs / 2, hs, hs, 3 / cam.z));
       ctx.globalAlpha = handleFade;

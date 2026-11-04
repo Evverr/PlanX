@@ -177,6 +177,8 @@ export class Editor {
   mindHover: string | null = null;
   /** The picked item the pointer is on, or on its link dots (see Scene.pickHover). */
   pickHover: string | null = null;
+  /** The pointer on the picked item's handle (or a little round it). */
+  hotHandle = false;
   /** The node whose buttons were last drawn and how far faded in; those going away as they fade out. */
   private plusShown: { id: string; fade: number } | null = null;
   private plusLeaving: { id: string; from: number; at: number } | null = null;
@@ -282,7 +284,7 @@ export class Editor {
     on(canvas, 'pointerleave', () => {
       this.presence?.setCursor(null);
       restOn(this, null);
-      if (this.hotDot || this.hotLine || this.linkDots || this.pickHover) { this.hotDot = null; this.hotLine = null; this.linkDots = null; this.pickHover = null; this.requestRender(); }
+      if (this.hotDot || this.hotLine || this.linkDots || this.pickHover || this.hotHandle) { this.hotDot = null; this.hotLine = null; this.linkDots = null; this.pickHover = null; this.hotHandle = false; this.requestRender(); }
     });
     on(canvas, 'wheel', (e) => this.wheel(e), { passive: false });
     on(window, 'keydown', (e) => onKeyDown(this, e));
@@ -590,6 +592,7 @@ export class Editor {
       byFinger: this.byFinger,
       hotDot: this.hotDot,
       pickHover: this.pickHover,
+      hotHandle: this.hotHandle,
       linkDots: this.tool === 'link' && !this.gesture ? this.linkDots : null,
       hotPlus: this.hotPlus,
       plusFade,
