@@ -46,7 +46,7 @@
 .panel { left: 50%; transform: translateX(-50%); width: max-content; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); padding: var(--s6) var(--s16); flex-wrap: nowrap; }
 /* Too wide to sit beside the zoom panel: one bar's height (52px) and a gap higher. */
 .panel.raised { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
-.panel.docked.raised { bottom: var(--s60); border-radius: var(--s12); }
+.panel.docked.raised { bottom: var(--s60); border-radius: var(--panel-radius); }
 .sw { width: var(--e26); height: var(--e26); border-radius: 50%; border: var(--s2) solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; margin: 0 3.5px; }
 .sw.on { box-shadow: 0 0 0 2px var(--accent); }
 .sw-group, .sort-wrap { display: flex; align-items: center; }
