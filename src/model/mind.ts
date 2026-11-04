@@ -142,13 +142,43 @@ function clearFloor(n: Item, all: Item[], block: (k: Item) => Item[]): void {
   if (!p) return;
   const way = mindWay(n, p), edge = floorOf(n, all);
   for (const k of branchesOf(p, way, all)) {
-    for (const c of branchesOf(k, way, all)) {
+    // (On the left, a row by its widest, all of it as one, so it keeps its left edges level.)
+    const row = branchesOf(k, way, all);
+    if (way === 'left' && row.length) {
+      const d = Math.min(0, outFrom(edge, way, { w: widest(row), h: 0 }).x! - Math.min(...row.map((c) => c.x)));
+      if (d) row.flatMap(block).forEach((m) => { m.x += d; });
+      continue;
+    }
+    for (const c of row) {
       const at = outFrom(edge, way, c);
       const d = way === 'right' ? Math.max(0, at.x! - c.x) : way === 'left' ? Math.min(0, at.x! - c.x) : 0;
       const e = way === 'down' ? Math.max(0, at.y! - c.y) : way === 'up' ? Math.min(0, at.y! - c.y) : 0;
       if (d || e) block(c).forEach((m) => { m.x += d; m.y += e; });
     }
   }
+}
+
+/** On the left of its parent, a node's branches stand by their left edges, the widest of them the gap
+ *  off the floor (see floorOf), as on the right they stand by their left edges the gap past it. Puts
+ *  them there, moving what grows from them along as far as their left edge moves; `was`, where it stood
+ *  till now (the leftmost of them by default). */
+function alignLeft(p: Item, all: Item[], block: (k: Item) => Item[], was?: number): void {
+  const row = branchesOf(p, 'left', all);
+  if (!row.length) return;
+  const x = outFrom(floorOf(p, all), 'left', { w: widest(row), h: 0 }).x!, d = x - (was ?? Math.min(...row.map((k) => k.x)));
+  for (const k of row) block(k).forEach((n) => { n.x = n === k ? x : n.x + d; });
+}
+const widest = (row: Item[]) => Math.max(...row.map((k) => k.w));
+/** The leftmost of a row but `node` (where the row stood before it came), if there's any other. */
+const leftBut = (row: Item[], node: Item) => { const rest = row.filter((k) => k !== node); return rest.length ? Math.min(...rest.map((k) => k.x)) : undefined; };
+/** Every row of branches beside `n`, and beside them in turn, set across afresh by the rule above (on
+ *  the right, by left edges the gap past the floor; on the left, see alignLeft); along, as they stand. */
+function alignAcross(n: Item, way: Way, all: Item[]): void {
+  const kids = branchesOf(n, way, all);
+  if (!kids.length || upright(way)) return;
+  const f = floorOf(n, all), w = widest(kids);
+  for (const k of kids) k.x = outFrom(f, way, { w: way === 'left' ? w : k.w, h: k.h }).x!;
+  for (const k of kids) alignAcross(k, way, all);
 }
 
 /**
@@ -161,7 +191,8 @@ export function childPlace(parent: Item, items: Item[], get: Get, w: number, h: 
   const way = wayFrom(parent, get, toward), a = axis(way);
   const kids = items.filter((i) => i.type === 'mind' && i.parent === parent.id && mindWay(i, parent) === way);
   const placed = kids.flatMap((k) => [k, ...descendants([k.id], items).map(get)]).filter((i): i is Item => !!i);
-  const at = { x: 0, y: 0, ...outFrom(floorOf(parent, items), way, { w, h }) };
+  // On the left, level with the left edges there (see alignLeft).
+  const at = { x: 0, y: 0, ...outFrom(floorOf(parent, items), way, { w: way === 'left' ? Math.max(w, ...kids.map((k) => k.w)) : w, h }) };
   at[a.at] = placed.length ? hi(placed, a) + a.gap : middle(parent, a) - (a.at === 'x' ? w : h) / 2;
   const nodes = items.filter((i) => i.type === 'mind'), g = a.gap / 2;
   for (let tries = 0; tries < 100; tries++) {
@@ -215,6 +246,7 @@ export function addChild(id: string, items: Item[]): Map<string, Point> {
   if (!node || !p) return new Map();
   const way = mindWay(node, p), a = axis(way);
   lineUpNodes(branchesOf(p, way, all).sort((m, n) => middle(m, a) - middle(n, a)), a, middle(p, a), block);
+  if (way === 'left') alignLeft(p, all, block, leftBut(branchesOf(p, way, all), node));
   const ways = new Map(all.filter((k) => k.type === 'mind' && k.parent && byId.has(k.parent)).map((k) => [k.id, mindWay(k, byId.get(k.parent!)!)]));
   spreadGroups(p, all, block, ways);
   clearCousins(p, way, all, byId);
@@ -232,13 +264,13 @@ export function insertBeside(id: string, from: string, where: 'above' | 'below',
   const { all, byId, block } = working(items);
   const node = byId.get(id)!, start = byId.get(from)!, p = byId.get(start.parent!)!, dir = where === 'below' ? 1 : -1;
   const way = mindWay(start, p), a = axis(way);
-  if (way === 'right') node.x = start.x;
-  else if (way === 'left') node.x = start.x + start.w - node.w;
+  if (way === 'right' || way === 'left') node.x = start.x;
   else if (way === 'down') node.y = start.y;
   else node.y = start.y + start.h - node.h;
   // Next to it by its own size, not what grows from it (kept clear of that below).
   node[a.at] = dir > 0 ? start[a.at] + start[a.size] + a.gap : start[a.at] - a.gap - node[a.size];
   pushPast(start, node, (node[a.size] + a.gap) * dir, dir, all, byId, block, 1);
+  if (way === 'left') alignLeft(p, all, block, leftBut(branchesOf(p, way, all), node));
   const ways = new Map(all.filter((k) => k.type === 'mind' && k.parent && byId.has(k.parent)).map((k) => [k.id, mindWay(k, byId.get(k.parent!)!)]));
   spreadGroups(p, all, block, ways);
   clearCousins(p, way, all, byId);
@@ -259,10 +291,12 @@ export function makeRoom(id: string, dw: number, dh: number, items: Item[]): Map
   // Its own branches, each way they grow, with all that grows from them.
   for (const k of all.filter((i) => i.type === 'mind' && i.parent === node.id)) {
     const way = mindWay(k, node), d = {
-      right: { x: dw, y: dh / 2 }, left: { x: p ? -dw : 0, y: dh / 2 }, down: { x: dw / 2, y: dh }, up: { x: dw / 2, y: p ? -dh : 0 },
+      // (On the left it keeps its left edge, see alignLeft.)
+      right: { x: dw, y: dh / 2 }, left: { x: 0, y: dh / 2 }, down: { x: dw / 2, y: dh }, up: { x: dw / 2, y: p ? -dh : 0 },
     }[way];
     block(k).forEach((n) => { n.x += d.x; n.y += d.y; });
   }
+  if (p && mindWay(node, p) === 'left') alignLeft(p, all, block);
   clearFloor(node, all, block);
   if (p) {
     const way = mindWay(node, p);
@@ -329,8 +363,9 @@ function clearCousins(p: Item, way: Way, all: Item[], byId: Map<string, Item>): 
 function layOut(n: Item, way: Way, all: Item[], block: (k: Item) => Item[]): void {
   const a = axis(way), across = a.at === 'x' ? 'y' : 'x';
   const kids = all.filter((k) => k.type === 'mind' && k.parent === n.id).sort((m, q) => m[across] - q[across] || m[a.at] - q[a.at]);
+  const wide = kids.length ? widest(kids) : 0;
   for (const k of kids) {
-    Object.assign(k, outFrom(floorOf(n, all), way, k));
+    Object.assign(k, outFrom(floorOf(n, all), way, way === 'left' ? { w: wide, h: k.h } : k));
     k[a.at] = n[a.at];
     layOut(k, way, all, block);
   }
@@ -360,7 +395,8 @@ export function tidyBranches(id: string, items: Item[]): Map<string, Point> {
         .map((p) => ({ p, kids: all.filter((k) => k.type === 'mind' && k.parent === p.id && ways.get(k.id) === way).sort((m, q) => middle(m, a) - middle(q, a)) }))
         .filter((g) => g.kids.length);
       if (!groups.length) continue;
-      for (const { p, kids } of groups) for (const k of kids) Object.assign(k, outFrom(floorOf(p, all), way, k));
+      // (On the left, by their left edges, see alignLeft.)
+      for (const { p, kids } of groups) { const w = widest(kids); for (const k of kids) Object.assign(k, outFrom(floorOf(p, all), way, way === 'left' ? { w, h: k.h } : k)); }
       const row = groups.flatMap((g) => g.kids);
       const total = row.reduce((t, k, i) => t + k[a.size] + (i ? (k.parent === row[i - 1].parent ? a.gap : 3 * cousinGap(a, row[i - 1], k)) : 0), 0);
       const parents = groups.map((g) => g.p);
@@ -466,7 +502,10 @@ export function moveBranch(id: string, to: string, items: Item[], toward: Toward
       d.y += dy;
     }
     Object.assign(node, at, { parent: to });
+    // Over to the other side, its rows stand by the edges they stand by there.
+    if (flip) alignAcross(node, way, all);
   }
+  if (way === 'left') alignLeft(target, all, block, leftBut(branchesOf(target, way, all), node));
   // Re-centre round the new place, then round the old one if anything is left there.
   for (const k of [id, all.find((i) => i.parent === old.id && i.type === 'mind' && mindWay(i, old) === oldWay && !moving.has(i.id))?.id]) {
     if (k) balance(k, all).forEach((pt, n) => Object.assign(byId.get(n)!, pt));

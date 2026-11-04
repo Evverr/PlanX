@@ -1,7 +1,7 @@
 import type { Item } from '../model/types';
 import { DEFAULTS } from '../model/types';
 import { mindSize } from '../canvas/text';
-import { addChild, branchWays, childPlace, descendants, foldedWays, folding, insertBeside, mindSide, mindWay, type Toward } from '../model/mind';
+import { addChild, branchWays, childPlace, descendants, foldedWays, folding, insertBeside, mindWay, type Toward } from '../model/mind';
 
 /** The ways a node is added to a mind map (see addMindNode). */
 export type MindAdd = 'child' | 'left' | 'down' | 'up' | 'above' | 'below';
@@ -12,9 +12,9 @@ import type { Editor } from './editor';
 export function mindFit(ed: Editor, it: Item, text: string): Partial<Item> {
   if (it.type !== 'mind') return {};
   const { w, h } = mindSize(it, text), up = it.parent ? ed.board.get(it.parent) : undefined;
-  const left = up && !it.down && !it.up && mindSide(it, up) < 0;
-  // New lines grow it downwards, or over its parent, upwards.
-  return { w, h, x: left ? it.x + it.w - w : it.x, y: up && it.up ? it.y + it.h - h : it.y };
+  // New lines grow it downwards, or over its parent, upwards; it keeps its left edge, on the left of
+  // its parent too (its neighbours there level with it, see makeRoom).
+  return { w, h, x: it.x, y: up && it.up ? it.y + it.h - h : it.y };
 }
 
 /** Adds a node to a mind map: a child of `from` (`left`, `down`, `up`: one led that way from a central
