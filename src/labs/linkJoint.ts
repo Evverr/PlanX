@@ -135,7 +135,7 @@ export function rejoined(ed: Editor, gone: Set<string>): Link[] {
     if (gone.has(a.from) || gone.has(z.to) || a.from === z.to) continue;
     const startHead = a.heads === 'start' || a.heads === 'both', endHead = z.heads === undefined || z.heads === 'both';
     const via = [...(a.via ?? []), ...(z.via ?? [])], sided = !!(a.fromSide && z.toSide);
-    out.push({ id: uid(), from: a.from, to: z.to, style: a.style, color: a.color, lo: a.lo, dash: a.dash,
+    out.push({ id: uid(), from: a.from, to: z.to, style: a.style, color: a.color, lo: a.lo, dash: a.dash, lw: a.lw,
       ...(startHead ? { heads: endHead ? 'both' as const : 'start' as const } : endHead ? {} : { heads: 'none' as const }),
       ...(via.length && { via }), ...(sided && { fromSide: a.fromSide, toSide: z.toSide, fromAt: a.fromAt, toAt: z.toAt }) });
   }
@@ -151,7 +151,7 @@ export function joinLine(ed: Editor, link: Link, it: Item, at: number, p: Point)
   const via = link.style === 'elbow' ? undefined : link.via, before = via?.slice(0, at), after = via?.slice(at);
   // The heads it had at its start and end, on the two.
   const h = link.heads, startHead = h === 'start' || h === 'both', endHead = h === undefined || h === 'both';
-  const look = { style: link.style, color: link.color, lo: link.lo, dash: link.dash };
+  const look = { style: link.style, color: link.color, lo: link.lo, dash: link.dash, lw: link.lw };
   // Pinned to its ends' sides, each meets the thing in the middle by the side facing the other end.
   const first: Link = { id: uid(), from: link.from, to: it.id, ...look, heads: startHead ? 'start' : 'none',
     ...(before?.length && { via: before }), ...(link.fromSide && { fromSide: link.fromSide, fromAt: link.fromAt, toSide: nearestSide(mid, before?.length ? before[before.length - 1] : center(a)) }) };

@@ -247,6 +247,16 @@ export function LinkParams({ editor, ids }: { editor: Editor; ids: string[] }) {
       <div className="params-title">{links.length > 1 ? `Линии: ${links.length}` : 'Линия'}</div>
       <ColorRow editor={editor} label="Цвет" colors={Object.fromEntries(Object.entries(STROKE_COLORS).filter(([k]) => k !== 'none').map(([k, v]) => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--link)')]))}
         current={l.color ?? 'gray'} opacity={l.lo ?? 1} onColor={(c) => set({ color: c === 'gray' ? undefined : c })} onOpacity={(v) => set({ lo: v })} />
+      {/* How thick: from a hair to 8 px. */}
+      <div className="params-group">
+        <div className="params-label">Толщина</div>
+        <div className="params-opacity">
+          <input type="range" min={0.5} max={8} step={0.5} value={l.lw ?? 1.7} aria-label="Толщина линии, px" style={{ '--p': `${(((l.lw ?? 1.7) - 0.5) / 7.5) * 100}%` } as React.CSSProperties}
+            onPointerDown={() => { editor.beginChange(); window.addEventListener('pointerup', () => editor.endChange(), { once: true }); }}
+            onChange={(e) => set({ lw: Number(e.target.value) })} />
+          <i>{(l.lw ?? 1.7).toLocaleString('ru')} px</i>
+        </div>
+      </div>
       <div className="params-group">
         <div className="params-label">Вид</div>
         <div className="params-text">

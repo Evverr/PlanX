@@ -202,6 +202,8 @@ export interface Link {
   /** Pinned to its sides, where along them (0…1: left to right, top to bottom); unset, their middles. */
   fromAt?: number;
   toAt?: number;
+  /** How thick, in screen pixels (0.5…8); unset, the usual (see linkWidth in the renderer). */
+  lw?: number;
 }
 
 export type LinkStyle = 'straight' | 'elbow';
