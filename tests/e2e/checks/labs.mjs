@@ -484,6 +484,11 @@ export const checks = {
     expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'away once something else was picked').toBe(false);
     await p.click([500, 330]);
     expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'out by a second click').toBe(true);
+    // Along the way it moves, just past the table's edge is enough; across, 44 isn't reached by 30.
+    await p.drag([360, 293], [360, 260]);
+    expect((await p.ev(`planx.board.get('t')`)).cols.length, '30 off its side: kept').toBe(3);
+    await p.drag([360, 293], [670, 300]);
+    expect((await p.ev(`planx.board.get('t')`)).cols.length, 'just past the right edge: gone').toBe(2);
   },
 
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {

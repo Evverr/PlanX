@@ -16,7 +16,8 @@ export interface Grip { id: string; axis: 'col' | 'row'; index: number }
 
 /** A pill's size on the screen, and how far past it it still answers the pointer. */
 const LONG = 16, THICK = 6, REACH = 4;
-/** How far off the table (on the screen) a dragged column or row is let go to be taken away. */
+/** How far off the table (on the screen) a dragged column or row is let go to be taken away: off its
+ *  side, across the way it moves; along that way, just past the table's edge is enough. */
 const OFF = 44;
 /** How much bigger one is under the pointer or dragged. */
 const HOT = 1.68;
@@ -145,8 +146,8 @@ export function moveGrip(ed: Editor, w: Point): void {
 /** Whether the column or row being dragged is off the table, to be taken away when let go. */
 function off(ed: Editor, it: Item): boolean {
   if (!drag) return false;
-  const m = OFF / ed.cam.z, p = drag.at;
-  return p.x < it.x - m || p.x > it.x + it.w + m || p.y < it.y - m || p.y > it.y + it.h + m;
+  const m = OFF / ed.cam.z, p = drag.at, col = drag.grip.axis === 'col', mx = col ? 0 : m, my = col ? m : 0;
+  return p.x < it.x - mx || p.x > it.x + it.w + mx || p.y < it.y - my || p.y > it.y + it.h + my;
 }
 
 /** Puffs where columns or rows were taken away: at the screen point, since when. */
@@ -245,16 +246,19 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
   ctx.restore();
 }
 
-/** The puffs, as when something's dropped off the macOS Dock: a few grey clouds swelling and fading. */
+/** The puffs, as when something's dropped off the macOS Dock: a few white clouds swelling and fading. */
 function drawPuffs(ctx: CanvasRenderingContext2D, ed: Editor): void {
   const now = performance.now();
   while (puffs.length && now - puffs[0].t > PUFF) puffs.shift();
   if (!puffs.length) return;
   ctx.save();
-  ctx.fillStyle = document.documentElement.dataset.theme === 'dark' ? '#C9CED6' : '#9AA0AA';
+  ctx.fillStyle = '#fff';
+  // (A faint shadow, for white on white.)
+  ctx.shadowColor = 'rgba(0, 0, 0, .12)';
+  ctx.shadowBlur = 4;
   for (const p of puffs) {
     const k = (now - p.t) / PUFF, e = 1 - (1 - k) ** 2;
-    ctx.globalAlpha = 0.55 * (1 - k);
+    ctx.globalAlpha = 0.9 * (1 - k);
     for (let i = 0; i < 7; i++) {
       const a = (i / 7) * Math.PI * 2 + 0.4, d = 6 + 22 * e, r = (4 + (i % 3) * 2) * (1 + 1.2 * e);
       ctx.beginPath();
