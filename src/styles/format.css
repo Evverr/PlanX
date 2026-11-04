@@ -12,8 +12,9 @@
 /* Its body the panels' (panels.css), as high as the bars; only its width its own. */
 .tfmt { position: fixed; z-index: 5; display: flex; flex-wrap: nowrap; align-items: center; column-gap: var(--s14); box-sizing: border-box; height: var(--panel-h); padding: 0 var(--s18) 0 var(--s22); width: max-content;
   color: var(--fmt-ink); }
-/* With the arrow back at its start, as far from the edge as "more" is at the end. */
-.tfmt.has-back { padding-left: var(--s18); }
+/* With the arrow back at its start, as far from the edge as the actions' button is at the end, its hover the same. */
+.tfmt.has-back { padding-left: calc(var(--s18) - var(--s6)); }
+.tfmt .back.fb::before { inset: round(calc(-6px * var(--k)), 1px) round(calc(-3px * var(--k)), 1px); }
 .tfmt .caret { margin: 0 round(calc(-10px * var(--k)), 1px); }
 /* The text panel fades in when it shows up, and out twice as fast when it goes. */
 .tfmt.leaving { animation: fade-out .08s ease forwards; pointer-events: none; }
@@ -40,7 +41,7 @@
 .fb.sw-btn { min-width: var(--e24); width: var(--e24); height: var(--e30); }
 .fb.sw-btn::before { inset: round(calc(-6px * var(--k)), 1px) round(calc(-9px * var(--k)), 1px); }
 .fb.sw-btn > .pi { margin: 0 round(calc(-3px * var(--k)), 1px); }
-.fb .swatch { position: absolute; left: var(--s4); right: var(--s4); bottom: -1px; height: var(--e4); border-radius: var(--s2); }
+.fb .swatch { position: absolute; left: var(--s4); right: var(--s4); bottom: -1px; width: auto; height: var(--e4); padding: 0; border-radius: var(--s2); box-shadow: none; cursor: inherit; }
 .fpick { position: relative; isolation: isolate; flex: none; height: var(--e30); border: 0; background: transparent; display: flex; align-items: center; gap: var(--s10); padding: 0; cursor: pointer; font: 500 var(--s15)/1 "Inter", var(--ui); color: var(--fmt-ink); white-space: nowrap; }
 /* The link's menu: its address, then what to do with it. */
 .tf-link { display: flex; flex-direction: column; gap: var(--s6); padding: var(--s8); width: var(--e260, 260px); }
