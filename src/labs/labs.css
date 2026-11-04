@@ -258,8 +258,16 @@
 .layer-delete:hover { background: var(--fmt-hover); }
 .layer-row:hover .layer-delete { visibility: visible; }
 
-/* "Стекло" (src/labs/glass.ts): the panels and popups 84% their colour, what's behind them blurred 12px. */
-:root[data-glass] :is(.bar, .tools, .tfmt, .tools-more, .draw-panel, .minimap, .pop, .board-menu, .more-pop, .op-pop, .color-picker, .tf-menu,
-  .comment-menu, .comment-card, .tile-menu, .modal, .peek, .labs-pill, .ink-style, .recorder, .icon-pick, .peers-more) {
+/* "Стекло" (src/labs/glass.ts): the panels and popups 84% their colour, what's behind them blurred 12px.
+   Those that others open from have it on a layer under what they hold, not on themselves: one blurring
+   on itself, what opens from it would blur it alone, the board behind seen sharp. */
+:root[data-glass] :is(.bar, .tools, .tfmt, .tools-more, .draw-panel, .pop, .board-menu, .more-pop, .op-pop) {
+  background-color: transparent !important; isolation: isolate; }
+:root[data-glass] :is(.bar, .tools, .tfmt, .tools-more, .draw-panel, .pop, .board-menu, .more-pop, .op-pop)::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
+  background-color: color-mix(in srgb, var(--surface) 84%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+:root[data-glass] :is(.minimap, .color-picker, .tf-menu, .comment-menu, .comment-card, .tile-menu, .modal, .peek, .labs-pill, .ink-style, .recorder,
+  .icon-pick, .peers-more) {
   background-color: color-mix(in srgb, var(--surface) 84%, transparent) !important;
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
