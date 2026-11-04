@@ -501,6 +501,18 @@ export const checks = {
     expect(!!(await p.ev(`planx.board.get('t')`)), 'the table stays').toBe(true);
   },
 
+  async 'typing in a mind map node, its panel follows it, one panel only'(p) {
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', true))()`);
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.add(e.newItem('mind', 400, 300, { id: 'm', text: 'Т', w: 120, h: 50 })); e.setSelection(['m']); })()`);
+    await sleep(400);
+    await p.ev(`planx.editor.startEditing('m')`);
+    await sleep(300);
+    for (const ch of 'ема очень длинная') { await p.cdp('Input.insertText', { text: ch }); await sleep(40); }
+    await sleep(300);
+    expect(await p.ev(`document.querySelectorAll('.panel-over:not(.gone)').length`), 'one panel').toBe(1);
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
+  },
+
   async '"Кнопка T" on a mind map node: its text formatted from the text panel'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.add(e.newItem('mind', 400, 300, { id: 'm', text: 'Тема', w: 160, h: 60 })); e.setSelection(['m']); })()`);
     await sleep(400);
