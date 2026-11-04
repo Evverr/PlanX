@@ -199,10 +199,12 @@ export function App({ boardId }: { boardId: string }) {
   // next press on the board (or something else picked).
   // (Standing where the selection panel stood when that was at the bottom.)
   const [textMode, setTextMode] = useState<{ id: string; dock?: { cx: number; bottom: number } } | null>(null);
-  useEffect(() => { if (textMode && textMode.id !== textItem?.id) setTextMode(null); }, [textItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // What it's for: what the text panel's for, or a mind map node (whose text the panel's for only by the T).
+  const tItem = selItems.length === 1 && (textItem?.id === selItems[0].id || selItems[0].type === 'mind') ? selItems[0] : undefined;
+  useEffect(() => { if (textMode && textMode.id !== tItem?.id) setTextMode(null); }, [tItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const textModeRef = useRef(textMode);
   textModeRef.current = textMode;
-  const tMode = labs.textButton && !!textItem && selItems.length === 1 && textMode?.id === textItem.id && !editing;
+  const tMode = labs.textButton && !!tItem && textMode?.id === tItem.id && !editing;
   // Its text typed in (or being typed): the panel's for it while it stays picked.
   const [typedIn, setTypedIn] = useState<string | null>(null);
   useEffect(() => { if (ui.editingId) setTypedIn(ui.editingId); }, [ui.editingId]);
@@ -241,8 +243,8 @@ export function App({ boardId }: { boardId: string }) {
   }, [editor]);
   // The text panel: shown as above; once it goes, it fades out (half as long as it fades in), still
   // showing what it showed.
-  const panelOn = !!textItem && (tMode || (textShown === textItem.id && quiet !== textItem.id));
-  const panelNow = panelOn && textItem ? (editing?.id === textItem.id && editing.type === 'table' && ui.editingCell !== null ? cellItem(editing, ui.editingCell) : textItem) : null;
+  const panelOn = tMode || (!!textItem && textShown === textItem.id && quiet !== textItem.id);
+  const panelNow = tMode ? tItem! : panelOn && textItem ? (editing?.id === textItem.id && editing.type === 'table' && ui.editingCell !== null ? cellItem(editing, ui.editingCell) : textItem) : null;
   const lastPanel = useRef<Item | null>(null);
   const [, panelGone] = useState(0);
   if (panelNow) lastPanel.current = panelNow;
@@ -271,11 +273,11 @@ export function App({ boardId }: { boardId: string }) {
   overWent.current.shown = overShown;
   const following = useFollowing();
   // The T (on something with text, alone, the text panel not up already, or going): the panel turns into the text panel.
-  const toText = labs.textButton && textItem && selItems.length === 1 && !panelOn
+  const toText = labs.textButton && tItem && !panelOn
     ? () => {
       const bar = document.querySelector('.bar.panel:not(.gone)'), r = bar?.getBoundingClientRect();
       const dock = r && !bar!.classList.contains('panel-over') ? { cx: r.left + r.width / 2, bottom: r.bottom } : undefined;
-      morphPanel('.bar.panel', 'tfmt', () => setTextMode({ id: textItem.id, dock }));
+      morphPanel('.bar.panel', 'tfmt', () => setTextMode({ id: tItem.id, dock }));
     } : undefined;
 
   // All the others shown, after "+N" was pressed (back to five once they're five or fewer).
