@@ -13,8 +13,9 @@ import { linkWidth } from '../canvas/renderer';
 /** What can be put into a line: those, and the game stickers (pictures). */
 const JOINABLE = new Set(['text', 'sticky', 'rect', 'ellipse', 'polygon', 'emoji', 'icon']);
 const joinable = (it: Item) => JOINABLE.has(it.type) || (it.type === 'image' && !!it.doodle);
-/** How near a middle circle (on the screen) the dragged thing's middle takes it. */
-const NEAR = 28;
+/** A middle circle's radius on the screen, and that of the one taken: what's dragged takes it as soon
+ *  as any of it is over that. */
+const MID_R = 6, HOT_R = 10;
 
 /** The line picked as the press began, its middles waiting for something to be dragged onto them. */
 let picked: string | null = null;
@@ -47,18 +48,32 @@ function dragged(ed: Editor): { link: Link; it: Item } | null {
   return { link, it };
 }
 
-/** The middle the dragged thing is over. */
-function over(ed: Editor, link: Link, it: Item): { p: Point; at: number } | null {
-  const c = center(it), near = NEAR / ed.cam.z;
-  return middles(ed, link).find((m) => Math.hypot(m.p.x - c.x, m.p.y - c.y) <= near) ?? null;
+/** The middle a box (on the board: what's dragged) is over, any of it. */
+function over(ed: Editor, link: Link, b: { x: number; y: number; w: number; h: number }): { p: Point; at: number } | null {
+  const r = HOT_R / ed.cam.z;
+  return middles(ed, link).find((m) => {
+    const dx = m.p.x - Math.max(b.x, Math.min(m.p.x, b.x + b.w)), dy = m.p.y - Math.max(b.y, Math.min(m.p.y, b.y + b.h));
+    return Math.hypot(dx, dy) <= r;
+  }) ?? null;
+}
+
+/** A button being dragged off the rail, with the line picked: the box of what it'd make, centred on
+ *  the pointer (on the board). */
+let railBox: { x: number; y: number; w: number; h: number } | null = null;
+export function railOver(ed: Editor, at: Point | null, size: { w: number; h: number } | null): void {
+  const was = !!railBox;
+  railBox = at && size ? (() => { const c = ed.toWorld(at.x, at.y); return { x: c.x - size.w / 2, y: c.y - size.h / 2, ...size }; })() : null;
+  if (was || railBox) ed.requestRender();
 }
 
 /** While dragging: the picked line in blue, as picked, and its middles as dashed circles (as thick as
  *  the line), the one under what's dragged bigger and filled. */
 export function drawJoint(ctx: CanvasRenderingContext2D, ed: Editor): void {
-  const d = dragged(ed);
+  // Something taken hold of; or off the rail, the line picked still.
+  const sel = [...ed.selection], fromRail = railBox && sel.length === 1 ? ed.board.getLink(sel[0]) : undefined;
+  const d = dragged(ed) ?? (fromRail && railBox ? { link: fromRail, it: null } : null);
   if (!d) return;
-  const hit = over(ed, d.link, d.it), color = getComputedStyle(document.documentElement).getPropertyValue('--fmt-on-ink').trim() || '#0080FF';
+  const hit = over(ed, d.link, d.it ?? railBox!), color = getComputedStyle(document.documentElement).getPropertyValue('--fmt-on-ink').trim() || '#0080FF';
   const width = linkWidth(ed.cam.z), pts = linkShape(d.link, (id) => ed.board.get(id))?.pts ?? [];
   ctx.save();
   ctx.strokeStyle = color;
@@ -71,11 +86,8 @@ export function drawJoint(ctx: CanvasRenderingContext2D, ed: Editor): void {
   for (const m of middles(ed, d.link)) {
     const p = ed.toScreen(m.p), on = hit?.at === m.at;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, on ? 10 : 6, 0, Math.PI * 2);
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#fff';
-    ctx.fill();
-    if (on) { ctx.globalAlpha = 0.2; ctx.fillStyle = color; ctx.fill(); ctx.globalAlpha = 1; }
+    // (No fill: just its dashed edge.)
+    ctx.arc(p.x, p.y, on ? HOT_R : MID_R, 0, Math.PI * 2);
     ctx.setLineDash([3, 3]);
     ctx.stroke();
   }
@@ -85,6 +97,7 @@ export function drawJoint(ctx: CanvasRenderingContext2D, ed: Editor): void {
 /** Letting go (before the editor does): whether it'll join, and where. */
 export function beforeUp(ed: Editor): void {
   const d = dragged(ed), hit = d && over(ed, d.link, d.it);
+  railOver(ed, null, null);
   pending = d && hit && ed.moving ? { link: d.link.id, item: d.it.id, at: hit.at, p: hit.p } : null;
   picked = null;
   down = false;

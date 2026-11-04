@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from 'react';
 import { SHAPE_TOOLS, type Editor, type Pens, type Tool } from '../editor/editor';
 import { readPictures } from '../canvas/pictures';
+import { DEFAULTS } from '../model/types';
+import { isPoly } from '../editor/tools';
 import { DrawPanel, isDrawTool } from './DrawPanel';
 import { ShapePanel, SHAPES } from './ShapePanel';
 import { panelScale, usePanelSize } from './panels/size';
@@ -10,7 +12,7 @@ import { isSeparator, useSortable } from './sortable';
 import { ToolPreview } from './ToolPreview';
 import { readText, writeText } from '../storage';
 import { labOn, useLabs } from '../labs/labs';
-import { joinDropped } from '../labs/linkJoint';
+import { joinDropped, railOver } from '../labs/linkJoint';
 import { ObjectsMenu, OBJECTS } from '../labs/ObjectsMenu';
 import { LinePanel } from '../labs/LinePanel';
 
@@ -115,6 +117,11 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     // Held still, the shapes and drawing buttons open their variants beside the rail (a click just
     // takes the last one).
     hold: (key: string) => { if (!VARIANTS.has(key)) return false; setVariants(key); return true; },
+    // Over the board, a line picked: its middles show and take what this would make ("Узел на линии", src/labs).
+    over: (key: string, at: { x: number; y: number } | null) => {
+      const t = toolOf(key), d = t ? DEFAULTS[(isPoly(t) ? 'polygon' : t) as keyof typeof DEFAULTS] : undefined;
+      if (labOn('linkJoint')) railOver(editor, at && d ? at : null, d ? { w: d.w, h: d.h } : null);
+    },
     drop: (key: string, at: { x: number; y: number }) => {
       const t = toolOf(key);
       // A line picked: dropped on its middle, what's made goes into it ("Узел на линии", src/labs).

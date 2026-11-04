@@ -18,6 +18,8 @@ export interface DropOut {
   /** A button held still: true if that does something of its own (opens its variants), so it
    *  doesn't lift, and letting go isn't a click. Moving it still drags it, out or along the panel. */
   hold?: (key: string) => boolean;
+  /** Where a button out over the board is now (on the screen), or null once it's not. */
+  over?: (key: string, at: { x: number; y: number } | null) => void;
 }
 
 /** Where a lifted button is: on its panel, or in the panel's "more" popover. */
@@ -259,9 +261,11 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     const next = { ...d, x: e.clientX, y: e.clientY, moved, out };
     if (out) {
       if (!d.out) setOrder(d.before);
+      dropOut!.over?.(d.key, { x: e.clientX, y: e.clientY });
       setDrag(next);
       return;
     }
+    if (d.out) dropOut?.over?.(d.key, null);
     // Not where it's dragged (gone into "more", or back where it was when it went out over the board).
     const el = zones[d.zone].els.get(d.key);
     if (!el) { setDrag(next); return; }
@@ -283,6 +287,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
       if (!drag.out) el.animate([{ transform: from }, { transform: 'none' }], { duration: 150, easing: 'ease-out' });
     }
     setDrag(null);
+    if (drag.out) dropOut?.over?.(drag.key, null);
     if (!drag.moved) return;
     if (drag.out) dropOut!.drop(drag.key, { x: drag.x, y: drag.y });
     else writeJSON(storageKey, order);
