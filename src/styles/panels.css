@@ -1,4 +1,15 @@
-.bar { position: fixed; z-index: 5; display: flex; align-items: center; gap: var(--s4); padding: var(--s6); background: var(--surface); border-radius: var(--s12); box-shadow: var(--shadow); }
+/* The panels, one body for all: the bars (top, zoom, selection), the text panel, the tool rail and what
+   opens beside it (its "more" column, the drawing tools, shapes, lines), and the body standing in for
+   one turning into another («Кнопка T», .panel-shell). Their look is set here, and only here; the
+   bars and the text panel are --panel-h high. */
+:root {
+  --panel-bg: var(--surface);
+  --panel-shadow: var(--shadow);
+  --panel-radius: var(--s12);
+  --panel-h: var(--bar);
+}
+:is(.bar, .tfmt, .tools, .tools-more, .draw-panel, .panel-shell) { background: var(--panel-bg); border-radius: var(--panel-radius); box-shadow: var(--panel-shadow); }
+.bar { position: fixed; z-index: 5; display: flex; align-items: center; gap: var(--s4); padding: var(--s6); }
 .ib { position: relative; width: var(--e40); height: var(--e40); border: 0; background: transparent; border-radius: var(--s6); display: grid; place-items: center; cursor: pointer; color: var(--ink); padding: 0; transition: background-color .12s ease-out; }
 /* Hovers everywhere match the tool panel's (.fb): a neutral grey, the pressed state light blue. */
 .ib:hover { background: var(--fmt-hover); }
@@ -11,9 +22,9 @@
 
 /* Buttons in the panels answer the pointer across the whole panel (its height in a bar, its width
    in an upright one) and halfway to their neighbours, while their highlight keeps its own size. */
-.bar { --gap: var(--s4); --bar-h: var(--bar); }
+.bar { --gap: var(--s4); --bar-h: var(--panel-h); }
 .topbar { --gap: var(--s8); }
-.tfmt { --gap: var(--s14); --bar-h: var(--bar); }
+.tfmt { --gap: var(--s14); --bar-h: var(--panel-h); }
 .draw-panel { --gap: var(--s18); }
 .tb, .zpct, .bar .sw:not(.custom) { position: relative; }
 .bar .ib::after, .bar .tb::after, .bar .zpct::after, .bar .sw:not(.custom)::after,
@@ -33,17 +44,14 @@
   display: flex; flex-direction: column; align-items: center; width: var(--rail-w); padding: var(--s15) calc((var(--rail-w) - var(--e30)) / 2);
   /* 18px gaps as in the mockup, whatever the screen: what doesn't fit goes under the "more" button. */
   --gap: var(--s18);
-  gap: var(--gap);
-  background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: var(--s12); box-shadow: var(--fmt-shadow); }
-.tools.docked { left: 0; border-radius: 0 var(--s12) var(--s12) 0; }
+  gap: var(--gap); }
+.tools.docked { left: 0; border-radius: 0 var(--panel-radius) var(--panel-radius) 0; }
 /* With the rail stuck to the edge, what opens beside it moves in with it (keeping its 12px gap). */
 .tools.docked ~ .tools-more:not(.labs-more), .tools.docked ~ .draw-panel, .tools.docked ~ .recorder, .tools.docked ~ .icon-pick { left: calc(12px + var(--rail-w) + env(safe-area-inset-left, 0px)); }
 /* The rail's buttons that didn't fit, upright beside it like the rail itself and level with its
    bottom, in as many columns as the screen's height needs (rows and place set in Toolbar.tsx). */
 .tools-more { position: fixed; z-index: 5; left: calc(24px + var(--rail-w) + env(safe-area-inset-left, 0px));
-  display: grid; grid-auto-flow: column; grid-auto-columns: var(--e30); gap: var(--s18); padding: var(--s21) var(--s15);
-  background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: var(--s12); box-shadow: var(--fmt-shadow);
-  }
+  display: grid; grid-auto-flow: column; grid-auto-columns: var(--e30); gap: var(--s18); padding: var(--s21) var(--s15); }
 /* Panels whose buttons can be rearranged: holding one lifts it so it can be moved (see ui/sortable.ts). */
 .sortable { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 .sortable.sorting, .sortable.sorting * { cursor: grabbing !important; }
@@ -53,8 +61,7 @@
 .tsep { flex: none; width: var(--s20); height: var(--s7); position: relative; }
 /* Drawing tools, opened from the rail's drawing button: a second rail beside the first. */
 .draw-panel { position: fixed; z-index: 5; left: calc(24px + var(--rail-w) + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
-  display: flex; flex-direction: column; align-items: center; gap: var(--s18); width: var(--e62); padding: var(--s21) var(--s16);
-  background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: var(--s12); box-shadow: var(--fmt-shadow); }
+  display: flex; flex-direction: column; align-items: center; gap: var(--s18); width: var(--e62); padding: var(--s21) var(--s16); }
 .ink-preset, .ink-size { position: relative; flex: none; width: var(--e34); height: var(--e34); border-radius: 50%; border: 1.5px solid var(--fmt-line); background: transparent;
   display: grid; place-items: center; padding: 0; cursor: pointer; transition: border-color .12s ease-out; }
 .ink-preset:hover, .ink-size:hover { border-color: var(--muted); }
