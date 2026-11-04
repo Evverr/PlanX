@@ -148,7 +148,7 @@ export const checks = {
   async 'a bar beside the rail moves with it when the panels come off the edges'(p) {
     // Stuck to the edges: the rail low on the left, the top bar at the bottom 12px right of it.
     await p.ev(`localStorage.setItem('planx-dock-panels', '1'); localStorage.setItem('planx-tools-top', '400');
-      localStorage.setItem('planx-topbar-low', '1'); localStorage.setItem('planx-topbar-x', '72')`);
+      localStorage.setItem('planx-topbar-low', '1'); localStorage.setItem('planx-topbar-x', '64')`);
     await p.reload();
     await sleep(400);
     const rail0 = await p.rect('.tools'), top0 = await p.rect('.topbar');

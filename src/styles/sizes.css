@@ -74,7 +74,8 @@
 }
 :root {
   --bar: calc(var(--s6) * 2 + var(--e40));
-  --rail-w: calc(var(--e30) + var(--s15) * 2);
+  /* The tool rails as wide as the bars are high. */
+  --rail-w: var(--bar);
 }
 :root[data-size="m"] { --k: .9; }
 :root[data-size="s"] { --k: .8; }
