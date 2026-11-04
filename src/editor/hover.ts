@@ -149,7 +149,7 @@ export function dotAt(ed: Editor, it: Item, w: Point): Side | null {
 
 /** The same, for any item (with the line tool, every item has its dots). */
 export function anyDotAt(ed: Editor, it: Item, w: Point): Side | null {
-  const r = ed.reach(16.5);  // well beyond the dot itself, so it is easy to catch
+  const r = ed.reach(DOT_GAP + 0.5);  // well beyond the dot itself, so it is easy to catch, up to the item's edge
   for (const side of SIDES) {
     const p = sidePoint(it, side, DOT_GAP / ed.cam.z);
     if (Math.hypot(w.x - p.x, w.y - p.y) <= r) return side;
