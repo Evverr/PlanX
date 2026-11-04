@@ -10,6 +10,7 @@ import { isSeparator, useSortable } from './sortable';
 import { ToolPreview } from './ToolPreview';
 import { readText, writeText } from '../storage';
 import { labOn, useLabs } from '../labs/labs';
+import { joinDropped } from '../labs/linkJoint';
 import { ObjectsMenu, OBJECTS } from '../labs/ObjectsMenu';
 import { LinePanel } from '../labs/LinePanel';
 
@@ -116,8 +117,11 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     hold: (key: string) => { if (!VARIANTS.has(key)) return false; setVariants(key); return true; },
     drop: (key: string, at: { x: number; y: number }) => {
       const t = toolOf(key);
+      // A line picked: dropped on its middle, what's made goes into it ("Узел на линии", src/labs).
+      const sel = [...editor.selection], line = labOn('linkJoint') && sel.length === 1 && editor.board.getLink(sel[0]) ? sel[0] : null;
       if (t === 'sticky') editor.addSticky('yellow', at);
       else if (t) editor.dropItem(t, at);
+      if (t && line) joinDropped(editor, line, editor.selectedItems()[0]);
       else if (key === 'image') { pictureAt.current = at; filePicker.current?.click(); }
     },
   };

@@ -473,6 +473,17 @@ export const checks = {
     expect(ends.y < 200, 'the line to it follows it').toBe(true);
   },
 
+  async '"Узел на линии": a sticker dragged off the rail onto a picked line\'s middle goes into it'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('rect', 200, 300, { id: 'a', w: 100, h: 100 })); b.add(e.newItem('rect', 900, 300, { id: 'c', w: 100, h: 100 }));
+      b.addLink({ id: 'l', from: 'a', to: 'c', style: 'straight' }); e.setSelection(['l']); })()`);
+    await sleep(300);
+    const m = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'), l = planx.board.getLink('l'); const q = g.linkHandles(l, g.linkShape(l, (id) => planx.board.get(id))).middles[0].p, s = planx.editor.toScreen(q), c = planx.editor.canvas.getBoundingClientRect(); return [s.x + c.left, s.y + c.top]; })()`);
+    await carry(p, await p.at('.tools [data-key="sticky"]'), [[m[0] - 100, m[1] + 100], m]);
+    const st = await p.ev(`(() => { const s = planx.board.list().find((i) => i.type === 'sticky'); return { joint: !!s?.joint, ls: planx.board.linkList().map((l) => l.from + '>' + l.to).sort().join() , s: s?.id }; })()`);
+    expect(`${st.joint} ${st.ls}`, 'in the line').toBe(`true a>${st.s},${st.s}>c`);
+  },
+
   async '"Удаление строк и столбцов": Delete takes a whole column\'s text, then the column'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       planx.board.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [120, 120, 120], rows: [40, 40, 40], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] }));
