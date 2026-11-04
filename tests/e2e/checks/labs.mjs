@@ -340,14 +340,14 @@ export const checks = {
     await sleep(300);
   },
 
-  async '"Панель над элементом": the selection panel again over what\'s picked, the bottom one staying; under it near the top, what opens from it opening down; gone while it\'s moved'(p) {
+  async '"Панель над элементом": the selection panel over what\'s picked, not at the bottom; under it near the top, what opens from it opening down; gone while it\'s moved or the board is; at the bottom for what\'s big or partly off the screen'(p) {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', true))()`);
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); b.add(e.newItem('rect', 480, 300, { id: 'a', w: 240, h: 140 })); e.setSelection(['a']); })()`);
     await sleep(400);
     const over = await p.rect('.panel-over'), under = await p.rect('.bar.panel:not(.panel-over)');
     expect(over.b < 300, 'over the item').toBe(true);
     expect(Math.round((over.l + over.r) / 2), 'in the middle of it').toBe(600);
-    expect(under.t > 600, 'the bottom one too').toBe(true);
+    expect(!!under, 'not at the bottom too').toBe(false);
     // It works the same: a button there does what it does below.
     await p.click(await p.at('.panel-over button[aria-label^="Дублировать"]'));
     expect(await p.ev(`planx.board.list().filter((i) => i.type === 'rect').length`), 'duplicated').toBe(2);
@@ -371,6 +371,26 @@ export const checks = {
     await p.mouse('mouseReleased', 660, 95);
     await sleep(200);
     expect(!!(await p.rect('.panel-over')), 'let go: back').toBe(true);
+    // The board moved: away till it stands still.
+    await p.ev(`(() => { const e = planx.editor; e.cam = { ...e.cam, x: e.cam.x + 20 }; e.camChanged(); })()`);
+    await sleep(60);
+    expect(!!(await p.rect('.panel-over:not(.gone)')), 'the board moving: not there').toBe(false);
+    await sleep(350);
+    expect(!!(await p.rect('.panel-over')), 'still: back').toBe(true);
+    // Big, or partly off the screen: at the bottom.
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.update('a', { x: 100, y: 120, w: 900, h: 500 }); })()`);
+    await sleep(400);
+    expect([!!(await p.rect('.panel-over:not(.gone)')), !!(await p.rect('.bar.panel:not(.panel-over, .gone)'))].join(), 'big: at the bottom').toBe('false,true');
+    await p.ev(`(() => { planx.board.update('a', { x: -100, y: 300, w: 240, h: 140 }); })()`);
+    await sleep(300);
+    expect([!!(await p.rect('.panel-over:not(.gone)')), !!(await p.rect('.bar.panel:not(.panel-over, .gone)'))].join(), 'off the edge: at the bottom').toBe('false,true');
+    // With the handles of «Авторасположение» up: at the bottom, out of their way.
+    await p.ev(`(async () => { const e = planx.editor, b = planx.board; b.update('a', { x: 400, y: 300 }); b.add(e.newItem('rect', 700, 300, { id: 'c', w: 100, h: 100 })); e.setSelection(['a', 'c']); })()`);
+    await sleep(300);
+    expect(!!(await p.rect('.panel-over:not(.gone)')), 'two picked: over them').toBe(true);
+    await p.ev(`(async () => { (await import('/src/labs/tidy.ts')).startTidy(planx.editor); })()`);
+    await sleep(300);
+    expect([!!(await p.rect('.panel-over:not(.gone)')), !!(await p.rect('.bar.panel:not(.panel-over, .gone)'))].join(), 'laid out: at the bottom').toBe('false,true');
     // Switched off, only the one at the bottom.
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
     await sleep(150);
