@@ -21,10 +21,15 @@ let picked: string | null = null;
 /** Where the drag ended up joining, worked out before the editor lets go, done after. */
 let pending: { link: string; item: string; at: number; p: Point } | null = null;
 
+/** Whether the press is still on (the line shown as picked meanwhile, from the moment something's
+ *  pressed, not only once it's moved). */
+let down = false;
+
 /** A press: the line picked, if one is, alone. */
 export function notePress(ed: Editor): void {
   const ids = [...ed.selection];
   picked = ids.length === 1 && ed.board.getLink(ids[0]) ? ids[0] : null;
+  down = !!picked;
 }
 
 /** Each middle circle of the line: where, and which stretch of it. */
@@ -33,9 +38,10 @@ function middles(ed: Editor, link: Link): Array<{ p: Point; at: number }> {
   return shape ? linkHandles(link, shape).middles : [];
 }
 
-/** What's being dragged, if it can go into the picked line (not one of its ends, nor in a line already). */
+/** What's taken hold of (pressed, or being dragged), if it can go into the picked line (not one of
+ *  its ends, nor in a line already). */
 function dragged(ed: Editor): { link: Link; it: Item } | null {
-  if (!picked || !ed.moving || ed.selection.size !== 1) return null;
+  if (!picked || !down || ed.selection.size !== 1) return null;
   const link = ed.board.getLink(picked), it = ed.selectedItems()[0];
   if (!link || !it || !joinable(it) || it.joint || it.id === link.from || it.id === link.to) return null;
   return { link, it };
@@ -79,8 +85,10 @@ export function drawJoint(ctx: CanvasRenderingContext2D, ed: Editor): void {
 /** Letting go (before the editor does): whether it'll join, and where. */
 export function beforeUp(ed: Editor): void {
   const d = dragged(ed), hit = d && over(ed, d.link, d.it);
-  pending = d && hit ? { link: d.link.id, item: d.it.id, at: hit.at, p: hit.p } : null;
+  pending = d && hit && ed.moving ? { link: d.link.id, item: d.it.id, at: hit.at, p: hit.p } : null;
   picked = null;
+  down = false;
+  ed.requestRender();
 }
 
 /** Let go (after the editor): it joins the line. */
