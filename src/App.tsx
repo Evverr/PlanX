@@ -249,6 +249,11 @@ export function App({ boardId }: { boardId: string }) {
   const peers = conn.peers();
   // Features on trial (src/labs): with "following" on, a click on someone's avatar follows them.
   const labs = useLabs();
+  // "Панель над элементом" (src/labs); it and the text panel, coming in where the other's going, wait for it to go.
+  const overOn = labs.panelOver && !ui.moving && (!editing || editing.type === 'mind'), overShown = overOn && selItems.length > 0;
+  const overWent = useRef({ shown: false, at: 0 });
+  if (overWent.current.shown && !overShown) overWent.current.at = performance.now();
+  overWent.current.shown = overShown;
   const following = useFollowing();
 
   // All the others shown, after "+N" was pressed (back to five once they're five or fewer).
@@ -383,12 +388,12 @@ export function App({ boardId }: { boardId: string }) {
 
       {/* Typing in a table cell, the panel shows and sets that cell's own formatting. */}
       {/* A basic sticker's panel once its text is being typed, not on just picking it. */}
-      {panelItem && <TextPanel editor={editor} item={panelItem} leaving={!panelOn} />}
+      {panelItem && <TextPanel editor={editor} item={panelItem} leaving={!panelOn} after={performance.now() - overWent.current.at < PANEL_OUT} />}
 
       {/* Hidden while typing, but for a mind map node, which opens for typing on a single click. */}
       {(!editing || editing.type === 'mind') && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={linkCount} docked={docked} />}
       {/* "Панель над элементом" (src/labs): the same over what's picked, out of the way while it's moved. */}
-      {labs.panelOver && !ui.moving && (!editing || editing.type === 'mind') && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={0} docked={false} over />}
+      {overOn && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={0} docked={false} over after={!!panelItem} />}
       {/* A table cell is typed into as if it were an item of its own, the size of the cell. */}
       {editing && (editing.type === 'table' && ui.editingCell !== null
         ? <TextEditor key={`${editing.id}:${ui.editingCell}`} editor={editor} item={cellItem(editing, ui.editingCell)} />

@@ -30,12 +30,12 @@
    in the middle of the screen, from the side beside a rail or a menu. (The slide is added to their own
    place, so those centred by a transform keep it.) Anything new that pops up goes in this list. */
 :is(.pop, .board-menu, .more-pop, .op-pop, .color-picker, .tf-menu, .tools-more, .draw-panel, .tfmt:not(.leaving), .comment-menu, .tile-menu,
-  .minimap, .modal, .peek, .comment-card, .labs-pill, .ink-style) {
+  .minimap, .modal, .peek, .comment-card, .labs-pill, .ink-style, .panel-over) {
   --in-x: 0px; --in-y: -8px;
   animation: fade-in .16s ease-out, come-in .16s ease-out; animation-composition: replace, add; }
 @keyframes come-in { from { transform: translate(var(--in-x), var(--in-y)); } }
 /* Rising: from the bottom (or the bars there), and in the middle of the screen. */
-:is(.op-pop, .color-picker, .tfmt, .more-pop.above, .minimap, .help, .namepop, .toast.bottom, .shelf-toast, .modal, .peek, .labs-keys) { --in-y: 8px; }
+:is(.op-pop, .color-picker, .tfmt, .panel-over:not(.opens-down), .more-pop.above, .minimap, .help, .namepop, .toast.bottom, .shelf-toast, .modal, .peek, .labs-keys) { --in-y: 8px; }
 :root[data-topbar="low"] :is(.board-menu:not(.sub, .context-menu, .objects-menu, .shape-menu), .confirm) { --in-y: 8px; }
 :root[data-zoom="high"] :is(.minimap, .help, .namepop) { --in-y: -8px; }
 /* From the side. */
@@ -43,6 +43,9 @@
 :is(.board-menu.sub.leftward, .labs-more, .labs-pop) { --in-x: 8px; --in-y: 0px; }
 :root[data-rail="right"] :is(.objects-menu, .board-menu.shape-menu, .tools-more:not(.labs-more), .draw-panel, .recorder, .icon-pick, .ink-style) { --in-x: 8px; }
 :root[data-labs="left"] :is(.labs-more, .labs-pop) { --in-x: -8px; }
+/* The text panel and the selection panel over what's picked ("Панель над элементом", src/labs), coming in
+   where the other's going, wait till it's gone (see App). */
+:is(.tfmt:not(.leaving), .panel-over).after-gone { animation-delay: .08s; animation-fill-mode: backwards; }
 /* And how it goes: a copy of it where it was fades out in half the time (see ui/leaving.ts). */
 .gone { animation: fade-out .08s ease-out forwards !important; animation-composition: replace !important; pointer-events: none !important; }
 @media (prefers-reduced-motion: reduce) { * { --in-x: 0px !important; --in-y: 0px !important; } }

@@ -273,9 +273,11 @@ function selectionRoom(): number {
   return innerWidth - EDGE * 2 - (rail ? rail.width + EDGE : 0);
 }
 
-export function SelectionPanel({ editor, items, cells, linkCount, docked, over }: { editor: Editor; items: Item[]; cells: number[]; linkCount: number; docked: boolean;
+export function SelectionPanel({ editor, items, cells, linkCount, docked, over, after }: { editor: Editor; items: Item[]; cells: number[]; linkCount: number; docked: boolean;
   /** The second one, over what's picked as the text panel is over what's typed in ("Панель над элементом", src/labs). */
-  over?: boolean }) {
+  over?: boolean;
+  /** (That one) coming in where the text panel is going: once it's gone. */
+  after?: boolean }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
   const sort = useSortable('planx-order-selection', ORDER, 'x');
   const labs = useLabs();
@@ -285,6 +287,10 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over }
   const [, redraw] = useReducer((n: number) => n + 1, 0);
   // Over what's picked but with no room there, it stands under it, and what opens from it opens down.
   const [down, setDown] = useState(false);
+  // Whether it came in waiting for the text panel to go (as it showed up).
+  const wait = useRef(false), had = useRef(false);
+  if (over && items.length && !had.current) wait.current = !!after;
+  had.current = items.length > 0;
   // It finds its place again when the window changes size, a panel opens or closes beside the rail,
   // another panel is moved, or one has slid to a new place.
   useEffect(() => {
@@ -340,7 +346,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over }
     <button className="ib" title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
   );
   return (
-    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${over ? `panel-over ${down ? 'opens-down' : ''}` : docked ? 'docked' : ''} ${!over && place.bottom !== null ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
+    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${over ? `panel-over ${down ? 'opens-down' : ''} ${wait.current ? 'after-gone' : ''}` : docked ? 'docked' : ''} ${!over && place.bottom !== null ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
       style={over ? undefined : { transform: `translateX(calc(-50% + ${place.left}px))`, ...(place.bottom !== null && { bottom: place.bottom }) }}
       role="toolbar" aria-label="Выделенное" {...sort.container}>
       {sort.renderFit({

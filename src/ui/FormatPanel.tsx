@@ -140,7 +140,10 @@ export function placeOver(editor: Editor, box: HTMLElement, b: Rect): boolean {
   return !over;
 }
 
-export function TextPanel({ editor, item, leaving }: { editor: Editor; item: Item; leaving?: boolean }) {
+export function TextPanel({ editor, item, leaving, after }: { editor: Editor; item: Item; leaving?: boolean;
+  /** Coming in where the panel over what's picked is going ("Панель над элементом", src/labs): once it's gone. */
+  after?: boolean }) {
+  const [wait] = useState(!!after);
   const sort = useSortable('planx-order-text', ORDER, 'x');
   const labs = useLabs();
   const el = sort.ref;
@@ -180,7 +183,7 @@ export function TextPanel({ editor, item, leaving }: { editor: Editor; item: Ite
   return (
     // Keep focus in the text being edited when a control is pressed. Controls can be rearranged by holding them;
     // components can't take the ref, so each sits in a wrapper.
-    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`tfmt sortable ${sort.sorting ? 'sorting' : ''} ${leaving ? 'leaving' : ''}`} role="toolbar" aria-label="Форматирование текста"
+    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`tfmt sortable ${sort.sorting ? 'sorting' : ''} ${leaving ? 'leaving' : ''} ${wait ? 'after-gone' : ''}`} role="toolbar" aria-label="Форматирование текста"
       {...sort.container} onPointerDown={(e) => { if (!(e.target as Element).closest('input')) e.preventDefault(); sort.container.onPointerDown(e); }}>
       {sort.renderFit({
         font: <span className="sort-wrap"><Drop open={menu === 'font'} menu={Object.entries(FONTS).map(([k, f]) => (
