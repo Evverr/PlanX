@@ -258,8 +258,8 @@
 .layer-delete:hover { background: var(--fmt-hover); }
 .layer-row:hover .layer-delete { visibility: visible; }
 
-/* "Стекло" (src/labs/glass.ts): the panels and popups 88% their colour, what's behind them blurred 12px. */
+/* "Стекло" (src/labs/glass.ts): the panels and popups 84% their colour, what's behind them blurred 12px. */
 :root[data-glass] :is(.bar, .tools, .tfmt, .tools-more, .draw-panel, .minimap, .pop, .board-menu, .more-pop, .op-pop, .color-picker, .tf-menu,
   .comment-menu, .comment-card, .tile-menu, .modal, .peek, .labs-pill, .ink-style, .recorder, .icon-pick, .peers-more) {
-  background-color: color-mix(in srgb, var(--surface) 88%, transparent) !important;
+  background-color: color-mix(in srgb, var(--surface) 84%, transparent) !important;
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
