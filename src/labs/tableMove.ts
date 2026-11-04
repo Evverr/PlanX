@@ -98,10 +98,14 @@ export function releasedForGrips(ed: Editor, sp: Point): void {
 function tableOf(ed: Editor): Item | null {
   const one = ed.selection.size === 1 ? [...ed.selection][0] : null;
   if (shownFor && one !== shownFor) show(ed, null);
-  if (!shownFor || ed.cam.z < LINES_FROM_Z) return null;
+  if (!shownFor || ed.cam.z < GRIPS_FROM_Z) return null;
   const it = ed.selectedItems()[0];
   return it?.type === 'table' && !isLocked(it) && !it.rot && ed.editingId !== it.id ? it : null;
 }
+
+/** Zoomed out further than this, the pills and pluses aren't out: twice as far as a table's lines are
+ *  still taken (see LINES_FROM_Z). */
+const GRIPS_FROM_Z = LINES_FROM_Z / 2;
 
 /** How far past the table's edge a pill stands, on the screen: clear of the selection frame by 3. */
 const OUT = 3.75;
