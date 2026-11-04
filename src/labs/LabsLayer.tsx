@@ -24,7 +24,7 @@ import { drawNib } from './nib';
 import { drawEditedPath } from './paths';
 import { drawEraser, eraserStyle, subscribeEraser } from './eraseArea';
 import { drawGroup, endGroupScale, groupScaling, moveGroupScale, onGroupHandle, startGroupScale } from './multi';
-import { drawGrips, endGrip, gripAt, gripDragging, moveGrip, setHotGrip, startGrip } from './tableMove';
+import { drawGrips, endGrip, gripAt, gripDragging, moveGrip, pressedForGrips, setHotGrip, startGrip } from './tableMove';
 import './labs.css';
 
 type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'keys' | 'layers' | 'history';
@@ -139,8 +139,10 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
         editor.board.beginGesture();
         return;
       }
-      // A table's row or column taken by its pill ("Перестановка в таблице").
+      // A table's row or column taken by its pill ("Перестановка в таблице"); a second click on the
+      // table puts them out.
       const grip = e.button === 0 && labOn('tableMove') ? gripAt(editor, local(e)) : null;
+      if (!grip && e.button === 0 && labOn('tableMove')) pressedForGrips(editor, editor.toWorld(local(e).x, local(e).y));
       if (grip) {
         e.stopPropagation();
         canvas()!.setPointerCapture(e.pointerId);

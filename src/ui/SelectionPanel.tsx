@@ -14,12 +14,13 @@ import { ItemMenuButton, LinkParams } from '../labs/ContextMenu';
 import { boxOf, instanceBounds } from '../canvas/geometry';
 import { placeOver } from './FormatPanel';
 import { dotGap } from '../canvas/renderer';
+import { gripsOn, subscribeGrips, toggleGrips } from '../labs/tableMove';
 
 
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['colors', 'text', 'align', 'tidy', 'rows', 'cols', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+const ORDER = ['colors', 'text', 'align', 'tidy', 'rows', 'cols', 'grips', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -308,6 +309,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   // Over what's picked, it stays where it is while rows or columns are being added or taken away (the
   // table growing under it), till the pointer leaves it or the board's scrolled.
   const hold = useRef(false);
+  useEffect(() => subscribeGrips(redraw), []);
   if (over && items.length && !had.current) wait.current = !!after;
   had.current = items.length > 0;
   // It finds its place again when the window changes size, a panel opens or closes beside the rail,
@@ -405,6 +407,11 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
             {btn('minus-s', 'Убрать столбец', () => { hold.current = !!over; editor.changeTable('col', -1); })}
             {btn('plus-s', 'Добавить столбец', () => { hold.current = !!over; editor.changeTable('col', 1); })}
           </div>
+        ) : undefined,
+        // "Перестановка в таблице" (src/labs): the gear puts the table's pills out.
+        grips: labs.tableMove && tables.length === 1 && items.length === 1 ? (
+          <button className={`ib ${gripsOn(tables[0].id) ? 'on' : ''}`} title="Переставить строки и столбцы" aria-label="Переставить строки и столбцы"
+            aria-pressed={gripsOn(tables[0].id)} onClick={() => toggleGrips(editor)}><PanelIcon name="settings" /></button>
         ) : undefined,
         // How the selected links run: straight, in right angles, smooth; each way any of them runs lit,
         // a press sending all of them that way.

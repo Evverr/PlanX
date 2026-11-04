@@ -13,7 +13,7 @@
    in an upright one) and halfway to their neighbours, while their highlight keeps its own size. */
 .bar { --gap: var(--s4); --bar-h: var(--bar); }
 .topbar { --gap: var(--s8); }
-.tfmt { --gap: var(--s14); --bar-h: var(--s54); }
+.tfmt { --gap: var(--s14); --bar-h: var(--bar); }
 .draw-panel { --gap: var(--s18); }
 .tb, .zpct, .bar .sw:not(.custom) { position: relative; }
 .bar .ib::after, .bar .tb::after, .bar .zpct::after, .bar .sw:not(.custom)::after,

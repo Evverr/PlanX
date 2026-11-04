@@ -7,7 +7,7 @@ import { isLocked } from './labs';
 import { PICK_FRAME } from '../canvas/renderer';
 
 /**
- * "Перестановка в таблице": on the selected table, a pill just out over its top edge by each column and
+ * "Перестановка в таблице": on the selected table (clicked a second time, or by the gear on its panel), a pill just out over its top edge by each column and
  * out left of its left edge by each row; one dragged along takes its column or row there, the others making room.
  */
 
@@ -17,7 +17,7 @@ export interface Grip { id: string; axis: 'col' | 'row'; index: number }
 /** A pill's size on the screen, and how far past it it still answers the pointer. */
 const LONG = 16, THICK = 6, REACH = 4;
 /** How far off the table (on the screen) a dragged column or row is let go to be taken away. */
-const OFF = 24;
+const OFF = 44;
 /** How much bigger one is under the pointer or dragged. */
 const HOT = 1.68;
 
@@ -56,9 +56,35 @@ export function withRemoved(it: Item, axis: 'col' | 'row', index: number): Parti
   };
 }
 
-/** The table whose pills are out: the one selected alone, not locked, typed in or turned, close enough. */
+/** The table the pills are out for: put out by a second click on it, or by the gear on its panel;
+ *  put away as something else is picked. */
+let shownFor: string | null = null;
+const fns = new Set<() => void>();
+export const subscribeGrips = (fn: () => void) => { fns.add(fn); return () => { fns.delete(fn); }; };
+export const gripsOn = (id: string | undefined): boolean => !!id && shownFor === id;
+function show(ed: Editor, id: string | null): void {
+  if (shownFor === id) return;
+  shownFor = id;
+  fns.forEach((f) => f());
+  ed.requestRender();
+}
+/** The gear: the selected table's pills out, or away. */
+export function toggleGrips(ed: Editor): void {
+  const it = ed.selectedItems()[0];
+  if (it?.type === 'table') show(ed, shownFor === it.id ? null : it.id);
+}
+/** A press on the board at `w`: a second one on the table picked alone puts its pills out. */
+export function pressedForGrips(ed: Editor, w: Point): void {
+  const it = ed.selection.size === 1 ? ed.selectedItems()[0] : undefined;
+  if (it?.type === 'table' && w.x >= it.x && w.x <= it.x + it.w && w.y >= it.y && w.y <= it.y + it.h) show(ed, it.id);
+}
+
+/** The table whose pills are out: the one selected alone (with them put out), not locked, typed in or
+ *  turned, close enough. */
 function tableOf(ed: Editor): Item | null {
-  if (ed.selection.size !== 1 || ed.cam.z < LINES_FROM_Z) return null;
+  const one = ed.selection.size === 1 ? [...ed.selection][0] : null;
+  if (shownFor && one !== shownFor) show(ed, null);
+  if (!shownFor || ed.cam.z < LINES_FROM_Z) return null;
   const it = ed.selectedItems()[0];
   return it?.type === 'table' && !isLocked(it) && !it.rot && ed.editingId !== it.id ? it : null;
 }

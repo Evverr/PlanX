@@ -9,8 +9,9 @@
 .fsep { flex: none; width: 5px; height: var(--e24); position: relative; }
 .fsep.line::after { content: ""; position: absolute; left: 50%; top: var(--s2); width: 1px; height: var(--e20); background: var(--fmt-line); }
 /* Text controls over the selected text or sticker; TextPanel in FormatPanel.tsx places it. */
-.tfmt { position: fixed; z-index: 5; display: flex; flex-wrap: nowrap; align-items: center; column-gap: var(--s14); padding: var(--s12) var(--s18) var(--s12) var(--s22); width: max-content;
-  background: var(--fmt-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-radius: var(--s16); box-shadow: var(--fmt-shadow); color: var(--fmt-ink); }
+/* The same body as the other panels (.bar): as high, as round, the same colour and shadow; only its width its own. */
+.tfmt { position: fixed; z-index: 5; display: flex; flex-wrap: nowrap; align-items: center; column-gap: var(--s14); box-sizing: border-box; height: var(--bar); padding: 0 var(--s18) 0 var(--s22); width: max-content;
+  background: var(--surface); border-radius: var(--s12); box-shadow: var(--shadow); color: var(--fmt-ink); }
 .tfmt .caret { margin: 0 round(calc(-10px * var(--k)), 1px); }
 /* The text panel fades in when it shows up, and out twice as fast when it goes. */
 .tfmt.leaving { animation: fade-out .08s ease forwards; pointer-events: none; }
