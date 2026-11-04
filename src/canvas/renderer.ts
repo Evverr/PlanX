@@ -13,6 +13,7 @@ import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame'
 import { COMPONENT_COLOR, firstInstance, instancePlus, objectArrow } from '../model/components';
 import { labOn } from '../labs/labs';
 import { zoomFade, zoomSize } from '../labs/zoomFade';
+import { gripsOn } from '../labs/tableMove';
 import { isBuiltin } from '../model/builtins';
 import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
@@ -133,9 +134,24 @@ export const HANDLE = 12;
  *  pixels (half as far off its frame as they were). */
 export const DOT_R = 3.5;
 export const DOT_GAP = 12;
-/** A table's are further out, past the pills of «Перестановка в таблице» (src/labs) even when they've grown. */
-const TABLE_DOT_GAP = 22;
-export const dotGap = (it: Item | undefined): number => (it?.type === 'table' && labOn('tableMove') ? TABLE_DOT_GAP : DOT_GAP);
+/** A table's top and left ones, with the pills of «Перестановка в таблице» (src/labs) out: further
+ *  out, past them even when they've grown; sliding there and back in this long, in ms. */
+const PILLS_DOT_GAP = 22, PILLS_SLIDE = 160;
+/** How far each table's top and left dots have slid out (0…1, eased) for its pills, and since when. */
+const pillTurns = new Map<string, { on: boolean; from: number; at: number }>();
+const slid = (t: { on: boolean; from: number; at: number }, now: number) => {
+  const k = Math.min(1, (now - t.at) / PILLS_SLIDE), e = 1 - (1 - k) * (1 - k);
+  return t.from + ((t.on ? 1 : 0) - t.from) * e;
+};
+/** How far off the item's side its dot on that side stands, on the screen. */
+export function dotGap(it: Item, side: Side, now = performance.now()): number {
+  if (it.type !== 'table' || (side !== 'top' && side !== 'left')) return DOT_GAP;
+  const on = labOn('tableMove') && gripsOn(it.id);
+  let t = pillTurns.get(it.id);
+  if (!t) { if (!on) return DOT_GAP; pillTurns.set(it.id, (t = { on, from: 0, at: now })); }
+  else if (t.on !== on) pillTurns.set(it.id, (t = { on, from: slid(t, now), at: now }));
+  return DOT_GAP + (PILLS_DOT_GAP - DOT_GAP) * slid(t, now);
+}
 /** The dots' strength, and the one under the pointer's (15 across), which it grows to (and back from)
  *  three times as fast as a popup comes in. */
 const DOT_FADE = 0.3, DOT_HOT_FADE = 0.8, DOT_HOT_R = 7.5, DOT_GROW = 160 / 3;
@@ -149,7 +165,10 @@ const dotLit = (t: { hot: boolean; from: number; at: number }, now: number) => {
   return t.from + ((t.hot ? 1 : 0) - t.from) * e;
 };
 /** Whether a link dot is still growing or shrinking (and wants another frame). */
-export const dotsMoving = (): boolean => { const now = performance.now(); return [...dotTurns.values()].some((t) => now - t.at < DOT_GROW); };
+export const dotsMoving = (): boolean => {
+  const now = performance.now();
+  return [...dotTurns.values()].some((t) => now - t.at < DOT_GROW) || [...pillTurns.values()].some((t) => now - t.at < PILLS_SLIDE);
+};
 /** Selection outlines and handles, the link dots and selected links. */
 const SELECT_COLOR = '#4DA3FF';
 
@@ -1157,7 +1176,7 @@ function drawDots(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
   ctx.lineWidth = 2 / cam.z;
   const now = performance.now();
   for (const side of SIDES) {
-    const p = sidePoint(it, side, dotGap(it) / cam.z), key = `${it.id}:${side}`, hot = side === s.hotDot;
+    const p = sidePoint(it, side, dotGap(it, side, now) / cam.z), key = `${it.id}:${side}`, hot = side === s.hotDot;
     let t = dotTurns.get(key);
     if (!t) dotTurns.set(key, (t = { hot, from: hot ? 1 : 0, at: 0 }));
     else if (t.hot !== hot) dotTurns.set(key, (t = { hot, from: dotLit(t, now), at: now }));
@@ -1340,7 +1359,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     let curve: Bezier;
     // Drawn the way it will run: straight or in right angles, as the last one was made to.
     // Pulled from a link dot, it starts at the dot (and ends on what it's led to, as it'll be made).
-    const dot = fromSide ? dotGap(from) / cam.z : 0;
+    const dot = fromSide ? dotGap(from, fromSide) / cam.z : 0;
     if (style) {
       const ps = fromSide ?? nearestSide(from, target ? center(target) : to);
       const qs = target ? nearestSide(target, to) : facing(sidePoint(from, ps, dot), to);

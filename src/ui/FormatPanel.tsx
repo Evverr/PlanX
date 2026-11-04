@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useReducer, useState, type ReactNode } from
 
 import type { Editor } from '../editor/editor';
 import { alignOf, baseWeight, DEFAULTS, MARK_COLORS, TEXT_COLORS, type Item, type ListKind, type TextAlign } from '../model/types';
-import { DOT_GAP, DOT_R, dotGap } from '../canvas/renderer';
+import { DOT_GAP, DOT_R } from '../canvas/renderer';
 import { boxOf, type Rect } from '../canvas/geometry';
 import { FONTS } from '../canvas/text';
 import { PanelIcon as Icon, type PanelIconName as IconName } from './PanelIcon';
@@ -159,7 +159,7 @@ export function TextPanel({ editor, item, leaving, after, dock }: { editor: Edit
       return;
     }
     // A turned item's box square to the screen; as far over it as the selection panel stands.
-    placeOver(editor, box, boxOf(item), dotGap(item));
+    placeOver(editor, box, boxOf(item));
   });
   // Its bottom stays that far over the item whatever size it turns (the panels' size, fonts coming in).
   const [, redraw] = useReducer((n: number) => n + 1, 0);

@@ -2,7 +2,7 @@ import type { Item, Link, Side } from '../model/types';
 import { ROTATABLE } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { hitItem, hitLink, instanceBounds, linkHandles, linkShape, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
-import { dotGap, HANDLE } from '../canvas/renderer';
+import { DOT_GAP, dotGap, HANDLE } from '../canvas/renderer';
 import { instanceGlyph, instancePlus, objectArrow } from '../model/components';
 import { isBuiltin } from '../model/builtins';
 import { branchWays, buttonKey, foldBadge, mindButtons, type MindButtonAt, type Way } from '../model/mind';
@@ -150,9 +150,9 @@ export function dotAt(ed: Editor, it: Item, w: Point): Side | null {
 
 /** The same, for any item (with the line tool, every item has its dots). */
 export function anyDotAt(ed: Editor, it: Item, w: Point): Side | null {
-  const r = ed.reach(dotGap(it) + 0.5);  // well beyond the dot itself, so it is easy to catch, up to the item's edge
+  const r = ed.reach(DOT_GAP + 0.5);  // well beyond the dot itself, so it is easy to catch, up to the item's edge
   for (const side of SIDES) {
-    const p = sidePoint(it, side, dotGap(it) / ed.cam.z);
+    const p = sidePoint(it, side, dotGap(it, side) / ed.cam.z);
     if (Math.hypot(w.x - p.x, w.y - p.y) <= r) return side;
   }
   return null;

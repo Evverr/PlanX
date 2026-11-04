@@ -13,7 +13,6 @@ import { AlignButton, LockButton, ReactButton, TidyButton } from '../labs/Select
 import { ItemMenuButton, LinkParams } from '../labs/ContextMenu';
 import { boxOf, instanceBounds } from '../canvas/geometry';
 import { placeOver } from './FormatPanel';
-import { dotGap } from '../canvas/renderer';
 import { gripsOn, subscribeGrips, toggleGrips } from '../labs/tableMove';
 
 
@@ -336,7 +335,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
       const all = editor.board.list(), boxes = items.map((i) => (i.inst ? instanceBounds(i, all) : boxOf(i)));
       if (!boxes.length) return;
       const x = Math.min(...boxes.map((b) => b.x)), y = Math.min(...boxes.map((b) => b.y));
-      const under = placeOver(editor, el, { x, y, w: Math.max(...boxes.map((b) => b.x + b.w)) - x, h: Math.max(...boxes.map((b) => b.y + b.h)) - y }, Math.max(...items.map((i) => dotGap(i))));
+      const under = placeOver(editor, el, { x, y, w: Math.max(...boxes.map((b) => b.x + b.w)) - x, h: Math.max(...boxes.map((b) => b.y + b.h)) - y });
       if (under !== down) setDown(under);
       return;
     }
