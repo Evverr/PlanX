@@ -74,8 +74,8 @@
 }
 :root {
   --bar: calc(var(--s6) * 2 + var(--e40));
-  /* The tool rails as wide as the bars are high. */
-  --rail-w: var(--bar);
+  /* The tool rails 2 wider than the bars are high. */
+  --rail-w: calc(var(--bar) + var(--s2));
 }
 :root[data-size="m"] { --k: .9; }
 :root[data-size="s"] { --k: .8; }
