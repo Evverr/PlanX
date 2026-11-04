@@ -500,6 +500,19 @@ export const checks = {
     expect(await p.ev(`planx.editor.hotLine`), 'no line lit').toBe(null);
   },
 
+  async '"Таблица помнит формат": the next empty cell goes on aligned as the last one was set'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      planx.board.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill('') })); e.setSelection(['t']); e.startEditing('t', 0); })()`);
+    await sleep(300);
+    await p.ev(`planx.editor.setTextStyle({ ta: 'right' })`);
+    await sleep(100);
+    await p.key('Tab', 'Tab', 9);
+    await sleep(300);
+    const t = await p.ev(`planx.board.get('t')`);
+    expect(`${await p.ev('planx.editor.editingCell')} ${t.cellFmt?.[1]?.ta}`, 'the next cell right-aligned').toBe('1 right');
+    expect(await p.ev(`!!document.querySelector('.tfmt')`), 'the text panel up').toBe(true);
+  },
+
   async '"Удаление строк и столбцов": Delete takes a whole column\'s text, then the column'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       planx.board.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [120, 120, 120], rows: [40, 40, 40], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] }));

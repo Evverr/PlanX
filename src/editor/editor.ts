@@ -31,6 +31,7 @@ import { pushedBelow } from '../labs/textPush';
 import { holdZoomBox } from '../labs/zoomBox';
 import { rejoined } from '../labs/linkJoint';
 import { showGrips } from '../labs/tableMove';
+import { carryCellFormat, noteCellFormat } from '../labs/tableLook';
 import { holds as mindTidyOn, mindTidyKept, restartMindTidy, resumeMindTidy } from '../labs/tidyMind';
 import { clearComments } from '../labs/comments';
 import { isLocked, labOn, subscribeLabs } from '../labs/labs';
@@ -991,7 +992,11 @@ export class Editor {
       for (const it of items) {
         // In a table, the cell being typed in takes it on its own; otherwise the whole table, every cell.
         if (it.type !== 'table') this.board.update(it.id, patch);
-        else if (this.editingId === it.id && this.editingCell !== null) this.board.update(it.id, withCellFormat(it, this.editingCell, patch));
+        else if (this.editingId === it.id && this.editingCell !== null) {
+          this.board.update(it.id, withCellFormat(it, this.editingCell, patch));
+          // ("Таблица помнит формат", src/labs: for the next cell.)
+          if (labOn('tableLook')) noteCellFormat(it.id, patch);
+        }
         else if (this.cells.length) {
           // The picked cells, each on its own.
           let next: Partial<Item> = {};
@@ -1386,6 +1391,8 @@ export class Editor {
     this.editCaret = caret;
     this.editingId = id;
     this.editingCell = it.type === 'table' ? cell ?? 0 : null;
+    // An empty cell goes on as the last one was set ("Таблица помнит формат", src/labs).
+    if (it.type === 'table' && labOn('tableLook')) carryCellFormat(this, it, this.editingCell!);
     this.selection = new Set([id]);
     this.presence?.setSelection([id]);
     this.emit();
