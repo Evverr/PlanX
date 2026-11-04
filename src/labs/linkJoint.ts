@@ -1,6 +1,7 @@
 import type { Editor } from '../editor/editor';
 import { uid, type Item, type Link } from '../model/types';
 import { center, linkHandles, linkShape, nearestSide, type Point } from '../canvas/geometry';
+import { linkWidth } from '../canvas/renderer';
 
 /**
  * "Узел на линии": with a line picked, a text, sticker, shape or emoji dragged onto one of its middle
@@ -46,22 +47,30 @@ function over(ed: Editor, link: Link, it: Item): { p: Point; at: number } | null
   return middles(ed, link).find((m) => Math.hypot(m.p.x - c.x, m.p.y - c.y) <= near) ?? null;
 }
 
-/** While dragging: the picked line's middles, the one under it stronger. */
+/** While dragging: the picked line in blue, as picked, and its middles as dashed circles (as thick as
+ *  the line), the one under what's dragged bigger and filled. */
 export function drawJoint(ctx: CanvasRenderingContext2D, ed: Editor): void {
   const d = dragged(ed);
   if (!d) return;
   const hit = over(ed, d.link, d.it), color = getComputedStyle(document.documentElement).getPropertyValue('--fmt-on-ink').trim() || '#0080FF';
+  const width = linkWidth(ed.cam.z), pts = linkShape(d.link, (id) => ed.board.get(id))?.pts ?? [];
   ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  pts.forEach((q, i) => { const s = ed.toScreen(q); if (i) ctx.lineTo(s.x, s.y); else ctx.moveTo(s.x, s.y); });
+  ctx.stroke();
   for (const m of middles(ed, d.link)) {
     const p = ed.toScreen(m.p), on = hit?.at === m.at;
     ctx.beginPath();
     ctx.arc(p.x, p.y, on ? 10 : 6, 0, Math.PI * 2);
-    ctx.globalAlpha = on ? 0.35 : 1;
-    ctx.fillStyle = on ? color : '#fff';
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#fff';
     ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 1.5;
+    if (on) { ctx.globalAlpha = 0.2; ctx.fillStyle = color; ctx.fill(); ctx.globalAlpha = 1; }
+    ctx.setLineDash([3, 3]);
     ctx.stroke();
   }
   ctx.restore();
