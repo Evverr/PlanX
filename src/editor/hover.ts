@@ -183,10 +183,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if (dot !== ed.hotDot) { ed.hotDot = dot; ed.requestRender(); }
   let cursor = '';
   const over = hitItem(ed.shown(), w, ed.cam.z), near = ed.editingId || dot ? null : tableLineAt(ed, w, over);
-  // (On its link dots, not: the handle answers the item and itself.)
-  const onPicked = dot ? null : single && onHandle(ed, single, w) ? single.id : over && ed.selection.has(over.id) ? over.id : null;
-  if (onPicked !== ed.pickHover) { ed.pickHover = onPicked; ed.requestRender(); }
-  // On the handle itself, or a little round it, brighter still.
+  // On the handle itself, or a little round it (not on the link dots): the handle stronger.
   const onIt = !dot && !!single && onHandle(ed, single, w, 8);
   if (onIt !== ed.hotHandle) { ed.hotHandle = onIt; ed.requestRender(); }
   // (Whether it's still ready is asked before it's kept ready by the pointer being on it.)
