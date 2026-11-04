@@ -271,3 +271,11 @@
   .icon-pick, .peers-more) {
   background-color: color-mix(in srgb, var(--surface) 84%, transparent) !important;
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+
+/* «Кнопка T» (textButton.ts): a panel turning into another shows only what's on it, over a body like
+   theirs that slides and stretches from the one's box to the other's. */
+[data-morph] { background-color: transparent !important; box-shadow: none !important; border-color: transparent !important; }
+[data-morph]::before { opacity: 0 !important; }
+.panel-shell { position: fixed; z-index: 4; pointer-events: none; background: var(--surface); box-shadow: var(--shadow);
+  transition: left .2s ease, top .2s ease, width .2s ease, height .2s ease; }
+:root[data-glass] .panel-shell { background-color: color-mix(in srgb, var(--surface) 84%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }

@@ -19,7 +19,7 @@ import { dotGap } from '../canvas/renderer';
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['colors', 'align', 'tidy', 'rows', 'cols', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+const ORDER = ['colors', 'text', 'align', 'tidy', 'rows', 'cols', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -287,11 +287,13 @@ function selectionRoom(): number {
   return innerWidth - EDGE * 2 - (rail ? rail.width + EDGE : 0);
 }
 
-export function SelectionPanel({ editor, items, cells, linkCount, docked, over, after }: { editor: Editor; items: Item[]; cells: number[]; linkCount: number; docked: boolean;
+export function SelectionPanel({ editor, items, cells, linkCount, docked, over, after, onText }: { editor: Editor; items: Item[]; cells: number[]; linkCount: number; docked: boolean;
   /** The second one, over what's picked as the text panel is over what's typed in ("Панель над элементом", src/labs). */
   over?: boolean;
   /** (That one) coming in where the text panel is going: once it's gone. */
-  after?: boolean }) {
+  after?: boolean;
+  /** "Кнопка T" (src/labs): turns the panel into the text panel. */
+  onText?: () => void }) {
   // Hooks come before the early return; buttons can be rearranged by holding them.
   const sort = useSortable('planx-order-selection', ORDER, 'x');
   const labs = useLabs();
@@ -419,6 +421,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
         back: items.length > 0 ? btn('to-back', 'На задний план', () => editor.sendToBack()) : undefined,
         duplicate: items.length > 0 ? btn('duplicate', 'Дублировать (Ctrl+D)', () => editor.duplicate()) : undefined,
         // Features on trial (src/labs), while they're switched on.
+        text: onText ? btn('text', 'Текст и шрифт', onText) : undefined,
         tidy: labs.tidy && items.length > 1 ? <TidyButton editor={editor} />
           : labs.tidy && items[0]?.type === 'mind' && editor.board.list().some((i) => i.parent === items[0].id) ? <TidyButton editor={editor} mind={items[0].id} /> : undefined,
         align: labs.align && items.length > 1 ? <AlignButton editor={editor} /> : undefined,

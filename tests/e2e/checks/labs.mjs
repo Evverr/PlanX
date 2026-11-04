@@ -421,6 +421,28 @@ export const checks = {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
   },
 
+  async '"Кнопка T": the selection panel turns into the text panel, a press on the board turns it back'(p) {
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', true))()`);
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.add(e.newItem('sticky', 500, 300, { id: 's', text: 'Привет' })); e.setSelection(['s']); })()`);
+    await sleep(400);
+    // (What goes on in between, as it happens.)
+    await p.ev(`(() => { window.seen = []; new MutationObserver((rs) => { for (const r of rs) for (const n of r.addedNodes) if (n.classList?.contains('panel-shell')) window.seen.push(n.style.width); }).observe(document.body, { childList: true }); })()`);
+    const from = await p.rect('.panel-over');
+    await p.click(await p.at('.panel-over button[aria-label="Текст и шрифт"]'));
+    await sleep(50);
+    expect(await p.ev(`window.seen.join()`), 'a body going from one to the other, from the panel\'s width').toBe(`${from.w}px`);
+    await sleep(400);
+    expect([!!(await p.rect('.tfmt:not(.leaving)')), !!(await p.rect('.panel-over:not(.gone)'))].join(), 'the text panel instead').toBe('true,false');
+    expect(!!(await p.rect('.panel-shell')), 'the body gone once there').toBe(false);
+    await p.click(await p.at('.tfmt button[aria-label="Жирный"]'));
+    expect(await p.ev(`planx.board.get('s').fw`), 'its text bold').toBe(700);
+    const s = await p.ev(`planx.editor.toScreen({ x: 600, y: 400 })`);
+    await p.click([s.x, s.y]);
+    await sleep(400);
+    expect([!!(await p.rect('.tfmt:not(.leaving)')), !!(await p.rect('.panel-over:not(.gone)'))].join(), 'back to the selection panel').toBe('false,true');
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
+  },
+
   async '"Перестановка в таблице": a column dragged by its pill takes its cells along'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [100, 120, 140], rows: [40, 40, 40], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] })); e.setSelection(['t']); })()`);
