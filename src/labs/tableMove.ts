@@ -103,9 +103,9 @@ function tableOf(ed: Editor): Item | null {
   return it?.type === 'table' && !isLocked(it) && !it.rot && ed.editingId !== it.id ? it : null;
 }
 
-/** Zoomed out further than this, the pills and pluses aren't out: twice as far as a table's lines are
- *  still taken (see LINES_FROM_Z). */
-const GRIPS_FROM_Z = LINES_FROM_Z / 2;
+/** Zoomed out further than this, the pills and pluses aren't out: 25% (a table's lines are taken to
+ *  LINES_FROM_Z). */
+const GRIPS_FROM_Z = 0.25;
 
 /** How far past the table's edge a pill stands, on the screen: clear of the selection frame by 3. */
 const OUT = 3.75;
