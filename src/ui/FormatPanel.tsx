@@ -136,7 +136,8 @@ export function placeOver(editor: Editor, box: HTMLElement, b: Rect): boolean {
   const rail = document.querySelector('.tools')?.getBoundingClientRect();
   const minX = rail && rail.top < y + h && rail.bottom > y ? rail.right + EDGE : EDGE;
   box.style.left = `${Math.max(minX, Math.min(top.x - w / 2, innerWidth - w - EDGE))}px`;
-  box.style.top = `${y}px`;
+  // Under something taller than the screen: at the screen's bottom.
+  box.style.top = `${Math.min(y, innerHeight - h - EDGE)}px`;
   return !over;
 }
 

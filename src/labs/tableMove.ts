@@ -16,6 +16,8 @@ export interface Grip { id: string; axis: 'col' | 'row'; index: number }
 
 /** A pill's size on the screen, and how far past it it still answers the pointer. */
 const LONG = 16, THICK = 6, REACH = 4;
+/** How much bigger one is under the pointer or dragged. */
+const HOT = 1.68;
 
 const sum = (a: number[]) => a.reduce((s, v) => s + v, 0);
 const moved = <T>(a: T[], from: number, to: number): T[] => { const b = [...a], [x] = b.splice(from, 1); b.splice(to, 0, x); return b; };
@@ -146,15 +148,27 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
     const dragged = drag?.grip.axis === g.axis && drag.grip.index === g.index;
     const shift = dragged && drag ? (g.axis === 'col' ? { x: (drag.at.x - drag.from.x) * z, y: 0 } : { x: 0, y: (drag.at.y - drag.from.y) * z }) : { x: 0, y: 0 };
     const p = ed.toScreen(g), on = dragged || (hot?.axis === g.axis && hot.index === g.index);
-    // Under the pointer or dragged: a fifth bigger, in the selection frame's blue.
-    const k = on ? 1.2 : 1, [w, h] = g.axis === 'col' ? [LONG * k, THICK * k] : [THICK * k, LONG * k];
+    // Under the pointer or dragged: 1.2 × 1.4 times as big, in the selection frame's blue.
+    const k = on ? HOT : 1, [w, h] = g.axis === 'col' ? [LONG * k, THICK * k] : [THICK * k, LONG * k];
+    const cx = p.x + shift.x, cy = p.y + shift.y;
     ctx.beginPath();
-    ctx.roundRect(p.x + shift.x - w / 2, p.y + shift.y - h / 2, w, h, (THICK * k) / 2);
+    ctx.roundRect(cx - w / 2, cy - h / 2, w, h, (THICK * k) / 2);
     ctx.globalAlpha = 1;
     ctx.fillStyle = '#fff';
     ctx.fill();
     ctx.globalAlpha = on ? PICK_FRAME : 0.3;
     ctx.fillStyle = color;
+    ctx.fill();
+    // Three white dots along it: a thing to take hold of.
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#fff';
+    const step = 3.5 * k, r = 0.75 * k;
+    ctx.beginPath();
+    for (const d of [-step, 0, step]) {
+      const [x, y] = g.axis === 'col' ? [cx + d, cy] : [cx, cy + d];
+      ctx.moveTo(x + r, y);
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+    }
     ctx.fill();
   }
   ctx.restore();

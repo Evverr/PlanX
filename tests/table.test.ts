@@ -82,9 +82,9 @@ describe('table rows and columns moved ("Перестановка в табли�
 });
 
 describe('a table as one is drawn', () => {
-  it('has a bold light blue header and faint black lines, fainter down between columns', () => {
+  it('is 4 by 5, with a bold light blue header and faint black lines, fainter down between columns', () => {
     const t = freshTable();
-    expect(t.cellFmt).toEqual([0, 1, 2].map(() => ({ bg: 'blue', bgo: 0.3, fw: 700 })));
-    expect(t).toMatchObject({ sc: 'ink', so: 0.08, vc: 'ink', vo: 0.04 });
+    expect(t.cellFmt).toEqual([0, 1, 2, 3].map(() => ({ bg: 'blue', bgo: 0.3, fw: 700 })));
+    expect(t).toMatchObject({ sc: 'ink', so: 0.08, vc: 'ink', vo: 0.04, w: 480, h: 200 });
   });
 });

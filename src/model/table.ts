@@ -27,8 +27,8 @@ export const tableLook = (n = 3): Partial<Item> => ({
   sc: 'ink', so: 0.08, vc: 'ink', vo: 0.04, cellFmt: Array.from({ length: n }, () => ({ bg: 'blue', bgo: 0.3, fw: 700 })),
 });
 
-/** A new table as one is drawn: newTable in tableLook. */
-export const freshTable = (): Partial<Item> => ({ ...newTable(), ...tableLook() });
+/** A new table as one is drawn: 4 columns and 5 rows, in tableLook. */
+export const freshTable = (): Partial<Item> => ({ ...newTable(4, 5), ...tableLook(4) });
 
 /** The box of cell i (row by row) on the board. */
 export function cellRect(it: Item, i: number): Rect {

@@ -376,17 +376,20 @@ export const checks = {
     await p.ev(`(() => { const e = planx.editor; e.cam = { ...e.cam, x: e.cam.x + 20 }; e.camChanged(); })()`);
     await sleep(60);
     expect(Math.round((await p.rect('.panel-over:not(.gone)')).l - was.l), 'the board moving: along with it').toBe(20);
-    // Big, or partly off the screen: at the bottom.
-    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.update('a', { x: 100, y: 120, w: 900, h: 500 }); e.setSelection([]); })()`);
+    // Big: over it all the same, with room there.
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.update('a', { x: 100, y: 200, w: 900, h: 500 }); e.setSelection([]); })()`);
     await sleep(50);
     await p.ev(`planx.editor.setSelection(['a'])`);
     await sleep(400);
-    expect([!!(await p.rect('.panel-over:not(.gone)')), !!(await p.rect('.bar.panel:not(.panel-over, .gone)'))].join(), 'big: at the bottom').toBe('false,true');
-    await p.ev(`(() => { const e = planx.editor; planx.board.update('a', { x: -100, y: 300, w: 240, h: 140 }); e.setSelection([]); })()`);
+    expect([!!(await p.rect('.panel-over:not(.gone)')), !!(await p.rect('.bar.panel:not(.panel-over, .gone)'))].join(), 'big: over it').toBe('true,false');
+    expect((await p.rect('.panel-over:not(.gone)')).b < 200, 'above its top').toBe(true);
+    // Its top off the screen: under it, not at the bottom of the screen.
+    await p.ev(`(() => { const e = planx.editor; planx.board.update('a', { x: 300, y: -100, w: 240, h: 300 }); e.setSelection([]); })()`);
     await sleep(50);
     await p.ev(`planx.editor.setSelection(['a'])`);
     await sleep(300);
-    expect([!!(await p.rect('.panel-over:not(.gone)')), !!(await p.rect('.bar.panel:not(.panel-over, .gone)'))].join(), 'off the edge: at the bottom').toBe('false,true');
+    const below = await p.rect('.panel-over:not(.gone)');
+    expect(!!below && below.t > 200 && below.t < 260, 'under it').toBe(true);
     // With the handles of «Авторасположение» up: at the bottom, out of their way.
     await p.ev(`(async () => { const e = planx.editor, b = planx.board; b.update('a', { x: 400, y: 300 }); b.add(e.newItem('rect', 700, 300, { id: 'c', w: 100, h: 100 })); e.setSelection(['a', 'c']); })()`);
     await sleep(300);

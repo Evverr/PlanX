@@ -890,7 +890,7 @@ function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCel
   const n = colsOf(it).length * rowsOf(it).length;
   for (let i = 0; i < n; i++) {
     const text = cellText(it, i);
-    if (text && i !== editingCell) drawText(ctx, cellItem(it, i), 8, theme.ink, true, s);
+    if (text && i !== editingCell) drawText(ctx, cellItem(it, i), textPad(it), theme.ink, true, s, textPadY(it));
   }
   ctx.restore();
   // The outer edge, whole, over the clip.
