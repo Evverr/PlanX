@@ -438,10 +438,12 @@ export const checks = {
     expect(!!(await p.rect('.panel-shell')), 'the body gone once there').toBe(false);
     await p.click(await p.at('.tfmt button[aria-label="Жирный"]'));
     expect(await p.ev(`planx.board.get('s').fw`), 'its text bold').toBe(700);
-    // Its arrow takes it back.
+    // Its arrow takes it back: what was on the text panel doesn't show again as it goes.
+    await p.ev(`(() => { window.shown = 0; const t0 = performance.now(); const f = () => { if (document.querySelector('.panel-shell') && [...document.querySelectorAll('.tfmt')].some((e) => +getComputedStyle(e).opacity > 0.05)) window.shown++; if (performance.now() - t0 < 600) requestAnimationFrame(f); }; setTimeout(() => requestAnimationFrame(f), 130); })()`);
     await p.click(await p.at('.tfmt button[aria-label="Назад"]'));
     await sleep(700);
     expect([!!(await p.rect('.tfmt:not(.leaving)')), !!(await p.rect('.panel-over:not(.gone)'))].join(), 'back by its arrow').toBe('false,true');
+    expect(await p.ev(`window.shown`), 'the text panel unseen while the body narrows').toBe(0);
     await p.click(await p.at('.panel-over button[aria-label="Текст и шрифт"]'));
     await sleep(700);
     const s = await p.ev(`planx.editor.toScreen({ x: 600, y: 400 })`);
@@ -492,7 +494,8 @@ export const checks = {
     // The plus inside by the right edge: a column more.
     const t2 = await p.ev(`planx.board.get('t')`), c = await p.ev(`planx.editor.toScreen({ x: ${t2.x + t2.w}, y: ${t2.y + t2.h / 2} })`);
     await p.click([c.x - 14, c.y]);
-    expect((await p.ev(`planx.board.get('t')`)).cols.length, 'the plus: a column more').toBe(3);
+    await p.click([c.x - 14, c.y]);
+    expect((await p.ev(`planx.board.get('t')`)).cols.length, 'the plus where it was: pressed twice, two columns more').toBe(4);
   },
 
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {

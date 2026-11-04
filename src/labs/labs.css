@@ -279,5 +279,6 @@
   opacity: 0 !important; animation-duration: 1ms !important; animation-delay: 0s !important; }
 [data-morph] { background-color: transparent !important; box-shadow: none !important; border-color: transparent !important; }
 [data-morph]::before { opacity: 0 !important; }
+[data-morph-out] { opacity: 0 !important; transition: opacity .12s ease !important; }
 .panel-shell { position: fixed; z-index: 4; pointer-events: none; transition: left .2s ease, width .2s ease; }
 :root[data-glass] .panel-shell { background-color: color-mix(in srgb, var(--panel-bg) 84%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
