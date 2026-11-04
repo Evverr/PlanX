@@ -959,7 +959,7 @@ function strokeInk(ctx: CanvasRenderingContext2D, { pts, color, width, hl, op, s
 }
 
 /** Link line width on screen, whatever the zoom; thinner once zoomed far out. */
-const linkWidth = (z: number) => (z < 0.3 ? 1 : 1.7);
+export const linkWidth = (z: number) => (z < 0.3 ? 1 : 1.7);
 
 /** Line width and dashes are in screen pixels, so links look the same at any zoom. */
 /** Which ends of a line have an arrowhead. */

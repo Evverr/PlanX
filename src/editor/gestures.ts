@@ -255,7 +255,8 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       const held = g.start ? l?.from : l?.to, other = g.start ? l?.to : l?.from, far = Math.hypot(w.x - g.from.x, w.y - g.from.y) * ed.cam.z > 12;
       if (t?.id !== held && far) g.away = true;
       g.to = w;
-      g.target = t && t.id !== other && (g.away || far) ? t.id : null;
+      // (On its other end's item too: it turns round, the arrow going into that.)
+      g.target = t && (g.away || far) && (t.id !== other || t.id !== held) ? t.id : null;
       ed.requestRender();
       return;
     }
@@ -518,7 +519,22 @@ function relinkTo(ed: Editor, l: Link, target: Item, p: Point, start: boolean): 
       : { from: l.from, to: l.to, fromSide: sided ? otherSide : undefined, fromAt: sided ? l.fromAt : undefined, toSide: sided ? side : undefined, toAt: sided && at !== 0.5 ? at : undefined });
     return;
   }
-  if (target.id === from || board.hasLink(from, target.id)) return;
+  // On its other end's item: it turns round, from the item the end was taken from, into that.
+  if (target.id === from) {
+    const heldId = start ? l.from : l.to, heldSide = start ? l.fromSide : l.toSide, heldAt = start ? l.fromAt : l.toAt;
+    if (heldId === from || board.hasLink(heldId, from)) return;
+    const sided = !!l.fromSide || at !== 0.5, held = board.get(heldId);
+    board.transact(() => {
+      if (l.heads === 'start') board.updateLink(l.id, { heads: undefined });
+      board.relink(l.id, {
+        from: heldId, to: from,
+        fromSide: sided ? heldSide ?? (held ? nearestSide(held, center(target)) : undefined) : undefined, fromAt: sided ? heldAt : undefined,
+        toSide: sided ? side : undefined, toAt: sided && at !== 0.5 ? at : undefined,
+      });
+    });
+    return;
+  }
+  if (board.hasLink(from, target.id)) return;
   // (The end staying keeps its side and place, as the start if it was the end.)
   const fromSide = start ? l.toSide : l.fromSide, fromAt = start ? l.toAt : l.fromAt;
   const sided = !!l.fromSide || at !== 0.5;

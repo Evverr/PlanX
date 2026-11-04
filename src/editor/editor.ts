@@ -548,8 +548,11 @@ export class Editor {
     const relinked = g?.type === 'relink' ? this.board.getLink(g.id) : undefined;
     if (g?.type === 'relink' && relinked && g.going) {
       // (Its start taken, from its other end.)
-      const from = this.board.get(g.start ? relinked.to : relinked.from), side = g.start ? relinked.toSide : relinked.fromSide;
-      const at = g.start ? relinked.toAt : relinked.fromAt;
+      // (Over its other end's item, turning round: from the item it was taken from.)
+      const back = g.target === (g.start ? relinked.to : relinked.from);
+      const fromEnd = back !== !!g.start;
+      const from = this.board.get(fromEnd ? relinked.to : relinked.from), side = fromEnd ? relinked.toSide : relinked.fromSide;
+      const at = fromEnd ? relinked.toAt : relinked.fromAt;
       if (from) linkPreview = { from, fromSide: side ?? null, fromAt: at, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null, style: relinked.style };
     }
     // A mind map node's buttons stay while its text is being typed (one click opens it for typing).

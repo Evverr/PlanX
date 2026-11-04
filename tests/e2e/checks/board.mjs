@@ -242,6 +242,12 @@ export const checks = {
     await p.drag(tip, await screen(p, a.x + 50, a.y + 50));
     l = await p.ev(`planx.board.getLink('L2')`);
     expect(`${l.from === ids.c} ${l.to === ids.a} ${l.heads ?? 'end'}`, 'the arrow into what it was led to').toBe('true true end');
+    // Its arrow end led onto the item it comes from: it turns round, the arrow going into that.
+    const tip2 = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'); const s = planx.editor.toScreen(g.linkShape(planx.board.getLink('L2'), (k) => planx.board.get(k)).pts.at(-1)); return [s.x, s.y]; })()`);
+    const c = await p.ev(`planx.board.get('${ids.c}')`);
+    await p.drag(tip2, await screen(p, c.x + 50, c.y + 50));
+    l = await p.ev(`planx.board.getLink('L2')`);
+    expect(`${l.from === ids.a} ${l.to === ids.c} ${l.heads ?? 'end'}`, 'turned round').toBe('true true end');
   },
 
   async 'Esc and Cmd+Enter are done with a component being changed, as its tick'(p) {
