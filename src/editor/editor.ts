@@ -7,7 +7,7 @@ import { clearTextCache, dotsMoving, drawScene, readTheme, type Camera, type Pee
 import { fitHeight, foldedSize, font, itemTextHeight, mindSize } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
-import { newTable, withCellFormat, withCount, withTableFormat, type TableLine } from '../model/table';
+import { freshTable, withCellFormat, withCount, withTableFormat, type TableLine } from '../model/table';
 import type { AudioNote } from '../canvas/audio';
 import { addChild, descendants, foldedAway, folding, makeRoom, mindDepth, tidyBranches, type Way } from '../model/mind';
 import { readJSON, writeJSON } from '../storage';
@@ -748,7 +748,7 @@ export class Editor {
   }
 
   /** The selected table's lines: their colour ('gray' the usual, 'none' none) and opacity. */
-  setTableLines(patch: { sc?: string; so?: number }): void { setTableLines(this, patch); }
+  setTableLines(patch: { sc?: string; so?: number; vc?: string; vo?: number }): void { setTableLines(this, patch); }
 
   /** Draws with one of the pen's presets from now on. */
   pickPen(tool: PenTool, active: number): void {
@@ -998,7 +998,7 @@ export class Editor {
     if (tool === 'timeline') { this.addTimeline(this.toWorld(at.x, at.y)); return; }
     const type = (isPoly(tool) ? 'polygon' : tool) as ItemType;
     if (!DEFAULTS[type]) return;
-    const extra: Partial<Item> = isPoly(tool) ? { shape: tool } : tool === 'table' ? newTable() : tool === 'mind' ? { text: MIND_TOPIC } : {};
+    const extra: Partial<Item> = isPoly(tool) ? { shape: tool } : tool === 'table' ? freshTable() : tool === 'mind' ? { text: MIND_TOPIC } : {};
     if (type === 'mind') Object.assign(extra, mindSize({ ...DEFAULTS.mind, ...extra } as Item));
     const c = this.toWorld(at.x, at.y), d = { ...DEFAULTS[type], ...extra };
     const it = this.newItem(type, c.x - d.w / 2, c.y - d.h / 2, extra);

@@ -21,6 +21,15 @@ export const newTable = (n = 3, m = 3): Partial<Item> => ({
   cols: Array(n).fill(COL_W), rows: Array(m).fill(ROW_H), cells: Array(n * m).fill(''), w: n * COL_W, h: m * ROW_H,
 });
 
+/** How a table drawn on the board looks to begin with: a header row in light blue (at 30%) and bold, the
+ *  lines black at 8%, those down between columns at 4%. */
+export const tableLook = (n = 3): Partial<Item> => ({
+  sc: 'ink', so: 0.08, vc: 'ink', vo: 0.04, cellFmt: Array.from({ length: n }, () => ({ bg: 'blue', bgo: 0.3, fw: 700 })),
+});
+
+/** A new table as one is drawn: newTable in tableLook. */
+export const freshTable = (): Partial<Item> => ({ ...newTable(), ...tableLook() });
+
 /** The box of cell i (row by row) on the board. */
 export function cellRect(it: Item, i: number): Rect {
   const cols = colsOf(it), rows = rowsOf(it), c = i % cols.length, r = Math.floor(i / cols.length);
@@ -69,15 +78,16 @@ export function withCount(it: Item, axis: 'col' | 'row', delta: 1 | -1): Partial
   const cols = colsOf(it), rows = rowsOf(it), n = cols.length, size = n * rows.length;
   const cells = Array.from({ length: size }, (_, i) => cellText(it, i));
   const fmt = Array.from({ length: size }, (_, i) => it.cellFmt?.[i] ?? null);
-  // A cell's text and formatting move as one.
-  const regrid = <T>(all: T[], blank: T): T[] => axis === 'col'
-    ? rows.flatMap((_, r) => { const row = all.slice(r * n, r * n + n); return delta > 0 ? [...row, blank] : row.slice(0, -1); })
+  // A cell's text and formatting move as one; a new column's top cell is formatted as the one before it
+  // (the header going on).
+  const regrid = <T>(all: T[], blank: T, header = false): T[] => axis === 'col'
+    ? rows.flatMap((_, r) => { const row = all.slice(r * n, r * n + n); return delta > 0 ? [...row, header && r === 0 ? row[n - 1] : blank] : row.slice(0, -1); })
     : delta > 0 ? [...all, ...Array<T>(n).fill(blank)] : all.slice(0, -n);
   const keepFmt = (f: typeof fmt) => (f.some(Boolean) ? f : undefined);
   if (axis === 'col') {
     if (delta < 0 && n === 1) return {};
     const next = delta > 0 ? [...cols, cols[n - 1]] : cols.slice(0, -1);
-    return { cols: next, cells: regrid(cells, ''), cellFmt: keepFmt(regrid(fmt, null)), w: sum(next) };
+    return { cols: next, cells: regrid(cells, ''), cellFmt: keepFmt(regrid(fmt, null, true)), w: sum(next) };
   }
   if (delta < 0 && rows.length === 1) return {};
   const next = delta > 0 ? [...rows, rows[rows.length - 1]] : rows.slice(0, -1);
