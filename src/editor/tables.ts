@@ -103,8 +103,8 @@ export function grabbableLine(ed: Editor, w: Point, hit: Item | null, pointer: s
 }
 
 /** Zoomed out further than this, a table's lines can't be taken hold of (the table's taken instead):
- *  75% and less. */
-export const LINES_FROM_Z = 0.75;
+ *  56% and less (a third further out than 75%). */
+export const LINES_FROM_Z = 0.56;
 
 /** The table line under the point: of the table there, or just past a table's right or bottom edge. */
 export function tableLineAt(ed: Editor, w: Point, hit: Item | null): TableLine | null {

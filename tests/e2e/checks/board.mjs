@@ -399,15 +399,15 @@ export const checks = {
     expect(t.cols[0], 'the column widened after 0.7 s').toBeNear(180, 2);
   },
 
-  async 'zoomed out to under 75%, a table\'s lines aren\'t taken: the table is'(p) {
-    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 0.7 }; e.camChanged();
+  async 'zoomed out to under 56%, a table\'s lines aren\'t taken: the table is'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 0.5 }; e.camChanged();
       b.add(e.newItem('table', 600, 500, { id: 't', w: 360, h: 120, cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill('') })); e.setSelection(['t']); })()`);
     await sleep(200);
     const line = await screen(p, 720, 520);
     await p.drag(line, [line[0] + 40, line[1] + 40], { rest: 700 });
     const t = await p.ev(`planx.board.get('t')`);
     expect(t.cols[0], 'no resize').toBe(120);
-    expect(t.x, 'the table moved').toBeNear(600 + 40 / 0.7, 2);
+    expect(t.x, 'the table moved').toBeNear(600 + 40 / 0.5, 2);
   },
 
   async 'the selection panel goes up above a bar beneath it, and back down'(p) {
@@ -758,6 +758,18 @@ export const checks = {
     await sleep(300);
     const it = await p.ev(`(() => { const i = planx.board.list().find((x) => x.doodle); return i && i.type + ' ' + i.doodle; })()`);
     expect(it, 'a picture of that sticker').toBe('image 01-love');
+  },
+
+  async 'typing in a table\'s cell, its lines still resize it, the typing going on'(p) {
+    const id = await put(p, `const t = e.newItem('table', X, Y, { cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill(''), w: 360, h: 120 }); b.add(t); e.setSelection([t.id]); e.startEditing(t.id, 4); return t.id;`);
+    await sleep(300);
+    await p.cdp('Input.insertText', { text: 'Привет' });
+    const t0 = await p.ev(`planx.board.get('${id}')`), line = await screen(p, t0.x + 120, t0.y + 100);
+    await p.mouse('mouseMoved', line[0] - 30, line[1]);
+    await p.drag(line, [line[0] + 50, line[1]], { rest: 700 });
+    const t = await p.ev(`planx.board.get('${id}')`);
+    expect(t.cols[0], 'the column wider').toBeNear(170, 2);
+    expect(`${await p.ev('planx.editor.editingId') === id} ${await p.ev('planx.editor.editingCell')}`, 'still typing in that cell').toBe('true 4');
   },
 
   async 'once a table line has been waited for, the table\'s other lines are taken at once, till the pointer is off it a second'(p) {

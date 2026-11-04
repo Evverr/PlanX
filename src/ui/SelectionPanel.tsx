@@ -245,6 +245,9 @@ function MindColors({ editor, nodes }: { editor: Editor; nodes: Item[] }) {
  */
 function TableColors({ editor, table, cells }: { editor: Editor; table: Item; cells: number[] }) {
   const [paint, pick] = usePaint();
+  // Cells picked (others than before): back on their fill.
+  const cellKey = cells.join();
+  useEffect(() => { if (cellKey) pick('fill', false); }, [cellKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const n = colsOf(table).length * rowsOf(table).length, mine = cells.length ? cells : Array.from({ length: n }, (_, i) => i);
   const own = (i: number, k: string) => table.cellFmt?.[i]?.[k];
   const fill = same(mine.map((i) => { const v = own(i, 'bg'); return typeof v === 'string' ? v : 'none'; }));
