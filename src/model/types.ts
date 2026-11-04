@@ -201,15 +201,17 @@ export interface Link {
 
 export type LinkStyle = 'straight' | 'elbow';
 
-/** Fills for stickers and shapes, by name; an item's colour can also be any '#rrggbb' picked by hand. */
+/** Fills for stickers and shapes, by name; an item's colour can also be any '#rrggbb' picked by hand.
+ *  Light ones, each over its strong pair in STROKE_COLORS: light grey over grey, grey over black. */
 export const FILLS: Record<string, string> = {
+  gray: '#E2E4E9',
+  graphite: '#C4C8D0',
   yellow: '#FFE27A',
   orange: '#FFBC78',
   pink: '#FFA8C8',
   purple: '#CDBBFF',
   blue: '#A6D4FF',
   green: '#B0E6A6',
-  gray: '#E2E4E9',
   none: 'transparent',
 };
 
@@ -225,15 +227,17 @@ export const INK_COLORS: Record<string, string> = {
   pink: '#F17AC1',
 };
 
-/** Outline colours of shapes; "gray" is the usual outline (unset on the item), "ink" the theme's text colour. */
+/** Outline colours of shapes; "gray" is the usual outline (unset on the item), "ink" the theme's text
+ *  colour. Strong ones, each under its light pair in FILLS. */
 export const STROKE_COLORS: Record<string, string> = {
   gray: '',
   ink: '',
-  red: '#E5484D',
+  yellow: '#F5C518',
   orange: '#F5A524',
-  green: '#30A46C',
-  blue: '#3E7BFA',
+  red: '#E5484D',
   purple: '#8E4EC6',
+  blue: '#3E7BFA',
+  green: '#30A46C',
 };
 
 /** Icon colours; "ink" follows the theme's text colour. */
