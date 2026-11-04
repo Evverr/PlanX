@@ -12,7 +12,7 @@ import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
 import { COMPONENT_COLOR, firstInstance, instancePlus, objectArrow } from '../model/components';
 import { labOn } from '../labs/labs';
-import { zoomFade } from '../labs/zoomFade';
+import { zoomFade, zoomSize } from '../labs/zoomFade';
 import { isBuiltin } from '../model/builtins';
 import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
@@ -670,9 +670,10 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
 /** A folded mind map node's count of what it hides that way: a pill in the next level's colour on a
  *  stub of branch, the number in it. */
 function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, way: Way, n: number) {
-  const { theme, cam } = s, b = foldBadge(it, way, cam.z, n, s.slide?.get(`${it.id}:${way}`) ?? 0);
-  const fade = zoomFade('fold', cam.z, s.selection.has(it.id));
+  const { theme, cam } = s, fade = zoomFade('fold', cam.z, s.selection.has(it.id));
   if (!fade) return;
+  // Smaller as it's zoomed out (see zoomSize): as at a zoom that much bigger.
+  const z = cam.z / zoomSize('fold', cam.z, s.selection.has(it.id)), b = foldBadge(it, way, z, n, s.slide?.get(`${it.id}:${way}`) ?? 0);
   ctx.globalAlpha *= fade;
   ctx.strokeStyle = shade(levelColor(mindDepth(it, s.get) + 1), theme.dim);
   ctx.lineWidth = it.parent ? 1.125 : 2.25;
@@ -687,11 +688,11 @@ function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, way: W
   ctx.roundRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h, b.h / 2);
   ctx.fillStyle = shade(levelColor(mindDepth(it, s.get) + 1), theme.dim);
   ctx.fill();
-  ctx.font = font(10 / cam.z, 600);
+  ctx.font = font(10 / z, 600);
   ctx.fillStyle = theme.ink;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(String(n), b.x, b.y + 0.5 / cam.z);
+  ctx.fillText(String(n), b.x, b.y + 0.5 / z);
   ctx.globalAlpha = 1;
 }
 
@@ -1168,7 +1169,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     if (!it.comp || it.stowed) continue;
     const fade = zoomFade('comp', cam.z, s.selection.has(it.id));
     if (!fade) continue;
-    const p = instancePlus(it, cam.z);
+    // Smaller as it's zoomed out (see zoomSize): as at a zoom that much bigger.
+    const z = cam.z / zoomSize('comp', cam.z, s.selection.has(it.id)), p = instancePlus(it, z);
     ctx.fillStyle = COMPONENT_COLOR;
     ctx.globalAlpha = (s.hotPlus === `tick:${it.id}` ? 1 : 0.75) * fade;
     ctx.beginPath();
@@ -1176,7 +1178,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     ctx.fill();
     ctx.globalAlpha = fade;
     ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2 / cam.z;
+    ctx.lineWidth = 2 / z;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -1185,7 +1187,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     ctx.globalAlpha = 1;
     // Past it, an arrow: made one of the board's own objects ("Объекты", src/labs), if it isn't yet.
     if (it.obj || !labOn('objects')) continue;
-    const q = objectArrow(it, cam.z);
+    const q = objectArrow(it, z);
     ctx.fillStyle = COMPONENT_COLOR;
     ctx.globalAlpha = (s.hotPlus === `obj:${it.id}` ? 1 : 0.75) * fade;
     ctx.beginPath();
