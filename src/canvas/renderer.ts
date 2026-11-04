@@ -975,13 +975,13 @@ function head(ctx: CanvasRenderingContext2D, tip: Point, ang: number, arm: numbe
   ctx.stroke();
 }
 
-function arrow(ctx: CanvasRenderingContext2D, [a, c1, c2, b]: Bezier, color: string, z: number, dash: number[] = [], heads: Heads = END) {
+function arrow(ctx: CanvasRenderingContext2D, [a, c1, c2, b]: Bezier, color: string, z: number, dash: number[] = [], heads: Heads = END, thick?: number) {
   // The heads follow the curve's tangents at its ends; straight links have no control points, so fall back along the line.
   const from = c2.x !== b.x || c2.y !== b.y ? c2 : c1.x !== b.x || c1.y !== b.y ? c1 : a;
   const back = c1.x !== a.x || c1.y !== a.y ? c1 : c2.x !== a.x || c2.y !== a.y ? c2 : b;
   const ang = Math.atan2(b.y - from.y, b.x - from.x), ang0 = Math.atan2(a.y - back.y, a.x - back.x);
   // Pull a tip back by half the line width so the rounded cap just touches the target.
-  const px = linkWidth(z), width = px / z;
+  const px = thick ?? linkWidth(z), width = px / z;
   const arm = px * 3.8 / z, sx = Math.cos(ang) * width / 2, sy = Math.sin(ang) * width / 2;
   const tip = heads.end ? { x: b.x - sx, y: b.y - sy } : b;
   const tip0 = heads.start ? { x: a.x - Math.cos(ang0) * width / 2, y: a.y - Math.sin(ang0) * width / 2 } : a;
@@ -1007,11 +1007,11 @@ function facing(from: Point, to: Point): Side {
 
 /** A link drawn by its shape: a smooth one as its curve; a straight or right-angled one through its
  *  points, its corners rounded, the head along its last stretch. */
-function linkArrow(ctx: CanvasRenderingContext2D, shape: LinkShape, color: string, z: number, dash: number[] = [], heads: Heads = END) {
-  if (shape.curve) { arrow(ctx, shape.curve, color, z, dash, heads); return; }
+function linkArrow(ctx: CanvasRenderingContext2D, shape: LinkShape, color: string, z: number, dash: number[] = [], heads: Heads = END, thick?: number) {
+  if (shape.curve) { arrow(ctx, shape.curve, color, z, dash, heads, thick); return; }
   const pts = shape.pts, b = pts[pts.length - 1], from = pts[pts.length - 2], a = pts[0], back = pts[1];
   const ang = Math.atan2(b.y - from.y, b.x - from.x), ang0 = Math.atan2(a.y - back.y, a.x - back.x);
-  const px = linkWidth(z), width = px / z, arm = px * 3.8 / z;
+  const px = thick ?? linkWidth(z), width = px / z, arm = px * 3.8 / z;
   const tip = heads.end ? { x: b.x - Math.cos(ang) * width / 2, y: b.y - Math.sin(ang) * width / 2 } : b;
   const tip0 = heads.start ? { x: a.x - Math.cos(ang0) * width / 2, y: a.y - Math.sin(ang0) * width / 2 } : a;
   ctx.strokeStyle = color;
@@ -1156,11 +1156,11 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
       const l = s.links[k], shape = shapes[k]!;
       const look = linkLook(l, theme);
       gc.globalAlpha = l.lo ?? 1;
-      linkArrow(gc, shape, s.selection.has(l.id) ? SELECT_COLOR : look.color, cam.z, look.dash, look.heads);
+      linkArrow(gc, shape, s.selection.has(l.id) ? SELECT_COLOR : look.color, cam.z, look.dash, look.heads, l.lw);
       // The one under the pointer a little bluer.
       if (l.id === s.hotLink && !s.selection.has(l.id)) {
         gc.globalAlpha = 0.4 * (l.lo ?? 1);
-        linkArrow(gc, shape, SELECT_COLOR, cam.z, look.dash, look.heads);
+        linkArrow(gc, shape, SELECT_COLOR, cam.z, look.dash, look.heads, l.lw);
       }
       gc.globalAlpha = 1;
     }
