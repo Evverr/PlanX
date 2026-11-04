@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { LABS, setLab, useLabs } from '../labs/labs';
 import { setZoomsWithKey, useZoomsWithKey, zoomKeyName } from '../labs/wheelZoom';
+import { setGlass, useGlass } from '../labs/glass';
 import { readJSON, writeJSON } from '../storage';
 import { Switch } from './BoardMenu';
 import avatar from '../../assets/doodles/people/03-red-hair.png';
@@ -66,13 +67,17 @@ export function ProfileDialog({ name, onRename, onClose }: { name: string; onRen
 
 /** "Настройки" (the board menu): every feature on trial ("Нововведения", src/labs) with its switch. */
 export function SettingsDialog({ onClose }: { onClose: () => void }) {
-  const labs = useLabs(), byKey = useZoomsWithKey();
+  const labs = useLabs(), byKey = useZoomsWithKey(), glass = useGlass();
   return (
     <Modal title="Настройки" onClose={onClose} className="settings">
       <div className="settings-list">
         <button className="settings-row" role="menuitemcheckbox" aria-checked={byKey} onClick={() => setZoomsWithKey(!byKey)}>
           <span><b>Зум с {zoomKeyName()}</b><i>{`Масштаб — ${zoomKeyName()} + колесо, а просто колесо листает доску по вертикали. Выключено: масштаб просто колесом`}</i></span>
           <Switch on={byKey} />
+        </button>
+        <button className="settings-row" role="menuitemcheckbox" aria-checked={glass} onClick={() => setGlass(!glass)}>
+          <span><b>Стекло</b><i>Панели и попапы полупрозрачные (80%), доска за ними размыта</i></span>
+          <Switch on={glass} />
         </button>
       </div>
       <div className="settings-title">Нововведения</div>
