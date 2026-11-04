@@ -449,7 +449,7 @@ export const checks = {
     await sleep(300);
     // The first column's pill, on the top edge over its middle, to the last column.
     await p.mouse('mouseMoved', 350, 300);
-    await p.drag([350, 300], [700, 310]);
+    await p.drag([350, 297], [640, 307]);
     await sleep(100);
     let t = await p.ev(`planx.board.get('t')`);
     expect(t.cells.join(''), 'the column went last').toBe('bcaefdhig');
@@ -459,6 +459,11 @@ export const checks = {
     await p.drag([300, 400], [310, 305]);
     t = await p.ev(`planx.board.get('t')`);
     expect(t.cells.join(''), 'the last row went first').toBe('higbcaefd');
+    // Dragged off the table: taken away.
+    await p.drag([297, 360], [297, 700]);
+    t = await p.ev(`planx.board.get('t')`);
+    expect(t.cells.join(''), 'the middle row gone').toBe('higefd');
+    expect(t.h, 'the table shorter').toBe(80);
   },
 
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {

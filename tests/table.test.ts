@@ -71,6 +71,14 @@ describe('table rows and columns moved ("Перестановка в табли�
     expect(p.cellFmt?.[0]).toBeNull();
   });
 
+  it('takes a column or row away with its cells, but not the last one', async () => {
+    const { withRemoved } = await import('../src/labs/tableMove');
+    const t = table({ cols: [100, 120, 140], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'], cellFmt: [null, { fw: 700 }, null, null, null, null, null, null, null] });
+    expect(withRemoved(t, 'col', 0)).toEqual({ cols: [120, 140], w: 260, cells: ['b', 'c', 'e', 'f', 'h', 'i'], cellFmt: [{ fw: 700 }, null, null, null, null, null] });
+    expect(withRemoved(t, 'row', 1)).toMatchObject({ rows: [40, 40], h: 80, cells: ['a', 'b', 'c', 'g', 'h', 'i'] });
+    expect(withRemoved(table({ cols: [100], cells: ['x', 'y', 'z'] }), 'col', 0)).toEqual({});
+  });
+
   it('takes a row back over the others', async () => {
     const { withMoved } = await import('../src/labs/tableMove');
     const t = table({ rows: [40, 50, 60], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] });
