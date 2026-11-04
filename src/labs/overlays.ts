@@ -169,10 +169,10 @@ export function drawLabs(ctx: CanvasRenderingContext2D, ed: Editor): boolean {
       if (!it.lock && !it.rx) continue;
       const b = boxOf(it);
       if (b.x > view.x + view.w || b.y > view.y + view.h + 40 / ed.cam.z || b.x + b.w < view.x - 40 / ed.cam.z || b.y + b.h < view.y) continue;
-      const picked = ed.selection.has(it.id), rx = reactions && it.rx ? zoomFade('reactions', ed.cam.z, picked) : 0;
-      const lk = lock && it.lock ? zoomFade('lock', ed.cam.z, picked) : 0;
-      if (rx) { ctx.globalAlpha = rx; drawReactions(ctx, ed, it, me, zoomSize('reactions', ed.cam.z, picked)); ctx.globalAlpha = 1; }
-      if (lk) drawLock(ctx, ed, it, lk, zoomSize('lock', ed.cam.z, picked));
+      // (Picked or not: they aren't what's done to it.)
+      const rx = reactions && it.rx ? zoomFade('reactions', ed.cam.z) : 0, lk = lock && it.lock ? zoomFade('lock', ed.cam.z) : 0;
+      if (rx) { ctx.globalAlpha = rx; drawReactions(ctx, ed, it, me, zoomSize('reactions', ed.cam.z)); ctx.globalAlpha = 1; }
+      if (lk) drawLock(ctx, ed, it, lk, zoomSize('lock', ed.cam.z));
     }
   }
   let moving = false;
