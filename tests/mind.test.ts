@@ -35,6 +35,25 @@ describe('mind map', () => {
     expect(moveBranch('a1', 'b', items, 1).get('a1')).toEqual({ x: -420, y: 0 });
   });
 
+  it('on the left of its parent, lines branches up by their left edges, the widest the gap off it', () => {
+    const r = node('r', 0, 0), b = node('b', -160, 0, { parent: 'r' }), b1 = node('b1', -320, 0, { parent: 'b' });
+    const get = (id: string) => [r, b, b1].find((i) => i.id === id);
+    // A wider one (160) goes the gap off the centre; b, and what grows from it, level with its left edge.
+    const at = childPlace(r, [r, b, b1], get, 160, 40, -1);
+    expect(at.x).toBe(-220);
+    const c = node('c', at.x, at.y, { parent: 'r', w: 160 }), added = addChild('c', [r, b, b1, c]);
+    expect(added.get('b')?.x).toBe(-220);
+    expect(added.get('b1')?.x).toBe(-380);
+    // b typed wider than c (keeping its left edge): the row goes out to stay level, its branch with it.
+    const grown = makeRoom('b', 100, 0, [r, { ...b, x: -220, w: 200 }, { ...b1, x: -380 }, { ...c, ...added.get('c') }]);
+    expect(grown.get('b')?.x).toBe(-260);
+    expect(grown.get('c')?.x).toBe(-260);
+    expect(grown.get('b1')?.x).toBe(-420);
+    // Laid out afresh, the same.
+    const tidy = tidyBranches('r', [r, { ...b, x: -500, w: 200 }, { ...b1, x: -1000 }, { ...c, x: -900 }]);
+    expect([tidy.get('b')?.x, tidy.get('c')?.x, tidy.get('b1')?.x]).toEqual([-260, -260, -420]);
+  });
+
   it('puts a node above or below another without moving it, the others making room', () => {
     const a2 = node('a2', 160, 0, { parent: 'r' }), x = node('x', 160, 0, { parent: 'r' });
     const all = [...items, a2, x];

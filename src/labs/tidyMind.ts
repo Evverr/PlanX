@@ -127,8 +127,10 @@ function apply(ed: Editor): void {
     b.forEach((k, i) => {
       // Out: its gap from its parent times kx, from where its parent is now.
       const p = placed(ed.board.get(k.parent!)!), bp = base(ed.board.get(k.parent!)!);
-      const gap = forth ? k[out] - (bp[out] + bp[deep]) : bp[out] - (k[out] + k[deep]);
-      const o = forth ? p[out] + p[deep] + gap * kx : p[out] - gap * kx - k[deep];
+      // (On the left, by their left edges: measured by the widest of its parent's, see model/mind.ts.)
+      const d = way === 'left' ? Math.max(...row.filter((s) => s.parent === k.parent).map((s) => s.w)) : k[deep];
+      const gap = forth ? k[out] - (bp[out] + bp[deep]) : bp[out] - (k[out] + d);
+      const o = forth ? p[out] + p[deep] + gap * kx : p[out] - gap * kx - d;
       next.set(k.id, { [along]: Math.round(pos[i] + shift), [out]: Math.round(o) } as unknown as Point);
     });
   });
