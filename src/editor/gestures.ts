@@ -510,13 +510,12 @@ export function eraseAlong(ed: Editor, a: Point, b: Point): void {
 function relinkTo(ed: Editor, l: Link, target: Item, p: Point, start: boolean): void {
   const board = ed.board, from = start ? l.to : l.from;
   const { side, at } = anchorAt(target, p, 10 / ed.cam.z), keep = board.get(from);
-  // On the item it's at already: only somewhere else on it.
-  if (target.id === (start ? l.from : l.to)) {
-    const sided = !!l.fromSide || at !== 0.5, other = board.get(start ? l.to : l.from);
-    const otherSide = (start ? l.toSide : l.fromSide) ?? (other ? nearestSide(other, center(target)) : undefined);
-    board.relink(l.id, start
-      ? { from: l.from, to: l.to, fromSide: sided ? side : undefined, fromAt: sided && at !== 0.5 ? at : undefined, toSide: sided ? otherSide : undefined, toAt: sided ? l.toAt : undefined }
-      : { from: l.from, to: l.to, fromSide: sided ? otherSide : undefined, fromAt: sided ? l.fromAt : undefined, toSide: sided ? side : undefined, toAt: sided && at !== 0.5 ? at : undefined });
+  // Its end let go on the item it's at already: only somewhere else on it. (Its start let go on its own
+  // item turns it round, as anywhere: the arrow into that.)
+  if (!start && target.id === l.to) {
+    const sided = !!l.fromSide || at !== 0.5, other = board.get(l.from);
+    const otherSide = l.fromSide ?? (other ? nearestSide(other, center(target)) : undefined);
+    board.relink(l.id, { from: l.from, to: l.to, fromSide: sided ? otherSide : undefined, fromAt: sided ? l.fromAt : undefined, toSide: sided ? side : undefined, toAt: sided && at !== 0.5 ? at : undefined });
     return;
   }
   // On its other end's item: it turns round, from the item the end was taken from, into that.
