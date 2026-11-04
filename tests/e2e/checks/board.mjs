@@ -221,6 +221,22 @@ export const checks = {
     expect(await p.ev(`planx.board.getLink('L1')?.to`), 'and back on undo').toBe(ids.d);
   },
 
+  async 'a link\'s start dragged onto another item turns it round, its arrow going there, where along the side it was let go'(p) {
+    const ids = await put(p, `const a = e.newItem('sticky', X, Y), c = e.newItem('sticky', X + 420, Y), d = e.newItem('rect', X, Y + 300, { w: 300, h: 100 }); b.add(a); b.add(c); b.add(d);
+      b.addLink({ id: 'L2', from: a.id, to: c.id, style: 'straight' }); return { a: a.id, c: c.id, d: d.id };`);
+    const start = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'); const s = planx.editor.toScreen(g.linkShape(planx.board.getLink('L2'), (k) => planx.board.get(k)).pts[0]); return [s.x, s.y]; })()`);
+    const d = await p.ev(`planx.board.get('${ids.d}')`);
+    // Let go a third of the way along its top.
+    await p.drag(start, await screen(p, d.x + 100, d.y + 5));
+    let l = await p.ev(`planx.board.getLink('L2')`);
+    expect(`${l.from === ids.c} ${l.to === ids.d} ${l.toSide} ${Math.round(l.toAt * 100)}`, 'from the other end to the new one, a third along its top').toBe('true true top 33');
+    // Near its middle: the middle.
+    const end = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'); const pts = g.linkShape(planx.board.getLink('L2'), (k) => planx.board.get(k)).pts, s = planx.editor.toScreen(pts.at(-1)); return [s.x, s.y]; })()`);
+    await p.drag(end, await screen(p, d.x + 155, d.y + 5));
+    l = await p.ev(`planx.board.getLink('L2')`);
+    expect(`${l.to === ids.d} ${l.toAt ?? 'middle'}`, 'snapped to the middle').toBe('true middle');
+  },
+
   async 'Esc and Cmd+Enter are done with a component being changed, as its tick'(p) {
     for (const key of ['esc', 'enter']) {
       await put(p, `const a = e.newItem('sticky', X, Y, { text: 'Привет' }); b.add(a); e.setSelection([a.id]); return {};`);

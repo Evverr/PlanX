@@ -83,7 +83,7 @@ export class Board {
         if (!this.items.has(from) || !this.items.has(to)) return;
         const fromSide = m.get('fromSide') as Side | undefined, toSide = m.get('toSide') as Side | undefined, style = m.get('style') as LinkStyle | undefined;
         const look: Partial<Link> = {};
-        for (const k of ['color', 'lo', 'dash', 'heads', 'via'] as const) if (m.has(k)) (look as Record<string, unknown>)[k] = m.get(k);
+        for (const k of ['color', 'lo', 'dash', 'heads', 'via', 'fromAt', 'toAt'] as const) if (m.has(k)) (look as Record<string, unknown>)[k] = m.get(k);
         out.push({ id, from, to, ...(fromSide && toSide && { fromSide, toSide }), ...(style && { style }), ...look });
       });
       this.linkCache = out;
@@ -211,7 +211,7 @@ export class Board {
       m.set('to', link.to);
       if (link.fromSide && link.toSide) { m.set('fromSide', link.fromSide); m.set('toSide', link.toSide); }
       if (link.style) m.set('style', link.style);
-      for (const k of ['color', 'lo', 'dash', 'heads', 'via'] as const) if (link[k] !== undefined) m.set(k, link[k]);
+      for (const k of ['color', 'lo', 'dash', 'heads', 'via', 'fromAt', 'toAt'] as const) if (link[k] !== undefined) m.set(k, link[k]);
       this.links.set(link.id, m);
     });
   }
@@ -223,6 +223,16 @@ export class Board {
     this.transact(() => {
       m.set('to', to);
       if (toSide && m.get('fromSide')) m.set('toSide', toSide);
+    });
+  }
+
+  /** Leads a link's ends anew: from and to which items, by which sides and where along them (an
+   *  undefined field goes). */
+  relink(id: string, ends: Pick<Link, 'from' | 'to' | 'fromSide' | 'toSide' | 'fromAt' | 'toAt'>): void {
+    const m = this.links.get(id);
+    if (!m) return;
+    this.transact(() => {
+      for (const [k, v] of Object.entries(ends)) { if (v === undefined) m.delete(k); else m.set(k, v); }
     });
   }
 

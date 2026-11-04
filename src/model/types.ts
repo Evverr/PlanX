@@ -199,6 +199,9 @@ export interface Link {
   heads?: 'start' | 'both' | 'none';
   /** Points on the board it runs through on its way (its nodes, as in Miro), in order. */
   via?: Array<{ x: number; y: number }>;
+  /** Pinned to its sides, where along them (0…1: left to right, top to bottom); unset, their middles. */
+  fromAt?: number;
+  toAt?: number;
 }
 
 export type LinkStyle = 'straight' | 'elbow';

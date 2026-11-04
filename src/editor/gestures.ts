@@ -1,7 +1,7 @@
 import type { Item, Link, Side } from '../model/types';
 import { DEFAULTS, ROTATABLE, textPad, textPadY, uid } from '../model/types';
 import type { PathNode, Point, Rect } from '../canvas/geometry';
-import { angleOf, boxOf, center, hitItem, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedFrom, toLocal, turn } from '../canvas/geometry';
+import { anchorAt, angleOf, boxOf, center, hitItem, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedFrom, toLocal, turn } from '../canvas/geometry';
 import { fitHeight, itemTextHeight, mindSize } from '../canvas/text';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, freshTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
@@ -33,7 +33,9 @@ export type Gesture =
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline' }
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
-  | { type: 'relink'; id: string; from: Point; to: Point; target: string | null; away?: boolean; body?: boolean; going?: boolean }
+  | { type: 'relink'; id: string; from: Point; to: Point; target: string | null; away?: boolean; body?: boolean; going?: boolean;
+      /** Its start's taken, not its end: let go on another item, it turns round, its arrow going there. */
+      start?: boolean }
   | { type: 'linkNode'; id: string; node: number; via: Point[]; add?: boolean }
   | { type: 'linkStretch'; id: string; k: number; pts: Point[]; start: Point; moved?: boolean }
   | { type: 'mindMove'; id: string; from: Point; to: Point; target: string | null }
@@ -249,9 +251,11 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       }
       // Over the item it went to, nothing's lit until it's been taken off it once (more than a twitch).
       const l = board.getLink(g.id), t = hitItem(ed.shown(), w, ed.cam.z);
-      if (t?.id !== l?.to && Math.hypot(w.x - g.from.x, w.y - g.from.y) * ed.cam.z > 12) g.away = true;
+      // (Moved along it further than a twitch, the end's to go somewhere else on it.)
+      const held = g.start ? l?.from : l?.to, other = g.start ? l?.to : l?.from, far = Math.hypot(w.x - g.from.x, w.y - g.from.y) * ed.cam.z > 12;
+      if (t?.id !== held && far) g.away = true;
       g.to = w;
-      g.target = t && t.id !== l?.from && g.away ? t.id : null;
+      g.target = t && t.id !== other && (g.away || far) ? t.id : null;
       ed.requestRender();
       return;
     }
@@ -393,9 +397,11 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
     case 'link':
       if (g.target && !board.hasLink(g.from, g.target)) {
         const target = board.get(g.target)!;
-        // Running the way the last one was made to.
-        const l: Link = g.fromSide
-          ? { id: uid(), from: g.from, to: g.target, fromSide: g.fromSide, toSide: nearestSide(target, g.to) }
+        // Running the way the last one was made to; into the side it's let go by, as far along it (its
+        // middle when near that), pinned by its sides then even if drawn without.
+        const { side, at } = anchorAt(target, g.to, 10 / ed.cam.z), src = board.get(g.from);
+        const l: Link = g.fromSide || at !== 0.5
+          ? { id: uid(), from: g.from, to: g.target, fromSide: g.fromSide ?? (src ? nearestSide(src, center(target)) : 'right'), toSide: side, ...(at !== 0.5 && { toAt: at }) }
           : { id: uid(), from: g.from, to: g.target };
         if (ed.linkStyle) l.style = ed.linkStyle;
         board.addLink(l);
@@ -412,7 +418,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       // Let go on another item, the arrow goes to it; taken off its item (by its head or its line) and let
       // go on none, it's gone. A click on its line just picks it.
       const l = board.getLink(g.id), target = g.target ? board.get(g.target) : undefined;
-      if (l && g.going && target && target.id !== l.to && !board.hasLink(l.from, target.id)) board.retarget(l.id, target.id, nearestSide(target, g.to));
+      if (l && g.going && target) relinkTo(ed, l, target, g.to, !!g.start);
       else if (l && g.away && !target && g.going) {
         board.remove([l.id]);
         ed.setSelection([]);
@@ -493,4 +499,34 @@ export function eraseAlong(ed: Editor, a: Point, b: Point): void {
     }
   }
   if (gone.size) ed.board.remove(gone);
+}
+
+/**
+ * A link's end let go on `target` at `p`: led there, to the side it's let go by and as far along it
+ * (its middle within 10 px of it). Its start taken, it turns round: from its other end to there, the
+ * arrow going there. Pinned by its sides only when it was, or now that it's let go off a side's middle.
+ */
+function relinkTo(ed: Editor, l: Link, target: Item, p: Point, start: boolean): void {
+  const board = ed.board, from = start ? l.to : l.from;
+  const { side, at } = anchorAt(target, p, 10 / ed.cam.z), keep = board.get(from);
+  // On the item it's at already: only somewhere else on it.
+  if (target.id === (start ? l.from : l.to)) {
+    const sided = !!l.fromSide || at !== 0.5, other = board.get(start ? l.to : l.from);
+    const otherSide = (start ? l.toSide : l.fromSide) ?? (other ? nearestSide(other, center(target)) : undefined);
+    board.relink(l.id, start
+      ? { from: l.from, to: l.to, fromSide: sided ? side : undefined, fromAt: sided && at !== 0.5 ? at : undefined, toSide: sided ? otherSide : undefined, toAt: sided ? l.toAt : undefined }
+      : { from: l.from, to: l.to, fromSide: sided ? otherSide : undefined, fromAt: sided ? l.fromAt : undefined, toSide: sided ? side : undefined, toAt: sided && at !== 0.5 ? at : undefined });
+    return;
+  }
+  if (target.id === from || board.hasLink(from, target.id)) return;
+  // (The end staying keeps its side and place, as the start if it was the end.)
+  const fromSide = start ? l.toSide : l.fromSide, fromAt = start ? l.toAt : l.fromAt;
+  const sided = !!l.fromSide || at !== 0.5;
+  board.relink(l.id, {
+    from, to: target.id,
+    fromSide: sided ? fromSide ?? (keep ? nearestSide(keep, center(target)) : undefined) : undefined,
+    toSide: sided ? side : undefined,
+    fromAt: sided ? fromAt : undefined,
+    toAt: sided && at !== 0.5 ? at : undefined,
+  });
 }
