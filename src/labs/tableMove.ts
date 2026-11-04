@@ -79,10 +79,18 @@ export function toggleGrips(ed: Editor): void {
   const it = ed.selectedItems()[0];
   if (it?.type === 'table') show(ed, shownFor === it.id ? null : it.id);
 }
-/** A press on the board at `w`: a second one on the table picked alone puts its pills out. */
-export function pressedForGrips(ed: Editor, w: Point): void {
+/** A press on the table picked alone (at `w` on the board, `sp` on the screen), waiting to be let go
+ *  where it was: a second click puts its pills out, a drag only moves it. */
+let clicked: { id: string; x: number; y: number } | null = null;
+export function pressedForGrips(ed: Editor, w: Point, sp: Point): void {
   const it = ed.selection.size === 1 ? ed.selectedItems()[0] : undefined;
-  if (it?.type === 'table' && w.x >= it.x && w.x <= it.x + it.w && w.y >= it.y && w.y <= it.y + it.h) show(ed, it.id);
+  clicked = it?.type === 'table' && w.x >= it.x && w.x <= it.x + it.w && w.y >= it.y && w.y <= it.y + it.h ? { id: it.id, ...sp } : null;
+}
+/** Let go: there, without having moved, the pills come out. */
+export function releasedForGrips(ed: Editor, sp: Point): void {
+  const c = clicked;
+  clicked = null;
+  if (c && Math.hypot(sp.x - c.x, sp.y - c.y) < 4 && ed.selection.size === 1 && ed.selection.has(c.id)) show(ed, c.id);
 }
 
 /** The table whose pills are out: the one selected alone (with them put out), not locked, typed in or
