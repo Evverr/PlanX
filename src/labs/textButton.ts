@@ -46,16 +46,20 @@ export function morphPanel(from: string, to: 'tfmt' | 'panel', swap: () => void)
       const b = document.querySelector<HTMLElement>(to === 'tfmt' ? '.tfmt:not(.gone):not(.leaving)' : '.bar.panel:not(.gone)');
       if (!b) { if (++tries < 10) requestAnimationFrame(find); else done(); return; }
       b.dataset.morph = '';
-      // Its width once it's found it (a panel measures what fits it first, a frame or two): only then
-      // does the body take it, in one go. (The two are alike but for their width: only that changes.)
-      let last = '', still = 0, frames = 0;
-      const settle = () => {
-        const q = settledRect(b), now = `${q.left}|${q.width}`;
-        still = now === last ? still + 1 : 0;
-        last = now;
-        if (still < 2 && ++frames < 12) { requestAnimationFrame(settle); return; }
-        Object.assign(shell.style, { left: `${q.left}px`, width: `${q.width}px` });
-        setTimeout(reveal, WIDEN);
+      // The body follows its width each frame as it finds it (a panel measures what fits it, and may
+      // again as the other one goes); what's on it fades in once that's held still the body's whole
+      // way there. (The two are alike but for their width: only that changes.)
+      let last = '', since = performance.now();
+      const t0 = since;
+      const follow = () => {
+        const q = settledRect(b), now = `${Math.round(q.left)}|${Math.round(q.width)}`, t = performance.now();
+        if (now !== last) {
+          last = now;
+          since = t;
+          Object.assign(shell.style, { left: `${q.left}px`, width: `${q.width}px` });
+        }
+        if (t - since < WIDEN && t - t0 < 1000) { requestAnimationFrame(follow); return; }
+        reveal();
       };
       const reveal = () => {
         // What's on it fades in; then it's itself again.
@@ -71,7 +75,7 @@ export function morphPanel(from: string, to: 'tfmt' | 'panel', swap: () => void)
           done();
         }, IN + 10);
       };
-      settle();
+      follow();
     };
     requestAnimationFrame(find);
   }, OUT);

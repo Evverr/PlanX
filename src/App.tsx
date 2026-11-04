@@ -270,8 +270,8 @@ export function App({ boardId }: { boardId: string }) {
   if (overWent.current.shown && !overShown) overWent.current.at = performance.now();
   overWent.current.shown = overShown;
   const following = useFollowing();
-  // The T (on something with text, alone, the text panel not up already): the panel turns into the text panel.
-  const toText = labs.textButton && textItem && selItems.length === 1 && !panelItem
+  // The T (on something with text, alone, the text panel not up already, or going): the panel turns into the text panel.
+  const toText = labs.textButton && textItem && selItems.length === 1 && !panelOn
     ? () => {
       const bar = document.querySelector('.bar.panel:not(.gone)'), r = bar?.getBoundingClientRect();
       const dock = r && !bar!.classList.contains('panel-over') ? { cx: r.left + r.width / 2, bottom: r.bottom } : undefined;
