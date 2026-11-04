@@ -9,8 +9,8 @@ import { usePanelSize, type PanelSize } from './panels/size';
  * arrow for a further level, and a line splits the groups. Icons come from the set (picked at
  * random for now). The first rows' text is a shade lighter, as in the mockup.
  */
-export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, onLoadBoard, onProfile, onSettings }: {
-  level?: number; onShare?: () => void; onSave?: () => void; onReset?: () => void; onSaveBoard?: () => void; onLoadBoard?: () => void;
+export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, onSaveBoardAs, onLoadBoard, onProfile, onSettings }: {
+  level?: number; onShare?: () => void; onSave?: () => void; onReset?: () => void; onSaveBoard?: () => void; onSaveBoardAs?: () => void; onLoadBoard?: () => void;
   onProfile?: () => void; onSettings?: () => void;
 }) {
   const [on, setOn] = useState(false);
@@ -52,6 +52,7 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
         {row('share', 'Поделиться', { onClick: onShare })}
         <div className="menu-line" />
         {row('download', 'Сохранить доску', { onClick: onSaveBoard })}
+        {row('download', 'Сохранить как…', { onClick: onSaveBoardAs })}
         {row('upload', 'Загрузить доску', { onClick: onLoadBoard })}
         <div className="menu-line" />
         {row('save-template', 'Сохранить панели', { onClick: onSave })}

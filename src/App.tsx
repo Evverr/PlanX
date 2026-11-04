@@ -312,6 +312,11 @@ export function App({ boardId }: { boardId: string }) {
                 onSettings={() => { setMenuOpen(false); setDialog('settings'); }}
                 onShare={() => { setMenuOpen(false); void share(); }}
                 onSaveBoard={() => { saveBoardFile(editor); setMenuOpen(false); setToast('Доска сохранена в файл'); }}
+                onSaveBoardAs={() => {
+                  setMenuOpen(false);
+                  window.dispatchEvent(new CustomEvent('planx:confirm', { detail: { text: 'Сохранить доску в файл под именем', action: 'Сохранить', input: board.title.trim() || 'Доска', placeholder: 'Имя файла',
+                    ok: (name?: string) => { saveBoardFile(editor, name); setToast('Доска сохранена в файл'); } } }));
+                }}
                 onLoadBoard={() => { setMenuOpen(false); boardFileInput.current?.click(); }}
                 onSave={() => { savePanels(); setMenuOpen(false); setToast('Панели сохранены'); }}
                 onReset={() => { editor.addOutsideStep(resetPanels()); setMenuOpen(false); setToast('Панели сброшены. Вернуть: Ctrl+Z'); }} />}

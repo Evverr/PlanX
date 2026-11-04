@@ -38,8 +38,9 @@ export function decodeBoardFile(bytes: Uint8Array): { update: Uint8Array } | { e
 }
 
 /** Saves the board this is as a .plnt file named after it. */
-export function saveBoardFile(ed: Editor): void {
-  saveFile(new Blob([encodeBoardFile(ed.board.doc)], { type: 'application/octet-stream' }), fileName(ed, 'plnt'));
+export function saveBoardFile(ed: Editor, name?: string): void {
+  // ("Сохранить как…": under a name of its own.)
+  saveFile(new Blob([encodeBoardFile(ed.board.doc)], { type: 'application/octet-stream' }), fileName(ed, 'plnt', name));
 }
 
 /** Opens a .plnt file as a new board: put into this browser's copy of it (the server gets it when it's

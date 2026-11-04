@@ -293,6 +293,20 @@ export const checks = {
     expect(await p.ev('planx.board.title'), 'its name too').toBe('Доска для файла');
   },
 
+  async '"Сохранить как…" in the menu asks for a name, the board\'s at first, and saves the file under it'(p) {
+    await put(p, `b.add(e.newItem('sticky', X, Y, { text: 'Тут' }));`);
+    await p.ev(`planx.board.setTitle('План'); window.named = null; HTMLAnchorElement.prototype.click = function () { window.named = this.download; }`);
+    await p.menu('Сохранить как…');
+    await sleep(200);
+    expect(await p.ev(`document.querySelector('.confirm-input').value`), 'the board\'s name at first').toBe('План');
+    await p.ev(`(() => { const i = document.querySelector('.confirm-input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, 'План: копия'); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+    await sleep(50);
+    await p.click(await p.at('.btn.primary'));
+    await sleep(200);
+    expect(await p.ev('window.named'), 'saved under it').toBe('План  копия.plnt');
+    expect(await p.ev('planx.board.title'), 'the board keeps its own').toBe('План');
+  },
+
   async 'the shapes\' gear sets how new shapes come out, and the selected ones too: their corners\' rounding'(p) {
     await put(p, `b.add(e.newItem('polygon', X, Y, { shape: 'hexagon' })); b.add(e.newItem('rect', X + 220, Y));`);
     const ids = await p.ev(`planx.board.list().map((i) => i.id)`);
