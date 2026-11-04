@@ -4,7 +4,7 @@ import { center, hitItem, hitLink, instanceBounds, linkShape, onAudioButton, onT
 import { copyId } from '../model/components';
 import { TASK_STATES } from '../model/builtins';
 import { toggleAudio } from '../canvas/audio';
-import { anyDotAt, dotAt, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, tickAt, objectArrowAt } from './hover';
+import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, tickAt, objectArrowAt } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -72,8 +72,8 @@ export function press(ed: Editor, e: PointerEvent): void {
   }
   const end = ed.tool === 'select' && e.button === 0 && !e.shiftKey && !ed.spaceDown && !ed.editingId ? linkEndAt(ed, w) : null;
   if (end) {
-    ed.setSelection([end.id]);
-    ed.gesture = { type: 'relink', id: end.id, from: w, to: w, target: null };
+    ed.setSelection([end.link.id]);
+    ed.gesture = { type: 'relink', id: end.link.id, from: w, to: w, target: null, start: end.start };
     // Held: the open hand closes.
     ed.canvas!.style.cursor = 'grabbing';
     return;
@@ -314,7 +314,8 @@ export function press(ed: Editor, e: PointerEvent): void {
     } else {
       ed.setSelection([link.id]);
       // Dragged by its line ("Линии", src/labs), it's led to another item as by its head.
-      if (labOn('lineTool')) ed.gesture = { type: 'relink', id: link.id, from: w, to: w, target: null, body: true };
+      // The end it's led by: that of the half it's taken by.
+      if (labOn('lineTool')) ed.gesture = { type: 'relink', id: link.id, from: w, to: w, target: null, body: true, start: inFirstHalf(ed, link, w) };
     }
     return;
   }

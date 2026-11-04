@@ -167,11 +167,24 @@ export function linkEnds(link: Link, get: (id: string) => Item | undefined): [Po
 export const SIDES: Side[] = ['top', 'right', 'bottom', 'left'];
 const NORMAL: Record<Side, Point> = { top: { x: 0, y: -1 }, right: { x: 1, y: 0 }, bottom: { x: 0, y: 1 }, left: { x: -1, y: 0 } };
 
-/** Midpoint of an item's side, pushed `gap` outward, on the board: turned with the item. Curved links
- *  attach here, the selection dots sit just outside. */
-export function sidePoint(r: Turned, side: Side, gap = 0): Point {
-  const c = center(r), n = NORMAL[side];
-  return fromLocal(r, { x: c.x + n.x * (r.w / 2 + gap), y: c.y + n.y * (r.h / 2 + gap) });
+/** Midpoint of an item's side (or the point `at` along it, 0…1, left to right or top to bottom),
+ *  pushed `gap` outward, on the board: turned with the item. Curved links attach here, the selection
+ *  dots sit just outside. */
+export function sidePoint(r: Turned, side: Side, gap = 0, at = 0.5): Point {
+  const c = center(r), n = NORMAL[side], along = at - 0.5;
+  return fromLocal(r, { x: c.x + n.x * (r.w / 2 + gap) + (n.x ? 0 : along * r.w), y: c.y + n.y * (r.h / 2 + gap) + (n.y ? 0 : along * r.h) });
+}
+
+/** Where on an item's outline a link's end let go at `p` goes: the side nearest it and how far along
+ *  (0…1); its middle when within `snap` of it (board units). */
+export function anchorAt(r: Turned, p: Point, snap: number): { side: Side; at: number } {
+  const q = toLocal(r, p), c = center(r);
+  const d: Record<Side, number> = { top: Math.abs(q.y - r.y), bottom: Math.abs(q.y - r.y - r.h), left: Math.abs(q.x - r.x), right: Math.abs(q.x - r.x - r.w) };
+  // (Inside, the side it's nearest; outside, the one it's past.)
+  const side = SIDES.reduce((a, s) => (d[s] < d[a] ? s : a), 'top' as Side);
+  const across = side === 'top' || side === 'bottom', len = across ? r.w : r.h;
+  const at = Math.max(0, Math.min(1, across ? (q.x - r.x) / r.w : (q.y - r.y) / r.h));
+  return { side, at: Math.abs(at - 0.5) * len <= snap || Math.abs((across ? q.x : q.y) - (across ? c.x : c.y)) <= snap ? 0.5 : Math.round(at * 1000) / 1000 };
 }
 
 /** The side whose midpoint is closest to p. */
@@ -199,7 +212,7 @@ export function linkCurve(link: Link, get: (id: string) => Item | undefined): Be
   const a = get(link.from), b = get(link.to);
   if (!a || !b) return null;
   if (link.fromSide && link.toSide) {
-    return curveBetween(sidePoint(a, link.fromSide), link.fromSide, sidePoint(b, link.toSide), link.toSide, angleOf(a), angleOf(b));
+    return curveBetween(sidePoint(a, link.fromSide, 0, link.fromAt), link.fromSide, sidePoint(b, link.toSide, 0, link.toAt), link.toSide, angleOf(a), angleOf(b));
   }
   const [p, q] = linkEnds(link, get)!;
   return [p, p, q, q];
@@ -226,11 +239,11 @@ export function linkShape(link: Link, getItem: (id: string) => Item | undefined)
   // Right-angled, with its own bends: out of its sides, through them, square at every turn.
   if (link.via?.length && link.style === 'elbow') {
     const via = link.via, ps = link.fromSide ?? nearestSide(a, via[0]), qs = link.toSide ?? nearestSide(b, via[via.length - 1]);
-    return { pts: squared([sidePoint(a, ps), ...via, sidePoint(b, qs)], ps === 'left' || ps === 'right') };
+    return { pts: squared([sidePoint(a, ps, 0, link.fromSide ? link.fromAt : 0.5), ...via, sidePoint(b, qs, 0, link.toSide ? link.toAt : 0.5)], ps === 'left' || ps === 'right') };
   }
   if (link.via?.length) {
-    const via = link.via, p = link.fromSide ? sidePoint(a, link.fromSide) : edgePoint(a, via[0]);
-    const q = link.toSide ? sidePoint(b, link.toSide) : edgePoint(b, via[via.length - 1]), all = [p, ...via, q];
+    const via = link.via, p = link.fromSide ? sidePoint(a, link.fromSide, 0, link.fromAt) : edgePoint(a, via[0]);
+    const q = link.toSide ? sidePoint(b, link.toSide, 0, link.toAt) : edgePoint(b, via[via.length - 1]), all = [p, ...via, q];
     return { pts: link.style ? all : throughSmoothly(all) };
   }
   if (!link.style) {
@@ -238,8 +251,8 @@ export function linkShape(link: Link, getItem: (id: string) => Item | undefined)
     return { curve, pts: Array.from({ length: 25 }, (_, i) => bezierPoint(curve, i / 24)) };
   }
   const ps = link.fromSide ?? nearestSide(a, center(b)), qs = link.toSide ?? nearestSide(b, center(a));
-  const p = link.fromSide || link.style === 'elbow' ? sidePoint(a, ps) : linkEnds(link, get)![0];
-  const q = link.toSide || link.style === 'elbow' ? sidePoint(b, qs) : linkEnds(link, get)![1];
+  const p = link.fromSide || link.style === 'elbow' ? sidePoint(a, ps, 0, link.fromSide ? link.fromAt : 0.5) : linkEnds(link, get)![0];
+  const q = link.toSide || link.style === 'elbow' ? sidePoint(b, qs, 0, link.toSide ? link.toAt : 0.5) : linkEnds(link, get)![1];
   return { pts: link.style === 'straight' ? [p, q] : elbowRoute(p, ps, q, qs) };
 }
 

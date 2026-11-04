@@ -77,14 +77,30 @@ export function plusAt(ed: Editor, it: Item, w: Point): MindButtonAt | null {
   return best;
 }
 
-/** The link whose arrowhead is under the point: taken hold of there, it's led to another item. */
-export function linkEndAt(ed: Editor, w: Point): Link | null {
+/** The link whose end (its arrowhead, or its start) is under the point: taken hold of there, that end's
+ *  led to another item. `start`: it's the start. */
+export function linkEndAt(ed: Editor, w: Point): { link: Link; start: boolean } | null {
   const links = ed.shownLinks(), reach = Math.max(9 / ed.cam.z, ed.reach(0));
   for (let i = links.length - 1; i >= 0; i--) {
-    const shape = linkShape(links[i], (id) => ed.board.get(id)), tip = shape?.pts[shape.pts.length - 1];
-    if (tip && Math.hypot(w.x - tip.x, w.y - tip.y) <= reach) return links[i];
+    const shape = linkShape(links[i], (id) => ed.board.get(id)), tip = shape?.pts[shape.pts.length - 1], first = shape?.pts[0];
+    if (tip && Math.hypot(w.x - tip.x, w.y - tip.y) <= reach) return { link: links[i], start: false };
+    if (first && Math.hypot(w.x - first.x, w.y - first.y) <= reach) return { link: links[i], start: true };
   }
   return null;
+}
+
+/** Whether the point on a link is in its first half (along it, from its start). */
+export function inFirstHalf(ed: Editor, link: Link, w: Point): boolean {
+  const pts = linkShape(link, (id) => ed.board.get(id))?.pts ?? [];
+  let total = 0, at = 0, near = Infinity;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], len = Math.hypot(b.x - a.x, b.y - a.y);
+    const k = len ? Math.max(0, Math.min(1, ((w.x - a.x) * (b.x - a.x) + (w.y - a.y) * (b.y - a.y)) / len ** 2)) : 0;
+    const d = Math.hypot(a.x + (b.x - a.x) * k - w.x, a.y + (b.y - a.y) * k - w.y);
+    if (d < near) { near = d; at = total + len * k; }
+    total += len;
+  }
+  return at < total / 2;
 }
 
 /** Whether the point is on the diamond before the title of the instance picked (or holding what's

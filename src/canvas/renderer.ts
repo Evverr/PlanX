@@ -19,7 +19,7 @@ import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
 import { autoInk } from '../model/color';
 import cursorUrl from './cursor.svg';
-import { angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, pathNodes, flattenPath, linkHandles, spreadElbows, polyPoints, linkShape, nearestSide, pointInRect, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
+import { anchorAt, angleOf, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, pathNodes, flattenPath, linkHandles, spreadElbows, polyPoints, linkShape, nearestSide, pointInRect, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -1360,14 +1360,16 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     // Drawn the way it will run: straight or in right angles, as the last one was made to.
     // Pulled from a link dot, it starts at the dot (and ends on what it's led to, as it'll be made).
     const dot = fromSide ? dotGap(from, fromSide) / cam.z : 0;
+    // Over an item: the side it's going into, and where along it (its middle when near that).
+    const anchor = target ? anchorAt(target, to, 10 / cam.z) : null;
     if (style) {
       const ps = fromSide ?? nearestSide(from, target ? center(target) : to);
-      const qs = target ? nearestSide(target, to) : facing(sidePoint(from, ps, dot), to);
-      const p = sidePoint(from, ps, dot), q = target ? sidePoint(target, qs) : to;
+      const qs = anchor ? anchor.side : facing(sidePoint(from, ps, dot), to);
+      const p = sidePoint(from, ps, dot), q = target && anchor ? sidePoint(target, anchor.side, 0, anchor.at) : to;
       linkArrow(ctx, { pts: style === 'straight' ? [p, q] : elbowRoute(p, ps, q, qs) }, SELECT_COLOR, cam.z, [6, 6]);
-    } else if (fromSide) {
-      const toSide = target ? nearestSide(target, to) : null;
-      curve = curveBetween(sidePoint(from, fromSide, dot), fromSide, target && toSide ? sidePoint(target, toSide) : to, toSide, angleOf(from), target ? angleOf(target) : 0);
+    } else if (fromSide || (anchor && anchor.at !== 0.5)) {
+      const ps = fromSide ?? nearestSide(from, target ? center(target) : to);
+      curve = curveBetween(sidePoint(from, ps, dot), ps, target && anchor ? sidePoint(target, anchor.side, 0, anchor.at) : to, anchor?.side ?? null, angleOf(from), target ? angleOf(target) : 0);
     } else {
       const end = target ? edgePoint(target, center(from)) : to, start = edgePoint(from, end);
       curve = [start, start, end, end];

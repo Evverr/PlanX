@@ -546,8 +546,9 @@ export class Editor {
     // An arrow being led to another item is drawn from its start to the pointer (or the item under it).
     const relinked = g?.type === 'relink' ? this.board.getLink(g.id) : undefined;
     if (g?.type === 'relink' && relinked && g.going) {
-      const from = this.board.get(relinked.from);
-      if (from) linkPreview = { from, fromSide: relinked.fromSide ?? null, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null, style: relinked.style };
+      // (Its start taken, from its other end.)
+      const from = this.board.get(g.start ? relinked.to : relinked.from), side = g.start ? relinked.toSide : relinked.fromSide;
+      if (from) linkPreview = { from, fromSide: side ?? null, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null, style: relinked.style };
     }
     // A mind map node's buttons stay while its text is being typed (one click opens it for typing).
     const plusOn = this.plusOn();
@@ -571,7 +572,8 @@ export class Editor {
     const glide = this.gliding();
     drawScene(this.ctx, {
       items: glide ? this.shown().map(glide) : this.shown(),
-      links: relinked ? this.shownLinks().filter((l) => l.id !== relinked.id) : this.shownLinks(),
+      // (Only once it's going: taken hold of, it stays as it is till then.)
+      links: relinked && g?.type === 'relink' && g.going ? this.shownLinks().filter((l) => l.id !== relinked.id) : this.shownLinks(),
       hotLink: g ? null : this.hotLink,
       get: glide ? (id) => { const it = this.board.get(id); return it && glide(it); } : (id) => this.board.get(id),
       cam: this.cam,
