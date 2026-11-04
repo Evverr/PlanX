@@ -5,11 +5,13 @@ import { expect, sleep } from '../lib.mjs';
 const cursor = (p, q) => p.ev(`getComputedStyle(document.querySelector('${q}')).cursor`);
 
 export const checks = {
-  async 'menus come in out of nothing, sliding 8px from where they open'(p) {
+  async 'menus come in out of nothing, sliding 5.33px from where they open'(p) {
     await p.click(await p.at('.topbar button[aria-label="Меню"]'));
     const r = await p.ev(`(() => { const m = document.querySelector('.board-menu'), cs = getComputedStyle(m);
-      return [cs.animationName.replace(', ', '+'), cs.getPropertyValue('--in-x').trim(), cs.getPropertyValue('--in-y').trim(), cs.animationComposition].join(); })()`);
-    expect(r, 'faded in, falling from the top bar').toBe('fade-in+come-in,0px,-8px,replace, add');
+      // (The slide as it works out, in px.)
+      const px = (v) => { const q = document.createElement('i'); q.style.marginTop = 'var(' + v + ')'; m.appendChild(q); const out = getComputedStyle(q).marginTop; q.remove(); return out; };
+      return [cs.animationName.replace(', ', '+'), px('--in-x'), px('--in-y'), cs.animationComposition].join(); })()`);
+    expect(r, 'faded in, falling from the top bar').toBe('fade-in+come-in,0px,-5.33px,replace, add');
     // Closed: a copy where it was fades out in half the time, then goes.
     await p.ev(`window.seenGone = 'none'; new MutationObserver((rs) => rs.forEach((r) => r.addedNodes.forEach((g) => { if (g.classList?.contains('gone')) { const cs = getComputedStyle(g); window.seenGone = [g.classList.contains('board-menu'), cs.animationName, cs.animationDuration, cs.pointerEvents].join(); } }))).observe(document.body, { childList: true, subtree: true })`);
     await p.click(await p.at('.topbar button[aria-label="Меню"]'));
@@ -20,8 +22,9 @@ export const checks = {
     // The other popups alike: the map, "?" and the note at the bottom rise, a note at the top falls.
     const ways = await p.ev(`['bar minimap', 'pop help', 'pop toast bottom', 'modal', 'pop toast', 'pop confirm'].map((c) => {
       const d = document.createElement('div'); d.className = c; document.body.appendChild(d);
-      const cs = getComputedStyle(d), v = cs.animationName.includes('come-in') ? cs.getPropertyValue('--in-y').trim() : 'none'; d.remove(); return v; }).join()`);
-    expect(ways, 'rising, rising, rising, rising, falling, falling').toBe('8px,8px,8px,8px,-8px,-8px');
+      const q = document.createElement('i'); q.style.marginTop = 'var(--in-y)'; d.appendChild(q);
+      const cs = getComputedStyle(d), v = cs.animationName.includes('come-in') ? getComputedStyle(q).marginTop : 'none'; d.remove(); return v; }).join()`);
+    expect(ways, 'rising, rising, rising, rising, falling, falling').toBe('5.33px,5.33px,5.33px,5.33px,-5.33px,-5.33px');
   },
 
   async 'an edge shows its cursor after half a second, then at once on every panel'(p) {
