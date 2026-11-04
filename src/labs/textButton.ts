@@ -1,12 +1,14 @@
 /**
  * "Кнопка T": on the selection panel of something with text, a T that turns the panel into the text
- * panel (its font and text), till the next press on the board. The one panel turns into the other:
- * what was on it fades out, the panel's body slides and stretches to the other's place and size, and
- * what's on that fades in.
+ * panel (its font and text), till the next press on the board. It stays the one panel where it is:
+ * what's on it fades out, then it takes the other's width, then what's on that fades in.
  */
 
-/** How long the panel's body takes to turn into the other's, in ms. */
-const MORPH = 200;
+/** How long what's on the panel takes to fade out, the panel to take the new width, and the new
+ *  buttons to fade in, in ms. */
+const OUT = 120, WIDEN = 200, IN = 160;
+
+let busy = false;
 
 /** Where an element would stand with its animations done (its coming in, sliding up, not counted). */
 function settledRect(el: HTMLElement): DOMRect {
@@ -18,28 +20,50 @@ function settledRect(el: HTMLElement): DOMRect {
 }
 
 /**
- * The panel `from` (a selector) turning into the one `to` comes in as: call it just before the switch.
- * A body like theirs goes from the one's box to the other's while both show only what's on them.
+ * The panel `from` (a selector) turning into the one that `swap` brings ('tfmt' the text panel,
+ * 'panel' the selection panel), standing where it stands. While it goes on, a body like theirs
+ * (.panel-shell) stands in for both, and they show only what's on them (see labs.css).
  */
-export function morphPanel(from: string, to: string): void {
+export function morphPanel(from: string, to: 'tfmt' | 'panel', swap: () => void): void {
   const a = document.querySelector<HTMLElement>(`${from}:not(.gone):not(.leaving)`);
-  if (!a) return;
-  const r = a.getBoundingClientRect(), cs = getComputedStyle(a);
-  a.dataset.morph = '';
+  if (!a || busy) { swap(); return; }
+  busy = true;
+  const root = document.documentElement, r = a.getBoundingClientRect();
   const shell = document.createElement('div');
   shell.className = 'panel-shell';
-  Object.assign(shell.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, borderRadius: cs.borderRadius });
+  Object.assign(shell.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, borderRadius: getComputedStyle(a).borderRadius });
   document.body.append(shell);
-  // The other one, once it's there.
-  let tries = 0;
-  const find = () => {
-    const b = document.querySelector<HTMLElement>(`${to}:not(.gone):not(.leaving):not([data-morph])`);
-    if (!b) { if (++tries < 10) requestAnimationFrame(find); else shell.remove(); return; }
-    b.dataset.morph = '';
-    const q = settledRect(b);
-    shell.style.borderRadius = getComputedStyle(b).borderRadius;
-    Object.assign(shell.style, { left: `${q.left}px`, top: `${q.top}px`, width: `${q.width}px`, height: `${q.height}px` });
-    setTimeout(() => { delete b.dataset.morph; shell.remove(); }, MORPH + 20);
-  };
-  requestAnimationFrame(find);
+  // What's on it fades out.
+  a.dataset.morph = '';
+  a.style.transition = 'opacity .12s ease';
+  a.style.opacity = '0';
+  const done = () => { shell.remove(); delete root.dataset.morphIn; busy = false; };
+  setTimeout(() => {
+    // The other comes in unseen (see labs.css), and the body takes its width.
+    root.dataset.morphIn = to;
+    swap();
+    let tries = 0;
+    const find = () => {
+      const b = document.querySelector<HTMLElement>(to === 'tfmt' ? '.tfmt:not(.gone):not(.leaving)' : '.bar.panel:not(.gone)');
+      if (!b) { if (++tries < 10) requestAnimationFrame(find); else done(); return; }
+      b.dataset.morph = '';
+      const q = settledRect(b);
+      Object.assign(shell.style, { left: `${q.left}px`, top: `${q.top}px`, width: `${q.width}px`, height: `${q.height}px` });
+      setTimeout(() => {
+        // What's on it fades in; then it's itself again.
+        b.style.opacity = '0';
+        delete root.dataset.morphIn;
+        void b.offsetWidth;
+        b.style.transition = `opacity ${IN}ms ease`;
+        b.style.opacity = '1';
+        setTimeout(() => {
+          b.style.transition = '';
+          b.style.opacity = '';
+          delete b.dataset.morph;
+          done();
+        }, IN + 10);
+      }, WIDEN);
+    };
+    requestAnimationFrame(find);
+  }, OUT);
 }

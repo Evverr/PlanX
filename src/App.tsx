@@ -197,9 +197,12 @@ export function App({ boardId }: { boardId: string }) {
   const labs = useLabs();
   // "Кнопка T" (src/labs): the text panel instead of the selection panel, asked for by its T, till the
   // next press on the board (or something else picked).
-  const [textMode, setTextMode] = useState<string | null>(null);
-  useEffect(() => { if (textMode && textMode !== textItem?.id) setTextMode(null); }, [textItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-  const tMode = labs.textButton && !!textItem && selItems.length === 1 && textMode === textItem.id && !editing;
+  // (Standing where the selection panel stood when that was at the bottom.)
+  const [textMode, setTextMode] = useState<{ id: string; dock?: { cx: number; bottom: number } } | null>(null);
+  useEffect(() => { if (textMode && textMode.id !== textItem?.id) setTextMode(null); }, [textItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const textModeRef = useRef(textMode);
+  textModeRef.current = textMode;
+  const tMode = labs.textButton && !!textItem && selItems.length === 1 && textMode?.id === textItem.id && !editing;
   // Its text typed in (or being typed): the panel's for it while it stays picked.
   const [typedIn, setTypedIn] = useState<string | null>(null);
   useEffect(() => { if (ui.editingId) setTypedIn(ui.editingId); }, [ui.editingId]);
@@ -231,7 +234,7 @@ export function App({ boardId }: { boardId: string }) {
       if (e.target !== editor.canvas) return;
       if (!editor.editingId) setQuiet(null);
       // Back to the selection panel, turning into it.
-      setTextMode((m) => { if (m) morphPanel('.tfmt', '.bar.panel'); return null; });
+      if (textModeRef.current) morphPanel('.tfmt', 'panel', () => setTextMode(null));
     };
     window.addEventListener('pointerdown', press, true);
     return () => window.removeEventListener('pointerdown', press, true);
@@ -269,7 +272,11 @@ export function App({ boardId }: { boardId: string }) {
   const following = useFollowing();
   // The T (on something with text, alone, the text panel not up already): the panel turns into the text panel.
   const toText = labs.textButton && textItem && selItems.length === 1 && !panelItem
-    ? () => { morphPanel('.bar.panel', '.tfmt'); setTextMode(textItem.id); } : undefined;
+    ? () => {
+      const bar = document.querySelector('.bar.panel:not(.gone)'), r = bar?.getBoundingClientRect();
+      const dock = r && !bar!.classList.contains('panel-over') ? { cx: r.left + r.width / 2, bottom: r.bottom } : undefined;
+      morphPanel('.bar.panel', 'tfmt', () => setTextMode({ id: textItem.id, dock }));
+    } : undefined;
 
   // All the others shown, after "+N" was pressed (back to five once they're five or fewer).
   const [peersOpen, setPeersOpen] = useState(false);
@@ -408,7 +415,7 @@ export function App({ boardId }: { boardId: string }) {
 
       {/* Typing in a table cell, the panel shows and sets that cell's own formatting. */}
       {/* A basic sticker's panel once its text is being typed, not on just picking it. */}
-      {panelItem && <TextPanel editor={editor} item={panelItem} leaving={!panelOn} after={performance.now() - overWent.current.at < PANEL_OUT} />}
+      {panelItem && <TextPanel editor={editor} item={panelItem} leaving={!panelOn} after={performance.now() - overWent.current.at < PANEL_OUT} dock={tMode ? textMode?.dock : undefined} />}
 
       {/* Hidden while typing, but for a mind map node, which opens for typing on a single click. */}
       {/* "Панель над элементом" (src/labs): over what's picked instead, but where it'd be in the way there (see panelPlace). */}

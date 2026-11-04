@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useReducer, useState, type ReactNode } from
 
 import type { Editor } from '../editor/editor';
 import { alignOf, baseWeight, DEFAULTS, MARK_COLORS, TEXT_COLORS, type Item, type ListKind, type TextAlign } from '../model/types';
-import { DOT_GAP, DOT_R } from '../canvas/renderer';
+import { DOT_GAP, DOT_R, dotGap } from '../canvas/renderer';
 import { boxOf, type Rect } from '../canvas/geometry';
 import { FONTS } from '../canvas/text';
 import { PanelIcon as Icon, type PanelIconName as IconName } from './PanelIcon';
@@ -141,17 +141,25 @@ export function placeOver(editor: Editor, box: HTMLElement, b: Rect, dots = DOT_
   return !over;
 }
 
-export function TextPanel({ editor, item, leaving, after }: { editor: Editor; item: Item; leaving?: boolean;
+export function TextPanel({ editor, item, leaving, after, dock }: { editor: Editor; item: Item; leaving?: boolean;
   /** Coming in where the panel over what's picked is going ("Панель над элементом", src/labs): once it's gone. */
-  after?: boolean }) {
+  after?: boolean;
+  /** Standing where the selection panel at the bottom stood ("Кнопка T", src/labs): its middle and bottom. */
+  dock?: { cx: number; bottom: number } }) {
   const [wait] = useState(!!after);
   const sort = useSortable('planx-order-text', ORDER, 'x');
   const labs = useLabs();
   const el = sort.ref;
   const [menu, setMenu] = useState<Menu | null>(null);
   useLayoutEffect(() => {
-    // A turned item's box square to the screen.
-    placeOver(editor, el.current!, boxOf(item));
+    const box = el.current!;
+    if (dock) {
+      box.style.left = `${Math.max(EDGE, Math.min(dock.cx - box.offsetWidth / 2, innerWidth - box.offsetWidth - EDGE))}px`;
+      box.style.top = `${dock.bottom - box.offsetHeight}px`;
+      return;
+    }
+    // A turned item's box square to the screen; as far over it as the selection panel stands.
+    placeOver(editor, box, boxOf(item), dotGap(item));
   });
   // Its bottom stays that far over the item whatever size it turns (the panels' size, fonts coming in).
   const [, redraw] = useReducer((n: number) => n + 1, 0);
