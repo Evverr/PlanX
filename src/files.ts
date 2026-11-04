@@ -2,8 +2,8 @@ import type { Editor } from './editor/editor';
 
 /** Files handed to the browser to save: pictures, PDFs, the board itself. */
 
-/** A file name after the board's title, with this ending. */
-export const fileName = (ed: Editor, ext: string) => `${(ed.board.title.trim() || 'Доска').replace(/[\\/:*?"<>|]+/g, ' ')}.${ext}`;
+/** A file name after the board's title (or `name`, given one), with this ending. */
+export const fileName = (ed: Editor, ext: string, name = ed.board.title) => `${(name.trim() || ed.board.title.trim() || 'Доска').replace(/[\\/:*?"<>|]+/g, ' ')}.${ext}`;
 
 /** Hands the browser a file to save. */
 export function saveFile(blob: Blob, name: string): void {
