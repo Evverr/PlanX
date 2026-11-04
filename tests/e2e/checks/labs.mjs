@@ -434,7 +434,7 @@ export const checks = {
     await sleep(700);
     expect([!!(await p.rect('.tfmt:not(.leaving)')), !!(await p.rect('.panel-over:not(.gone)'))].join(), 'the text panel instead').toBe('true,false');
     const to = await p.rect('.tfmt:not(.leaving)');
-    expect(to.b, 'standing where the panel stood').toBe(from.b);
+    expect(`${to.t} ${to.b}`, 'standing where the panel stood, as high').toBe(`${from.t} ${from.b}`);
     expect(!!(await p.rect('.panel-shell')), 'the body gone once there').toBe(false);
     await p.click(await p.at('.tfmt button[aria-label="Жирный"]'));
     expect(await p.ev(`planx.board.get('s').fw`), 'its text bold').toBe(700);
@@ -449,6 +449,10 @@ export const checks = {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [100, 120, 140], rows: [40, 40, 40], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] })); e.setSelection(['t']); })()`);
     await sleep(300);
+    // No pills till the gear on the panel puts them out.
+    expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'no pills at first').toBe(false);
+    await p.click(await p.at('.bar.panel button[aria-label="Переставить строки и столбцы"]'));
+    expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'the gear puts them out').toBe(true);
     // The first column's pill, on the top edge over its middle, to the last column.
     await p.mouse('mouseMoved', 350, 300);
     await p.drag([350, 297], [640, 307]);
@@ -466,6 +470,14 @@ export const checks = {
     t = await p.ev(`planx.board.get('t')`);
     expect(t.cells.join(''), 'the middle row gone').toBe('higefd');
     expect(t.h, 'the table shorter').toBe(80);
+    // Picked again: no pills, till a second click on it.
+    await p.ev(`(() => { planx.editor.setSelection([]); })()`);
+    await sleep(50);
+    await p.ev(`planx.editor.setSelection(['t'])`);
+    await sleep(50);
+    expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'away once something else was picked').toBe(false);
+    await p.click([500, 330]);
+    expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'out by a second click').toBe(true);
   },
 
   async 'a locked sticker is neither moved nor deleted, until unlocked'(p) {

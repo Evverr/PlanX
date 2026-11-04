@@ -31,7 +31,7 @@ export function morphPanel(from: string, to: 'tfmt' | 'panel', swap: () => void)
   const root = document.documentElement, r = a.getBoundingClientRect();
   const shell = document.createElement('div');
   shell.className = 'panel-shell';
-  Object.assign(shell.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, borderRadius: getComputedStyle(a).borderRadius });
+  Object.assign(shell.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
   document.body.append(shell);
   // What's on it fades out.
   a.dataset.morph = '';
@@ -48,7 +48,8 @@ export function morphPanel(from: string, to: 'tfmt' | 'panel', swap: () => void)
       if (!b) { if (++tries < 10) requestAnimationFrame(find); else done(); return; }
       b.dataset.morph = '';
       const q = settledRect(b);
-      Object.assign(shell.style, { left: `${q.left}px`, top: `${q.top}px`, width: `${q.width}px`, height: `${q.height}px` });
+      // (The two are alike but for their width: only that changes.)
+      Object.assign(shell.style, { left: `${q.left}px`, width: `${q.width}px` });
       setTimeout(() => {
         // What's on it fades in; then it's itself again.
         b.style.opacity = '0';
