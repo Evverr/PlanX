@@ -28,6 +28,7 @@ import { useBar } from './ui/panels/bar';
 import type { Item, Link } from './model/types';
 import { Labs } from './labs/LabsLayer';
 import { useLabs } from './labs/labs';
+import { morphPanel } from './labs/textButton';
 import { zoomHelp } from './labs/wheelZoom';
 import { useFollowing } from './labs/presence';
 import { readJSON, readText, writeJSON, writeText } from './storage';
@@ -193,6 +194,12 @@ export function App({ boardId }: { boardId: string }) {
   // What has text the panel sets: text, basic stickers, tasks, tables, shapes (not mind map nodes, nor a
   // component's title); several picked with text ("Несколько сразу", src/labs) taken as one.
   const textItem = selItems.length === 1 && ['text', 'sticky', 'task', 'table', 'rect', 'ellipse', 'polygon'].includes(selItems[0].type) ? selItems[0] : asOne(selItems) ?? undefined;
+  const labs = useLabs();
+  // "Кнопка T" (src/labs): the text panel instead of the selection panel, asked for by its T, till the
+  // next press on the board (or something else picked).
+  const [textMode, setTextMode] = useState<string | null>(null);
+  useEffect(() => { if (textMode && textMode !== textItem?.id) setTextMode(null); }, [textItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tMode = labs.textButton && !!textItem && selItems.length === 1 && textMode === textItem.id && !editing;
   // Its text typed in (or being typed): the panel's for it while it stays picked.
   const [typedIn, setTypedIn] = useState<string | null>(null);
   useEffect(() => { if (ui.editingId) setTypedIn(ui.editingId); }, [ui.editingId]);
@@ -220,13 +227,18 @@ export function App({ boardId }: { boardId: string }) {
   useEffect(() => { if (quiet && quiet !== textItem?.id) setQuiet(null); }, [textItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // Any later press on the board (one that doesn't end typing) brings it back, on the same item too.
   useEffect(() => {
-    const press = (e: PointerEvent) => { if (e.target === editor.canvas && !editor.editingId) setQuiet(null); };
+    const press = (e: PointerEvent) => {
+      if (e.target !== editor.canvas) return;
+      if (!editor.editingId) setQuiet(null);
+      // Back to the selection panel, turning into it.
+      setTextMode((m) => { if (m) morphPanel('.tfmt', '.bar.panel'); return null; });
+    };
     window.addEventListener('pointerdown', press, true);
     return () => window.removeEventListener('pointerdown', press, true);
   }, [editor]);
   // The text panel: shown as above; once it goes, it fades out (half as long as it fades in), still
   // showing what it showed.
-  const panelOn = !!textItem && textShown === textItem.id && quiet !== textItem.id;
+  const panelOn = !!textItem && (tMode || (textShown === textItem.id && quiet !== textItem.id));
   const panelNow = panelOn && textItem ? (editing?.id === textItem.id && editing.type === 'table' && ui.editingCell !== null ? cellItem(editing, ui.editingCell) : textItem) : null;
   const lastPanel = useRef<Item | null>(null);
   const [, panelGone] = useState(0);
@@ -248,15 +260,16 @@ export function App({ boardId }: { boardId: string }) {
     return () => window.removeEventListener('planx:confirm', on);
   }, []);
   const peers = conn.peers();
-  // Features on trial (src/labs): with "following" on, a click on someone's avatar follows them.
-  const labs = useLabs();
   // "Панель над элементом" (src/labs); it and the text panel, coming in where the other's going, wait for it to go.
   const place = usePanelPlace(editor, selItems);
-  const overOn = labs.panelOver && (!editing || editing.type === 'mind'), overShown = overOn && place === 'over' && selItems.length > 0;
+  const overOn = labs.panelOver && (!editing || editing.type === 'mind') && !tMode, overShown = overOn && place === 'over' && selItems.length > 0;
   const overWent = useRef({ shown: false, at: 0 });
   if (overWent.current.shown && !overShown) overWent.current.at = performance.now();
   overWent.current.shown = overShown;
   const following = useFollowing();
+  // The T (on something with text, alone, the text panel not up already): the panel turns into the text panel.
+  const toText = labs.textButton && textItem && selItems.length === 1 && !panelItem
+    ? () => { morphPanel('.bar.panel', '.tfmt'); setTextMode(textItem.id); } : undefined;
 
   // All the others shown, after "+N" was pressed (back to five once they're five or fewer).
   const [peersOpen, setPeersOpen] = useState(false);
@@ -399,8 +412,8 @@ export function App({ boardId }: { boardId: string }) {
 
       {/* Hidden while typing, but for a mind map node, which opens for typing on a single click. */}
       {/* "Панель над элементом" (src/labs): over what's picked instead, but where it'd be in the way there (see panelPlace). */}
-      {(!editing || editing.type === 'mind') && (!labs.panelOver || place === 'bottom') && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={linkCount} docked={docked} />}
-      {overOn && place === 'over' && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={0} docked={false} over after={!!panelItem} />}
+      {(!editing || editing.type === 'mind') && !tMode && (!labs.panelOver || place === 'bottom') && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={linkCount} docked={docked} onText={toText} />}
+      {overOn && place === 'over' && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={0} docked={false} over after={!!panelItem} onText={toText} />}
       {/* A table cell is typed into as if it were an item of its own, the size of the cell. */}
       {editing && (editing.type === 'table' && ui.editingCell !== null
         ? <TextEditor key={`${editing.id}:${ui.editingCell}`} editor={editor} item={cellItem(editing, ui.editingCell)} />
