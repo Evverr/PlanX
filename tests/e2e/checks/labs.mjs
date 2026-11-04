@@ -453,6 +453,26 @@ export const checks = {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
   },
 
+  async '"Узел на линии": a shape dragged onto a picked line\'s middle becomes a part of it'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 200, 300, { id: 'a', w: 100, h: 100 })); b.add(e.newItem('sticky', 800, 300, { id: 'c', w: 100, h: 100 }));
+      b.add(e.newItem('rect', 450, 600, { id: 'r', w: 100, h: 60, text: 'Узел' }));
+      b.addLink({ id: 'l', from: 'a', to: 'c', style: 'straight', color: 'red', heads: 'both' }); e.setSelection(['l']); })()`);
+    await sleep(300);
+    const m = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'), l = planx.board.getLink('l'); const s = g.linkShape(l, (id) => planx.board.get(id)); const q = g.linkHandles(l, s).middles[0].p; return planx.editor.toScreen(q); })()`);
+    // The shape's middle at (500, 630): taken from there to the line's middle circle.
+    await p.drag([500, 630], [m.x, m.y], { steps: 16 });
+    await sleep(200);
+    const out = await p.ev(`(() => { const b = planx.board, r = b.get('r'), ls = b.linkList();
+      return { cx: r.x + r.w / 2, cy: r.y + r.h / 2, joint: !!r.joint, old: !!b.getLink('l'), ls: ls.map((l) => l.from + '>' + l.to + ':' + (l.heads ?? 'end') + ':' + l.color).sort().join(' ') }; })()`);
+    expect(`${out.cx},${out.cy}`, 'in the middle of the line').toBe(`${(await p.ev(`planx.editor.toWorld(${m.x}, ${m.y}).x`))},${(await p.ev(`planx.editor.toWorld(${m.x}, ${m.y}).y`))}`);
+    expect(`${out.joint} ${out.old} ${out.ls}`, 'the line made two through it, as it looked').toBe('true false a>r:start:red r>c:end:red');
+    // Moved, the line goes along.
+    await p.ev(`planx.board.update('r', { y: 100 })`);
+    const ends = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'), l = planx.board.linkList().find((l) => l.to === 'r'); return g.linkShape(l, (id) => planx.board.get(id)).pts.at(-1); })()`);
+    expect(ends.y < 200, 'the line to it follows it').toBe(true);
+  },
+
   async '"Удаление строк и столбцов": Delete takes a whole column\'s text, then the column'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       planx.board.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [120, 120, 120], rows: [40, 40, 40], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] }));

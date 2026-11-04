@@ -213,7 +213,12 @@ export interface LinkShape { pts: Point[]; curve?: Bezier }
  * them; or right angles, out of its side a little way, turning halfway (or once, from a side across to a
  * side along) and into the other side. One without sides goes from the sides facing each other.
  */
-export function linkShape(link: Link, get: (id: string) => Item | undefined): LinkShape | null {
+/** How far short of a thing put into a line ("Узел на линии", src/labs) the line stops. */
+const JOINT_GAP = 3;
+
+export function linkShape(link: Link, getItem: (id: string) => Item | undefined): LinkShape | null {
+  // A thing put into a line is met that much further out all round.
+  const get = (id: string) => { const it = getItem(id); return it?.joint ? { ...it, x: it.x - JOINT_GAP, y: it.y - JOINT_GAP, w: it.w + JOINT_GAP * 2, h: it.h + JOINT_GAP * 2 } : it; };
   const a = get(link.from), b = get(link.to);
   if (!a || !b) return null;
   // Through its nodes: from its item's edge (or side) toward the first, on through each, into the other's
