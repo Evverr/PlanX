@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { boxOf, instanceBounds } from '../canvas/geometry';
@@ -9,7 +9,7 @@ import { holds } from './tidyMind';
  * "Панель над элементом" (src/labs): one selection panel, over what's picked; at the bottom instead
  * where it would be in the way there: what's picked more than half the screen across or high (big, or
  * several far apart) or partly off it, or the handles of «Авторасположение» up (it would lie over
- * them). While the board is moved or zoomed it's away, and back once it's still.
+ * them).
  */
 export function panelPlace(ed: Editor, items: Item[]): 'over' | 'bottom' {
   if (!items.length || tidyMatches(ed) || holds(ed)) return 'bottom';
@@ -21,21 +21,13 @@ export function panelPlace(ed: Editor, items: Item[]): 'over' | 'bottom' {
   return big || off ? 'bottom' : 'over';
 }
 
-/** Where the selection panel goes now (see panelPlace), worked out once the board stands still (0.2 s
- *  after it's last moved or zoomed). */
-export function usePanelPlace(ed: Editor, items: Item[]): 'over' | 'bottom' | null {
+/** Where the selection panel goes (see panelPlace), worked out as something is picked (or the handles
+ *  of «Авторасположение» come or go) and kept while it stays picked: moving or zooming the board, the
+ *  panel stays by it. */
+export function usePanelPlace(ed: Editor, items: Item[]): 'over' | 'bottom' {
   useSyncExternalStore(subscribeTidy, tidyNow);
-  const key = `${ed.cam.x}|${ed.cam.y}|${ed.cam.z}`, first = useRef(key);
-  const [still, setStill] = useState(true);
-  useEffect(() => {
-    if (key === first.current) return;
-    first.current = '';
-    setStill(false);
-    const t = setTimeout(() => setStill(true), 200);
-    return () => clearTimeout(t);
-  }, [key]);
-  // Meanwhile, where it was before (or nowhere, if over what's picked): not hopping as it goes.
-  const settled = useRef<'over' | 'bottom'>('bottom');
-  if (still) settled.current = panelPlace(ed, items);
-  return still || settled.current === 'bottom' ? settled.current : null;
+  const key = `${items.map((i) => i.id).join()}|${tidyMatches(ed)}|${holds(ed)}`;
+  const kept = useRef<{ key: string; place: 'over' | 'bottom' } | null>(null);
+  if (kept.current?.key !== key) kept.current = { key, place: panelPlace(ed, items) };
+  return kept.current.place;
 }
