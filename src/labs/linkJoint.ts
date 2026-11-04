@@ -117,23 +117,16 @@ export function joinLine(ed: Editor, link: Link, it: Item, at: number, p: Point)
   const b = ed.board, x = p.x - it.w / 2, y = p.y - it.h / 2, mid = { ...it, x, y };
   const a = b.get(link.from), z = b.get(link.to);
   if (!a || !z) return;
-  // Its nodes go with the stretches they're on (a right-angled one finds its own way afresh). A smooth
-  // one without any: each half gets one, a quarter of the way along it, so the two run as it ran.
-  const via = link.style === 'elbow' ? undefined : link.via;
-  let before = via?.slice(0, at), after = via?.slice(at), free = false;
-  if (!link.style && !via?.length) {
-    const pts = linkShape(link, (id) => b.get(id))?.pts;
-    // (Into and out of it they then go free, the way the line ran, not pinned to its sides.)
-    if (pts) { before = [along(pts, 0.25)]; after = [along(pts, 0.75)]; free = true; }
-  }
+  // Its nodes go with the stretches they're on (a right-angled one finds its own way afresh).
+  const via = link.style === 'elbow' ? undefined : link.via, before = via?.slice(0, at), after = via?.slice(at);
   // The heads it had at its start and end, on the two.
   const h = link.heads, startHead = h === 'start' || h === 'both', endHead = h === undefined || h === 'both';
   const look = { style: link.style, color: link.color, lo: link.lo, dash: link.dash };
   // Pinned to its ends' sides, each meets the thing in the middle by the side facing the other end.
   const first: Link = { id: uid(), from: link.from, to: it.id, ...look, heads: startHead ? 'start' : 'none',
-    ...(before?.length && { via: before }), ...(link.fromSide && { fromSide: link.fromSide, fromAt: link.fromAt, ...(!free && { toSide: nearestSide(mid, before?.length ? before[before.length - 1] : center(a)) }) }) };
+    ...(before?.length && { via: before }), ...(link.fromSide && { fromSide: link.fromSide, fromAt: link.fromAt, toSide: nearestSide(mid, before?.length ? before[before.length - 1] : center(a)) }) };
   const second: Link = { id: uid(), from: it.id, to: link.to, ...look, ...(endHead ? {} : { heads: 'none' as const }),
-    ...(after?.length && { via: after }), ...(link.toSide && { toSide: link.toSide, toAt: link.toAt, ...(!free && { fromSide: nearestSide(mid, after?.length ? after[0] : center(z)) }) }) };
+    ...(after?.length && { via: after }), ...(link.toSide && { fromSide: nearestSide(mid, after?.length ? after[0] : center(z)), toSide: link.toSide, toAt: link.toAt }) };
   b.transact(() => {
     b.update(it.id, { x, y, joint: true });
     b.remove([link.id]);
@@ -143,13 +136,3 @@ export function joinLine(ed: Editor, link: Link, it: Item, at: number, p: Point)
   ed.requestRender();
 }
 
-/** The point that far (0…1) along a line through the points. */
-function along(pts: Point[], k: number): Point {
-  const lengths = pts.slice(1).map((q, i) => Math.hypot(q.x - pts[i].x, q.y - pts[i].y));
-  let left = lengths.reduce((a, l) => a + l, 0) * k;
-  for (let i = 0; i < lengths.length; i++) {
-    if (left <= lengths[i]) { const t = lengths[i] ? left / lengths[i] : 0; return { x: Math.round(pts[i].x + (pts[i + 1].x - pts[i].x) * t), y: Math.round(pts[i].y + (pts[i + 1].y - pts[i].y) * t) }; }
-    left -= lengths[i];
-  }
-  return pts[pts.length - 1];
-}
