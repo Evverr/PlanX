@@ -439,7 +439,7 @@ export const checks = {
     await p.click(await p.at('.tfmt button[aria-label="Жирный"]'));
     expect(await p.ev(`planx.board.get('s').fw`), 'its text bold').toBe(700);
     // Its arrow takes it back: what was on the text panel doesn't show again as it goes.
-    await p.ev(`(() => { window.shown = 0; const t0 = performance.now(); const f = () => { if (document.querySelector('.panel-shell') && [...document.querySelectorAll('.tfmt')].some((e) => +getComputedStyle(e).opacity > 0.05)) window.shown++; if (performance.now() - t0 < 600) requestAnimationFrame(f); }; setTimeout(() => requestAnimationFrame(f), 130); })()`);
+    await p.ev(`(() => { window.shown = 0; const t0 = performance.now(); const f = () => { if (document.querySelector('.panel-shell') && [...document.querySelectorAll('.tfmt')].some((e) => +getComputedStyle(e).opacity > 0.05)) window.shown++; if (performance.now() - t0 < 600) requestAnimationFrame(f); }; setTimeout(() => requestAnimationFrame(f), 170); })()`);
     await p.click(await p.at('.tfmt button[aria-label="Назад"]'));
     await sleep(700);
     expect([!!(await p.rect('.tfmt:not(.leaving)')), !!(await p.rect('.panel-over:not(.gone)'))].join(), 'back by its arrow').toBe('false,true');
@@ -1050,10 +1050,11 @@ export const checks = {
   async '"Ссылка в тексте": the chain on the text panel sets an address, the text goes blue, Cmd+click opens it'(p) {
     await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 250); planx.board.add(e.newItem('sticky', x, y, { id: 'st', w: 150, h: 150, text: 'Сайт' })); e.setSelection(['st']); e.startEditing('st'); })()`);
     await sleep(300);
-    // Typed in, done, picked again: its panel's there.
+    // Typed in, done: its panel's there by the T ("Кнопка T").
     await p.ev('planx.editor.stopEditing()');
-    await p.click([375, 325]);
-    await sleep(900);
+    await sleep(300);
+    await p.click(await p.at('.bar.panel button[aria-label="Текст и шрифт"]'));
+    await sleep(700);
     await p.click(await p.at('.tfmt button[aria-label="Ссылка"]'));
     await sleep(200);
     expect(await p.ev(`document.activeElement?.getAttribute('aria-label')`), 'its field ready').toBe('Адрес ссылки');

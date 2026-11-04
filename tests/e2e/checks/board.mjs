@@ -422,17 +422,13 @@ export const checks = {
   },
 
   async 'the text panel keeps its bottom over the item whatever the panels\' size'(p) {
-    // It's there once text has been typed in: typed in, done, picked again.
+    // It's there by the T on the selection panel ("Кнопка T", src/labs), not on just picking it.
     await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(500, 370); planx.board.add(e.newItem('text', x, y, { id: 'tx', w: 200, h: 26, text: 'Текст' })); e.setSelection(['tx']); })()`);
     await p.click([540, 383]);
     expect(await p.rect('.tfmt'), 'not on just picking it').toBeFalsy();
-    await p.ev(`planx.editor.startEditing('tx')`);
-    await sleep(100);
-    await p.ev(`planx.editor.stopEditing()`);
-    // (Long enough after the first click not to make a double click of it.)
-    await sleep(500);
-    await p.click([540, 383]);
-    await sleep(600);
+    await sleep(300);
+    await p.click(await p.at('.bar.panel button[aria-label="Текст и шрифт"]'));
+    await sleep(700);
     const b0 = (await p.rect('.tfmt')).b;
     for (const size of ['Средние', 'Маленькие']) {
       await p.menu('Размер панелей');
