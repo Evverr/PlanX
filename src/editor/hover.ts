@@ -16,11 +16,11 @@ import { zoomShows, zoomSize } from '../labs/zoomFade';
 /** How far outside a corner (in screen pixels) the pointer turns the item. */
 const ROTATE_ZONE = 18;
 
-/** Whether the point is on the item's resize handle, at its lower right corner. */
-export function onHandle(ed: Editor, it: Item, w: Point): boolean {
+/** Whether the point is on the item's resize handle, at its lower right corner (or `more` round it). */
+export function onHandle(ed: Editor, it: Item, w: Point, more = 0): boolean {
   // What's in an instance is as big as the instance makes it; the instance's handle is at its contents' corner.
   if (it.type === 'mind' || it.fold || it.host) return false;
-  const hs = ed.reach((HANDLE + 6) / 2) * 2, off = 3 / ed.cam.z, b = it.inst ? instanceBounds(it, ed.board.list()) : it;
+  const hs = ed.reach((HANDLE + 6 + more) / 2) * 2, off = 3 / ed.cam.z, b = it.inst ? instanceBounds(it, ed.board.list()) : it;
   return pointInRect(it.inst ? w : toLocal(it, w), { x: b.x + b.w + off - hs / 2, y: b.y + b.h + off - hs / 2, w: hs, h: hs });
 }
 
@@ -186,6 +186,9 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   // (On its link dots, not: the handle answers the item and itself.)
   const onPicked = dot ? null : single && onHandle(ed, single, w) ? single.id : over && ed.selection.has(over.id) ? over.id : null;
   if (onPicked !== ed.pickHover) { ed.pickHover = onPicked; ed.requestRender(); }
+  // On the handle itself, or a little round it, brighter still.
+  const onIt = !dot && !!single && onHandle(ed, single, w, 8);
+  if (onIt !== ed.hotHandle) { ed.hotHandle = onIt; ed.requestRender(); }
   // (Whether it's still ready is asked before it's kept ready by the pointer being on it.)
   restOn(ed, near);
   warmTable(ed, near?.id ?? (over?.type === 'table' ? over.id : undefined));
