@@ -364,6 +364,9 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   });
   if (!items.length && (over || !linkCount)) return null;
   const tables = items.filter((i) => i.type === 'table'), links = editor.selectedLinks();
+  // An instance picked alone, or something in one (not of a built-in component: those aren't changed).
+  const inOne = items.length === 1 ? (items[0].host ? editor.board.get(items[0].host) : items[0]) : undefined;
+  const editInst = inOne?.inst && !inOne.inst.startsWith('@') ? inOne.id : null;
   const colored = items.some((i) => fillable(i) || i.type === 'icon' || i.type === 'ink');
   const btn = (icon: PanelIconName, title: string, fn: () => void) => (
     <button className="ib" title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
@@ -413,8 +416,10 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
             ))}
           </div>
         ) : undefined,
-        // What's picked made a component (one already isn't made one again).
-        component: items.length > 0 && !(items.length === 1 && items[0].comp) ? btn('component', 'Компонент из выделенного', () => editor.makeComponent()) : undefined,
+        // What's picked made a component (one already isn't made one again); a component's instance (or
+        // something in one) alone: its component brought out to be changed instead.
+        component: editInst ? btn('component', 'Редактировать компонент', () => editor.editComponentAt(editInst))
+          : items.length > 0 && !(items.length === 1 && items[0].comp) ? btn('component', 'Компонент из выделенного', () => editor.makeComponent()) : undefined,
         // An instance can be cut loose from its component.
         detach: items.some((i) => i.inst) ? btn('component-off', 'Отвязать от компонента (Ctrl+Alt+B)', () => editor.detachInstances()) : undefined,
         front: items.length > 0 ? btn('to-front', 'На передний план', () => editor.bringToFront()) : undefined,

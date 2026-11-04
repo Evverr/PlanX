@@ -22,6 +22,16 @@ const glyph = (p, at) => p.ev(`(() => { const e = planx.editor; e.render(); cons
   return red(12, 7.4) ? 'solid' : red(12, 12) ? 'outline' : 'none'; })()`);
 
 export const checks = {
+  async 'with an instance picked, the panel\'s component button brings its component out to be changed'(p) {
+    await fixture(p);
+    await p.ev(`planx.editor.setSelection(['instance'])`);
+    await sleep(300);
+    await p.click(await p.at('.bar.panel button[aria-label="Редактировать компонент"]'));
+    await sleep(200);
+    expect(await selected(p), 'the component out and picked').toBe('source');
+    expect(await p.ev(`planx.board.list().filter((i) => i.comp).length`), 'no component made of it').toBe(1);
+  },
+
   async 'a component brought out at an instance changed in it says so once (unless told not to again)'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); localStorage.removeItem('planx-no-differs-note');
       b.add(e.newItem('sticky', 300, 300, { id: 's', w: 100, h: 100 })); e.setSelection(['s']); e.makeComponent(); e.stopEditing();
