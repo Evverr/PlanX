@@ -24,9 +24,9 @@ export function zoomedAt(cam: Camera, sx: number, sy: number, factor: number, mi
 
 /** The camera showing all of `b` (board units) in the `free` part of the screen, with 5% of it left
  *  empty at each side, at most at 140%. */
-export function fittedTo(b: Rect, free: Rect, min = MIN_Z): Camera {
-  const padX = free.w * 0.05, padY = free.h * 0.05;
-  const z = clamp(Math.min((free.w - padX * 2) / b.w, (free.h - padY * 2) / b.h), min, 1.4);
+export function fittedTo(b: Rect, free: Rect, min = MIN_Z, pad = 0.05, max = 1.4): Camera {
+  const padX = free.w * pad, padY = free.h * pad;
+  const z = clamp(Math.min((free.w - padX * 2) / Math.max(1, b.w), (free.h - padY * 2) / Math.max(1, b.h)), min, max);
   return { z, x: free.x + free.w / 2 - (b.x + b.w / 2) * z, y: free.y + free.h / 2 - (b.y + b.h / 2) * z };
 }
 
