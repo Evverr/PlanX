@@ -2,7 +2,6 @@ import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { cellText, colsOf, rowsOf, withCount } from '../model/table';
-import { LINES_FROM_Z } from '../editor/tables';
 import { isLocked } from './labs';
 import { PICK_FRAME } from '../canvas/renderer';
 
