@@ -194,9 +194,10 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
   return (
     // Keep focus in the text being edited when a control is pressed. Controls can be rearranged by holding them;
     // components can't take the ref, so each sits in a wrapper.
-    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`tfmt sortable ${sort.sorting ? 'sorting' : ''} ${leaving ? 'leaving' : ''} ${wait ? 'after-gone' : ''}`} role="toolbar" aria-label="Форматирование текста"
+    <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`tfmt sortable ${onBack ? 'has-back' : ''} ${sort.sorting ? 'sorting' : ''} ${leaving ? 'leaving' : ''} ${wait ? 'after-gone' : ''}`} role="toolbar" aria-label="Форматирование текста"
       {...sort.container} onPointerDown={(e) => { if (!(e.target as Element).closest('input')) e.preventDefault(); sort.container.onPointerDown(e); }}>
-      {onBack && <><span className="back-wrap" data-nosort><Btn icon="chevron-left" label="Назад" onClick={onBack} /></span><div className="fsep line" /></>}
+      {/* (As roomy as the "more" button at the other end.) */}
+      {onBack && <div className="more-wrap back-wrap" data-nosort><button className="ib" title="Назад" aria-label="Назад" onClick={onBack}><Icon name="chevron-left" /></button></div>}
       {sort.renderFit({
         font: <span className="sort-wrap"><Drop open={menu === 'font'} menu={Object.entries(FONTS).map(([k, f]) => (
           <button key={k} className={`tf-item ${(item.ff ?? 'onest') === k ? 'on' : ''}`} style={{ fontFamily: f.css }}

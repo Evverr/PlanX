@@ -1,7 +1,7 @@
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
-import { cellText, colsOf, rowsOf } from '../model/table';
+import { cellText, colsOf, rowsOf, withCount } from '../model/table';
 import { LINES_FROM_Z } from '../editor/tables';
 import { isLocked } from './labs';
 import { PICK_FRAME } from '../canvas/renderer';
@@ -106,6 +106,32 @@ function grips(it: Item): Array<Grip & Point> {
     ...cols.map((w, i) => ({ id: it.id, axis: 'col' as const, index: i, x: it.x + sum(cols.slice(0, i)) + w / 2, y: it.y })),
     ...rows.map((h, i) => ({ id: it.id, axis: 'row' as const, index: i, x: it.x, y: it.y + sum(rows.slice(0, i)) + h / 2 })),
   ];
+}
+
+/** The pluses inside the table with its pills out, as a mind map node's: by its bottom edge in the
+ *  middle (a row more) and by its right edge in the middle (a column more); radius and how far in
+ *  from the edge, on the screen. */
+const PLUS_R = 9, PLUS_IN = 14;
+export type TablePlus = 'row' | 'col';
+function plusAt(ed: Editor, it: Item, which: TablePlus): Point {
+  const p = ed.toScreen(which === 'row' ? { x: it.x + it.w / 2, y: it.y + it.h } : { x: it.x + it.w, y: it.y + it.h / 2 });
+  return which === 'row' ? { x: p.x, y: p.y - PLUS_IN } : { x: p.x - PLUS_IN, y: p.y };
+}
+/** The plus under a point on the canvas. */
+export function tablePlusAt(ed: Editor, sp: Point): TablePlus | null {
+  const it = tableOf(ed);
+  if (!it || drag) return null;
+  for (const w of ['row', 'col'] as const) { const c = plusAt(ed, it, w); if (Math.hypot(sp.x - c.x, sp.y - c.y) <= PLUS_R + 2) return w; }
+  return null;
+}
+let hotPlus: TablePlus | null = null;
+export const setHotPlus = (ed: Editor, w: TablePlus | null) => { if (hotPlus !== w) { hotPlus = w; ed.requestRender(); } };
+/** A plus pressed: a row or column more, at the end. */
+export function pressPlus(ed: Editor, w: TablePlus): void {
+  const it = tableOf(ed);
+  if (!it) return;
+  ed.board.update(it.id, withCount(it, w, 1));
+  ed.requestRender();
 }
 
 /** The pill under a point on the canvas. */
@@ -242,6 +268,23 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
       ctx.arc(x, y, r, 0, Math.PI * 2);
     }
     ctx.fill();
+  }
+  // The pluses, faint and a tenth smaller till the pointer's on one.
+  if (!drag) for (const w of ['row', 'col'] as const) {
+    const c = plusAt(ed, it, w), on = hotPlus === w, r = on ? PLUS_R : PLUS_R * 0.9;
+    ctx.globalAlpha = on ? 1 : 0.5;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = on ? 1 : 0.75;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = on ? 2 : 1.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(c.x - r * 0.45, c.y); ctx.lineTo(c.x + r * 0.45, c.y);
+    ctx.moveTo(c.x, c.y - r * 0.45); ctx.lineTo(c.x, c.y + r * 0.45);
+    ctx.stroke();
   }
   ctx.restore();
 }
