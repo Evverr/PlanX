@@ -453,6 +453,20 @@ export const checks = {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
   },
 
+  async '"Удаление строк и столбцов": Delete takes a whole column\'s text, then the column'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      planx.board.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [120, 120, 120], rows: [40, 40, 40], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] }));
+      e.setSelection(['t']); e.cells = [1, 4, 7]; e.emit(); })()`);
+    await sleep(200);
+    await p.key('Delete', 'Delete', 46);
+    let t = await p.ev(`planx.board.get('t')`);
+    expect(`${t.cells.join('')} ${t.cols.length}`, 'first its text').toBe('acdfgi 3');
+    await p.key('Delete', 'Delete', 46);
+    t = await p.ev(`planx.board.get('t')`);
+    expect(`${t.cells.join('')} ${t.cols.length} ${t.w}`, 'then the column').toBe('acdfgi 2 240');
+    expect(!!(await p.ev(`planx.board.get('t')`)), 'the table stays').toBe(true);
+  },
+
   async '"Перестановка в таблице": a column dragged by its pill takes its cells along'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [100, 120, 140], rows: [40, 40, 40], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] })); e.setSelection(['t']); })()`);
