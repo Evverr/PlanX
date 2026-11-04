@@ -1326,14 +1326,16 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     if (target) outline(ctx, target, cam.z, SELECT_COLOR, [4, 4]);
     let curve: Bezier;
     // Drawn the way it will run: straight or in right angles, as the last one was made to.
+    // Pulled from a link dot, it starts at the dot (and ends on what it's led to, as it'll be made).
+    const dot = fromSide ? DOT_GAP / cam.z : 0;
     if (style) {
       const ps = fromSide ?? nearestSide(from, target ? center(target) : to);
-      const qs = target ? nearestSide(target, to) : facing(sidePoint(from, ps), to);
-      const p = sidePoint(from, ps), q = target ? sidePoint(target, qs) : to;
+      const qs = target ? nearestSide(target, to) : facing(sidePoint(from, ps, dot), to);
+      const p = sidePoint(from, ps, dot), q = target ? sidePoint(target, qs) : to;
       linkArrow(ctx, { pts: style === 'straight' ? [p, q] : elbowRoute(p, ps, q, qs) }, SELECT_COLOR, cam.z, [6, 6]);
     } else if (fromSide) {
       const toSide = target ? nearestSide(target, to) : null;
-      curve = curveBetween(sidePoint(from, fromSide), fromSide, target && toSide ? sidePoint(target, toSide) : to, toSide, angleOf(from), target ? angleOf(target) : 0);
+      curve = curveBetween(sidePoint(from, fromSide, dot), fromSide, target && toSide ? sidePoint(target, toSide) : to, toSide, angleOf(from), target ? angleOf(target) : 0);
     } else {
       const end = target ? edgePoint(target, center(from)) : to, start = edgePoint(from, end);
       curve = [start, start, end, end];
