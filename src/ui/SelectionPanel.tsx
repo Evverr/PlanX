@@ -278,6 +278,10 @@ function TableColors({ editor, table, cells }: { editor: Editor; table: Item; ce
 }
 
 
+/** How long the panel over what's picked takes to fade out going to its other side, and back in there
+ *  (as long as panels take to go). */
+const FLIP = 80;
+
 /** The room the menu's button takes at the right end. */
 const MENU_BUTTON = 44;
 
@@ -307,7 +311,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   const wait = useRef(false), had = useRef(false);
   // Over what's picked, it stays where it is while rows or columns are being added or taken away (the
   // table growing under it), till the pointer leaves it or the board's scrolled.
-  const hold = useRef(false);
+  const hold = useRef(false), flipping = useRef(false), want = useRef(false);
   useEffect(() => subscribeGrips(redraw), []);
   if (over && items.length && !had.current) wait.current = !!after;
   had.current = items.length > 0;
@@ -335,8 +339,25 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
       const all = editor.board.list(), boxes = items.map((i) => (i.inst ? instanceBounds(i, all) : boxOf(i)));
       if (!boxes.length) return;
       const x = Math.min(...boxes.map((b) => b.x)), y = Math.min(...boxes.map((b) => b.y));
-      const under = placeOver(editor, el, { x, y, w: Math.max(...boxes.map((b) => b.x + b.w)) - x, h: Math.max(...boxes.map((b) => b.y + b.h)) - y });
-      if (under !== down) setDown(under);
+      const box = { x, y, w: Math.max(...boxes.map((b) => b.x + b.w)) - x, h: Math.max(...boxes.map((b) => b.y + b.h)) - y };
+      // Going over to the other side (dragged up past the top, say): it fades out where it is, then
+      // comes back in on that side, as quick as panels go.
+      const under = placeOver(editor, el, box, undefined, flipping.current ? down : undefined);
+      want.current = under;
+      if (under !== down && !flipping.current) {
+        flipping.current = true;
+        placeOver(editor, el, box, undefined, down);
+        el.style.transition = `opacity ${FLIP}ms ease`;
+        el.style.opacity = '0';
+        setTimeout(() => {
+          flipping.current = false;
+          el.style.opacity = '';
+          setDown(want.current);
+          setTimeout(() => { if (!flipping.current) el.style.transition = ''; }, FLIP + 20);
+        }, FLIP);
+        return;
+      }
+      if (!flipping.current && under !== down) setDown(under);
       return;
     }
     // Its width, from what's in it.

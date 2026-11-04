@@ -29,6 +29,7 @@ import { formatCells, pickCell, restOn, setTableLines } from './tables';
 import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, type Pens, type PenTool, type Tool } from './tools';
 import { pushedBelow } from '../labs/textPush';
 import { holdZoomBox } from '../labs/zoomBox';
+import { rejoined } from '../labs/linkJoint';
 import { holds as mindTidyOn, mindTidyKept, restartMindTidy, resumeMindTidy } from '../labs/tidyMind';
 import { clearComments } from '../labs/comments';
 import { isLocked, labOn, subscribeLabs } from '../labs/labs';
@@ -548,7 +549,8 @@ export class Editor {
     if (g?.type === 'relink' && relinked && g.going) {
       // (Its start taken, from its other end.)
       const from = this.board.get(g.start ? relinked.to : relinked.from), side = g.start ? relinked.toSide : relinked.fromSide;
-      if (from) linkPreview = { from, fromSide: side ?? null, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null, style: relinked.style };
+      const at = g.start ? relinked.toAt : relinked.fromAt;
+      if (from) linkPreview = { from, fromSide: side ?? null, fromAt: at, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null, style: relinked.style };
     }
     // A mind map node's buttons stay while its text is being typed (one click opens it for typing).
     const plusOn = this.plusOn();
@@ -603,6 +605,7 @@ export class Editor {
       mindMove: g?.type === 'mindMove' ? { from: g.from, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null } : null,
       tableLines: this.hotLine ? [...this.pickedLines, this.hotLine] : this.pickedLines,
       editingCell: this.editingCell,
+      live: true,
       guides: g?.type === 'drag' ? g.guides ?? [] : [],
       pickedCells: this.cells.length && this.selection.size === 1 ? { id: [...this.selection][0], cells: this.cells } : null,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker', op: this.penStyle(g.tool).op } : null,
@@ -896,7 +899,13 @@ export class Editor {
     // A mind map node goes with everything branching from it, a folded frame with all it holds.
     const items = this.board.list(), folded = items.filter((i) => i.fold && ids.has(i.id));
     const held = folded.length ? [...this.carried(folded).keys()] : [];
-    this.board.remove([...ids, ...held, ...descendants(ids, items)].filter((id) => !isLocked(this.board.get(id))));
+    const going = [...ids, ...held, ...descendants(ids, items)].filter((id) => !isLocked(this.board.get(id)));
+    // What was put into a line going: the line made one again ("Узел на линии", src/labs).
+    const lines = labOn('linkJoint') ? rejoined(this, new Set(going)) : [];
+    this.board.transact(() => {
+      this.board.remove(going);
+      lines.forEach((l) => this.board.addLink(l));
+    });
     this.setSelection([...this.selection].filter((id) => !ids.has(id)));
   }
 

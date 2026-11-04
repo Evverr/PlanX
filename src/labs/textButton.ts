@@ -31,7 +31,8 @@ export function morphPanel(from: string, to: 'tfmt' | 'panel', swap: () => void)
   const root = document.documentElement, r = a.getBoundingClientRect();
   const shell = document.createElement('div');
   shell.className = 'panel-shell';
-  Object.assign(shell.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+  // (Its shadow too: the main panels at the window's edges have one of their own.)
+  Object.assign(shell.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, boxShadow: getComputedStyle(a).boxShadow });
   document.body.append(shell);
   // What's on it fades out, and stays out whatever it does as it goes (its own going away, its ghost).
   a.dataset.morph = '';
@@ -45,6 +46,7 @@ export function morphPanel(from: string, to: 'tfmt' | 'panel', swap: () => void)
     const find = () => {
       const b = document.querySelector<HTMLElement>(to === 'tfmt' ? '.tfmt:not(.gone):not(.leaving)' : '.bar.panel:not(.gone)');
       if (!b) { if (++tries < 10) requestAnimationFrame(find); else done(); return; }
+      shell.style.boxShadow = getComputedStyle(b).boxShadow;
       b.dataset.morph = '';
       // The body follows its width each frame as it finds it (a panel measures what fits it, and may
       // again as the other one goes); what's on it fades in once that's held still the body's whole

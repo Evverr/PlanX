@@ -29,6 +29,7 @@ import type { Item, Link } from './model/types';
 import { Labs } from './labs/LabsLayer';
 import { useLabs } from './labs/labs';
 import { morphPanel } from './labs/textButton';
+import { joinDropped } from './labs/linkJoint';
 import { zoomHelp } from './labs/wheelZoom';
 import { useFollowing } from './labs/presence';
 import { readJSON, readText, writeJSON, writeText } from './storage';
@@ -269,6 +270,10 @@ export function App({ boardId }: { boardId: string }) {
   const place = usePanelPlace(editor, selItems);
   const overOn = labs.panelOver && (!editing || editing.type === 'mind') && !tMode, overShown = overOn && place === 'over' && selItems.length > 0;
   const overWent = useRef({ shown: false, at: 0 });
+  // What's picked, and whether that's instead of something else picked just now (the panel over it
+  // fading out and coming back in by the new one).
+  const selKey = selItems.map((i) => i.id).join(), lastSel = useRef(''), swapped = !!lastSel.current && lastSel.current !== selKey && !!selKey;
+  useEffect(() => { lastSel.current = selKey; }, [selKey]);
   if (overWent.current.shown && !overShown) overWent.current.at = performance.now();
   overWent.current.shown = overShown;
   const following = useFollowing();
@@ -359,10 +364,13 @@ export function App({ boardId }: { boardId: string }) {
       {recorder && <AudioRecorder onClose={() => setRecorder(false)} onAdd={(note) => { editor.addAudio(note); setRecorder(false); }} />}
       {pop === 'icons' && <IconPicker zoom={ui.cam.z} onPick={(kind, id, at) => {
         setPop(null);
+        // A line picked: dropped on its middle, what's made goes into it ("Узел на линии", src/labs).
+        const sel = [...editor.selection], line = labs.linkJoint && at && sel.length === 1 && editor.board.getLink(sel[0]) ? sel[0] : null;
         if (kind === 'emoji') editor.addEmoji(id, at);
         else if (kind === 'sticky') editor.addSticky(id, at);
         else if (kind === 'doodle') editor.addDoodle(id, at);
         else editor.addIcon(id, at);
+        if (line) joinDropped(editor, line, editor.selectedItems()[0]);
       }} />}
 
       {/* The others on the board: in the top right corner, faint till the pointer comes over them; five,
@@ -423,7 +431,8 @@ export function App({ boardId }: { boardId: string }) {
       {/* Hidden while typing, but for a mind map node, which opens for typing on a single click. */}
       {/* "Панель над элементом" (src/labs): over what's picked instead, but where it'd be in the way there (see panelPlace). */}
       {(!editing || editing.type === 'mind') && !tMode && (!labs.panelOver || place === 'bottom') && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={linkCount} docked={docked} onText={toText} />}
-      {overOn && place === 'over' && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={0} docked={false} over after={!!panelItem} onText={toText} />}
+      {/* Something else picked: the one by the last fades out, a new one comes in by it once that's gone. */}
+      {overOn && place === 'over' && <SelectionPanel key={selKey} editor={editor} items={selItems} cells={ui.cells} linkCount={0} docked={false} over after={!!panelItem || swapped} onText={toText} />}
       {/* A table cell is typed into as if it were an item of its own, the size of the cell. */}
       {editing && (editing.type === 'table' && ui.editingCell !== null
         ? <TextEditor key={`${editing.id}:${ui.editingCell}`} editor={editor} item={cellItem(editing, ui.editingCell)} />

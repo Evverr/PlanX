@@ -82,7 +82,7 @@ export function ReactButton({ editor, items }: { editor: Editor; items: Item[] }
   return (
     <div ref={ref} className="op-wrap">
       <button className={`ib ${open ? 'on' : ''}`} title="Реакция" aria-label="Реакция" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <PanelIcon name="like" />
+        <PanelIcon name="heart" />
       </button>
       {open && (
         <div className="op-pop react-pop" data-nosort role="menu" aria-label="Реакции">

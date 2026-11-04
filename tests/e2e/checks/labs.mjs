@@ -471,6 +471,9 @@ export const checks = {
     await p.ev(`planx.board.update('r', { y: 100 })`);
     const ends = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'), l = planx.board.linkList().find((l) => l.to === 'r'); return g.linkShape(l, (id) => planx.board.get(id)).pts.at(-1); })()`);
     expect(ends.y < 200, 'the line to it follows it').toBe(true);
+    // Taken away, the line is one again, as it was.
+    await p.ev(`(() => { planx.editor.setSelection(['r']); planx.editor.deleteSelection(); })()`);
+    expect(await p.ev(`planx.board.linkList().map((l) => l.from + '>' + l.to + ':' + (l.heads ?? 'end') + ':' + l.color + ':' + l.style).join()`), 'one again').toBe('a>c:both:red:straight');
   },
 
   async '"Узел на линии": a sticker dragged off the rail onto a picked line\'s middle goes into it'(p) {
@@ -481,7 +484,7 @@ export const checks = {
     const m = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'), l = planx.board.getLink('l'); const q = g.linkHandles(l, g.linkShape(l, (id) => planx.board.get(id))).middles[0].p, s = planx.editor.toScreen(q), c = planx.editor.canvas.getBoundingClientRect(); return [s.x + c.left, s.y + c.top]; })()`);
     await carry(p, await p.at('.tools [data-key="sticky"]'), [[m[0] - 100, m[1] + 100], m]);
     const st = await p.ev(`(() => { const s = planx.board.list().find((i) => i.type === 'sticky'); return { joint: !!s?.joint, ls: planx.board.linkList().map((l) => l.from + '>' + l.to).sort().join() , s: s?.id }; })()`);
-    expect(`${st.joint} ${st.ls}`, 'in the line').toBe(`true a>${st.s},${st.s}>c`);
+    expect(`${st.joint} ${st.ls}`, 'in the line').toBe(`true ${[`a>${st.s}`, `${st.s}>c`].sort().join()}`);
   },
 
   async '"Удаление строк и столбцов": Delete takes a whole column\'s text, then the column'(p) {
