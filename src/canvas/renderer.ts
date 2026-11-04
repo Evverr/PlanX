@@ -12,6 +12,7 @@ import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
 import { COMPONENT_COLOR, firstInstance, instancePlus, objectArrow } from '../model/components';
 import { labOn } from '../labs/labs';
+import { zoomFade } from '../labs/zoomFade';
 import { isBuiltin } from '../model/builtins';
 import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
@@ -667,6 +668,9 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
  *  stub of branch, the number in it. */
 function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, way: Way, n: number) {
   const { theme, cam } = s, b = foldBadge(it, way, cam.z, n, s.slide?.get(`${it.id}:${way}`) ?? 0);
+  const fade = zoomFade('fold', cam.z, s.selection.has(it.id));
+  if (!fade) return;
+  ctx.globalAlpha *= fade;
   ctx.strokeStyle = shade(levelColor(mindDepth(it, s.get) + 1), theme.dim);
   ctx.lineWidth = it.parent ? 1.125 : 2.25;
   ctx.beginPath();
@@ -675,7 +679,7 @@ function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, way: W
   else if (way === 'right') { ctx.moveTo(it.x + it.w, b.y); ctx.lineTo(b.x - b.w / 2, b.y); }
   else { ctx.moveTo(it.x, b.y); ctx.lineTo(b.x + b.w / 2, b.y); }
   ctx.stroke();
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = fade;
   ctx.beginPath();
   ctx.roundRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h, b.h / 2);
   ctx.fillStyle = shade(levelColor(mindDepth(it, s.get) + 1), theme.dim);
@@ -685,6 +689,7 @@ function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, way: W
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(String(n), b.x, b.y + 0.5 / cam.z);
+  ctx.globalAlpha = 1;
 }
 
 /** The branches of mind maps, under the nodes and half see-through (but for those to picked nodes):
@@ -1155,13 +1160,15 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   for (const it of s.items) {
     // (Its title being typed in too: done with it there and then.)
     if (!it.comp || it.stowed) continue;
+    const fade = zoomFade('comp', cam.z, s.selection.has(it.id));
+    if (!fade) continue;
     const p = instancePlus(it, cam.z);
     ctx.fillStyle = COMPONENT_COLOR;
-    ctx.globalAlpha = s.hotPlus === `tick:${it.id}` ? 1 : 0.75;
+    ctx.globalAlpha = (s.hotPlus === `tick:${it.id}` ? 1 : 0.75) * fade;
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = fade;
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = 2 / cam.z;
     ctx.lineCap = 'round';
@@ -1169,18 +1176,20 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     ctx.beginPath();
     ctx.moveTo(p.x - p.r * 0.45, p.y + p.r * 0.02); ctx.lineTo(p.x - p.r * 0.1, p.y + p.r * 0.36); ctx.lineTo(p.x + p.r * 0.45, p.y - p.r * 0.3);
     ctx.stroke();
+    ctx.globalAlpha = 1;
     // Past it, an arrow: made one of the board's own objects ("Объекты", src/labs), if it isn't yet.
     if (it.obj || !labOn('objects')) continue;
     const q = objectArrow(it, cam.z);
     ctx.fillStyle = COMPONENT_COLOR;
-    ctx.globalAlpha = s.hotPlus === `obj:${it.id}` ? 1 : 0.75;
+    ctx.globalAlpha = (s.hotPlus === `obj:${it.id}` ? 1 : 0.75) * fade;
     ctx.beginPath();
     ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = fade;
     // In it, the component icon in white.
     const k = q.r * 1.6;
     drawIcon(ctx, 'component', q.x - k / 2, q.y - k / 2, k, '#fff');
+    ctx.globalAlpha = 1;
   }
   // A link picked alone: its nodes, and where new ones can be pulled out (the middles of its stretches).
   const pickedLink = s.selection.size === 1 ? s.links.find((l) => s.selection.has(l.id)) : undefined, ps = pickedLink && linkShape(pickedLink, s.get);

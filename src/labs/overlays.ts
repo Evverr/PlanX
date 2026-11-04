@@ -5,6 +5,7 @@ import { boxOf } from '../canvas/geometry';
 import { font } from '../canvas/text';
 import { drawEmoji } from '../emoji/emoji';
 import { labOn, myId } from './labs';
+import { zoomFade } from './zoomFade';
 
 /**
  * What the features on trial draw over the board, at screen scale: a lock on locked items, the
@@ -17,10 +18,10 @@ export const REACTIONS = ['emoji-27', 'emoji-24', 'emoji-23', 'emoji-25', 'emoji
 const dark = () => document.documentElement.dataset.theme === 'dark';
 
 /** A small round badge with a padlock, at the item's top right corner. */
-function drawLock(ctx: CanvasRenderingContext2D, ed: Editor, it: Item) {
+function drawLock(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, fade: number) {
   const b = boxOf(it), p = ed.toScreen({ x: b.x + b.w, y: b.y });
   const x = Math.round(p.x) + 2, y = Math.round(p.y) - 2, r = 10;
-  ctx.globalAlpha = ed.selection.has(it.id) ? 1 : 0.8;
+  ctx.globalAlpha = (ed.selection.has(it.id) ? 1 : 0.8) * fade;
   ctx.shadowColor = 'rgba(0, 0, 0, .18)';
   ctx.shadowBlur = 4;
   ctx.shadowOffsetY = 1;
@@ -156,8 +157,10 @@ export function drawLabs(ctx: CanvasRenderingContext2D, ed: Editor): boolean {
       if (!it.lock && !it.rx) continue;
       const b = boxOf(it);
       if (b.x > view.x + view.w || b.y > view.y + view.h + 40 / ed.cam.z || b.x + b.w < view.x - 40 / ed.cam.z || b.y + b.h < view.y) continue;
-      if (reactions && it.rx) drawReactions(ctx, ed, it, me);
-      if (lock && it.lock) drawLock(ctx, ed, it);
+      const picked = ed.selection.has(it.id), rx = reactions && it.rx ? zoomFade('reactions', ed.cam.z, picked) : 0;
+      const lk = lock && it.lock ? zoomFade('lock', ed.cam.z, picked) : 0;
+      if (rx) { ctx.globalAlpha = rx; drawReactions(ctx, ed, it, me); ctx.globalAlpha = 1; }
+      if (lk) drawLock(ctx, ed, it, lk);
     }
   }
   let moving = false;
