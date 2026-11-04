@@ -491,6 +491,13 @@ export const checks = {
     await p.ev(`planx.editor.dropItem('table', { x: 500, y: 350 })`);
     await sleep(100);
     expect(await p.ev(`(async () => { const t = planx.board.list().find((i) => i.type === 'table'); return (await import('/src/labs/tableMove.ts')).gripsOn(t.id); })()`), 'pills out').toBe(true);
+    // Its plus at the bottom, over the line down its middle: the plus lit, not the line.
+    const t = await p.ev(`planx.board.list().find((i) => i.type === 'table')`);
+    const c = await p.ev(`(() => { const s = planx.editor.toScreen({ x: ${t.x + t.w / 2}, y: ${t.y + t.h} }), r = planx.editor.canvas.getBoundingClientRect(); return [s.x + r.left, s.y + r.top - 14]; })()`);
+    await p.mouse('mouseMoved', c[0], c[1] - 20);
+    await p.mouse('mouseMoved', ...c);
+    await sleep(700);
+    expect(await p.ev(`planx.editor.hotLine`), 'no line lit').toBe(null);
   },
 
   async '"Удаление строк и столбцов": Delete takes a whole column\'s text, then the column'(p) {

@@ -2,6 +2,8 @@ import type { Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { colsOf, lineAt, rowsOf, withCellFormat, type TableLine } from '../model/table';
 import type { Editor } from './editor';
+import { labOn } from '../labs/labs';
+import { tablePlusAt } from '../labs/tableMove';
 
 /** How long the mouse rests on a table line before it can be dragged, in ms. */
 const LINE_REST = 500;
@@ -108,6 +110,8 @@ export const LINES_FROM_Z = 0.75;
 export function tableLineAt(ed: Editor, w: Point, hit: Item | null): TableLine | null {
   if (hit && hit.type !== 'table' && hit.type !== 'frame') return null;
   if (ed.cam.z < LINES_FROM_Z) return null;
+  // On a plus of «Перестановка в таблице» (src/labs): that, not a line under it.
+  if (labOn('tableMove') && tablePlusAt(ed, ed.toScreen(w))) return null;
   // A finger gets a wider band, but not so wide a small cell is all lines.
   const tol = (ed.byFinger ? 10 : 5) / ed.cam.z, items = ed.shown();
   for (let i = items.length - 1; i >= 0; i--) {
