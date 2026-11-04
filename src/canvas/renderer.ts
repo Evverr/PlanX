@@ -81,7 +81,7 @@ export interface Scene {
   byFinger: boolean;
   /** The dot under the pointer, drawn larger and at full strength; the others are faint. */
   hotDot: Side | null;
-  /** The picked item the pointer is on (or on its link dots): its frame stronger. */
+  /** The picked item the pointer is on (or on its link dots or handle): its frame and handle stronger. */
   pickHover?: string | null;
   /** With the line tool, the item whose link dots show. */
   linkDots?: string | null;
@@ -134,9 +134,10 @@ export const DOT_R = 3.5;
 export const DOT_GAP = 16;
 /** The dots' strength, and the one under the pointer's (15 across), which it grows to (and back from)
  *  three times as fast as a popup comes in. */
-const DOT_FADE = 0.1, DOT_HOT_FADE = 0.8, DOT_HOT_R = 7.5, DOT_GROW = 160 / 3;
-/** The frame of what's picked: its strength, with the pointer on it, and its least corner radius. */
-const PICK_FADE = 0.2, PICK_HOT_FADE = 0.8, PICK_RAD = 4;
+const DOT_FADE = 0.3, DOT_HOT_FADE = 0.8, DOT_HOT_R = 7.5, DOT_GROW = 160 / 3;
+/** The frame of what's picked and its handle: their strength, with the pointer on it, their line and
+ *  the frame's least corner radius. */
+const PICK_FADE = 0.3, PICK_HOT_FADE = 0.8, PICK_LINE = 1.5, PICK_RAD = 4;
 /** How far each dot is on its way to lit (1) or not (0), and since when, by item and side. */
 const dotTurns = new Map<string, { hot: boolean; from: number; at: number }>();
 const dotLit = (t: { hot: boolean; from: number; at: number }, now: number) => {
@@ -1275,9 +1276,10 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     // An instance keeps its red title alone, without a selection frame.
     if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) {
       ctx.globalAlpha = s.pickHover === id ? PICK_HOT_FADE : PICK_FADE;
-      outline(ctx, it, cam.z, theme.pick, [], 1, PICK_RAD);
+      outline(ctx, it, cam.z, theme.pick, [], PICK_LINE, PICK_RAD);
       ctx.globalAlpha = 1;
     }
+    const handleFade = s.pickHover === id ? PICK_HOT_FADE : PICK_FADE;
     // A mind map node sizes itself and links by its branches: instead of the handle and dots it
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && it.type === 'mind') {
@@ -1289,20 +1291,24 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       const b = instanceBounds(it, s.items), hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z;
       ctx.fillStyle = theme.surface;
       ctx.strokeStyle = theme.pick;
-      ctx.lineWidth = 2 / cam.z;
+      ctx.lineWidth = PICK_LINE / cam.z;
       ctx.beginPath();
       ctx.roundRect(b.x + b.w + off - hs / 2, b.y + b.h + off - hs / 2, hs, hs, 3 / cam.z);
+      ctx.globalAlpha = handleFade;
       ctx.fill();
       ctx.stroke();
+      ctx.globalAlpha = 1;
     } else if (s.showHandle && s.editingId !== id) {
       const hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z;
       ctx.fillStyle = theme.surface;
       ctx.strokeStyle = theme.pick;
-      ctx.lineWidth = 2 / cam.z;
+      ctx.lineWidth = PICK_LINE / cam.z;
       ctx.beginPath();
       turned(ctx, it, () => ctx.roundRect(it.x + it.w + off - hs / 2, it.y + it.h + off - hs / 2, hs, hs, 3 / cam.z));
+      ctx.globalAlpha = handleFade;
       ctx.fill();
       ctx.stroke();
+      ctx.globalAlpha = 1;
       drawDots(ctx, it, s);
     }
   }
