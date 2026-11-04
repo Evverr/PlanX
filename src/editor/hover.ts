@@ -11,7 +11,7 @@ import { rotateCursor } from './cursors';
 import { restOn, sameLine, tableLineAt, warmTable } from './tables';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
-import { zoomShows } from '../labs/zoomFade';
+import { zoomShows, zoomSize } from '../labs/zoomFade';
 
 /** How far outside a corner (in screen pixels) the pointer turns the item. */
 const ROTATE_ZONE = 18;
@@ -96,7 +96,7 @@ export function onInstanceGlyph(ed: Editor, it: Item, w: Point): boolean {
 /** Whether the point is on a component's tick for an instance of it. */
 export function onInstancePlus(ed: Editor, it: Item, w: Point): boolean {
   if (!it.comp || it.stowed || !zoomShows('comp', ed.cam.z, ed.selection.has(it.id))) return false;
-  const p = instancePlus(it, ed.cam.z);
+  const p = instancePlus(it, ed.cam.z / zoomSize('comp', ed.cam.z, ed.selection.has(it.id)));
   return Math.hypot(w.x - p.x, w.y - p.y) <= Math.max(p.r * 1.3, ed.reach(0));
 }
 
@@ -106,7 +106,7 @@ export const tickAt = (ed: Editor, w: Point): Item | null => ed.shown().find((it
 /** The component in sight whose arrow (made one of the board's objects, "Объекты") is under the point. */
 export const objectArrowAt = (ed: Editor, w: Point): Item | null => !labOn('objects') ? null : ed.shown().find((it) => {
   if (!it.comp || it.stowed || it.obj || !zoomShows('comp', ed.cam.z, ed.selection.has(it.id))) return false;
-  const p = objectArrow(it, ed.cam.z);
+  const p = objectArrow(it, ed.cam.z / zoomSize('comp', ed.cam.z, ed.selection.has(it.id)));
   return Math.hypot(w.x - p.x, w.y - p.y) <= Math.max(p.r * 1.3, ed.reach(0));
 }) ?? null;
 
@@ -127,7 +127,7 @@ export function foldBadgeAt(ed: Editor, w: Point): { id: string; way: Way } | nu
     const it = ed.board.get(id);
     if (!it || ed.hidden().has(id) || !zoomShows('fold', ed.cam.z, ed.selection.has(id))) continue;
     for (const [way, n] of ways) {
-      const b = foldBadge(it, way, ed.cam.z, n, ed.slid.get(`${id}:${way}`) ?? 0);
+      const b = foldBadge(it, way, ed.cam.z / zoomSize('fold', ed.cam.z, ed.selection.has(id)), n, ed.slid.get(`${id}:${way}`) ?? 0);
       if (Math.abs(w.x - b.x) <= b.w / 2 + pad && Math.abs(w.y - b.y) <= b.h / 2 + pad) return { id, way };
     }
   }

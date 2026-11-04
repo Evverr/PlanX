@@ -5,7 +5,7 @@ import { boxOf } from '../canvas/geometry';
 import { font } from '../canvas/text';
 import { drawEmoji } from '../emoji/emoji';
 import { labOn, myId } from './labs';
-import { zoomFade, zoomFading } from './zoomFade';
+import { zoomFade, zoomFading, zoomSize } from './zoomFade';
 
 /**
  * What the features on trial draw over the board, at screen scale: a lock on locked items, the
@@ -18,9 +18,14 @@ export const REACTIONS = ['emoji-27', 'emoji-24', 'emoji-23', 'emoji-25', 'emoji
 const dark = () => document.documentElement.dataset.theme === 'dark';
 
 /** A small round badge with a padlock, at the item's top right corner. */
-function drawLock(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, fade: number) {
+function drawLock(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, fade: number, k: number) {
   const b = boxOf(it), p = ed.toScreen({ x: b.x + b.w, y: b.y });
   const x = Math.round(p.x) + 2, y = Math.round(p.y) - 2, r = 10;
+  // k times its size, about its middle.
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(k, k);
+  ctx.translate(-x, -y);
   ctx.globalAlpha = (ed.selection.has(it.id) ? 1 : 0.8) * fade;
   ctx.shadowColor = 'rgba(0, 0, 0, .18)';
   ctx.shadowBlur = 4;
@@ -43,6 +48,7 @@ function drawLock(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, fade: num
   ctx.beginPath();
   ctx.roundRect(x - 4.5, y - 0.5, 9, 6.5, 1.5);
   ctx.fill();
+  ctx.restore();
   ctx.globalAlpha = 1;
 }
 
@@ -54,11 +60,16 @@ let pills: Pill[] = [];
 export const pillAt = (p: Point): Pill | undefined => pills.find((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
 
 /** Under the item's lower left corner, a row of pills: an emoji and how many put it; blue if you did. */
-function drawReactions(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, me: string) {
+function drawReactions(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, me: string, k: number) {
   const b = boxOf(it), p = ed.toScreen({ x: b.x, y: b.y + b.h });
   if (b.w * ed.cam.z < 24) return;
-  let x = Math.round(p.x);
-  const y = Math.round(p.y) + 6, h = 24;
+  // k times their size, from the item's corner.
+  const x0 = Math.round(p.x), y0 = Math.round(p.y);
+  ctx.save();
+  ctx.translate(x0, y0);
+  ctx.scale(k, k);
+  let x = 0;
+  const y = 6, h = 24;
   ctx.font = font(12, 600);
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
@@ -78,9 +89,10 @@ function drawReactions(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, me: 
     drawEmoji(ctx, emoji, x + 8, y + 4, 16);
     ctx.fillStyle = mine ? (dark() ? '#9CCBFF' : '#0066D6') : dark() ? '#D5D9E0' : '#454545';
     ctx.fillText(text, x + 8 + 16 + 5, y + h / 2 + 0.5);
-    pills.push({ x, y, w, h, id: it.id, emoji });
+    pills.push({ x: x0 + x * k, y: y0 + y * k, w: w * k, h: h * k, id: it.id, emoji });
     x += w + 4;
   }
+  ctx.restore();
 }
 
 /** Puts this browser's reaction on the items, or takes it off if it's on all of them already. */
@@ -159,8 +171,8 @@ export function drawLabs(ctx: CanvasRenderingContext2D, ed: Editor): boolean {
       if (b.x > view.x + view.w || b.y > view.y + view.h + 40 / ed.cam.z || b.x + b.w < view.x - 40 / ed.cam.z || b.y + b.h < view.y) continue;
       const picked = ed.selection.has(it.id), rx = reactions && it.rx ? zoomFade('reactions', ed.cam.z, picked) : 0;
       const lk = lock && it.lock ? zoomFade('lock', ed.cam.z, picked) : 0;
-      if (rx) { ctx.globalAlpha = rx; drawReactions(ctx, ed, it, me); ctx.globalAlpha = 1; }
-      if (lk) drawLock(ctx, ed, it, lk);
+      if (rx) { ctx.globalAlpha = rx; drawReactions(ctx, ed, it, me, zoomSize('reactions', ed.cam.z, picked)); ctx.globalAlpha = 1; }
+      if (lk) drawLock(ctx, ed, it, lk, zoomSize('lock', ed.cam.z, picked));
     }
   }
   let moving = false;

@@ -2,9 +2,9 @@ import { labOn } from './labs';
 
 /**
  * "Мелочи при отдалении" (src/labs): the small things drawn the same size on screen whatever the zoom
- * go when the board is zoomed out past their zoom (1 = 100%) and come back past it, fading as a popup
- * does (in .16s, out .08s, as in styles/moves.css); while gone they can't be pressed. On what's picked
- * they stay.
+ * shrink as the board is zoomed out from twice their zoom (1 = 100%), down to half their size at it,
+ * then go past it and come back, fading as a popup does (in .16s, out .08s, as in styles/moves.css);
+ * while gone they can't be pressed. On what's picked they stay as they are.
  */
 export const ZOOM_GONE = {
   /** A component's tick and its arrow ("Объекты"). */
@@ -27,6 +27,10 @@ function look(t: { on: boolean; from: number; at: number }, now: number): number
   const k = Math.min(1, (now - t.at) / (t.on ? IN : OUT));
   return t.from + ((t.on ? 1 : 0) - t.from) * ease(k);
 }
+
+/** How big to draw it at this zoom: whole from twice its zoom, shrinking with the zoom to half at it. */
+export const zoomSize = (kind: Kind, z: number, picked = false): number =>
+  picked || !labOn('zoomFade') ? 1 : Math.max(0.5, Math.min(1, z / (2 * ZOOM_GONE[kind])));
 
 /** Whether it's there at this zoom (to be pressed); always when picked. */
 export const zoomShows = (kind: Kind, z: number, picked = false): boolean => picked || !labOn('zoomFade') || z >= ZOOM_GONE[kind];
