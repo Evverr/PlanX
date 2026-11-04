@@ -52,7 +52,7 @@ function Palette({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-type Paint = 'fill' | 'stroke' | 'text';
+type Paint = 'fill' | 'stroke' | 'down' | 'text';
 
 /** Which colours the circles set, fill or outline (a table's lines), or the text's; Shift-click picks
  *  fill and outline both (the text's goes on its own). */
@@ -71,12 +71,15 @@ const textLook = (tc: string | null) => (!tc || tc === 'ink' ? 'var(--ink)' : tc
 
 /** The fill/outline/text switch, each showing its colour now (outline and text where there are), and a
  *  line after it. */
-function PaintSwitch({ paint, pick, fill, stroke, fillLabel, strokeLabel, text }: {
-  paint: Paint[]; pick: (which: Paint, shift: boolean) => void; fill: string | null; stroke?: string | null; fillLabel: string; strokeLabel?: string; text?: string | null;
+function PaintSwitch({ paint, pick, fill, stroke, fillLabel, strokeLabel, down, downLabel, text }: {
+  paint: Paint[]; pick: (which: Paint, shift: boolean) => void; fill: string | null; stroke?: string | null; fillLabel: string; strokeLabel?: string;
+  /** A table's: the lines down between its columns, a second outline circle. */
+  down?: string | null; downLabel?: string; text?: string | null;
 }) {
   const fillLook = !fill ? 'var(--line)' : fill.startsWith('#') ? fill : fill === 'none' ? 'transparent' : FILLS[fill] ?? FILLS.blue;
-  const strokeLook = !stroke ? 'var(--line)' : stroke.startsWith('#') ? stroke : stroke === 'none' ? 'transparent'
-    : stroke === 'ink' ? 'var(--ink)' : STROKE_COLORS[stroke] || 'var(--shape-stroke)';
+  const lineLook = (c: string | null | undefined) => !c ? 'var(--line)' : c.startsWith('#') ? c : c === 'none' ? 'transparent'
+    : c === 'ink' ? 'var(--ink)' : STROKE_COLORS[c] || 'var(--shape-stroke)';
+  const strokeLook = lineLook(stroke);
   return (
     <>
       <div className="sw-group paint-target">
@@ -88,6 +91,12 @@ function PaintSwitch({ paint, pick, fill, stroke, fillLabel, strokeLabel, text }
           <button className={`ib ${paint.includes('stroke') ? 'on' : ''}`} title={`${strokeLabel} (с Shift — вместе)`} aria-label={strokeLabel}
             aria-pressed={paint.includes('stroke')} onClick={(e) => pick('stroke', e.shiftKey)}>
             <span className={`paint-stroke ${stroke === 'none' ? 'none' : ''}`} style={{ borderColor: strokeLook }} />
+          </button>
+        )}
+        {down !== undefined && (
+          <button className={`ib ${paint.includes('down') ? 'on' : ''}`} title={`${downLabel} (с Shift — вместе)`} aria-label={downLabel}
+            aria-pressed={paint.includes('down')} onClick={(e) => pick('down', e.shiftKey)}>
+            <span className={`paint-stroke ${down === 'none' ? 'none' : ''}`} style={{ borderColor: lineLook(down) }} />
           </button>
         )}
         {text !== undefined && (
@@ -183,7 +192,7 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
         <PaintSwitch paint={targets} pick={pick} fill={fill} stroke={strokable.length ? stroke : undefined} fillLabel="Заливка" strokeLabel="Обводка" text={text} />
         <Swatches editor={editor} swatches={swatches} current={target === 'fill' ? fill : target === 'stroke' ? stroke : text} onPick={setColor}
           label={target === 'fill' ? 'Цвет' : target === 'stroke' ? 'Цвет обводки' : 'Цвет текста'} noneLabel={target === 'fill' ? 'Без заливки' : 'Без обводки'} />
-        <OpacitySlider editor={editor} value={opacity} onChange={(v) => targets.forEach((t) => editor.setOpacity(t, v))} />
+        <OpacitySlider editor={editor} value={opacity} onChange={(v) => targets.forEach((t) => t !== 'down' && editor.setOpacity(t, v))} />
       </>}
       {/* Icons and drawings: their colour, any too, and how see-through. */}
       {colorable.length > 0 && icons.length > 0 && <div className="sep" />}
@@ -224,7 +233,7 @@ function MindColors({ editor, nodes }: { editor: Editor; nodes: Item[] }) {
       <PaintSwitch paint={paint} pick={pick} fill={fill} stroke={stroke ?? MIND_PALETTE[0]} fillLabel="Заливка" strokeLabel="Обводка" text={text} />
       <Swatches editor={editor} swatches={swatches} current={target === 'fill' ? fill : target === 'stroke' ? stroke : text} onPick={setColor}
         label={target === 'fill' ? 'Цвет' : target === 'stroke' ? 'Цвет обводки' : 'Цвет текста'} noneLabel="Без заливки" />
-      <OpacitySlider editor={editor} value={opacity} onChange={(v) => paint.forEach((t) => editor.setOpacity(t, v))} />
+      <OpacitySlider editor={editor} value={opacity} onChange={(v) => paint.forEach((t) => t !== 'down' && editor.setOpacity(t, v))} />
     </Palette>
   );
 }
@@ -238,26 +247,30 @@ function TableColors({ editor, table, cells }: { editor: Editor; table: Item; ce
   const n = colsOf(table).length * rowsOf(table).length, mine = cells.length ? cells : Array.from({ length: n }, (_, i) => i);
   const own = (i: number, k: string) => table.cellFmt?.[i]?.[k];
   const fill = same(mine.map((i) => { const v = own(i, 'bg'); return typeof v === 'string' ? v : 'none'; }));
-  const stroke = table.sc ?? 'gray';
-  const both = paint.length > 1, target = paint.includes('fill') ? 'fill' : 'stroke';
+  const stroke = table.sc ?? 'gray', down = table.vc ?? stroke;
+  const target = paint.includes('fill') ? 'fill' : paint.includes('stroke') ? 'stroke' : 'down';
   const swatches: Array<[string, string]> = target === 'fill' ? Object.entries(FILLS)
     : [...Object.entries(STROKE_COLORS).map(([k, v]): [string, string] => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--line)')]), ['none', '']];
   const setColor = (c: string) => {
     editor.beginChange();
     if (paint.includes('fill')) editor.setCellFill(c);
     // Together, the lines take the fill's colour itself.
-    if (paint.includes('stroke')) editor.setTableLines({ sc: both && c !== 'none' && FILLS[c] ? FILLS[c] : c });
+    const line = paint.includes('fill') && c !== 'none' && FILLS[c] ? FILLS[c] : c;
+    if (paint.includes('stroke')) editor.setTableLines({ sc: line });
+    if (paint.includes('down')) editor.setTableLines({ vc: line });
     editor.endChange();
   };
-  const opacity = target === 'fill' ? Number(same(mine.map((i) => String(own(i, 'bgo') ?? 1))) ?? 1) : table.so ?? 1;
+  const opacity = target === 'fill' ? Number(same(mine.map((i) => String(own(i, 'bgo') ?? 1))) ?? 1) : target === 'stroke' ? table.so ?? 1 : table.vo ?? table.so ?? 1;
   return (
     <Palette label={cells.length ? 'Цвет ячеек и линий' : 'Цвет таблицы и линий'}>
-      <PaintSwitch paint={paint} pick={pick} fill={fill} stroke={stroke} fillLabel="Заливка ячеек" strokeLabel="Линии" />
-      <Swatches editor={editor} swatches={swatches} current={target === 'fill' ? fill : stroke} onPick={setColor}
+      <PaintSwitch paint={paint} pick={pick} fill={fill} stroke={stroke} fillLabel="Заливка ячеек" strokeLabel="Линии и край"
+        down={down} downLabel="Вертикальные линии" />
+      <Swatches editor={editor} swatches={swatches} current={target === 'fill' ? fill : target === 'stroke' ? stroke : down} onPick={setColor}
         label={target === 'fill' ? 'Цвет ячеек' : 'Цвет линий'} noneLabel={target === 'fill' ? 'Без заливки' : 'Без линий'} />
       <OpacitySlider editor={editor} value={opacity} onChange={(v) => {
         if (paint.includes('fill')) editor.setCellOpacity(v);
         if (paint.includes('stroke')) editor.setTableLines({ so: v });
+        if (paint.includes('down')) editor.setTableLines({ vo: v });
       }} />
     </Palette>
   );

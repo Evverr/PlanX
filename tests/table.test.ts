@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cellAt, cellItem, cellRect, lineAt, movedLines, newTable, withCellFormat, withCount, withScale, withTableFormat } from '../src/model/table';
+import { cellAt, cellItem, cellRect, freshTable, lineAt, movedLines, newTable, withCellFormat, withCount, withScale, withTableFormat } from '../src/model/table';
 import type { Item } from '../src/model/types';
 
 const table = (extra: Partial<Item> = {}): Item => ({ id: 't', type: 'table', x: 0, y: 0, z: 0, ...newTable(), ...extra } as Item);
@@ -46,10 +46,12 @@ describe('table', () => {
     const bold = { ...t, ...withCellFormat(t, 1, { fw: 700 }) } as Item;
     expect(cellItem(bold, 1).fw).toBe(700);
     expect(cellItem(bold, 0).fw).toBeUndefined();
-    // A new column keeps cell 1's formatting with its text (it's now the second cell of three).
+    // A new column keeps cell 1's formatting with its text (it's now the second cell of three); its top
+    // cell is formatted as the one before it (the header going on), the rest are plain.
     const wider = { ...bold, ...withCount(bold, 'col', 1) } as Item;
     expect(wider.cellFmt?.[1]).toEqual({ fw: 700 });
-    expect(wider.cellFmt?.[2]).toBeNull();
+    expect(wider.cellFmt?.[2]).toEqual({ fw: 700 });
+    expect(wider.cellFmt?.[5]).toBeNull();
     // Formatting the whole table takes the field off every cell.
     expect(withTableFormat(bold, { fw: 400 })).toEqual({ fw: 400, cellFmt: undefined });
     // On an italic table, a cell set back to upright keeps upright.
@@ -76,5 +78,13 @@ describe('table rows and columns moved ("Перестановка в табли�
     expect(p.rows).toEqual([60, 40, 50]);
     expect(p.cells).toEqual(['g', 'h', 'i', 'a', 'b', 'c', 'd', 'e', 'f']);
     expect(p.cellFmt).toBeUndefined();
+  });
+});
+
+describe('a table as one is drawn', () => {
+  it('has a bold light blue header and faint black lines, fainter down between columns', () => {
+    const t = freshTable();
+    expect(t.cellFmt).toEqual([0, 1, 2].map(() => ({ bg: 'blue', bgo: 0.3, fw: 700 })));
+    expect(t).toMatchObject({ sc: 'ink', so: 0.08, vc: 'ink', vo: 0.04 });
   });
 });

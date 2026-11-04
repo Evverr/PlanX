@@ -70,6 +70,9 @@ export interface Item {
   /** Opacity of the fill and of the outline, 0…1; unset is solid (an icon's and a drawing's: theirs). */
   fo?: number;
   so?: number;
+  /** Tables: the colour (as sc) and opacity of the lines down between columns; unset, as sc and so. */
+  vc?: string;
+  vo?: number;
   /** Opacity of the text, and of its highlight (unset: 0.45). */
   to?: number;
   mo?: number;

@@ -40,13 +40,17 @@ export function formatCells(ed: Editor, fields: Record<string, unknown>): void {
   ed.board.update(it.id, patch);
 }
 
-/** The selected table's lines: their colour ('gray' the usual, 'none' none) and opacity. */
-export function setTableLines(ed: Editor, patch: { sc?: string; so?: number }): void {
+/** The selected table's lines: their colour ('gray' the usual, 'none' none) and opacity; vc and vo
+ *  those of the lines down between columns alone. */
+export function setTableLines(ed: Editor, patch: { sc?: string; so?: number; vc?: string; vo?: number }): void {
   const it = ed.selectedItems()[0];
   if (it?.type !== 'table') return;
   const next: Partial<Item> = {};
   if ('sc' in patch) next.sc = patch.sc === 'gray' ? undefined : patch.sc;
   if ('so' in patch) next.so = patch.so! >= 1 ? undefined : Math.round(patch.so! * 100) / 100;
+  // (Theirs kept even when the same as the others', so the others can change without them.)
+  if ('vc' in patch) next.vc = patch.vc;
+  if ('vo' in patch) next.vo = Math.round(patch.vo! * 100) / 100;
   ed.board.update(it.id, next);
 }
 

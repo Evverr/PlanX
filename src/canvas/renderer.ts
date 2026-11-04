@@ -842,18 +842,27 @@ function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCel
   });
   ctx.globalAlpha = 1;
   // The grid in the table's line colour (like a shape's outline; the usual is the panels' line grey).
-  const line = it.sc === 'none' ? null : it.sc ? (it.sc === 'ink' ? theme.ink : shade(it.sc.startsWith('#') ? it.sc : STROKE_COLORS[it.sc] || theme.line, theme.dim)) : theme.line;
+  const lineOf = (c?: string) => c === 'none' ? null : c ? (c === 'ink' ? theme.ink : shade(c.startsWith('#') ? c : STROKE_COLORS[c] || theme.line, theme.dim)) : theme.line;
+  // The lines down between columns may have a colour and opacity of their own.
+  const line = lineOf(it.sc), down = it.vc !== undefined ? lineOf(it.vc) : line;
+  ctx.lineWidth = 1 / cam.z;
+  if (down) {
+    ctx.globalAlpha = it.vo ?? it.so ?? 1;
+    ctx.strokeStyle = down;
+    ctx.beginPath();
+    let x = it.x;
+    for (const w of colsOf(it).slice(0, -1)) { x += w; ctx.moveTo(x, it.y); ctx.lineTo(x, it.y + it.h); }
+    ctx.stroke();
+  }
   if (line) {
     ctx.globalAlpha = it.so ?? 1;
     ctx.strokeStyle = line;
-    ctx.lineWidth = 1 / cam.z;
     ctx.beginPath();
-    let x = it.x, y = it.y;
-    for (const w of colsOf(it).slice(0, -1)) { x += w; ctx.moveTo(x, it.y); ctx.lineTo(x, it.y + it.h); }
+    let y = it.y;
     for (const h of rowsOf(it).slice(0, -1)) { y += h; ctx.moveTo(it.x, y); ctx.lineTo(it.x + it.w, y); }
     ctx.stroke();
-    ctx.globalAlpha = 1;
   }
+  ctx.globalAlpha = 1;
   // Lines under the pointer or picked to drag, in blue.
   const marked = s.tableLines.filter((l) => l.id === it.id);
   if (marked.length) {
