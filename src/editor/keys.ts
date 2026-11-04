@@ -1,8 +1,9 @@
 import type { Tool } from './tools';
 import { readPictures } from '../canvas/pictures';
 import type { Editor } from './editor';
-import { isLocked } from '../labs/labs';
+import { isLocked, labOn } from '../labs/labs';
 import { holdZoomBox } from '../labs/zoomBox';
+import { zoomKey } from '../labs/zoomKeys';
 import { cancelNib, finishNib, nibPoints, undoNibCorner } from '../labs/nib';
 import { nodeEditing, stopNodeEdit } from '../labs/paths';
 
@@ -70,6 +71,8 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
   }
   if (e.key === 'Enter' && ed.selection.size === 1) { e.preventDefault(); ed.startEditing([...ed.selection][0]); return; }
   if (e.shiftKey && e.code === 'Digit1') { ed.fit(); return; }
+  // 1: everything, 2: what's picked ("Зум на 1 и 2", src/labs).
+  if (labOn('zoomKeys') && zoomKey(ed, e)) return;
   if (e.shiftKey && e.code === 'Digit0') { ed.zoomCenter(1 / ed.cam.z); return; }
   if (e.key === '+' || e.key === '=') { ed.zoomCenter(1.2); return; }
   if (e.key === '-' || e.key === '_') { ed.zoomCenter(1 / 1.2); return; }
