@@ -3,7 +3,7 @@ import { readJSON, writeJSON } from '../storage';
 
 /**
  * "Стекло" (in "Настройки", kept per browser), off at first: the panels and popups, instead of plain
- * white (or dark), see-through at 88% with what's behind them blurred 12px (see labs.css).
+ * white (or dark), see-through at 84% with what's behind them blurred 12px (see labs.css).
  */
 const KEY = 'planx-glass';
 let on = readJSON<boolean>(KEY) === true;
