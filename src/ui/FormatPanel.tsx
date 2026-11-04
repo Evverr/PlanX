@@ -123,11 +123,11 @@ function textRoom(): number {
 /** Hung 20px over the top dot of the selected text or sticker (under the bottom dot when there's no room above). */
 /** Puts a panel over this box on the board, if it fits under the top bar (when level with it), otherwise
  *  under it, clear of the tool rail; gives back whether it's under. */
-export function placeOver(editor: Editor, box: HTMLElement, b: Rect): boolean {
+export function placeOver(editor: Editor, box: HTMLElement, b: Rect, dots = DOT_GAP): boolean {
   const w = box.offsetWidth, h = box.offsetHeight;
   const top = editor.toScreen({ x: b.x + b.w / 2, y: b.y });
   const bottom = editor.toScreen({ x: 0, y: b.y + b.h }).y;
-  const reach = DOT_GAP + DOT_R + GAP;
+  const reach = dots + DOT_R + GAP;
   const bar = document.querySelector('.topbar')?.getBoundingClientRect();
   const underBar = bar && top.x - w / 2 < bar.right && top.x + w / 2 > bar.left;
   const over = top.y - reach - h >= (underBar ? bar.bottom : 0) + EDGE;
