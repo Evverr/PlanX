@@ -6,7 +6,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchColor, branchCurve, branchWays, buttonKey, foldBadge, foldedWays, fillOpacity, levelColor, mindButtons, mindDepth, nodeColors, siblingTints, type Way } from '../model/mind';
+import { branchColor, branchCurve, branchEdges, branchWays, buttonKey, foldBadge, foldedWays, fillOpacity, levelColor, mindButtons, mindDepth, nodeColors, siblingTints, type Way } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
@@ -35,6 +35,8 @@ export interface Theme {
   grad: [string, string, string]; grid: string;
   /** Multiplier for the colours of stickers, shape fills and coloured icons; below 1 dims them in the dark theme. */
   dim: number;
+  /** What's picked: its frame, handle and link dots, in the blue of the tool picked on the rail. */
+  pick: string;
 }
 
 export function readTheme(): Theme {
@@ -46,6 +48,7 @@ export function readTheme(): Theme {
     stickyInk: v('--sticky-ink'), shapeStroke: v('--shape-stroke'),
     grad: [v('--grad-1'), v('--grad-2'), v('--grad-3')], grid: v('--grid'),
     dim: parseFloat(v('--fill-dim')) || 1,
+    pick: v('--fmt-on-ink') || SELECT_COLOR,
   };
 }
 
@@ -124,11 +127,11 @@ const DONE_COLOR = '#15C674';
 
 /** Size of the resize handle in screen pixels. */
 export const HANDLE = 12;
-/** Link dots around a single selected item: radius and distance from its side, in screen pixels. */
-export const DOT_R = 4.2;
+/** Link dots around a single selected item: radius (7 across) and distance from its side, in screen pixels. */
+export const DOT_R = 3.5;
 export const DOT_GAP = 16;
-/** The dots' strength, and how much bigger the one under the pointer is (at full strength). */
-const DOT_FADE = 0.3, DOT_HOT = 1.5;
+/** The dots' strength, and the one under the pointer's (15 across). */
+const DOT_FADE = 0.1, DOT_HOT_FADE = 0.8, DOT_HOT_R = 7.5;
 /** Selection outlines and handles, the link dots and selected links. */
 const SELECT_COLOR = '#4DA3FF';
 
@@ -696,17 +699,20 @@ function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, way: W
  *  thicker near the centre, thinner further out. */
 function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
   ctx.lineCap = 'round';
+  const edges = branchEdges(s.items, s.get);
   for (const it of s.items) {
     if (it.type !== 'mind' || !it.parent) continue;
     const up = s.get(it.parent);
     if (!up) continue;
-    const [a, c1, c2, b] = branchCurve(up, it);
+    const [a, c1, c2, b] = branchCurve(up, it, edges);
     // In the colour of the node it leads to.
     ctx.strokeStyle = shade(branchColor(it, s.get), s.theme.dim);
     ctx.lineWidth = up.parent ? 1.125 : 2.25;
     ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
+    // Straight from its parent's own edge to its row's, and from its row's to its own (see branchEdges).
+    if (a.x > up.x + up.w) { ctx.moveTo(up.x + up.w, a.y); ctx.lineTo(a.x, a.y); } else ctx.moveTo(a.x, a.y);
     ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, b.x, b.y);
+    if (b.x > it.x + it.w) ctx.lineTo(it.x + it.w, b.y);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
@@ -982,10 +988,10 @@ function linkLook(l: Link, theme: Theme): { color: string; dash: number[]; heads
   };
 }
 
-function outline(ctx: CanvasRenderingContext2D, it: Item, z: number, color: string, dash: number[] = []) {
+function outline(ctx: CanvasRenderingContext2D, it: Item, z: number, color: string, dash: number[] = [], width = 2) {
   const off = 3 / z;
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2 / z;
+  ctx.lineWidth = width / z;
   ctx.setLineDash(dash.map((d) => d / z));
   // Follows the item's corners, pushed out by the same gap.
   const r = corner(it);
@@ -1118,14 +1124,14 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
 /** An item's four link dots, beside its sides; the one under the pointer bigger. */
 function drawDots(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
   const { cam } = s;
-  ctx.fillStyle = SELECT_COLOR;
+  ctx.fillStyle = s.theme.pick;
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 2 / cam.z;
   for (const side of SIDES) {
     const p = sidePoint(it, side, DOT_GAP / cam.z);
     ctx.beginPath();
-    ctx.globalAlpha = side === s.hotDot ? 1 : DOT_FADE;
-    ctx.arc(p.x, p.y, (side === s.hotDot ? DOT_R * DOT_HOT : DOT_R) / cam.z, 0, Math.PI * 2);
+    ctx.globalAlpha = side === s.hotDot ? DOT_HOT_FADE : DOT_FADE;
+    ctx.arc(p.x, p.y, (side === s.hotDot ? DOT_HOT_R : DOT_R) / cam.z, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
   }
@@ -1247,7 +1253,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     if (!it || s.nodesOf === id) continue;
     // A mind map node shows it's picked by its "+" buttons alone, which a few picked together don't get.
     // An instance keeps its red title alone, without a selection frame.
-    if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) outline(ctx, it, cam.z, SELECT_COLOR);
+    if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) outline(ctx, it, cam.z, theme.pick, [], 1);
     // A mind map node sizes itself and links by its branches: instead of the handle and dots it
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && it.type === 'mind') {
@@ -1258,7 +1264,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       // An instance's handle at its contents' corner, to stretch them.
       const b = instanceBounds(it, s.items), hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z;
       ctx.fillStyle = theme.surface;
-      ctx.strokeStyle = SELECT_COLOR;
+      ctx.strokeStyle = theme.pick;
       ctx.lineWidth = 2 / cam.z;
       ctx.beginPath();
       ctx.roundRect(b.x + b.w + off - hs / 2, b.y + b.h + off - hs / 2, hs, hs, 3 / cam.z);
@@ -1267,14 +1273,12 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     } else if (s.showHandle && s.editingId !== id) {
       const hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z;
       ctx.fillStyle = theme.surface;
-      ctx.strokeStyle = SELECT_COLOR;
+      ctx.strokeStyle = theme.pick;
       ctx.lineWidth = 2 / cam.z;
       ctx.beginPath();
       turned(ctx, it, () => ctx.roundRect(it.x + it.w + off - hs / 2, it.y + it.h + off - hs / 2, hs, hs, 3 / cam.z));
       ctx.fill();
       ctx.stroke();
-      ctx.fillStyle = SELECT_COLOR;
-      ctx.strokeStyle = '#fff';
       drawDots(ctx, it, s);
     }
   }
