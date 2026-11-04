@@ -27,7 +27,7 @@ import { resetPanels, savePanels } from './ui/panels/store';
 import { useBar } from './ui/panels/bar';
 import type { Item, Link } from './model/types';
 import { Labs } from './labs/LabsLayer';
-import { useLabs } from './labs/labs';
+import { labOn, useLabs } from './labs/labs';
 import { morphPanel } from './labs/textButton';
 import { joinDropped } from './labs/linkJoint';
 import { zoomHelp } from './labs/wheelZoom';
@@ -235,7 +235,8 @@ export function App({ boardId }: { boardId: string }) {
   useEffect(() => {
     const press = (e: PointerEvent) => {
       if (e.target !== editor.canvas) return;
-      if (!editor.editingId) setQuiet(null);
+      // (With "Кнопка T", src/labs, it's the T that brings it back.)
+      if (!editor.editingId && !labOn('textButton')) setQuiet(null);
       // Back to the selection panel, turning into it.
       if (textModeRef.current) morphPanel('.tfmt', 'panel', () => setTextMode(null));
     };

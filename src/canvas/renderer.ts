@@ -909,14 +909,12 @@ function drawTable(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editingCel
     }
     ctx.stroke();
   }
-  // Picked cells: a blue edge just inside each, and a light blue wash.
+  // Picked cells: a blue edge just inside each, nothing more.
   if (s.pickedCells?.id === it.id) {
     ctx.strokeStyle = SELECT_COLOR;
     ctx.lineWidth = 2 / cam.z;
     for (const i of s.pickedCells.cells) {
       const r = cellRect(it, i), inset = 1 / cam.z;
-      ctx.fillStyle = SELECT_COLOR + '1F';
-      ctx.fillRect(r.x, r.y, r.w, r.h);
       ctx.strokeRect(r.x + inset, r.y + inset, r.w - inset * 2, r.h - inset * 2);
     }
   }
