@@ -1002,6 +1002,7 @@ export class Editor {
           let next: Partial<Item> = {};
           for (const i of this.cells) next = withCellFormat({ ...it, ...next }, i, patch);
           this.board.update(it.id, next);
+          if (labOn('tableLook')) noteCellFormat(it.id, patch);
         }
         else this.board.update(it.id, withTableFormat(it, patch));
       }

@@ -22,7 +22,13 @@ import { startComment } from '../labs/comments';
 export function press(ed: Editor, e: PointerEvent): void {
   const board = ed.board;
   ed.byFinger = e.pointerType === 'touch';
-  ed.stopEditing();
+  // Typing in a table's cell, one of its lines taken: it's resized, the typing going on (the text kept
+  // where it is, its focus too).
+  const typingIn = ed.editingId ? board.get(ed.editingId) : undefined;
+  const at = ed.toWorld(ed.local(e).x, ed.local(e).y);
+  const keepTyping = typingIn?.type === 'table' && e.button === 0 && !!grabbableLine(ed, at, hitItem(ed.shown(), at, ed.cam.z), e.pointerType);
+  if (keepTyping) e.preventDefault();
+  else ed.stopEditing();
   // Same as in newItem: once someone works on the board, leave the camera to them.
   ed.needsFit = false;
   const sp = ed.local(e);
@@ -250,7 +256,7 @@ export function press(ed: Editor, e: PointerEvent): void {
   }
   // A table's lines resize the column or row before them, the table selected or not. Shift-clicking
   // picks several lines (or drops one); dragging any picked line moves them all.
-  const tl = ed.editingId || entering ? null : grabbableLine(ed, w, hit, e.pointerType);
+  const tl = (ed.editingId && !keepTyping) || entering ? null : grabbableLine(ed, w, hit, e.pointerType);
   if (tl) {
     const same = (l: TableLine) => l.id === tl.id && l.axis === tl.axis && l.index === tl.index;
     const picked = ed.pickedLines.filter((l) => l.id === tl.id), was = picked.some(same);

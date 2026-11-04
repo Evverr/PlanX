@@ -198,7 +198,9 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   const dot = single && !ed.editingId ? dotAt(ed, single, w) : null;
   if (dot !== ed.hotDot) { ed.hotDot = dot; ed.requestRender(); }
   let cursor = '';
-  const over = hitItem(ed.shown(), w, ed.cam.z), near = ed.editingId || dot ? null : tableLineAt(ed, w, over);
+  // (Typing in a table's cell, its lines are still taken.)
+  const typingCell = !!ed.editingId && ed.board.get(ed.editingId)?.type === 'table';
+  const over = hitItem(ed.shown(), w, ed.cam.z), near = (ed.editingId && !typingCell) || dot ? null : tableLineAt(ed, w, over);
   // On the handle itself, or a little round it (not on the link dots): the handle stronger.
   const onIt = !dot && !!single && onHandle(ed, single, w, 8);
   if (onIt !== ed.hotHandle) { ed.hotHandle = onIt; ed.requestRender(); }
