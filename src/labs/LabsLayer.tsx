@@ -25,7 +25,7 @@ import { drawEditedPath } from './paths';
 import { drawEraser, eraserStyle, subscribeEraser } from './eraseArea';
 import { drawGroup, endGroupScale, groupScaling, moveGroupScale, onGroupHandle, startGroupScale } from './multi';
 import { afterUp as afterJoinUp, beforeUp as beforeJoinUp, drawJoint, notePress as noteJoinPress } from './linkJoint';
-import { drawGrips, endGrip, gripAt, gripDragging, moveGrip, pressedForGrips, pressPlus, setHotGrip, setHotPlus, startGrip, tablePlusAt } from './tableMove';
+import { drawGrips, endGrip, gripAt, gripDragging, moveGrip, pressedForGrips, pressPlus, releasedForGrips, setHotGrip, setHotPlus, startGrip, tablePlusAt } from './tableMove';
 import './labs.css';
 
 type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'keys' | 'layers' | 'history';
@@ -147,7 +147,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       const plus = e.button === 0 && labOn('tableMove') ? tablePlusAt(editor, local(e)) : null;
       if (plus) { e.stopPropagation(); pressPlus(editor, plus); return; }
       const grip = e.button === 0 && labOn('tableMove') ? gripAt(editor, local(e)) : null;
-      if (!grip && e.button === 0 && labOn('tableMove')) pressedForGrips(editor, editor.toWorld(local(e).x, local(e).y));
+      if (!grip && e.button === 0 && labOn('tableMove')) pressedForGrips(editor, editor.toWorld(local(e).x, local(e).y), { x: e.clientX, y: e.clientY });
       if (grip) {
         e.stopPropagation();
         canvas()!.setPointerCapture(e.pointerId);
@@ -232,6 +232,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     };
     const onUp = (e: PointerEvent) => {
       if (gripDragging()) endGrip(editor);
+      if (labOn('tableMove')) releasedForGrips(editor, { x: e.clientX, y: e.clientY });
       if (tidyDragging()) { const p = local(e); endTidyDrag(editor, editor.toWorld(p.x, p.y)); }
       if (groupScaling()) endGroupScale(editor);
       if (drawing) { drawing = false; presence.shareLaser(); }

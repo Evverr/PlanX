@@ -566,6 +566,10 @@ export const checks = {
     await p.ev(`planx.editor.setSelection(['t'])`);
     await sleep(50);
     expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'away once something else was picked').toBe(false);
+    // Taken and dragged, it only moves.
+    await p.drag([500, 330], [520, 340]);
+    expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'not out by a drag').toBe(false);
+    await p.ev(`planx.board.update('t', { x: 300, y: 300 })`);
     await p.click([500, 330]);
     expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'out by a second click').toBe(true);
     // Along the way it moves, just past the table's edge is enough; across, 44 isn't reached by 30.
