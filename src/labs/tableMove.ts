@@ -66,6 +66,8 @@ export const gripsOn = (id: string | undefined): boolean => !!id && shownFor ===
 function show(ed: Editor, id: string | null): void {
   if (shownFor === id) return;
   shownFor = id;
+  delete held.row;
+  delete held.col;
   fns.forEach((f) => f());
   ed.requestRender();
 }
@@ -114,6 +116,8 @@ function grips(it: Item): Array<Grip & Point> {
 const PLUS_R = 9, PLUS_IN = 14;
 export type TablePlus = 'row' | 'col';
 function plusAt(ed: Editor, it: Item, which: TablePlus): Point {
+  const h = held[which];
+  if (h) return ed.toScreen(h);
   const p = ed.toScreen(which === 'row' ? { x: it.x + it.w / 2, y: it.y + it.h } : { x: it.x + it.w, y: it.y + it.h / 2 });
   return which === 'row' ? { x: p.x, y: p.y - PLUS_IN } : { x: p.x - PLUS_IN, y: p.y };
 }
@@ -125,11 +129,22 @@ export function tablePlusAt(ed: Editor, sp: Point): TablePlus | null {
   return null;
 }
 let hotPlus: TablePlus | null = null;
-export const setHotPlus = (ed: Editor, w: TablePlus | null) => { if (hotPlus !== w) { hotPlus = w; ed.requestRender(); } };
+/** A pressed plus stays where it was (on the board) while the pointer's on it, to be pressed again;
+ *  left, it comes in at the table's new edge. */
+const held: Partial<Record<TablePlus, Point>> = {}, cameIn: Partial<Record<TablePlus, number>> = {};
+const PLUS_IN_MS = 160;
+export const setHotPlus = (ed: Editor, w: TablePlus | null) => {
+  if (hotPlus === w) return;
+  for (const k of ['row', 'col'] as const) if (held[k] && w !== k) { delete held[k]; cameIn[k] = performance.now(); }
+  hotPlus = w;
+  ed.requestRender();
+};
 /** A plus pressed: a row or column more, at the end. */
 export function pressPlus(ed: Editor, w: TablePlus): void {
   const it = tableOf(ed);
   if (!it) return;
+  const c = plusAt(ed, it, w);
+  held[w] = ed.toWorld(c.x, c.y);
   ed.board.update(it.id, withCount(it, w, 1));
   ed.requestRender();
 }
@@ -272,12 +287,15 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
   // The pluses, faint and a tenth smaller till the pointer's on one.
   if (!drag) for (const w of ['row', 'col'] as const) {
     const c = plusAt(ed, it, w), on = hotPlus === w, r = on ? PLUS_R : PLUS_R * 0.9;
-    ctx.globalAlpha = on ? 1 : 0.5;
+    // Coming in at the new edge.
+    const t = cameIn[w], k = t === undefined ? 1 : Math.min(1, (performance.now() - t) / PLUS_IN_MS);
+    if (k < 1) ed.requestRender(); else delete cameIn[w];
+    ctx.globalAlpha = (on ? 1 : 0.5) * k;
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = on ? 1 : 0.75;
+    ctx.globalAlpha = (on ? 1 : 0.75) * k;
     ctx.strokeStyle = '#fff';
     ctx.lineWidth = on ? 2 : 1.5;
     ctx.lineCap = 'round';

@@ -33,10 +33,9 @@ export function morphPanel(from: string, to: 'tfmt' | 'panel', swap: () => void)
   shell.className = 'panel-shell';
   Object.assign(shell.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
   document.body.append(shell);
-  // What's on it fades out.
+  // What's on it fades out, and stays out whatever it does as it goes (its own going away, its ghost).
   a.dataset.morph = '';
-  a.style.transition = 'opacity .12s ease';
-  a.style.opacity = '0';
+  a.dataset.morphOut = '';
   const done = () => { shell.remove(); delete root.dataset.morphIn; busy = false; };
   setTimeout(() => {
     // The other comes in unseen (see labs.css), and the body takes its width.
