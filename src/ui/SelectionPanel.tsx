@@ -278,6 +278,16 @@ function TableColors({ editor, table, cells }: { editor: Editor; table: Item; ce
 }
 
 
+/** A popover opened from the panel: down under it when there's no room above (under the top bar, when
+ *  level with it). */
+function opensDown(pop: HTMLElement): void {
+  if (pop.closest('.opens-down')) return;
+  pop.classList.remove('down');
+  const r = pop.getBoundingClientRect(), bar = document.querySelector('.topbar')?.getBoundingClientRect();
+  const top = (bar && bar.left < r.right && bar.right > r.left ? bar.bottom : 0) + EDGE;
+  if (r.top < top) pop.classList.add('down');
+}
+
 /** How long the panel over what's picked takes to fade out going to its other side, and back in there
  *  (as long as panels take to go). */
 const FLIP = 80;
@@ -312,6 +322,15 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   // Over what's picked, it stays where it is while rows or columns are being added or taken away (the
   // table growing under it), till the pointer leaves it or the board's scrolled.
   const hold = useRef(false), flipping = useRef(false), want = useRef(false);
+  // What opens from it (palette, alignment, reactions) opens down, over what's picked, when there's
+  // no room for it above the panel.
+  useEffect(() => {
+    const el = sort.ref.current;
+    if (!el) return;
+    const mo = new MutationObserver(() => el.querySelectorAll<HTMLElement>('.op-pop').forEach(opensDown));
+    mo.observe(el, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => subscribeGrips(redraw), []);
   if (over && items.length && !had.current) wait.current = !!after;
   had.current = items.length > 0;
