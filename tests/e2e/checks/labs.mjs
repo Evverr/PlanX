@@ -1414,6 +1414,13 @@ export const checks = {
     expect(await rows(), 'parameters first').toBe('Параметры, Комментарий, Скопировать, Переместить вверх, Переместить вниз, Сделать компонентом, Удалить');
     await pick('Параметры');
     expect(await p.ev(`!!document.querySelector('.params-pop .params-colors')`), 'the popup: colours').toBe(true);
+    // In a small window what's in it scrolls inside: the popup itself stays, and its glass with it.
+    await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1200, height: 300, deviceScaleFactor: 1, mobile: false });
+    await sleep(100);
+    const short = await p.ev(`(() => { const h = document.querySelector('.params-pop'), b = h.querySelector('.params-body'); return [h.scrollHeight <= h.clientHeight, b.scrollHeight > b.clientHeight].join(); })()`);
+    await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1200, height: 800, deviceScaleFactor: 1, mobile: false });
+    await sleep(100);
+    expect(short, 'scrolls inside, not itself').toBe('true,true');
     await p.click(await p.at('.params-pop button[aria-label="Заливка: pink"]'));
     expect(await p.ev(`document.querySelector('.params-pop button[aria-label="Обводка: ink"]') !== null`), 'its outline too').toBe(true);
     expect(await p.ev(`document.querySelector('.params-pop button[aria-label="Жирный"]') !== null`), 'its text as the text panel sets it').toBe(true);

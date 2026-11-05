@@ -167,7 +167,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
     return (
       <div ref={ref} className={`board-menu context-menu ${at.params ? 'params-pop' : ''}`} role={at.params ? 'dialog' : 'menu'} aria-label={at.params ? 'Параметры линии' : 'Линия'} style={comes}
         onContextMenu={(e) => e.preventDefault()}>
-        {at.params ? <>{gripBar}<LinkParams editor={editor} ids={editor.selectedLinks().map((l) => l.id)} /></> : <>
+        {at.params ? <>{gripBar}<div className="params-body"><LinkParams editor={editor} ids={editor.selectedLinks().map((l) => l.id)} /></div></> : <>
           {row('settings-l', 'Параметры', () => setAt({ ...at, params: true }))}
           <div className="menu-line" />
           {row('trashcan', 'Удалить', run(() => editor.deleteSelection()))}
@@ -186,7 +186,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
     return (
       <div ref={ref} className="board-menu context-menu params-pop" role="dialog" aria-label="Параметры" style={comes} onContextMenu={(e) => e.preventDefault()}>
         {gripBar}
-        <ParamsList editor={editor} items={params} />
+        <div className="params-body"><ParamsList editor={editor} items={params} /></div>
       </div>
     );
   }
