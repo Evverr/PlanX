@@ -169,7 +169,7 @@ const dotLit = (t: { hot: boolean; from: number; at: number }, now: number, ms =
   return t.from + ((t.hot ? 1 : 0) - t.from) * e;
 };
 /** The resize handle going stronger or back (under the pointer or near it), in this long, in ms. */
-export const HANDLE_TURN = 150;
+const HANDLE_TURN = 150;
 let handleTurn = { hot: false, from: 0, at: 0 };
 /** Whether a link dot is still growing or shrinking (and wants another frame). */
 export const dotsMoving = (): boolean => {

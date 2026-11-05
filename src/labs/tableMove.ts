@@ -3,7 +3,7 @@ import type { Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { cellText, colsOf, rowsOf, withCount } from '../model/table';
 import { isLocked } from './labs';
-import { HANDLE_TURN, PICK_FRAME } from '../canvas/renderer';
+import { PICK_FRAME } from '../canvas/renderer';
 
 /**
  * "Перестановка в таблице": on the selected table (clicked a second time, or by the gear on its panel), a pill just out over its top edge by each column and
@@ -240,17 +240,19 @@ export function endGrip(ed: Editor): void {
 
 const pick = () => getComputedStyle(document.documentElement).getPropertyValue('--fmt-on-ink').trim() || '#0080FF';
 
+/** How long a pill takes to grow and take its colour, or go back, in ms. */
+const PILL_TURN = 75;
 /** How far each pill is on its way to lit (1) or not (0), and since when. */
 const turns = new Map<string, { on: boolean; from: number; at: number }>();
 function litNow(ed: Editor, key: string, on: boolean): number {
   const now = performance.now(), at = (t: { on: boolean; from: number; at: number }) => {
-    const k = Math.min(1, (now - t.at) / HANDLE_TURN), e = 1 - (1 - k) * (1 - k);
+    const k = Math.min(1, (now - t.at) / PILL_TURN), e = 1 - (1 - k) * (1 - k);
     return t.from + ((t.on ? 1 : 0) - t.from) * e;
   };
   let t = turns.get(key);
   if (!t) { if (!on) return 0; turns.set(key, (t = { on, from: 0, at: now })); }
   else if (t.on !== on) turns.set(key, (t = { on, from: at(t), at: now }));
-  if (now - t.at < HANDLE_TURN) ed.requestRender();
+  if (now - t.at < PILL_TURN) ed.requestRender();
   else if (!t.on) turns.delete(key);
   return at(t);
 }
@@ -290,8 +292,8 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
     const dragged = drag?.grip.axis === g.axis && drag.grip.index === g.index;
     const shift = dragged && drag ? (g.axis === 'col' ? { x: (drag.at.x - drag.from.x) * z, y: 0 } : { x: 0, y: (drag.at.y - drag.from.y) * z }) : { x: 0, y: 0 };
     const on = dragged || (hot?.axis === g.axis && hot.index === g.index), lit = litNow(ed, `${it.id}:${g.axis}:${g.index}`, on);
-    // Under the pointer or dragged: 1.2 × 1.4 times as big, in the selection frame's blue; going there
-    // and back as the resize handle does.
+    // Under the pointer or dragged: 1.2 × 1.4 times as big, in the selection frame's blue, going there
+    // and back smoothly.
     const k = 1 + (HOT - 1) * lit, p = gripScreen(ed, g, k), [w, h] = g.axis === 'col' ? [LONG * k, THICK * k] : [THICK * k, LONG * k];
     const cx = p.x + shift.x, cy = p.y + shift.y;
     ctx.beginPath();
