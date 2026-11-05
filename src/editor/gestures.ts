@@ -378,8 +378,9 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       ed.addItem(it);
       ed.setTool('select');
       ed.setSelection([it.id]);
-      // A new table comes with its pills out ("Перестановка в таблице", src/labs).
-      if (it.type === 'table' && labOn('tableMove')) showGrips(ed, it.id);
+      // A new table comes with its pills out ("Перестановка в таблице", src/labs), as one dropped off the
+      // rail: no cell open for typing yet, or they'd stay away.
+      if (it.type === 'table') { if (labOn('tableMove')) showGrips(ed, it.id); return; }
       ed.startEditing(it.id);
       return;
     }
