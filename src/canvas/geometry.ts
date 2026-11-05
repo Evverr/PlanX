@@ -114,7 +114,49 @@ export function pathNodes(pts: number[], hs: number[] | undefined, at: (x: numbe
 }
 
 /** A polygon item's corners on the board (along its curves, for one drawn with "Перо" with some). */
+/** The star as the icon draws it (assets/icon-set/favorite-solid.svg), on its 24 grid, its points round:
+ *  from this point, by straight runs (one point) and curves (three, the last where it ends). */
+const STAR_FROM: Point = { x: 11.2156, y: 3.55591 };
+const STAR_RUNS: number[][] = [
+  [11.5303, 2.89111, 12.4682, 2.89111, 12.7828, 3.55591], [14.8973, 8.05566], [19.6107, 8.76807],
+  [20.3528, 8.88684, 20.5712, 9.77734, 20.0987, 10.2639], [16.6699, 13.7783], [17.4808, 18.7291],
+  [17.5876, 19.394, 16.9038, 20.035, 16.2092, 19.6552], [11.9992, 17.3282], [7.78922, 19.6552],
+  [7.09468, 20.035, 6.41081, 19.394, 6.51765, 18.7291], [7.32855, 13.7783], [3.89975, 10.2639],
+  [3.42723, 9.77734, 3.64568, 8.88684, 4.38771, 8.76807], [9.10231, 8.05566],
+];
+/** Its outline as points along it. */
+const starLine = (): Point[] => {
+  const out = [STAR_FROM];
+  for (const r of STAR_RUNS) {
+    const a = out[out.length - 1];
+    if (r.length === 2) { out.push({ x: r[0], y: r[1] }); continue; }
+    for (let i = 1; i <= 8; i++) {
+      const t = i / 8, u = 1 - t;
+      out.push({
+        x: u * u * u * a.x + 3 * u * u * t * r[0] + 3 * u * t * t * r[2] + t * t * t * r[4],
+        y: u * u * u * a.y + 3 * u * u * t * r[1] + 3 * u * t * t * r[3] + t * t * t * r[5],
+      });
+    }
+  }
+  return out;
+};
+const STAR_BOX = (() => {
+  const pts = starLine(), xs = pts.map((p) => p.x), ys = pts.map((p) => p.y), x = Math.min(...xs), y = Math.min(...ys);
+  return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+})();
+/** Adds the star, filling a box, to the current path. */
+export function traceStar(ctx: CanvasPath, b: { x: number; y: number; w: number; h: number }): void {
+  const X = (v: number) => b.x + ((v - STAR_BOX.x) / STAR_BOX.w) * b.w, Y = (v: number) => b.y + ((v - STAR_BOX.y) / STAR_BOX.h) * b.h;
+  ctx.moveTo(X(STAR_FROM.x), Y(STAR_FROM.y));
+  for (const r of STAR_RUNS) {
+    if (r.length === 2) ctx.lineTo(X(r[0]), Y(r[1]));
+    else ctx.bezierCurveTo(X(r[0]), Y(r[1]), X(r[2]), Y(r[3]), X(r[4]), Y(r[5]));
+  }
+  ctx.closePath();
+}
+
 export function polyPoints(it: Item): Point[] {
+  if (it.shape === 'star') return starLine().map((p) => ({ x: it.x + ((p.x - STAR_BOX.x) / STAR_BOX.w) * it.w, y: it.y + ((p.y - STAR_BOX.y) / STAR_BOX.h) * it.h }));
   if (it.vx && !it.shape) {
     const nodes = pathNodes(it.vx, it.vh, (x, y) => ({ x: it.x + x * it.w, y: it.y + y * it.h }));
     return it.vh ? flattenPath(nodes, true) : nodes.map((n) => n.p);

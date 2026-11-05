@@ -444,7 +444,8 @@ function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch
       )}
       {texted && <ColorRow editor={editor} label="Цвет текста" colors={TEXT_COLORS} current={it.tc ?? 'ink'} opacity={it.to ?? 1}
         onColor={(c) => set({ tc: c === 'ink' ? undefined : c })} onOpacity={(v) => set({ to: v })} />}
-      {(it.type === 'rect' || it.type === 'polygon') && (
+      {/* (Not a star's: it's round as its icon is.) */}
+      {(it.type === 'rect' || (it.type === 'polygon' && it.shape !== 'star')) && (
         <div className="params-group params-inline">
           <div className="params-label">Скругление</div>
           <span className="menu-input">
