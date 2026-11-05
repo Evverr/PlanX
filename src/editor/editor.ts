@@ -71,6 +71,8 @@ export interface UIState {
   editingCell: number | null;
   /** Items are being moved or resized by hand right now. */
   moving: boolean;
+  /** What's picked is still being picked: a box being drawn, or something just pressed, not let go yet. */
+  picking: boolean;
   cam: Camera;
   pens: Pens;
   /** Cells picked in the one selected table (by index, row by row). */
@@ -96,6 +98,7 @@ export class Editor {
   editingId: string | null = null;
   editingCell: number | null = null;
   moving = false;
+  picking = false;
   pens: Pens = readPens();
   /** Whether the text overlay opens with all the text picked (to type over it) or the caret at its end. */
   editCaret: 'all' | 'end' = 'all';
@@ -217,8 +220,15 @@ export class Editor {
   };
 
   private snapshot(): UIState {
-    return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, editingCell: this.editingCell, moving: this.moving, cam: { ...this.cam }, pens: this.pens,
+    return { tool: this.tool, selection: [...this.selection], editingId: this.editingId, editingCell: this.editingCell, moving: this.moving, picking: this.picking, cam: { ...this.cam }, pens: this.pens,
       cells: this.cells, canUndo: this.board.undoManager.undoStack.length > 0 || this.outside.length > 0, canRedo: this.board.undoManager.redoStack.length > 0 };
+  }
+
+  /** What's picked is still being picked, or no longer (the panels wait for that: see App). */
+  setPicking(picking: boolean): void {
+    if (this.picking === picking) return;
+    this.picking = picking;
+    this.emit();
   }
 
   /** Shared: items are being moved or resized by hand, or no longer. */
@@ -239,6 +249,7 @@ export class Editor {
     if (other && !this.own) {
       this.stopEditing();
       this.gesture = null;
+      this.setPicking(false);
       this.own = { board: this.board, cam: this.cam, tool: this.tool, selection: [...this.selection] };
     }
     const was = this.own;
@@ -1699,6 +1710,7 @@ export class Editor {
       this.canvas?.classList.remove('panning');
       this.setMoving(false);
       endGesture(this, g, e);
+      this.setPicking(false);
     }
     // Let go where it was pressed, off the component being changed: done with it (a drag isn't, to bring something into it).
     if (off) { const sp = this.local(e); if (Math.hypot(sp.x - off.x, sp.y - off.y) < 4) this.finishComponentHere(); }

@@ -200,8 +200,9 @@ export function App({ boardId }: { boardId: string }) {
   useEffect(() => setTitle(board.title), [board.title]);
   useEffect(() => { document.title = board.title ? `${board.title} · PlanX` : 'PlanX'; }, [board.title]);
 
-  const selItems = ui.selection.map((id) => board.get(id)).filter((i) => !!i);
-  const linkCount = ui.selection.filter((id) => board.getLink(id)).length;
+  // (For the panels, so none yet while it's still being picked: they come once, on letting go.)
+  const selItems = ui.picking ? [] : ui.selection.map((id) => board.get(id)).filter((i) => !!i);
+  const linkCount = ui.picking ? 0 : ui.selection.filter((id) => board.getLink(id)).length;
   const editing = ui.editingId ? board.get(ui.editingId) : undefined;
   // Several picked with text ("Несколько сразу", src/labs): the panel takes them as one.
   // What has text the panel sets: text, basic stickers, tasks, tables, shapes (not mind map nodes, nor a

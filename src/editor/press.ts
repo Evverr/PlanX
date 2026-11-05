@@ -307,7 +307,7 @@ export function press(ed: Editor, e: PointerEvent): void {
       const next = new Set(ed.selection);
       if (next.has(hit.id)) next.delete(hit.id); else next.add(hit.id);
       ed.setSelection(next);
-    } else if (!ed.selection.has(hit.id)) ed.setSelection([hit.id]);
+    } else if (!ed.selection.has(hit.id)) { ed.setPicking(true); ed.setSelection([hit.id]); }
     ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(items), moved: false, id: hit.id, dbl, cell, enter, again };
     return;
   }

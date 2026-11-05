@@ -340,6 +340,41 @@ export const checks = {
     await sleep(300);
   },
 
+  async 'the selection panel comes only on letting go: of something pressed, moved or not, and of a box drawn'(p) {
+    const { a } = await stickers(p);
+    const bars = () => p.ev(`document.querySelectorAll('.bar.panel:not(.gone)').length`);
+    const at = await p.ev(`(() => { const e = planx.editor, i = planx.board.get('${a}'), s = e.toScreen({ x: i.x + i.w / 2, y: i.y + i.h / 2 }); return [s.x, s.y]; })()`);
+    for (const lab of [false, true]) {
+      await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', ${lab}))()`);
+      // Pressed, not moved.
+      await p.ev(`planx.editor.setSelection([])`);
+      await sleep(250);
+      await p.mouse('mouseMoved', at[0], at[1]);
+      await p.mouse('mousePressed', at[0], at[1]);
+      await sleep(200);
+      expect(await p.ev(`planx.editor.selection.size`), 'picked as it\'s pressed').toBe(1);
+      expect(await bars(), 'no panel yet').toBe(0);
+      await p.mouse('mouseReleased', at[0], at[1]);
+      await sleep(250);
+      expect(await bars(), 'one on letting go').toBe(1);
+      // A box, over the two.
+      await p.ev(`planx.editor.setSelection([])`);
+      await sleep(250);
+      await p.mouse('mouseMoved', 300, 150);
+      await p.mouse('mousePressed', 300, 150);
+      for (const [x, y] of [[500, 400], [700, 450], [900, 500]]) {
+        await p.mouse('mouseMoved', x, y);
+        await sleep(120);
+        expect(await bars(), 'none while it\'s drawn').toBe(0);
+      }
+      expect(await p.ev(`planx.editor.selection.size`), 'what it takes in picked meanwhile').toBe(2);
+      await p.mouse('mouseReleased', 900, 500);
+      await sleep(250);
+      expect(await bars(), 'one on letting go').toBe(1);
+    }
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
+  },
+
   async '"Панель над элементом": the selection panel over what\'s picked, not at the bottom; under it near the top, what opens from it opening down; staying by it while it\'s moved or the board is; at the bottom for what\'s picked big or partly off the screen'(p) {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', true))()`);
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); b.add(e.newItem('rect', 480, 300, { id: 'a', w: 240, h: 140 })); e.setSelection(['a']); })()`);

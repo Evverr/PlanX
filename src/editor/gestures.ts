@@ -278,6 +278,7 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       g.rect = normRect(g.start, w);
       // Drawn with Z held, it's where to zoom to, not what to pick ("Зум рамкой", src/labs).
       if (g.zoom) { ed.requestRender(); return; }
+      ed.setPicking(true);
       const next = new Set(g.base), rect = g.rect;
       // A frame is taken in whole; a timeline (wide as it is) just touched, by a box started off it (one
       // started on it picks what lies on it).
@@ -470,6 +471,7 @@ export function cancelGesture(ed: Editor): void {
   if ((g.type === 'drag' && g.moved) || g.type === 'resize' || g.type === 'rotate' || g.type === 'erase' || g.type === 'tableLine' || g.type === 'linkNode' || g.type === 'linkStretch' || g.type === 'pathNode') ed.board.endGesture();
   ed.gesture = null;
   ed.setMoving(false);
+  ed.setPicking(false);
   ed.requestRender();
 }
 
