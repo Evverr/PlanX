@@ -1437,6 +1437,37 @@ export const checks = {
     expect(Math.abs(pasted[0] - 900) <= 1 && Math.abs(pasted[1] - 500) <= 1, `pasted there (${pasted})`).toBe(true);
   },
 
+  async '"Меню по правому клику" on nothing, with something picked: the menu of what\'s picked, still picked; with nothing picked, the board\'s'(p) {
+    const right = async ([x, y]) => {
+      await p.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+      await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'right', buttons: 2, clickCount: 1 });
+      await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'right', buttons: 0, clickCount: 1 });
+      await sleep(200);
+    };
+    const label = () => p.ev(`document.querySelector('.context-menu')?.getAttribute('aria-label') ?? ''`);
+    const { a, c } = await stickers(p);
+    const empty = [1000, 650];
+    for (const ids of [[a], [a, c]]) {
+      await p.ev(`planx.editor.setSelection(${JSON.stringify(ids)})`);
+      await right(empty);
+      expect(await label(), 'what\'s picked').toBe('Действия с выделенным');
+      expect(await p.ev(`[...planx.editor.selection].join()`), 'still picked').toBe(ids.join());
+      await p.escape();
+      await sleep(100);
+    }
+    const l = await p.ev(`(() => { const b = planx.board, l = { id: 'l1', from: '${a}', to: '${c}', style: 'straight' }; b.addLink(l); planx.editor.setSelection(['l1']); return l.id; })()`);
+    await right(empty);
+    expect(await label(), 'a line picked: the line\'s').toBe('Линия');
+    expect(await p.ev(`[...planx.editor.selection].join()`), 'still picked').toBe(l);
+    await p.escape();
+    await sleep(100);
+    await p.ev(`planx.editor.setSelection([])`);
+    await right(empty);
+    expect(await label(), 'nothing picked: the board\'s').toBe('Доска');
+    await p.escape();
+    await sleep(100);
+  },
+
   async '"Линии": with the line tool, any item under the pointer shows its dots, a mind map node too, and a line goes from the one pressed'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board, { x, y } = e.toWorld(300, 300);
       b.add(e.newItem('mind', x, y, { id: 'm', w: 200, h: 56, text: 'Тема' }));
