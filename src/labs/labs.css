@@ -175,6 +175,8 @@
 .params-grip { position: sticky; top: calc(-1 * var(--s13)); z-index: 1; height: var(--s14); margin: calc(-1 * var(--s8)) calc(-1 * var(--s18)) var(--s4) calc(-1 * var(--s14)); cursor: grab; background: var(--surface); }
 .params-grip::after { content: ""; display: block; width: 36px; height: 4px; margin: 5px auto 0; border-radius: 2px; background: var(--line); }
 .params-grip:active { cursor: grabbing; }
+/* (With «Стекло», none of its own: the popup's glass shows through it.) */
+:root[data-glass] .params-grip { background: transparent; }
 
 /* "Комментарии": pins over the board (pointing from their lower left corner), and the card opened. */
 .comments-layer { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
