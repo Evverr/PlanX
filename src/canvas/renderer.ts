@@ -14,6 +14,7 @@ import { COMPONENT_COLOR, firstInstance, instancePlus, objectArrow } from '../mo
 import { labOn } from '../labs/labs';
 import { zoomFade, zoomSize } from '../labs/zoomFade';
 import { gripsOn } from '../labs/tableMove';
+import { gridKind } from '../labs/boardGrid';
 import { isBuiltin } from '../model/builtins';
 import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
@@ -1085,6 +1086,9 @@ function drawBackground(ctx: CanvasRenderingContext2D, s: Scene) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
 
+  const kind = gridKind();
+  if (kind === 'none') return;
+  if (kind === 'dots') { drawGridDots(ctx, s); return; }
   let step = 18.5;
   while (step * cam.z < 9) step *= 4;
   const big = step * 4, px = step * cam.z;
@@ -1100,6 +1104,28 @@ function drawBackground(ctx: CanvasRenderingContext2D, s: Scene) {
       if (isMajor === major) ctx.fillRect(0, Math.round(j * px + cam.y), W, 1);
     }
   }
+}
+
+/** The dots on the board's background ("Фон доски", src/labs): this far apart on the board at 100%, and
+ *  as with the lines, four times as many or as few as it's zoomed, so they stay from DOTS_FROM to four
+ *  times that apart on the screen, however far it's zoomed. Their radius on the screen. */
+const DOTS_STEP = 28, DOTS_FROM = 24, DOTS_R = 1.5;
+function drawGridDots(ctx: CanvasRenderingContext2D, s: Scene) {
+  const { cam, theme, width: W, height: H } = s;
+  let step = DOTS_STEP;
+  while (step * cam.z < DOTS_FROM) step *= 4;
+  while (step * cam.z >= DOTS_FROM * 4) step /= 4;
+  const px = step * cam.z;
+  ctx.fillStyle = `rgba(${theme.grid}, .14)`;
+  ctx.beginPath();
+  for (let i = Math.floor(-cam.x / px); i * px + cam.x < W + DOTS_R; i++) {
+    for (let j = Math.floor(-cam.y / px); j * px + cam.y < H + DOTS_R; j++) {
+      const x = i * px + cam.x, y = j * px + cam.y;
+      ctx.moveTo(x + DOTS_R, y);
+      ctx.arc(x, y, DOTS_R, 0, Math.PI * 2);
+    }
+  }
+  ctx.fill();
 }
 
 let linkLayer: HTMLCanvasElement | null = null;

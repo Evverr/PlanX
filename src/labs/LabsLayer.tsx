@@ -23,6 +23,7 @@ import { drawNib } from './nib';
 import { drawEditedPath } from './paths';
 import { drawEraser, eraserStyle, subscribeEraser } from './eraseArea';
 import { drawGroup, endGroupScale, groupScaling, moveGroupScale, onGroupHandle, startGroupScale } from './multi';
+import { subscribeGrid } from './boardGrid';
 import { cropCursor, cropDragging, croppingId, drawCrop, endCropDrag, moveCrop, pressCrop } from './imageCrop';
 import { afterUp as afterJoinUp, beforeUp as beforeJoinUp, drawJoint, notePress as noteJoinPress } from './linkJoint';
 import { drawGrips, endGrip, gripAt, gripDragging, moveGrip, pressedForGrips, pressPlus, releasedForGrips, setHotGrip, setHotPlus, startGrip, tablePlusAt } from './tableMove';
@@ -63,8 +64,8 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) { drawTidy(ctx, editor); drawMindTidy(ctx, editor); } if (labOn('tableMove')) drawGrips(ctx, editor); if (labOn('linkJoint')) drawJoint(ctx, editor); drawCrop(ctx, editor); drawGroup(ctx, editor); drawNib(ctx, editor); if (labOn('nib')) drawEditedPath(ctx, editor); if (labOn('softEraser')) drawEraser(ctx, editor); return more; };
     editor.overlays.add(draw);
     editor.requestRender();
-    const off = subscribeLabs(() => { editor.emit(); editor.requestRender(); });
-    return () => { editor.overlays.delete(draw); off(); };
+    const off = subscribeLabs(() => { editor.emit(); editor.requestRender(); }), offGrid = subscribeGrid(() => editor.requestRender());
+    return () => { editor.overlays.delete(draw); off(); offGrid(); };
   }, [editor]);
 
   // "Ластик кружком": the circle is the eraser's pointer.

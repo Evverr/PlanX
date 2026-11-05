@@ -1,6 +1,8 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Glyph } from './glyphs';
 import { usePanelSize, type PanelSize } from './panels/size';
+import { setGridKind, useGridKind, type GridKind } from '../labs/boardGrid';
+import { useLabs } from '../labs/labs';
 
 /**
  * The board's menu, opened from the button after its name (Figma "Mol / Menu right"): first the board
@@ -15,6 +17,7 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
 }) {
   const [on, setOn] = useState(false);
   const [panelSize, setPanelSize] = usePanelSize();
+  const grid = useGridKind(), labs = useLabs();
   // A row with an arrow opens a further level beside it (the same menu again, or the one it brings)
   // while the pointer is on it (or its menu); `sub` is that row's label.
   const [sub, setSub] = useState<string | null>(null);
@@ -57,7 +60,7 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
         <div className="menu-line" />
         {row('save-template', 'Сохранить панели', { onClick: onSave })}
         {row('refresh-l', 'Сбросить панели', { onClick: onReset })}
-        {row('collapse-l', 'Размер панелей', { end: <SizeDots size={panelSize} onPick={setPanelSize} /> })}
+        {row('collapse-l', 'Размер панелей', { end: <PickDots label="Размер панелей" now={panelSize} of={[['l', 'Большие'], ['m', 'Средние'], ['s', 'Маленькие']] as Array<[PanelSize, string]>} onPick={setPanelSize} /> })}
         {/* The features on trial are in "Настройки" now; these keep their place, three rows for now. */}
         {row('lightning-plus', 'Нововведения', { more: <Stub />, end: arrow })}
         <div className="menu-line" />
@@ -65,22 +68,25 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
         {row('settings-l', 'Настройки', { onClick: onSettings })}
         <div className="menu-line" />
       </>}
-      {row('link-settings', 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
+      {/* "Фон доски" (src/labs). */}
+      {level === 0 && labs.boardGrid
+        ? row('apps', 'Фон', { end: <PickDots label="Фон" now={grid} of={[['lines', 'Линии'], ['dots', 'Точки'], ['none', 'Пусто']] as Array<[GridKind, string]>} onPick={setGridKind} /> })
+        : row('link-settings', 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
       {/* The second half of the features on trial. */}
       {row('change-order', 'Оглавление', { light: true, more: <Stub />, end: arrow })}
     </div>
   );
 }
 
-/** The panels' size at the end of a row: three dots, large, medium and small, the chosen one blue
- *  (a stand-in till they're drawn). Inside the row's button, so they're spans that act as buttons. */
-function SizeDots({ size, onPick }: { size: PanelSize; onPick: (s: PanelSize) => void }) {
-  const sizes: Array<[PanelSize, string]> = [['l', 'Большие'], ['m', 'Средние'], ['s', 'Маленькие']];
+/** A choice at the end of a row: a dot for each (the panels' size; what's on the board's background),
+ *  the chosen one blue (a stand-in till they're drawn). Inside the row's button, so they're spans that
+ *  act as buttons. */
+function PickDots<T extends string>({ label, now, of, onPick }: { label: string; now: T; of: Array<[T, string]>; onPick: (v: T) => void }) {
   return (
-    <span className="size-dots" role="radiogroup" aria-label="Размер панелей">
-      {sizes.map(([s, label]) => (
-        <span key={s} className={`size-dot ${size === s ? 'on' : ''}`} role="radio" aria-checked={size === s} aria-label={label} title={label}
-          onClick={(e) => { e.stopPropagation(); onPick(s); }} />
+    <span className="size-dots" role="radiogroup" aria-label={label}>
+      {of.map(([v, name]) => (
+        <span key={v} className={`size-dot ${now === v ? 'on' : ''}`} role="radio" aria-checked={now === v} aria-label={name} title={name}
+          onClick={(e) => { e.stopPropagation(); onPick(v); }} />
       ))}
     </span>
   );
