@@ -443,10 +443,10 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
           <button className={`ib ${gripsOn(tables[0].id) ? 'on' : ''}`} title="Переставить строки и столбцы" aria-label="Переставить строки и столбцы"
             aria-pressed={gripsOn(tables[0].id)} onClick={() => toggleGrips(editor)}><PanelIcon name="settings" /></button>
         ) : undefined,
-        // "Кроп картинки" (src/labs): the scissors (the icon for now).
+        // "Кроп картинки" (src/labs).
         crop: labs.imageCrop && items.length === 1 && canCrop(items[0]) ? (
           <button className={`ib ${croppingId() === items[0].id ? 'on' : ''}`} title="Кроп" aria-label="Кроп" aria-pressed={croppingId() === items[0].id}
-            onClick={() => toggleCrop(editor)}><PanelIcon name="scissors-2" /></button>
+            onClick={() => toggleCrop(editor)}><PanelIcon name="crop" /></button>
         ) : undefined,
         // How the selected links run: straight, in right angles, smooth; each way any of them runs lit,
         // a press sending all of them that way.
