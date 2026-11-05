@@ -98,8 +98,10 @@
 /* The controls: what's done on the left, the keys or moves for it on the right; 6px more room round
    it than other popups and between its rows. */
 .help { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(20px + var(--bar) + env(safe-area-inset-bottom, 0px));
-  width: 1040px; max-width: calc(100vw - var(--zoom-r, 12px) - 12px); max-height: calc(100vh - 40px - var(--bar)); overflow-y: auto; box-sizing: border-box; padding: var(--s20) var(--s24); }
+  width: 1040px; max-width: calc(100vw - var(--zoom-r, 12px) - 12px); max-height: calc(100vh - 40px - var(--bar)); box-sizing: border-box; padding: var(--s20) var(--s24) 0; display: flex; flex-direction: column; }
 .help h3 { margin: 0 0 var(--s12); font-size: var(--s15); font-weight: 600; }
+/* What scrolls, when the window's too small: inside, not the popup, whose glass (labs.css) would scroll away. */
+.help-body { min-height: 0; overflow-y: auto; margin: 0 calc(var(--s24) * -1); padding: 0 var(--s24) var(--s20); border-radius: 0 0 var(--s12) var(--s12); }
 .keys-grid { columns: 3 260px; column-gap: var(--s32); }
 .keys-grid section { break-inside: avoid; margin-bottom: var(--s16); }
 .keys-grid h4 { margin: 0 0 var(--s6); font: 700 var(--s11) "Inter", var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }

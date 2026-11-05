@@ -716,6 +716,14 @@ export const checks = {
     await p.escape();
     await sleep(250);
     expect(!!(await p.rect('.help')), 'closed').toBeFalsy();
+    // In a small window what's in it scrolls inside: the popup itself stays, and its glass with it.
+    await p.cdp('Emulation.setDeviceMetricsOverride', { width: 900, height: 420, deviceScaleFactor: 1, mobile: false });
+    await p.key('?', 'Slash', 191, 8);
+    const small = await p.ev(`(() => { const h = document.querySelector('.help:not(.gone)'), b = h.querySelector('.help-body'); return [h.scrollHeight <= h.clientHeight, b.scrollHeight > b.clientHeight].join(); })()`);
+    expect(small, 'scrolls inside, not itself').toBe('true,true');
+    await p.escape();
+    await sleep(250);
+    await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1200, height: 800, deviceScaleFactor: 1, mobile: false });
     const ids = await stickers(p);
     await p.key('k', 'KeyK', 75);
     const at = await p.ev(`(() => { const it = planx.board.get('${ids.a}'), s = planx.editor.toScreen({ x: it.x + 50, y: it.y + 50 }); return [s.x, s.y]; })()`);
