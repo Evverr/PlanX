@@ -417,7 +417,7 @@ export function App({ boardId }: { boardId: string }) {
         share: <button className="ib" title="Скопировать ссылку на доску" aria-label="Поделиться" onClick={share}><PanelIcon name="ai-two-stars" /></button>,
         sep: <div className="sep" />,
         map: <button className={`ib ${minimap ? 'on' : ''}`} title="Карта доски" aria-label="Карта доски" aria-pressed={minimap} data-minimap-toggle
-          onClick={() => { setMinimap(!minimap); setPop(null); }}><PanelIcon name="map" /></button>,
+          onClick={() => { setMinimap(!minimap); setPop(null); }}><PanelIcon name="location" /></button>,
         'zoom-out': <button className="ib" title="Отдалить (−)" aria-label="Отдалить" onClick={() => editor.zoomCenter(1 / 1.25)}><PanelIcon name="zoom-out" /></button>,
         zoom: <button className="zpct" title="Масштаб 100%" onClick={() => editor.zoomCenter(1 / editor.cam.z)}>{Math.round(ui.cam.z * 100)}%</button>,
         'zoom-in': <button className="ib" title="Приблизить (+)" aria-label="Приблизить" onClick={() => editor.zoomCenter(1.25)}><PanelIcon name="zoom-in" /></button>,
