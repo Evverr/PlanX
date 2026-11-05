@@ -37,7 +37,7 @@
   animation: fade-in .16s ease-out, come-in .16s ease-out; animation-composition: replace, add; }
 @keyframes come-in { from { transform: translate(var(--in-x), var(--in-y)); } }
 /* Rising: from the bottom (or the bars there), and in the middle of the screen. */
-:is(.op-pop, .color-picker, .tfmt, .panel-over:not(.opens-down), .more-pop.above, .minimap, .help, .namepop, .toast.bottom, .shelf-toast, .modal, .peek, .labs-keys) { --in-y: var(--slide); }
+:is(.op-pop, .color-picker, .tfmt, .panel-over:not(.opens-down), .more-pop.above, .minimap, .help, .namepop, .toast.bottom, .shelf-toast, .modal, .peek) { --in-y: var(--slide); }
 :root[data-topbar="low"] :is(.board-menu:not(.sub, .context-menu, .objects-menu, .shape-menu), .confirm) { --in-y: var(--slide); }
 :root[data-zoom="high"] :is(.minimap, .help, .namepop) { --in-y: calc(-1 * var(--slide)); }
 /* From the side. */

@@ -30,7 +30,7 @@ import { Labs } from './labs/LabsLayer';
 import { labOn, useLabs } from './labs/labs';
 import { morphPanel } from './labs/textButton';
 import { joinDropped } from './labs/linkJoint';
-import { zoomHelp } from './labs/wheelZoom';
+import { HelpPop } from './ui/HelpPop';
 import { useFollowing } from './labs/presence';
 import { readJSON, readText, writeJSON, writeText } from './storage';
 import { shelfUrlFor, useShelfTracking } from './shelf/track';
@@ -96,6 +96,18 @@ export function App({ boardId }: { boardId: string }) {
       window.removeEventListener('planx:toggle-icons', icons);
     };
   }, []);
+
+  // ? opens what the "?" in the zoom bar does, Esc puts it away.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if (e.key === '?') { e.preventDefault(); toggle('help'); setMinimap(false); }
+      if (e.key === 'Escape') setPop((cur) => (cur === 'help' ? null : cur));
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // While the window is being resized, the panels don't glide (see moves.css).
   useEffect(() => {
@@ -474,26 +486,7 @@ export function App({ boardId }: { boardId: string }) {
 
       {pop === 'name' && <NamePopover name={conn.me.name} onSave={(n) => { conn.rename(n); setPop(null); }} />}
 
-      {pop === 'help' && (
-        <div className="pop help" role="dialog" aria-label="Управление">
-          <h3>Управление</h3>
-          <dl>
-            <dt>Двигать доску</dt><dd>Пробел + тянуть</dd>
-            <dt>Масштаб</dt><dd>{zoomHelp()}</dd>
-            <dt>Редактировать текст</dt><dd>Двойной клик</dd>
-            <dt>Выделить несколько</dt><dd>Shift + клик</dd>
-            <dt>Стикер любой формы, фигура в пропорции</dt><dd>Shift + тянуть за угол</dd>
-            <dt>Копировать элемент</dt><dd>Alt + тянуть</dd>
-            <dt>Связать с другим элементом</dt><dd>Тянуть за синюю точку</dd>
-            <dt>Инструменты</dt><dd><kbd>V H N T R O C F P M E I</kbd></dd>
-            <dt>Переставить инструмент на панели</dt><dd>Удерживать его</dd>
-            <dt>Отменить / вернуть свои действия</dt><dd><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></dd>
-            <dt>Копировать, вставить, дублировать</dt><dd><kbd>Ctrl</kbd>+<kbd>C</kbd> <kbd>V</kbd> <kbd>D</kbd></dd>
-            <dt>Группа вокруг выделенного</dt><dd><kbd>Ctrl</kbd>+<kbd>G</kbd></dd>
-            <dt>Удалить выделенное</dt><dd><kbd>Del</kbd></dd>
-          </dl>
-        </div>
-      )}
+      {pop === 'help' && <HelpPop />}
 
       {toast && <div className="pop toast" role="status">{toast}</div>}
       {note && (

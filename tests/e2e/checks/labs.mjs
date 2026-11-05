@@ -710,11 +710,12 @@ export const checks = {
     expect(!!(await p.rect('.timer-pill')), 'gone').toBeFalsy();
   },
 
-  async '? opens the cheat sheet, and the laser draws without touching the board'(p) {
+  async '? opens the help, and the laser draws without touching the board'(p) {
     await p.key('?', 'Slash', 191, 8);
-    expect(!!(await p.rect('.labs-keys')), 'the cheat sheet').toBeTruthy();
+    expect(!!(await p.rect('.help')), 'the help, with the keys').toBeTruthy();
     await p.escape();
-    expect(!!(await p.rect('.labs-keys')), 'closed').toBeFalsy();
+    await sleep(250);
+    expect(!!(await p.rect('.help')), 'closed').toBeFalsy();
     const ids = await stickers(p);
     await p.key('k', 'KeyK', 75);
     const at = await p.ev(`(() => { const it = planx.board.get('${ids.a}'), s = planx.editor.toScreen({ x: it.x + 50, y: it.y + 50 }); return [s.x, s.y]; })()`);
@@ -731,7 +732,7 @@ export const checks = {
     expect((await p.rect('.labs-rail')).r, 'at the right edge').toBe(1200 - 12);
     const keys = () => p.ev(`[...document.querySelectorAll('.labs-rail > [data-key]')].map((e) => { const r = e.getBoundingClientRect(); return [e.dataset.key, Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)]; })`);
     const k0 = await keys();
-    expect(k0.map((k) => k[0]).join(), 'in order').toBe('export,pdf,search,layers,history,timer,laser,follow,keys');
+    expect(k0.map((k) => k[0]).join(), 'in order').toBe('export,pdf,search,layers,history,timer,laser,follow');
     // Brought to the fourth one's middle, it passes the two before that, as on the tool rail.
     await carry(p, k0[0].slice(1), [k0[3].slice(1)]);
     const k1 = (await keys()).map((k) => k[0]);

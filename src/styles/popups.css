@@ -97,11 +97,17 @@
 
 /* The controls: what's done on the left, the keys or moves for it on the right; 6px more room round
    it than other popups and between its rows. */
-.help { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(20px + var(--bar) + env(safe-area-inset-bottom, 0px)); width: var(--e392); max-width: calc(100vw - var(--e24)); box-sizing: border-box; padding: var(--s26); }
-.help h3 { margin: 0 0 var(--s10); font-size: var(--s13); font-weight: 600; }
-.help dl { display: grid; grid-template-columns: 1fr auto; gap: var(--s6) var(--s12); margin: 0; }
-.help dt { color: var(--muted); }
-.help dd { margin: 0; font-weight: 600; white-space: nowrap; text-align: right; }
+.help { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(20px + var(--bar) + env(safe-area-inset-bottom, 0px));
+  width: 1040px; max-width: calc(100vw - var(--zoom-r, 12px) - 12px); max-height: calc(100vh - 40px - var(--bar)); overflow-y: auto; box-sizing: border-box; padding: var(--s20) var(--s24); }
+.help h3 { margin: 0 0 var(--s12); font-size: var(--s15); font-weight: 600; }
+.keys-grid { columns: 3 260px; column-gap: var(--s32); }
+.keys-grid section { break-inside: avoid; margin-bottom: var(--s16); }
+.keys-grid h4 { margin: 0 0 var(--s6); font: 700 var(--s11) "Inter", var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.keys-grid dl { margin: 0; }
+.keys-row { display: flex; justify-content: space-between; gap: var(--s12); padding: var(--s4) 0; border-bottom: 1px solid var(--fmt-line); }
+.keys-row dt { display: flex; align-items: center; gap: 3px; white-space: nowrap; color: var(--muted); font-size: var(--s12); }
+.keys-row dd { margin: 0; text-align: right; }
+.help kbd { min-width: 1.4em; text-align: center; font: 600 11px/18px "Inter", var(--ui); color: var(--menu-ink); background: var(--surface); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; }
 kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); border-radius: 4px; padding: 1px 5px; }
 
 .text-edit { position: fixed; z-index: 4; margin: 0; border: 0; outline: none; resize: none; overflow: hidden; background: transparent; font-family: var(--ui); transform-origin: 0 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; }

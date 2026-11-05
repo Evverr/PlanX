@@ -15,7 +15,7 @@
 /* Their popups. */
 .labs-pop { top: 50%; transform: translateY(-50%); width: var(--e300); max-width: calc(100vw - var(--e96)); box-sizing: border-box;
   max-height: calc(100vh - 32px); overflow-y: auto; }
-.labs-pop h3, .labs-keys h3 { margin: 0 0 var(--s12); font: 700 var(--s13)/var(--s21) "Inter", var(--ui); }
+.labs-pop h3 { margin: 0 0 var(--s12); font: 700 var(--s13)/var(--s21) "Inter", var(--ui); }
 .labs-pop label { display: block; margin: var(--s12) 0 var(--s6); font-weight: 600; font-size: var(--s12); color: var(--muted); }
 .labs-pop .muted { color: var(--muted); font-size: var(--s12); line-height: 1.5; }
 .labs-pop .btn:disabled { opacity: .45; cursor: default; }
@@ -105,17 +105,6 @@
 
 /* Шпаргалка: in the middle over a dimmed screen. */
 .labs-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(0, 0, 0, .25); animation: fade-in .12s ease-out; }
-.labs-keys { position: relative; width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; box-sizing: border-box; padding: var(--s20) var(--s24); }
-.keys-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s4); }
-.keys-head h3 { margin: 0; font-size: var(--s15); }
-.keys-grid { columns: 2 300px; column-gap: var(--s32); }
-.keys-grid section { break-inside: avoid; margin-bottom: var(--s16); }
-.keys-grid h4 { margin: var(--s8) 0 var(--s6); font: 700 var(--s11) "Inter", var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
-.keys-grid dl { margin: 0; }
-.keys-row { display: flex; justify-content: space-between; gap: var(--s12); padding: var(--s4) 0; border-bottom: 1px solid var(--fmt-line); }
-.keys-row dt { display: flex; align-items: center; gap: 3px; white-space: nowrap; color: var(--muted); font-size: var(--s12); }
-.keys-row dd { margin: 0; text-align: right; }
-.labs-keys kbd { min-width: 1.4em; text-align: center; font: 600 11px/18px "Inter", var(--ui); color: var(--menu-ink); background: var(--surface); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; }
 
 /* The menu level with the switches. */
 
