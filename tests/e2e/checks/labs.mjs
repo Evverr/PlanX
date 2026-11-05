@@ -340,6 +340,57 @@ export const checks = {
     await sleep(300);
   },
 
+  async '"Кроп картинки": edges cut it for good, the ball rounds it, Esc drops it all, a press off it finishes'(p) {
+    await p.ev(`(() => { const c = document.createElement('canvas'); c.width = 400; c.height = 200; const x = c.getContext('2d'); x.fillStyle = '#c33'; x.fillRect(0, 0, 400, 200);
+      const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.add(e.newItem('image', 400, 200, { id: 'pic', w: 400, h: 200, src: c.toDataURL('image/png') })); e.setSelection(['pic']); })()`);
+    await sleep(300);
+    const scissors = async () => p.click(await p.at('button[aria-label="Кроп"]'));
+    const pic = () => p.ev(`(() => { const i = planx.board.get('pic'); return [i.x, i.y, i.w, i.h, i.rad ?? 0].join(); })()`);
+    const pixels = () => p.ev(`new Promise((ok) => { const m = new Image(); m.onload = () => ok(m.naturalWidth + 'x' + m.naturalHeight); m.src = planx.board.get('pic').src; })`);
+    await scissors();
+    expect(await p.ev(`document.querySelector('button[aria-label="Кроп"]').classList.contains('on')`), 'lit').toBe(true);
+    // Left edge in by 100; nothing on the board yet; Esc: as it was.
+    await p.drag([400, 300], [500, 300]);
+    expect(await pic(), 'nothing changed yet').toBe('400,200,400,200,0');
+    await p.escape();
+    await sleep(100);
+    expect(await pic(), 'dropped').toBe('400,200,400,200,0');
+    expect(await p.ev(`[...planx.editor.selection].join()`), 'still picked').toBe('pic');
+    // In again: the left edge and the bottom one, the press inside not moving it; Enter.
+    await scissors();
+    await p.drag([600, 300], [650, 330]);
+    expect(await pic(), 'stays put').toBe('400,200,400,200,0');
+    await p.drag([400, 300], [500, 300]);
+    await p.drag([600, 400], [600, 350]);
+    await p.key('Enter', 'Enter', 13);
+    await sleep(150);
+    expect(await pic(), 'cut').toBe('500,200,300,150,0');
+    expect(await pixels(), 'its pixels too').toBe('300x150');
+    expect(await p.ev(`[...planx.editor.selection].join()`), 'still picked').toBe('pic');
+    // Not undone: a step after adding it undone, it's cut still.
+    await p.ev(`(() => { const u = planx.board.undoManager; u.stopCapturing(); planx.board.update('pic', { fo: 0.9 }); u.undo(); })()`);
+    expect(await pixels(), 'gone for good').toBe('300x150');
+    // The ball, at the lower left corner: rounds it; can be set anew; a press off it finishes.
+    await p.ev(`planx.editor.setSelection(['pic'])`);
+    await sleep(100);
+    await scissors();
+    await p.drag([500, 350], [530, 320]);
+    await p.mouse('mouseMoved', 1000, 650);
+    await p.click([1000, 650]);
+    expect((await pic()).split(',')[4], 'rounded').toBe('30');
+    expect(await pixels(), 'its pixels as they were').toBe('300x150');
+    await p.ev(`planx.editor.setSelection(['pic'])`);
+    await sleep(100);
+    await scissors();
+    await p.drag([530, 320], [500, 350]);
+    await scissors();
+    expect((await pic()).split(',')[4], 'square again').toBe('0');
+    // A game sticker has no scissors.
+    await p.ev(`(() => { const e = planx.editor, d = e.newItem('image', 100, 100, { id: 'dood', w: 80, h: 80, doodle: 'x' }); planx.board.add(d); e.setSelection(['dood']); })()`);
+    await sleep(150);
+    expect(!!(await p.rect('button[aria-label="Кроп"]')), 'none on a game sticker').toBeFalsy();
+  },
+
   async 'the selection panel comes only on letting go: of something pressed, moved or not, and of a box drawn'(p) {
     const { a } = await stickers(p);
     const bars = () => p.ev(`document.querySelectorAll('.bar.panel:not(.gone)').length`);
