@@ -23,7 +23,6 @@ export function HelpPop() {
     .map((part, i) => (part.startsWith('[') ? <kbd key={i}>{part.slice(1, -1)}</kbd> : <span key={i}>{part}</span>));
   return (
     <div className="pop help" role="dialog" aria-label="Управление">
-      <h3>Управление</h3>
       <div className="help-body">
         <div className="keys-grid">
           {KEYS.map(([group, rows]) => (

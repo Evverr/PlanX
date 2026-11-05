@@ -99,14 +99,13 @@
    it than other popups and between its rows. */
 .help { right: var(--zoom-r, calc(12px + env(safe-area-inset-right, 0px))); bottom: calc(20px + var(--bar) + env(safe-area-inset-bottom, 0px));
   width: 1040px; max-width: calc(100vw - var(--zoom-r, 12px) - 12px); max-height: calc(100vh - 40px - var(--bar)); box-sizing: border-box; padding: var(--s20) var(--s24) 0; display: flex; flex-direction: column; }
-.help h3 { margin: 0 0 var(--s12); font-size: var(--s15); font-weight: 600; }
 /* What scrolls, when the window's too small: inside, not the popup, whose glass (labs.css) would scroll away. */
 .help-body { min-height: 0; overflow-y: auto; margin: 0 calc(var(--s24) * -1); padding: 0 var(--s24) var(--s20); border-radius: 0 0 var(--s12) var(--s12); }
 .keys-grid { columns: 3 260px; column-gap: var(--s32); }
 .keys-grid section { break-inside: avoid; margin-bottom: var(--s16); }
 .keys-grid h4 { margin: 0 0 var(--s6); font: 700 var(--s11) "Inter", var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .keys-grid dl { margin: 0; }
-.keys-row { display: flex; justify-content: space-between; gap: var(--s12); padding: var(--s4) 0; border-bottom: 1px solid var(--fmt-line); }
+.keys-row { display: flex; justify-content: space-between; gap: var(--s12); padding: var(--s6) 0; border-bottom: 1px solid var(--fmt-line); }
 .keys-row dd { margin: 0; display: flex; align-items: center; justify-content: flex-end; gap: 3px; white-space: nowrap; color: var(--muted); font-size: var(--s12); }
 .help kbd { min-width: 1.4em; text-align: center; font: 600 11px/18px "Inter", var(--ui); color: var(--menu-ink); background: var(--surface); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; }
 kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); border-radius: 4px; padding: 1px 5px; }
