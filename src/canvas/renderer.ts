@@ -126,7 +126,7 @@ export interface InkStroke { pts: Point[]; color: string; width: number; hl: boo
 
 /** Corner radius of everything with corners except stickers, in board units. */
 const CORNER = 8;
-const corner = (it: Item) => (it.type === 'rect' ? it.rad ?? CORNER : it.type === 'frame' || it.type === 'task' ? CORNER
+const corner = (it: Item) => (it.type === 'rect' ? it.rad ?? CORNER : it.type === 'image' ? it.rad ?? 0 : it.type === 'frame' || it.type === 'task' ? CORNER
   // A mind map node's: the central topic's rounder.
   : it.type === 'mind' ? Math.min(it.h / 2, it.parent ? 10 : 14) : 0);
 /** A ticked task's checkbox. */

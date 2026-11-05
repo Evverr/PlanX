@@ -5,8 +5,12 @@ import type { Item } from '../model/types';
  * Pictures put on the board. Each is kept in its item as a data URL (so it syncs with the board
  * like everything else) and drawn from a cache of loaded images, keyed by item.
  */
-const images = new Map<string, { src: string; img: HTMLImageElement }>();
+const images = new Map<string, { src: string; img: HTMLImageElement | HTMLCanvasElement }>();
 const listeners = new Set<() => void>();
+
+/** The picture being cut ("Кроп картинки", src/labs): drawn whole, with no rounding. */
+let plain: string | null = null;
+export const setPlainPicture = (id: string | null) => { plain = id; };
 
 /** Called whenever another picture finishes loading, so the board can redraw. */
 export function onPictureLoad(fn: () => void): () => void {
@@ -14,7 +18,7 @@ export function onPictureLoad(fn: () => void): () => void {
   return () => listeners.delete(fn);
 }
 
-/** Draws the picture stretched over the item; a plain box until it has loaded. */
+/** Draws the picture stretched over the item, its corners rounded by its `rad`; a plain box until it has loaded. */
 export function drawPicture(ctx: CanvasRenderingContext2D, it: Item, placeholder: string): void {
   // A game sticker, with its white outline.
   const src = (it.doodle && doodle(it.doodle)?.outlined) || it.src || '';
@@ -26,13 +30,39 @@ export function drawPicture(ctx: CanvasRenderingContext2D, it: Item, placeholder
     c = { src, img };
     images.set(it.id, c);
   }
-  if (!c.img.complete || !c.img.naturalWidth) {
+  if (c.img instanceof HTMLImageElement && (!c.img.complete || !c.img.naturalWidth)) {
     ctx.fillStyle = placeholder;
     ctx.fillRect(it.x, it.y, it.w, it.h);
     return;
   }
   ctx.imageSmoothingQuality = 'high';
+  const rad = it.id === plain ? 0 : it.rad ?? 0;
+  if (rad) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(it.x, it.y, it.w, it.h, rad);
+    ctx.clip();
+  }
   ctx.drawImage(c.img, it.x, it.y, it.w, it.h);
+  if (rad) ctx.restore();
+}
+
+/** The part of a picture (each from 0 to 1 of its size) as a picture of its own, at its own pixels,
+ *  ready to be drawn; none if it hasn't loaded. */
+export function croppedPicture(it: Item, part: { x: number; y: number; w: number; h: number }): string | null {
+  const img = images.get(it.id)?.img;
+  if (!img) return null;
+  const W = img instanceof HTMLImageElement ? img.naturalWidth : img.width, H = img instanceof HTMLImageElement ? img.naturalHeight : img.height;
+  if (!W || !H) return null;
+  const w = Math.max(1, Math.round(part.w * W)), h = Math.max(1, Math.round(part.h * H));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext('2d')!.drawImage(img, Math.round(part.x * W), Math.round(part.y * H), w, h, 0, 0, w, h);
+  const src = canvas.toDataURL('image/webp', 0.85);
+  // (Drawn at once from this, so it doesn't blink as the new one loads.)
+  images.set(it.id, { src, img: canvas });
+  return src;
 }
 
 /** Longest side a picture is stored at; bigger ones are scaled down so the board stays light. */

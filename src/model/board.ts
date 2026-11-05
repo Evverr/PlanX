@@ -139,6 +139,20 @@ export class Board {
     });
   }
 
+  /** Changes an item for good: never undone, so what's replaced is really gone from the board, not
+   *  kept for undoing (a picture's cut-off part, see labs/imageCrop.ts). */
+  updateForGood(id: string, patch: Partial<Item>): void {
+    const m = this.items.get(id);
+    if (!m) return;
+    this.doc.transact(() => {
+      for (const [k, v] of Object.entries(patch)) {
+        if (k === 'id') continue;
+        if (v === undefined) m.delete(k);
+        else if (m.get(k) !== v) m.set(k, v);
+      }
+    }, SYNC);
+  }
+
   update(id: string, patch: Partial<Item>): void {
     const m = this.items.get(id);
     if (!m) return;

@@ -14,6 +14,30 @@ function pair() {
   return [a, b] as const;
 }
 
+describe('a change for good', () => {
+  it('is not undone, and what it replaced is gone from what\'s stored; undoing what came before leaves it', () => {
+    const b = new Board();
+    const it = { id: 'p', type: 'image', x: 0, y: 0, w: 100, h: 100, z: 1, src: 'ORIGINALPICTURE' } as never;
+    b.add(it);
+    b.undoManager.stopCapturing();
+    b.update('p', { x: 50 });
+    b.undoManager.stopCapturing();
+    b.updateForGood('p', { src: 'CUTPICTURE', w: 60 });
+    const stored = new TextDecoder('latin1').decode(Y.encodeStateAsUpdate(b.doc));
+    expect(stored).toContain('CUTPICTURE');
+    expect(stored).not.toContain('ORIGINALPICTURE');
+    b.undoManager.undo();
+    expect(b.get('p')?.src).toBe('CUTPICTURE');
+    expect(b.get('p')?.w).toBe(60);
+    expect(b.get('p')?.x).toBe(0);
+    // Undone as far as it goes and back: what's cut stays cut.
+    b.undoManager.undo();
+    expect(b.get('p')).toBeUndefined();
+    b.undoManager.redo();
+    expect(b.get('p')?.src).toBe('CUTPICTURE');
+  });
+});
+
 describe('Board', () => {
   it('adds, updates and lists items by stacking order', () => {
     const b = new Board();

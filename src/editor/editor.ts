@@ -30,6 +30,7 @@ import { DEFAULT_PENS, isPoly, MIND_TOPIC, PENS_KEY, readPens, type InkStyle, ty
 import { pushedBelow } from '../labs/textPush';
 import { holdZoomBox } from '../labs/zoomBox';
 import { rejoined } from '../labs/linkJoint';
+import { croppingId } from '../labs/imageCrop';
 import { showGrips } from '../labs/tableMove';
 import { carryCellFormat, noteCellFormat } from '../labs/tableLook';
 import { holds as mindTidyOn, mindTidyKept, restartMindTidy, resumeMindTidy } from '../labs/tidyMind';
@@ -603,7 +604,7 @@ export class Editor {
       dpr: this.dpr,
       selection: this.selection,
       editingId: this.editingId,
-      nodesOf: nodeEditing(),
+      nodesOf: nodeEditing() ?? croppingId(),
       marquee: g?.type === 'marquee' ? g.rect : null,
       linkPreview,
       // Other people's cursors, unless switched off ("Нововведения").
