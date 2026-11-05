@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boxOf, distToSegment, edgePoint, elbowRoute, linkShape, spreadElbows, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, onTaskBox, rectContains, resizedAt, sidePoint, taskBox } from '../src/canvas/geometry';
+import { boxOf, polyPoints, distToSegment, edgePoint, elbowRoute, linkShape, spreadElbows, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, onTaskBox, rectContains, resizedAt, sidePoint, taskBox } from '../src/canvas/geometry';
 import { withList, wrapText } from '../src/canvas/text';
 import type { Item } from '../src/model/types';
 
@@ -87,6 +87,16 @@ describe('geometry', () => {
     expect(taskBox(task, 2)).toEqual({ x: 251, y: 9, r: 5 });
     // Zoomed far out it stops at 30% of the card's height.
     expect(taskBox(task, 0.1).r).toBeCloseTo(15.6);
+  });
+
+  it('a star takes a corner radius of its own: then its ten corners, filling its box', () => {
+    const pts = polyPoints(box('polygon', { shape: 'star', w: 100, h: 100, rad: 5 }));
+    expect(pts).toHaveLength(10);
+    expect(Math.min(...pts.map((p) => p.y))).toBeCloseTo(0);
+    expect(Math.max(...pts.map((p) => p.x))).toBeCloseTo(100);
+    // Its top tip in the middle, its next corner an inner one, nearer the middle of the box.
+    expect(pts[0].x).toBeCloseTo(50, 0);
+    expect(Math.hypot(pts[1].x - 50, pts[1].y - 50)).toBeLessThan(Math.hypot(pts[0].x - 50, pts[0].y - 50));
   });
 
   it('hits a star only inside its points, and ends links on its outline', () => {

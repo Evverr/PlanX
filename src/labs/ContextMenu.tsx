@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Point } from '../canvas/geometry';
-import { center, hitItem, hitLink } from '../canvas/geometry';
+import { center, hitItem, hitLink, starRound } from '../canvas/geometry';
 import { linkInTextAt } from '../canvas/renderer';
 import { alignOf, baseWeight, DEFAULTS, FILLS, fillable, HAS_FONT, ICON_COLORS, INK_COLORS, strokable, STROKE_COLORS, TEXT_COLORS, type Item, type LinkStyle } from '../model/types';
 import { fitHeight, FONTS } from '../canvas/text';
@@ -444,12 +444,11 @@ function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch
       )}
       {texted && <ColorRow editor={editor} label="Цвет текста" colors={TEXT_COLORS} current={it.tc ?? 'ink'} opacity={it.to ?? 1}
         onColor={(c) => set({ tc: c === 'ink' ? undefined : c })} onOpacity={(v) => set({ to: v })} />}
-      {/* (Not a star's: it's round as its icon is.) */}
-      {(it.type === 'rect' || (it.type === 'polygon' && it.shape !== 'star')) && (
+      {(it.type === 'rect' || it.type === 'polygon') && (
         <div className="params-group params-inline">
           <div className="params-label">Скругление</div>
           <span className="menu-input">
-            <input type="number" min={0} max={200} step={1} value={it.rad ?? (it.type === 'rect' ? 8 : 0)} aria-label="Скругление углов"
+            <input type="number" min={0} max={200} step={1} value={it.rad ?? (it.type === 'rect' ? 8 : it.shape === 'star' ? starRound(it) : 0)} aria-label="Скругление углов"
               onChange={(e) => set({ rad: Math.max(0, Math.min(200, Number(e.target.value) || 0)) })} />
             <i>px</i>
           </span>

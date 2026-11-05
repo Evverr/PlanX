@@ -41,7 +41,7 @@ export function ShapePanel({ editor, tool, zoom, onPick }: { editor: Editor; too
       )])))}
       <button className={`fb ${menu ? 'on' : ''}`} title="Настройки фигур" aria-label="Настройки фигур" aria-expanded={menu} data-nosort
         onClick={() => setMenu(!menu)}>
-        <PanelIcon name="settings" />
+        <PanelIcon name="more" />
       </button>
       {menu && <ShapeMenu editor={editor} onClose={() => setMenu(false)} />}
       {sort.ghost}

@@ -563,8 +563,8 @@ function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
 
 /** Adds a polygon item's outline to the current path. */
 function outlinePolygon(ctx: CanvasPath, it: Item) {
-  // The star as its icon draws it, round at its points.
-  if (it.shape === 'star') { traceStar(ctx, it); return; }
+  // The star as its icon draws it, round at its points (with a corner radius of its own, as any other).
+  if (it.shape === 'star' && it.rad === undefined) { traceStar(ctx, it); return; }
   if (it.vx && it.vh && !it.shape && it.rad) { outlineCurved(ctx, it, it.rad); return; }
   const pts = polyPoints(it), n = pts.length, rad = it.rad ?? 0;
   if (!rad) {
