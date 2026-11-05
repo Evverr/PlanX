@@ -108,8 +108,8 @@ function tableOf(ed: Editor): Item | null {
  *  LINES_FROM_Z). */
 const GRIPS_FROM_Z = 0.25;
 
-/** How far past the table's edge a pill stands, on the screen: clear of the selection frame by 3. */
-const OUT = 3.75;
+/** How far past the table's edge a pill stands, on the screen: clear of the selection frame by 5. */
+const OUT = 5.75;
 
 /** A pill's middle on the screen, `k` times its size: just out over its column's top, out left of its row. */
 function gripScreen(ed: Editor, g: Grip & Point, k = 1): Point {
