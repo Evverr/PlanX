@@ -5,8 +5,8 @@
  */
 
 /** How long what's on the panel takes to fade out, the panel to take the new width, and the new
- *  buttons to fade in, in ms. */
-const OUT = 120, WIDEN = 200, IN = 160;
+ *  buttons to fade in, in ms (the first two in labs.css too). */
+const OUT = 70, WIDEN = 118, IN = 94;
 
 let busy = false;
 
