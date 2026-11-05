@@ -498,6 +498,11 @@ export const checks = {
     await p.mouse('mouseMoved', ...c);
     await sleep(700);
     expect(await p.ev(`planx.editor.hotLine`), 'no line lit').toBe(null);
+    // Made with the tool, a click on the board: the same.
+    await p.ev(`planx.editor.setTool('table')`);
+    await p.click([800, 150]);
+    await sleep(100);
+    expect(await p.ev(`(async () => { const s = planx.editor.selectedItems()[0]; return [s.type, (await import('/src/labs/tableMove.ts')).gripsOn(s.id), planx.editor.editingId].join(); })()`), 'made with the tool: pills out, no cell open').toBe('table,true,');
   },
 
   async '"Таблица помнит формат": the next empty cell goes on aligned as the last one was set'(p) {
