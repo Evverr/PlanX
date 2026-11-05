@@ -46,8 +46,9 @@
 :root[data-rail="right"] :is(.objects-menu, .board-menu.shape-menu, .tools-more:not(.labs-more), .draw-panel, .recorder, .icon-pick, .ink-style) { --in-x: var(--slide); }
 :root[data-labs="left"] :is(.labs-more, .labs-pop) { --in-x: calc(-1 * var(--slide)); }
 /* The text panel, coming in where the other's going, waits till it's gone (see App); the selection panel
-   over what's picked ("Панель над элементом", src/labs) that long always, coming a little after the click. */
-:is(.tfmt:not(.leaving).after-gone, .panel-over:not(.gone)) { animation-delay: .08s; animation-fill-mode: backwards; }
+   over what's picked ("Панель над элементом", src/labs) comes a little after the click, always. */
+.tfmt:not(.leaving).after-gone { animation-delay: .08s; animation-fill-mode: backwards; }
+.panel-over:not(.gone) { animation-delay: .2s; animation-fill-mode: backwards; }
 /* And how it goes: a copy of it where it was fades out in half the time (see ui/leaving.ts). */
 .gone { animation: fade-out .08s ease-out forwards !important; animation-composition: replace !important; pointer-events: none !important; }
 @media (prefers-reduced-motion: reduce) { * { --in-x: 0px !important; --in-y: 0px !important; } }
