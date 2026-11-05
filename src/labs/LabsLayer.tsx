@@ -17,7 +17,6 @@ import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTime
 import { SwapPop } from './SwapPop';
 import { LayersPop } from './LayersPop';
 import { HistoryLookBar, HistoryPop } from './HistoryPop';
-import { zoomHelp } from './wheelZoom';
 import { ContextMenu } from './ContextMenu';
 import { CommentsLayer } from './CommentsLayer';
 import { drawNib } from './nib';
@@ -28,7 +27,7 @@ import { afterUp as afterJoinUp, beforeUp as beforeJoinUp, drawJoint, notePress 
 import { drawGrips, endGrip, gripAt, gripDragging, moveGrip, pressedForGrips, pressPlus, releasedForGrips, setHotGrip, setHotPlus, startGrip, tablePlusAt } from './tableMove';
 import './labs.css';
 
-type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'keys' | 'layers' | 'history';
+type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'layers' | 'history';
 
 /** Popups that close on a press anywhere but in them (the cheat sheet has its own backdrop). */
 const AWAY = '.labs-pop, .labs-rail, .labs-more, .history-pill, .confirm';
@@ -90,7 +89,6 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       const typing = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
       if ((e.ctrlKey || e.metaKey) && e.code === 'KeyF' && labOn('search')) { e.preventDefault(); setPop('search'); return; }
       if (typing) return;
-      if (e.key === '?' && labOn('keys')) { e.preventDefault(); setPop((p) => (p === 'keys' ? null : 'keys')); return; }
       if (e.code === 'KeyK' && !e.ctrlKey && !e.metaKey && !e.altKey && labOn('laser')) { setLaserOn((v) => !v); return; }
       if (e.key === 'Escape') { setLaserOn(false); presence.stopFollowing(); setPop(null); }
     };
@@ -125,7 +123,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     const onDown = (e: PointerEvent) => {
       if (e.target !== canvas()) {
         // (A point in the history being looked at: its list stays, for the next one.)
-        if (!editor.looking && !(e.target as Element | null)?.closest?.(AWAY)) setPop((p) => (p === 'keys' ? p : null));
+        if (!editor.looking && !(e.target as Element | null)?.closest?.(AWAY)) setPop(null);
         return;
       }
       if (editor.looking) return;
@@ -263,7 +261,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
 
   const toggle = (p: LabPop) => setPop((cur) => (cur === p ? null : p));
   const summon = () => setToast(presence.summon() ? 'Все участники перенесены к вам' : 'На доске пока никого нет. Откройте ссылку на доску во втором окне');
-  const all: Record<'export' | 'pdf' | 'search' | 'layers' | 'history' | 'timer' | 'laser' | 'follow' | 'keys', RailButton> = {
+  const all: Record<'export' | 'pdf' | 'search' | 'layers' | 'history' | 'timer' | 'laser' | 'follow', RailButton> = {
     export: { icon: 'cloud-download', title: 'Экспорт в PNG', on: pop === 'export', onClick: () => toggle('export') },
     pdf: { icon: 'file', title: 'Экспорт в PDF', on: pop === 'pdf', onClick: () => toggle('pdf') },
     search: { icon: 'search', title: 'Поиск по доске (Ctrl+F)', on: pop === 'search', onClick: () => toggle('search') },
@@ -272,7 +270,6 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     timer: { icon: 'timer', title: 'Общий таймер', on: pop === 'timer', onClick: () => toggle('timer') },
     laser: { icon: 'magic-wand', title: 'Лазерная указка (K)', on: laserOn, onClick: () => setLaserOn(!laserOn) },
     follow: { icon: 'meeting-point', title: 'Позвать всех ко мне', onClick: summon },
-    keys: { icon: 'keyboard', title: 'Шпаргалка по клавишам (?)', on: pop === 'keys', onClick: () => toggle('keys') },
   };
   const buttons = Object.fromEntries(Object.entries(all).filter(([id]) => labs[id as keyof typeof all]));
 
@@ -285,7 +282,6 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       {pop === 'layers' && <LayersPop editor={editor} />}
       {pop === 'history' && <HistoryPop editor={editor} board={realBoard} onToast={setToast} />}
       {pop === 'timer' && <TimerPop onStart={(min) => { startTimer(editor.board.doc, min * 60000, conn.me.name); setPop(null); }} />}
-      {pop === 'keys' && <KeysSheet onClose={() => setPop(null)} />}
       {labs.swap && <SwapPop editor={editor} />}
       <ContextMenu editor={editor} onToast={setToast} />
       {labs.comments && <CommentsLayer editor={editor} name={conn.me.name} />}
@@ -453,51 +449,6 @@ function TimerPill({ editor }: { editor: Editor }) {
         : <button className="pill-btn" title="Продолжить" aria-label="Продолжить" onClick={() => resumeTimer(doc)}><Glyph id="play-l" /></button>)}
       <button className="pill-btn text" title="Ещё минута" aria-label="Ещё минута" onClick={() => addMinute(doc)}>+1</button>
       <button className="pill-btn" title="Убрать таймер" aria-label="Убрать таймер" onClick={() => stopTimer(doc)}><Glyph id="circle-cross" /></button>
-    </div>
-  );
-}
-
-/** Keys in [brackets] are drawn as keys. */
-const KEYS: Array<[string, Array<[string, string]>]> = [
-  ['Инструменты', [['[V]', 'выделение'], ['[H]', 'рука'], ['[N]', 'стикер'], ['[T]', 'текст'], ['[R]', 'прямоугольник'], ['[O]', 'эллипс'],
-    ['[C]', 'связь'], ['[F]', 'группа'], ['[P]', 'ручка'], ['[M]', 'маркер'], ['[E]', 'ластик'], ['[I]', 'иконки и эмодзи']]],
-  ['Правка', [['[Ctrl] [Z]', 'отменить своё'], ['[Ctrl] [Shift] [Z]', 'вернуть'], ['[Ctrl] [C] [X] [V]', 'копировать, вырезать, вставить'],
-    ['[Ctrl] [D]', 'дублировать'], ['[Ctrl] [A]', 'выделить всё'], ['[Ctrl] [G]', 'группа вокруг выделенного'], ['[Enter]', 'редактировать текст'],
-    ['[Del]', 'удалить'], ['[←] [→] [↑] [↓]', 'сдвинуть (с Shift на 10)'], ['[Ctrl] [↑] [↓]', 'на слой выше, ниже'], ['[Alt] + тянуть', 'копия элемента']]],
-  ['Вид', [['[Пробел] + тянуть', 'двигать доску'], ['Колесо, щипок', 'масштаб'], ['[+] [−]', 'приблизить, отдалить'], ['[Shift] [1]', 'показать всё'], ['[1] [2]', 'всё, выбранное'],
-    ['[Shift] [0]', 'масштаб 100%'], ['Двойной клик', 'по пустому месту: показать всё']]],
-  ['Майнд-карта', [['[Tab]', 'новая ветка'], ['[Enter]', 'соседний узел']]],
-  ['Нововведения', [['[Ctrl] [F]', 'поиск по доске'], ['[Z] + рамка', 'зум рамкой'], ['[K]', 'лазерная указка'], ['[?]', 'эта шпаргалка'], ['[Esc]', 'закрыть, перестать следовать']]],
-];
-
-function KeysSheet({ onClose }: { onClose: () => void }) {
-  const mac = /Mac|iPhone|iPad/.test(navigator.platform);
-  const keyText = (k: string) => (k === 'Колесо, щипок' ? zoomHelp() : mac ? k.replace(/Ctrl/g, '⌘').replace(/Alt/g, '⌥') : k);
-  const keys = (k: string) => keyText(k).split(/(\[[^\]]+\])/).filter(Boolean)
-    .map((part, i) => (part.startsWith('[') ? <kbd key={i}>{part.slice(1, -1)}</kbd> : <span key={i}>{part}</span>));
-  return (
-    <div className="labs-backdrop" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="pop labs-keys" role="dialog" aria-label="Шпаргалка по клавишам">
-        <div className="keys-head">
-          <h3>Шпаргалка по клавишам</h3>
-          <button className="pill-btn" title="Закрыть" aria-label="Закрыть" onClick={onClose}><Glyph id="circle-cross" /></button>
-        </div>
-        <div className="keys-grid">
-          {KEYS.map(([group, rows]) => (
-            <section key={group}>
-              <h4>{group}</h4>
-              <dl>
-                {rows.map(([k, what]) => (
-                  <div key={k + what} className="keys-row">
-                    <dt>{keys(k)}</dt>
-                    <dd>{what}</dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
