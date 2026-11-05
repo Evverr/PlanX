@@ -48,6 +48,8 @@ export function morphPanel(from: string, to: 'tfmt' | 'panel', swap: () => void)
       if (!b) { if (++tries < 10) requestAnimationFrame(find); else done(); return; }
       shell.style.boxShadow = getComputedStyle(b).boxShadow;
       b.dataset.morph = '';
+      // Its usual coming in (with a slide) is off for good: it only fades in, below.
+      b.getAnimations().forEach((a) => a.cancel());
       // The body follows its width each frame as it finds it (a panel measures what fits it, and may
       // again as the other one goes); what's on it fades in once that's held still the body's whole
       // way there. (The two are alike but for their width: only that changes.)

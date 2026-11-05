@@ -569,6 +569,23 @@ export const checks = {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
   },
 
+  async '"Кнопка T": what comes in on the panel only fades in, it doesn\'t slide'(p) {
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', true))()`);
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.add(e.newItem('sticky', 500, 300, { id: 's', text: 'Привет' })); e.setSelection(['s']); })()`);
+    await sleep(400);
+    // Each frame: whatever's showing and shifted from its place.
+    const watch = (sel) => p.ev(`(() => { window.slid = []; const t0 = performance.now(); const f = () => { for (const e of document.querySelectorAll('${sel}:not(.gone):not(.leaving)')) { const cs = getComputedStyle(e); if (+cs.opacity > 0 && cs.transform !== 'none') window.slid.push(cs.transform); } if (performance.now() - t0 < 600) requestAnimationFrame(f); }; requestAnimationFrame(f); })()`);
+    await watch('.tfmt');
+    await p.click(await p.at('.panel-over button[aria-label="Текст и шрифт"]'));
+    await sleep(700);
+    expect(await p.ev('window.slid.length'), 'the text panel, no slide').toBe(0);
+    await watch('.panel-over');
+    await p.click(await p.at('.tfmt button[aria-label="Назад"]'));
+    await sleep(700);
+    expect(await p.ev('window.slid.length'), 'the panel back, no slide').toBe(0);
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
+  },
+
   async '"Кнопка T" on a mind map node: its text formatted from the text panel'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.add(e.newItem('mind', 400, 300, { id: 'm', text: 'Тема', w: 160, h: 60 })); e.setSelection(['m']); })()`);
     await sleep(400);
