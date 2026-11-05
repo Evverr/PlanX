@@ -18,6 +18,8 @@ const LONG = 16, THICK = 6, REACH = 4;
 /** How far off the table (on the screen) a dragged column or row is let go to be taken away: off its
  *  side, across the way it moves; along that way, just past the table's edge is enough. */
 const OFF = 44;
+/** How much bigger than that the place it answers the pointer in is. */
+const HIT = 1.5;
 /** How much bigger one is under the pointer or dragged. */
 const HOT = 1.68;
 
@@ -169,7 +171,7 @@ export function gripAt(ed: Editor, sp: Point): Grip | null {
   if (!it || drag) return null;
   for (const g of grips(it)) {
     const p = gripScreen(ed, g), [w, h] = g.axis === 'col' ? [LONG, THICK] : [THICK, LONG];
-    if (Math.abs(sp.x - p.x) <= w / 2 + REACH && Math.abs(sp.y - p.y) <= h / 2 + REACH) return { id: g.id, axis: g.axis, index: g.index };
+    if (Math.abs(sp.x - p.x) <= (w / 2 + REACH) * HIT && Math.abs(sp.y - p.y) <= (h / 2 + REACH) * HIT) return { id: g.id, axis: g.axis, index: g.index };
   }
   return null;
 }
