@@ -402,7 +402,7 @@ export function App({ boardId }: { boardId: string }) {
             <img src={catFor()} alt="" draggable={false} />
           </button>
         </div>,
-        share: <button className="ib" title="Скопировать ссылку на доску" aria-label="Поделиться" onClick={share}><PanelIcon name="link" /></button>,
+        share: <button className="ib" title="Скопировать ссылку на доску" aria-label="Поделиться" onClick={share}><PanelIcon name="ai-two-stars" /></button>,
         sep: <div className="sep" />,
         map: <button className={`ib ${minimap ? 'on' : ''}`} title="Карта доски" aria-label="Карта доски" aria-pressed={minimap} data-minimap-toggle
           onClick={() => { setMinimap(!minimap); setPop(null); }}><PanelIcon name="map" /></button>,

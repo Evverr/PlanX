@@ -33,7 +33,7 @@ const LATER: Partial<Record<string, [PanelIconName, string]>> = {};
 /** The solid versions of the rail's icons, shown while the button's on ("Сплошная выбранная иконка", src/labs);
  *  those without one stay as they are, in white. */
 const SOLID: Partial<Record<PanelIconName, PanelIconName>> = {
-  cursor: 'cursor-solid', landscape: 'landscape-solid', star: 'star-solid', sticker: 'sticker-solid', 'circle-check': 'circle-check-solid', columns: 'columns-solid', branch: 'branch-solid',
+  landscape: 'landscape-solid', star: 'star-solid', sticker: 'sticker-solid', 'circle-check': 'circle-check-solid', columns: 'columns-solid', branch: 'branch-solid',
   package: 'package-solid', 'pen-nib': 'pen-nib-solid', image: 'image-solid', smile: 'smile-solid', path: 'path-solid', comment: 'comment-solid',
 };
 
