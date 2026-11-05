@@ -4,7 +4,7 @@ const ICON_URLS = import.meta.glob<string>('./panel-icons/*.svg', { eager: true,
 export type PanelIconName =
   | 'undo' | 'redo' | 'search' | 'comment' | 'bold' | 'italic' | 'underline' | 'strike' | 'color' | 'marker'
   | 'align' | 'list' | 'columns' | 'image' | 'link' | 'clear' | 'paint' | 'sup' | 'sub' | 'up' | 'drop'
-  | 'cursor' | 'hand' | 'sticker' | 'text' | 'landscape' | 'circle-check' | 'maximize' | 'smile' | 'chevron-left'
+  | 'cursor' | 'cursor-solid' | 'hand' | 'sticker' | 'text' | 'landscape' | 'circle-check' | 'maximize' | 'smile' | 'chevron-left'
   | 'moon' | 'sun' | 'zoom-in' | 'zoom-out' | 'screen' | 'question-l' | 'undo-on' | 'redo-on'
   | 'to-front' | 'to-back' | 'duplicate' | 'trashcan' | 'map' | 'pen' | 'highlighter' | 'eraser'
   | 'align-left' | 'align-center' | 'align-right' | 'bulleted-list' | 'numbered-list' | 'question' | 'ellipse' | 'frame' | 'microphone' | 'triangle' | 'rhombus' | 'pentagon' | 'star' | 'plus' | 'cross' | 'plus-s' | 'minus-s' | 'branch' | 'more' | 'palette' | 'node-pool' | 'more-vertical' | 'chevron-down' | 'burger'
@@ -17,7 +17,7 @@ const GRID24 = new Set<PanelIconName>(['list', 'moon', 'sun', 'zoom-in', 'zoom-o
   'align-left', 'align-center', 'align-right', 'bulleted-list', 'numbered-list', 'question', 'ellipse', 'frame', 'microphone', 'triangle', 'rhombus', 'pentagon', 'star', 'plus', 'cross', 'plus-s', 'minus-s', 'branch', 'more', 'palette', 'node-pool', 'more-vertical', 'chevron-down', 'burger',
   'download', 'file', 'apps', 'hexagon', 'parallelogram', 'trapezoid', 'arrow', 'shape-cross', 'settings', 'component', 'component-off', 'line-straight', 'line-elbow', 'line-curve', 'timer', 'magic-wand', 'meeting-point', 'keyboard', 'lock-l', 'unlock-l', 'like', 'heart', 'timeline', 'package', 'pen-nib', 'cloud-download', 'path',
   'align-items-left', 'align-items-center', 'align-items-right', 'align-items-top', 'align-items-middle', 'align-items-bottom', 'layers', 'clock',
-  'sticker-solid', 'circle-check-solid', 'columns-solid', 'package-solid', 'pen-nib-solid', 'image-solid', 'smile-solid', 'path-solid', 'branch-solid', 'comment-solid']);
+  'cursor', 'cursor-solid', 'sticker-solid', 'circle-check-solid', 'columns-solid', 'package-solid', 'pen-nib-solid', 'image-solid', 'smile-solid', 'path-solid', 'branch-solid', 'comment-solid']);
 
 /** The icon is a mask over a plain fill, so CSS picks its colour: the panel's ink, blue when pressed. */
 export function PanelIcon({ name, className, style }: { name: PanelIconName; className?: string; style?: React.CSSProperties }) {
