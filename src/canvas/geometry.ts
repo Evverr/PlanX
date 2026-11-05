@@ -75,7 +75,8 @@ const POLY: Record<PolyShape, Point[]> = (() => {
     triangle: [{ x: 0.5, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }],
     rhombus: [{ x: 0.5, y: 0 }, { x: 1, y: 0.5 }, { x: 0.5, y: 1 }, { x: 0, y: 0.5 }],
     pentagon: fit(ring(5)),
-    star: fit(ring(5, 0.4)),
+    // (Drawn from its icon: see polyPoints.)
+    star: [],
     hexagon: [{ x: 0.25, y: 0 }, { x: 0.75, y: 0 }, { x: 1, y: 0.5 }, { x: 0.75, y: 1 }, { x: 0.25, y: 1 }, { x: 0, y: 0.5 }],
     parallelogram: [{ x: 0.25, y: 0 }, { x: 1, y: 0 }, { x: 0.75, y: 1 }, { x: 0, y: 1 }],
     trapezoid: [{ x: 0.22, y: 0 }, { x: 0.78, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }],
@@ -144,6 +145,23 @@ const STAR_BOX = (() => {
   const pts = starLine(), xs = pts.map((p) => p.x), ys = pts.map((p) => p.y), x = Math.min(...xs), y = Math.min(...ys);
   return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
 })();
+/** Its corners, sharp, each stretched to fill a unit box: a tip where the straight runs either side of
+ *  it would meet, then the inner corner after it. For a star given a corner radius of its own. */
+const STAR_CORNERS: Point[] = (() => {
+  const at = (r: number[]): Point => ({ x: r[r.length - 2], y: r[r.length - 1] });
+  const out: Point[] = [], n = STAR_RUNS.length;
+  for (let i = 0; i < n; i += 3) {
+    const before = at(STAR_RUNS[i ? i - 2 : n - 1]), start = i ? at(STAR_RUNS[i - 1]) : STAR_FROM, end = at(STAR_RUNS[i]), inner = at(STAR_RUNS[i + 1]);
+    const dx = start.x - before.x, dy = start.y - before.y, ex = inner.x - end.x, ey = inner.y - end.y;
+    const t = ((end.x - before.x) * ey - (end.y - before.y) * ex) / (dx * ey - dy * ex);
+    out.push({ x: before.x + dx * t, y: before.y + dy * t }, inner);
+  }
+  const xs = out.map((p) => p.x), ys = out.map((p) => p.y), x = Math.min(...xs), y = Math.min(...ys), w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+  return out.map((p) => ({ x: (p.x - x) / w, y: (p.y - y) / h }));
+})();
+/** The corner radius a star drawn as its icon looks to have, by its size. */
+export const starRound = (it: { w: number; h: number }): number => Math.round(Math.min(it.w, it.h) * 0.06);
+
 /** Adds the star, filling a box, to the current path. */
 export function traceStar(ctx: CanvasPath, b: { x: number; y: number; w: number; h: number }): void {
   const X = (v: number) => b.x + ((v - STAR_BOX.x) / STAR_BOX.w) * b.w, Y = (v: number) => b.y + ((v - STAR_BOX.y) / STAR_BOX.h) * b.h;
@@ -156,6 +174,8 @@ export function traceStar(ctx: CanvasPath, b: { x: number; y: number; w: number;
 }
 
 export function polyPoints(it: Item): Point[] {
+  // A star as its icon draws it, unless it's been given a corner radius of its own.
+  if (it.shape === 'star' && it.rad !== undefined) return STAR_CORNERS.map((p) => ({ x: it.x + p.x * it.w, y: it.y + p.y * it.h }));
   if (it.shape === 'star') return starLine().map((p) => ({ x: it.x + ((p.x - STAR_BOX.x) / STAR_BOX.w) * it.w, y: it.y + ((p.y - STAR_BOX.y) / STAR_BOX.h) * it.h }));
   if (it.vx && !it.shape) {
     const nodes = pathNodes(it.vx, it.vh, (x, y) => ({ x: it.x + x * it.w, y: it.y + y * it.h }));
