@@ -78,12 +78,18 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
       // What's in an instance is picked with it, as a click would.
       const id = hit ? (hit.host && !editor.selection.has(hit.id) ? hit.host : hit.id) : null;
       if (id && !editor.selection.has(id)) editor.setSelection([id]);
-      if (!id) editor.setSelection([]);
       editor.stopEditing();
-      // On a link (in text, or the item's own): the way to it first.
-      const url = labOn('textLink') ? linkInTextAt(w) ?? hit?.url ?? null : null;
       placed.current = null;
-      setAt({ x: e.clientX, y: e.clientY, w, url, board: !id, params: false });
+      // On nothing, with something picked: the menu's for that, wherever it's pressed.
+      const picked = editor.selectedItems();
+      if (!id && !picked.length && editor.selectedLinks().length) {
+        setAt({ x: e.clientX, y: e.clientY, w, url: null, board: false, params: false, link: editor.selectedLinks()[0].id });
+        return;
+      }
+      // On a link (in text, or the item's own): the way to it first.
+      const own = id ? hit?.url : picked.length === 1 ? picked[0].url : undefined;
+      const url = labOn('textLink') ? linkInTextAt(w) ?? own ?? null : null;
+      setAt({ x: e.clientX, y: e.clientY, w: !id && picked.length ? center(picked[0]) : w, url, board: !id && !picked.length, params: false });
     };
     // From its button on a panel: the same menu, by the panel, closed again by it. What's being typed
     // in is what it's for; the typing, and so the text panel, goes on till a row's pressed.
