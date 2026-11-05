@@ -24,20 +24,22 @@ export function HelpPop() {
   return (
     <div className="pop help" role="dialog" aria-label="Управление">
       <h3>Управление</h3>
-      <div className="keys-grid">
-        {KEYS.map(([group, rows]) => (
-          <section key={group}>
-            <h4>{group}</h4>
-            <dl>
-              {rows.map(([k, what]) => (
-                <div key={k + what} className="keys-row">
-                  <dt>{keys(k)}</dt>
-                  <dd>{what}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-        ))}
+      <div className="help-body">
+        <div className="keys-grid">
+          {KEYS.map(([group, rows]) => (
+            <section key={group}>
+              <h4>{group}</h4>
+              <dl>
+                {rows.map(([k, what]) => (
+                  <div key={k + what} className="keys-row">
+                    <dt>{keys(k)}</dt>
+                    <dd>{what}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+        </div>
       </div>
     </div>
   );
