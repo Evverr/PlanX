@@ -10,7 +10,7 @@ import { FONTS } from '../canvas/text';
 import { ColorRow } from '../labs/ContextMenu';
 import { PanelIcon as Icon, type PanelIconName as IconName } from './PanelIcon';
 import { useSortable } from './sortable';
-import { EDGE } from '../layout';
+import { EDGE, fitPopovers } from '../layout';
 import { useLabs } from '../labs/labs';
 import { ItemMenuButton } from '../labs/ContextMenu';
 import { linkPartPatch, linkPatch } from '../labs/textLink';
@@ -145,6 +145,8 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
     // A turned item's box square to the screen; as far over it as the selection panel stands.
     placeOver(editor, box, boxOf(item));
   });
+  // Its menus turn to its other side when there's no room for them under it (see fitPopover).
+  useEffect(() => (el.current ? fitPopovers(el.current, '.tf-menu') : undefined), []); // eslint-disable-line react-hooks/exhaustive-deps
   // Its bottom stays that far over the item whatever size it turns (the panels' size, fonts coming in).
   const [, redraw] = useReducer((n: number) => n + 1, 0);
   useEffect(() => {

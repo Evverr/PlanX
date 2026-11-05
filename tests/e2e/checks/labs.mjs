@@ -539,6 +539,19 @@ export const checks = {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
   },
 
+  async 'by the bottom of the window, the text panel\'s colours open up, clear of it'(p) {
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', true))()`);
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.add(e.newItem('sticky', 500, 720, { id: 's', w: 120, h: 60, text: 'Низ' })); e.setSelection(['s']); })()`);
+    await sleep(400);
+    await p.click(await p.at('.panel-over button[aria-label="Текст и шрифт"]'));
+    await sleep(700);
+    await p.click(await p.at('.tfmt button[aria-label="Цвет текста"]'));
+    await sleep(300);
+    const m = await p.rect('.tfmt .tf-menu'), t = await p.rect('.tfmt');
+    expect(`${m.b <= t.t} ${m.b <= 800}`, 'over the panel, on the screen').toBe('true true');
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
+  },
+
   async 'typing in a mind map node, its panel follows it, one panel only'(p) {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', true))()`);
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); planx.board.add(e.newItem('mind', 400, 300, { id: 'm', text: 'Т', w: 120, h: 50 })); e.setSelection(['m']); })()`);

@@ -216,7 +216,10 @@
 
 /* "Панель над элементом": placed by what's picked, not at the bottom. */
 .bar.panel.panel-over { position: fixed; bottom: auto; transform: none; transition: none; z-index: 5; }
-.panel-over.opens-down .op-pop, .op-pop.down { bottom: auto; top: calc(100% + var(--s18)); --in-y: calc(-1 * var(--slide)); }
+.panel-over.opens-down .op-pop, .bar.panel .op-pop.down { bottom: auto; top: calc(100% + var(--s18)); --in-y: calc(-1 * var(--slide)); }
+/* Turned to the other side for want of room (see fitPopover in layout.ts). */
+.bar.panel.panel-over .op-pop.up { top: auto; bottom: calc(100% + var(--s18)); --in-y: var(--slide); }
+.tfmt .tf-menu.up { top: auto; bottom: calc(100% + var(--s18)); --in-y: var(--slide); }
 
 /* "Сплошная выбранная иконка": what's on on the tool rail, white on blue. */
 .fb.fb.solid-on::before, .fb.solid-on:hover:not(:disabled)::before { background: var(--fmt-on-ink); }

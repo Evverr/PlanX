@@ -7,7 +7,7 @@ import { colsOf, rowsOf } from '../model/table';
 import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
 import { ColorPicker } from './ColorPicker';
-import { crowds, EDGE, shownRects } from '../layout';
+import { crowds, EDGE, fitPopovers, shownRects } from '../layout';
 import { useLabs } from '../labs/labs';
 import { AlignButton, LockButton, ReactButton, TidyButton } from '../labs/SelectionLabs';
 import { ItemMenuButton, LinkParams } from '../labs/ContextMenu';
@@ -281,16 +281,6 @@ function TableColors({ editor, table, cells }: { editor: Editor; table: Item; ce
 }
 
 
-/** A popover opened from the panel: down under it when there's no room above (under the top bar, when
- *  level with it). */
-function opensDown(pop: HTMLElement): void {
-  if (pop.closest('.opens-down')) return;
-  pop.classList.remove('down');
-  const r = pop.getBoundingClientRect(), bar = document.querySelector('.topbar')?.getBoundingClientRect();
-  const top = (bar && bar.left < r.right && bar.right > r.left ? bar.bottom : 0) + EDGE;
-  if (r.top < top) pop.classList.add('down');
-}
-
 /** How long the panel over what's picked takes to fade out going to its other side, and back in there
  *  (as long as panels take to go). */
 const FLIP = 80;
@@ -325,15 +315,11 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   // Over what's picked, it stays where it is while rows or columns are being added or taken away (the
   // table growing under it), till the pointer leaves it or the board's scrolled.
   const hold = useRef(false), flipping = useRef(false), want = useRef(false);
-  // What opens from it (palette, alignment, reactions) opens down, over what's picked, when there's
-  // no room for it above the panel.
-  useEffect(() => {
-    const el = sort.ref.current;
-    if (!el) return;
-    const mo = new MutationObserver(() => el.querySelectorAll<HTMLElement>('.op-pop').forEach(opensDown));
-    mo.observe(el, { childList: true, subtree: true });
-    return () => mo.disconnect();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // What opens from it (palette, alignment, reactions) turns to its other side when there's no room
+  // for it where it opens (lying over the panel, past the window's edge).
+  // (Once it's there: with nothing picked it isn't.)
+  const body = sort.ref.current;
+  useEffect(() => { const el = sort.ref.current; return el ? fitPopovers(el, '.op-pop') : undefined; }, [body]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => subscribeGrips(redraw), []);
   if (over && items.length && !had.current) wait.current = !!after;
   had.current = items.length > 0;
