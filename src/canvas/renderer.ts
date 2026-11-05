@@ -168,10 +168,12 @@ const dotLit = (t: { hot: boolean; from: number; at: number }, now: number) => {
   const k = Math.min(1, (now - t.at) / DOT_GROW), e = 1 - (1 - k) * (1 - k);
   return t.from + ((t.hot ? 1 : 0) - t.from) * e;
 };
+/** The resize handle going stronger or back (under the pointer or near it), as quick as a dot grows. */
+let handleTurn = { hot: false, from: 0, at: 0 };
 /** Whether a link dot is still growing or shrinking (and wants another frame). */
 export const dotsMoving = (): boolean => {
   const now = performance.now();
-  return [...dotTurns.values()].some((t) => now - t.at < DOT_GROW) || [...pillTurns.values()].some((t) => now - t.at < PILLS_SLIDE)
+  return now - handleTurn.at < DOT_GROW || [...dotTurns.values()].some((t) => now - t.at < DOT_GROW) || [...pillTurns.values()].some((t) => now - t.at < PILLS_SLIDE)
     || [...unpicked.values()].some((u) => now - u.at < PICK_OUT);
 };
 /** What's no longer picked fades out (its frame, its handle and dots) as a panel does, in this long. */
@@ -1346,7 +1348,10 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       outline(ctx, it, cam.z, theme.pick, [], PICK_LINE, PICK_RAD);
       ctx.globalAlpha = 1;
     }
-    const handleFade = s.hotHandle ? PICK_HOT_FADE : PICK_FADE;
+    // (A picture of the board has it as it is, and leaves the one on the board alone.)
+    const handleHot = !!s.hotHandle;
+    if (s.live && handleTurn.hot !== handleHot) handleTurn = { hot: handleHot, from: dotLit(handleTurn, now), at: now };
+    const handleFade = PICK_FADE + (PICK_HOT_FADE - PICK_FADE) * (s.live ? dotLit(handleTurn, now) : handleHot ? 1 : 0);
     // A mind map node sizes itself and links by its branches: instead of the handle and dots it
     // gets a "+" beside it for a branch of its own and one under it for a parallel branch.
     if (s.showHandle && it.type === 'mind') {
