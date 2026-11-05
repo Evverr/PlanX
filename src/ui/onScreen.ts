@@ -1,6 +1,6 @@
 /**
  * Menus kept on the screen: any menu or drop-down list that opens past an edge (a board menu's further
- * level, "Нововведения", "Оглавление", a panel's drop-down) is moved back in, 8 px off the edge; one taller
+ * level, "Нововведения", a panel's drop-down) is moved back in, 8 px off the edge; one taller
  * than the screen gets as tall as it and scrolls.
  */
 const MENUS = '.board-menu, .op-pop, [role="menu"]';

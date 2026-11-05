@@ -15,7 +15,7 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
   level?: number; onShare?: () => void; onSave?: () => void; onReset?: () => void; onSaveBoard?: () => void; onSaveBoardAs?: () => void; onLoadBoard?: () => void;
   onProfile?: () => void; onSettings?: () => void;
 }) {
-  const [on, setOn] = useState(false);
+  const [on, setOn] = useState(false), [on2, setOn2] = useState(false);
   const [panelSize, setPanelSize] = usePanelSize();
   const grid = useGridKind(), labs = useLabs();
   // A row with an arrow opens a further level beside it (the same menu again, or the one it brings)
@@ -72,8 +72,7 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
       {level === 0 && labs.boardGrid
         ? row('apps', 'Фон', { end: <PickDots label="Фон" now={grid} of={[['lines', 'Линии'], ['dots', 'Точки'], ['none', 'Пусто']] as Array<[GridKind, string]>} onPick={setGridKind} /> })
         : row('link-settings', 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
-      {/* The second half of the features on trial. */}
-      {row('change-order', 'Оглавление', { light: true, more: <Stub />, end: arrow })}
+      {row('change-order', 'Оглавление', { light: true, onClick: () => setOn2(!on2), end: <Switch on={on2} /> })}
     </div>
   );
 }

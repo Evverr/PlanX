@@ -42,7 +42,7 @@ export const checks = {
     await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1280, height: bottom + 16, deviceScaleFactor: 1, mobile: false });
     await sleep(200);
     await p.click(await p.at('.topbar button[aria-label="Меню"]'));
-    const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].filter((r) => r.textContent.includes('Оглавление')).pop(); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
+    const row = await p.ev(`(() => { const e = [...document.querySelectorAll('.board-menu .menu-row')].filter((r) => r.textContent.includes('Нововведения')).pop(); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', row[0], row[1]);
     await sleep(300);
     const r = await p.ev(`(() => { const r = document.querySelector('.board-menu .board-menu.sub').getBoundingClientRect(); return [Math.round(r.top), Math.round(r.bottom), innerHeight]; })()`);
