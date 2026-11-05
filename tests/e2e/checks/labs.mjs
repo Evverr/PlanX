@@ -409,7 +409,7 @@ export const checks = {
     await p.drag([530, 320], [500, 350]);
     await scissors();
     expect((await pic()).split(',')[4], 'square again').toBe('0');
-    // A game sticker has no scissors.
+    // A game sticker has no crop button.
     await p.ev(`(() => { const e = planx.editor, d = e.newItem('image', 100, 100, { id: 'dood', w: 80, h: 80, doodle: 'x' }); planx.board.add(d); e.setSelection(['dood']); })()`);
     await sleep(150);
     expect(!!(await p.rect('button[aria-label="Кроп"]')), 'none on a game sticker').toBeFalsy();

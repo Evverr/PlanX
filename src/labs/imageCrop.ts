@@ -5,9 +5,9 @@ import { croppedPicture, setPlainPicture } from '../canvas/pictures';
 import { isLocked } from './labs';
 
 /**
- * "Кроп картинки": the scissors on a picture's panel. Each of its edges moves in (and back, till it's
+ * "Кроп картинки": the crop button on a picture's panel. Each of its edges moves in (and back, till it's
  * done), the ball at its lower left corner rounds its corners. Nothing changes on the board till it's
- * done (Enter, the scissors again, a press off it; Esc drops it all). Then what's cut off is gone for
+ * done (Enter, the button again, a press off it; Esc drops it all). Then what's cut off is gone for
  * good, not to be undone, so a board doesn't keep the pictures' cut-off parts; the rounding is only how
  * it's drawn, and can be set anew.
  */
@@ -50,7 +50,7 @@ function leave(): void {
   keys = null;
 }
 
-/** The scissors: the picture picked alone starts being cut, or is done with. */
+/** The button: the picture picked alone starts being cut, or is done with. */
 export function toggleCrop(ed: Editor): void {
   if (crop) { finishCrop(ed); return; }
   const it = ed.selectedItems()[0];
