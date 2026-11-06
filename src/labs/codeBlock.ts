@@ -178,7 +178,8 @@ export function scrollCode(it: Item, e: WheelEvent, z: number): boolean {
   if (e.ctrlKey || e.metaKey) return false;
   const o = overflow(it);
   if (!o.x && !o.y) return false;
-  const s = scrollOf(it), dx = (e.shiftKey ? e.deltaY : e.deltaX) / z, dy = (e.shiftKey ? 0 : e.deltaY) / z;
+  // (With Shift a Mac turns the wheel across itself, elsewhere it comes down still.)
+  const s = scrollOf(it), dx = (e.shiftKey ? e.deltaX || e.deltaY : e.deltaX) / z, dy = (e.shiftKey ? 0 : e.deltaY) / z;
   const next = { x: Math.max(0, Math.min(o.x, s.x + dx)), y: Math.max(0, Math.min(o.y, s.y + dy)) };
   scrolls.set(it.id, next);
   return true;

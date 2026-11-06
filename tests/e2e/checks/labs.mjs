@@ -23,6 +23,14 @@ export const checks = {
     await p.cdp('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 400, y: 280, deltaX: 0, deltaY: 3000 });
     await sleep(100);
     expect(await p.ev('JSON.stringify(planx.editor.cam)'), 'at its end, the board not scrolled either').toBe(cam);
+    // With Shift, across: as a Mac sends it, and as elsewhere.
+    for (const [deltaX, deltaY] of [[40, 0], [0, 40]]) {
+      const shot = () => p.ev(`document.querySelector('canvas').toDataURL()`), before = await shot();
+      await p.cdp('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 400, y: 280, deltaX, deltaY, modifiers: 8 });
+      await sleep(100);
+      expect(await shot() !== before, `Shift+wheel ${deltaX},${deltaY}: the code scrolled across`).toBe(true);
+      expect(await p.ev('JSON.stringify(planx.editor.cam)'), `Shift+wheel ${deltaX},${deltaY}: the board stays`).toBe(cam);
+    }
     await p.ev(`window.clip = null; navigator.clipboard.writeText = async (t) => { window.clip = t; }`);
     await p.click([200 + 420 - 26, 150 + 22]);
     await sleep(100);
