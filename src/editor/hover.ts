@@ -209,10 +209,19 @@ export const frameButtonUnder = (ed: Editor, w: Point) => frameButtonAt(ed.shown
 
 /** What's picked, under the point (anywhere in its box), before what lies over it: a drawing covers
  *  little of its box, and whatever's on it would be taken in its place. Not frames, which hold others. */
+/** What hides what's under it: a task, a sticker, a picture, a table, a shape filled in. */
+const solid = (it: Item) => ['task', 'sticky', 'image', 'table'].includes(it.type) || ((it.type === 'rect' || it.type === 'ellipse' || it.type === 'polygon') && it.color !== 'none');
+
 export function pickedUnder(ed: Editor, w: Point): Item | null {
   if (ed.tool !== 'select' || ed.editingId) return null;
   const picked = ed.selectedItems().filter((it) => it.type !== 'frame' && !isLocked(it));
-  for (let i = picked.length - 1; i >= 0; i--) if (pointInRect(picked[i].rot ? toLocal(picked[i], w) : w, picked[i])) return picked[i];
+  for (let i = picked.length - 1; i >= 0; i--) {
+    const it = picked[i];
+    if (!pointInRect(it.rot ? toLocal(it, w) : w, it)) continue;
+    // (Not from under something solid over it there, a task or a sticker say: that's what's seen, and taken.)
+    const top = hitItem(ed.shown(), w, ed.cam.z);
+    return top && top.id !== it.id && top.z > it.z && solid(top) ? null : it;
+  }
   return null;
 }
 
