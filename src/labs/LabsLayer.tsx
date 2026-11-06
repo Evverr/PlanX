@@ -287,7 +287,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     timer: { icon: 'timer', title: 'Общий таймер', on: pop === 'timer', onClick: () => toggle('timer') },
     laser: { icon: 'magic-wand', title: 'Лазерная указка (K)', on: laserOn, onClick: () => setLaserOn(!laserOn) },
     follow: { icon: 'meeting-point', title: 'Позвать всех ко мне', onClick: summon },
-    codeBlock: { icon: 'code', title: 'Код', onClick: () => addCode(editor) },
+    codeBlock: { icon: 'code', title: 'Код', onClick: () => addCode(editor), drop: (at) => addCode(editor, at) },
   };
   const buttons = Object.fromEntries(Object.entries(all).filter(([id]) => labs[id as keyof typeof all]));
 
