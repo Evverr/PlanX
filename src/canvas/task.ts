@@ -194,9 +194,9 @@ export function drawStatus(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.stroke();
     if (s === 'doing') {
       ctx.beginPath();
-      ctx.arc(x, y, r - 1.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * part);
+      ctx.arc(x, y, r - 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * part);
       ctx.strokeStyle = BLUE;
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3.5;
       ctx.lineCap = 'round';
       ctx.stroke();
     }
