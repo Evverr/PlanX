@@ -401,7 +401,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   const editInst = inOne?.inst && !inOne.inst.startsWith('@') ? inOne.id : null;
   const colored = items.some((i) => fillable(i) || i.type === 'icon' || i.type === 'ink');
   const btn = (icon: PanelIconName, title: string, fn: () => void) => (
-    <button className="ib" title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
+    <button className={`ib ${icon === 'trashcan' ? 'danger' : ''}`} title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
   );
   return (
     <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${over ? `panel-over ${down ? 'opens-down' : ''} ${wait.current ? 'after-gone' : ''}` : docked ? 'docked' : ''} ${!over && place.bottom !== null ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
