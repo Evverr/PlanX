@@ -695,6 +695,17 @@ export const checks = {
     await p.drag([550, 300], [550, 550], { modifiers: 4 });
     const out = await p.ev(`(() => { const b = planx.board, r = b.get('r'); return [!!r.joint, r.y, b.linkList().map((l) => l.from + '>' + l.to + ':' + (l.heads ?? 'end') + ':' + l.color).join()].join(' '); })()`);
     expect(out, 'out, one line again').toBe('false 520 a>c:both:red');
+    // Cmd pressed on the way: out then.
+    await p.ev(`(() => { const b = planx.board; b.remove(b.linkList().map((l) => l.id)); b.update('r', { x: 500, y: 320, joint: true });
+      b.addLink({ id: 'l1', from: 'a', to: 'r', style: 'straight' }); b.addLink({ id: 'l2', from: 'r', to: 'c', style: 'straight' }); planx.editor.setSelection([]); })()`);
+    await sleep(100);
+    await p.mouse('mouseMoved', 550, 350);
+    await p.mouse('mousePressed', 550, 350);
+    for (let y = 360; y <= 420; y += 10) { await p.mouse('mouseMoved', 550, y); await sleep(25); }
+    for (let y = 430; y <= 500; y += 10) { await p.mouse('mouseMoved', 550, y, 4); await sleep(25); }
+    await p.mouse('mouseReleased', 550, 500);
+    await sleep(200);
+    expect(await p.ev(`!!planx.board.get('r').joint + ' ' + planx.board.linkList().map((l) => l.from + '>' + l.to).join()`), 'Cmd on the way: out').toBe('false a>c');
   },
 
   async '"Узел на линии": a sticker dragged off the rail onto a picked line\'s middle goes into it'(p) {
