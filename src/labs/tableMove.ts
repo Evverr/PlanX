@@ -190,21 +190,29 @@ function plusAt(ed: Editor, it: Item, which: EndPlus): Point {
   const p = ed.toScreen(which === 'row' ? { x: it.x + it.w / 2, y: it.y + it.h } : { x: it.x + it.w, y: it.y + it.h / 2 });
   return which === 'row' ? { x: p.x, y: p.y - PLUS_IN } : { x: p.x - PLUS_IN, y: p.y };
 }
-/** The pluses on the lines (and edges) by the column and the row the pointer's in, smaller, just inside
- *  the table: on its top edge after the column, on its left edge under the row, by their pills. All of
- *  them, each with whether it shows. */
-const INS_R = PLUS_R * 0.56;
+/** The pluses on the lines (and edges) by the column and the row the pointer's in, smaller (till the
+ *  pointer's on one), just inside the table: on its top edge after the column, on its left edge under the
+ *  row, by their pills. All of them, each with whether it shows. */
+const INS_R = PLUS_R * 0.644;
+/** How near (on the screen) a plus that's out takes the pointer, and keeps showing while it's that near,
+ *  though it's gone on into the next column or row. */
+const INS_NEAR = 15;
+/** The pluses out last time, kept while the pointer's near them. */
+let insOut = new Set<string>();
 function insertPluses(ed: Editor, it: Item): Array<{ key: TablePlus; p: Point; seen: boolean }> {
   const at = drag ? { col: -1, row: -1 } : pointedAt(ed, it), out: Array<{ key: TablePlus; p: Point; seen: boolean }> = [];
+  const near = (p: Point) => !drag && !!pointer && Math.hypot(pointer.x - p.x, pointer.y - p.y) <= INS_NEAR;
   const cols = colsOf(it), rows = rowsOf(it);
-  for (let b = 0; b <= cols.length; b++) {
-    const s = ed.toScreen({ x: it.x + sum(cols.slice(0, b)), y: it.y });
-    out.push({ key: `col@${b}`, p: { x: s.x, y: s.y + PLUS_IN }, seen: at.col === b - 1 });
+  // (From after the first: none on the top or left edge.)
+  for (let b = 1; b <= cols.length; b++) {
+    const s = ed.toScreen({ x: it.x + sum(cols.slice(0, b)), y: it.y }), p = { x: s.x, y: s.y + PLUS_IN }, key: TablePlus = `col@${b}`;
+    out.push({ key, p, seen: at.col === b - 1 || (insOut.has(`${it.id}:${key}`) && near(p)) });
   }
-  for (let b = 0; b <= rows.length; b++) {
-    const s = ed.toScreen({ x: it.x, y: it.y + sum(rows.slice(0, b)) });
-    out.push({ key: `row@${b}`, p: { x: s.x + PLUS_IN, y: s.y }, seen: at.row === b - 1 });
+  for (let b = 1; b <= rows.length; b++) {
+    const s = ed.toScreen({ x: it.x, y: it.y + sum(rows.slice(0, b)) }), p = { x: s.x + PLUS_IN, y: s.y }, key: TablePlus = `row@${b}`;
+    out.push({ key, p, seen: at.row === b - 1 || (insOut.has(`${it.id}:${key}`) && near(p)) });
   }
+  insOut = new Set(out.filter((q) => q.seen).map((q) => `${it.id}:${q.key}`));
   return out;
 }
 /** The plus under a point on the canvas. */
@@ -212,7 +220,7 @@ export function tablePlusAt(ed: Editor, sp: Point): TablePlus | null {
   const it = tableOf(ed);
   if (!it || drag) return null;
   for (const w of ['row', 'col'] as const) { const c = plusAt(ed, it, w); if (Math.hypot(sp.x - c.x, sp.y - c.y) <= PLUS_R + 2) return w; }
-  return insertPluses(ed, it).find((q) => q.seen && Math.hypot(sp.x - q.p.x, sp.y - q.p.y) <= INS_R + 2)?.key ?? null;
+  return insertPluses(ed, it).find((q) => q.seen && Math.hypot(sp.x - q.p.x, sp.y - q.p.y) <= INS_NEAR)?.key ?? null;
 }
 let hotPlus: TablePlus | null = null;
 /** A pressed plus stays where it was (on the board) while the pointer's on it, to be pressed again;
@@ -426,7 +434,8 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
   for (const q of insertPluses(ed, it)) {
     const shown = litNow(ed, `${it.id}:${q.key}:seen`, q.seen);
     if (!shown) continue;
-    const on = litNow(ed, `${it.id}:${q.key}:hot`, hotPlus === q.key, PLUS_TURN), r = INS_R * (0.9 + 0.1 * on);
+    // Under the pointer: as big as those at the ends.
+    const on = litNow(ed, `${it.id}:${q.key}:hot`, hotPlus === q.key, PLUS_TURN), r = INS_R * 0.9 + (PLUS_R - INS_R * 0.9) * on;
     ctx.globalAlpha = (0.5 + 0.5 * on) * shown;
     ctx.fillStyle = color;
     ctx.beginPath();
@@ -434,7 +443,7 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
     ctx.fill();
     ctx.globalAlpha = (0.75 + 0.25 * on) * shown;
     ctx.strokeStyle = '#fff';
-    ctx.lineWidth = (1.5 + 0.5 * on) * 0.8;
+    ctx.lineWidth = 1.5 + 0.5 * on;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(q.p.x - r * 0.45, q.p.y); ctx.lineTo(q.p.x + r * 0.45, q.p.y);
