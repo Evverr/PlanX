@@ -3,7 +3,7 @@ import { DEFAULTS, ROTATABLE, textPad, textPadY, uid } from '../model/types';
 import type { PathNode, Point, Rect } from '../canvas/geometry';
 import { anchorAt, angleOf, boxOf, center, hitItem, linkBox, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedFrom, toLocal, turn } from '../canvas/geometry';
 import { itemTextHeight, mindSize } from '../canvas/text';
-import { taskPartAt, taskSize } from '../canvas/task';
+import { TASK_MIN_W, taskPartAt, taskSize } from '../canvas/task';
 import { freshTask, nextView } from '../model/task';
 import { taskOpen } from '../labs/taskFull';
 import { pressTask, taskFieldAt } from './tasks';
@@ -163,7 +163,7 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       }
       if (it.type === 'text') nh = itemTextHeight(it, it.text, nw);
       // A task only wider or narrower, as tall as what's in it then (see canvas/task.ts).
-      if (it.type === 'task') { nw = Math.max(it.tv ? 360 : 200, nw); nh = taskSize(it, nw).h; }
+      if (it.type === 'task') { nw = Math.max(it.tv ? 360 : TASK_MIN_W, nw); nh = taskSize(it, nw).h; }
       // Text wrapping onto more lines (or fewer) takes the text just under it along.
       const moves = pushedBelow(it, nh - it.h, board.list());
       board.transact(() => {

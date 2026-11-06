@@ -35,7 +35,8 @@ export function pressTask(ed: Editor, it: Item, w: Point, sp: Point): boolean {
     window.dispatchEvent(new CustomEvent<TaskTip>('planx:task-tip', { detail: { text: 'Задачу можно выполнить, только выполнив все подзадачи', x: s.x + (r?.left ?? 0), y: s.y + (r?.top ?? 0) } }));
     return true;
   }
-  if (part === 'status') { if (pr === null) setStatus(board, it.id, nextStatus(statusOf(it))); }
+  // Done, its ring makes it to do again: with subtasks, by the last of them to do again.
+  if (part === 'status') { if (pr === null) setStatus(board, it.id, nextStatus(statusOf(it))); else toggleSub(board, it, it.subs!.length - 1); }
   else if (part === 'arrow') setView(board, it, it.tv ? undefined : taskOpen());
   else if (part === 'more') setView(board, it, 'full');
   else if (part === 'cancel') setView(board, it, undefined);
