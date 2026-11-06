@@ -27,8 +27,8 @@ const STATUS = 22, ARROW = 24;
 /** How far round the ring and the arrow a press is still theirs (the rest of the header a double click's). */
 const AROUND = 5;
 /** Where the people's names start and their circles' middle; a row's height; a subtask's. */
-/** What's under the header keeps this far from its sides (3 more than the header's ring from its left). */
-const PAD = 18;
+/** What's under the header keeps this far from its sides (7 more than the header's ring from its left). */
+const PAD = 22;
 const LABEL_X = PAD, NAME_X = PAD + 153, AVATAR_X = PAD + 135, ROW = 33, SUB = 38;
 /** The subtasks under who does it: their rings on its picture's middle, their text where names start. */
 const SUB_X = AVATAR_X - 11, SUB_TEXT_X = NAME_X;
@@ -346,7 +346,8 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
     }
   }
   // The arrow showing who set it and by when too, or only who does it again.
-  if (l.peopleAt) drawIcon(ctx, it.people ? 'chevron-up-s' : 'chevron-down-s', x + l.peopleAt.x, y + l.peopleAt.y, ARROW, arrowInk('people'));
+  // (Pointing left while they're hidden, down once shown; the left one's chevron 3 short of the icon's right.)
+  if (l.peopleAt) drawIcon(ctx, it.people ? 'chevron-down-s' : 'chevron-to-the-left-s', x + l.peopleAt.x + (it.people ? 0 : 3), y + l.peopleAt.y, ARROW, arrowInk('people'));
   label('Подзадачи:', l.subsAt);
   const subs = it.subs ?? [];
   l.subs.forEach((sy, i) => {
