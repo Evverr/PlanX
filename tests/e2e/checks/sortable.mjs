@@ -56,6 +56,13 @@ export const checks = {
     expect((await settled(p)).ghost, 'no preview left').toBe(0);
   },
 
+  async 'a task dragged off the rail onto the board comes opened to its description, its title typed in'(p) {
+    await carry(p, await p.at('.tools [data-key="task"]'), [[500, 300], [600, 300]]);
+    await sleep(100);
+    const t = await p.ev(`(() => { const t = planx.board.list().find((i) => i.type === 'task'); return t && [t.tv, t.w, planx.editor.editingId === t.id].join(); })()`);
+    expect(t, 'a task, opened, typed in').toBe('desc,494,true');
+  },
+
   async 'holding the shapes button opens its variants, a click picks the tool'(p) {
     const oval = await p.at('.tools [data-key="oval"]');
     await p.mouse('mouseMoved', ...oval);
