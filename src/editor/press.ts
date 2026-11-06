@@ -14,7 +14,7 @@ import { zoomBoxHeld } from '../labs/zoomBox';
 import { nibPress } from '../labs/nib';
 import { nodeEditing, pressNode } from '../labs/paths';
 import { swapKind } from '../labs/swap';
-import { openLink } from '../labs/textLink';
+import { linkPartAt, openLink } from '../labs/textLink';
 import { dotsOn, dotsUnder } from '../labs/linkTool';
 import { startComment } from '../labs/comments';
 
@@ -317,7 +317,9 @@ export function press(ed: Editor, e: PointerEvent): void {
       if (next.has(hit.id)) next.delete(hit.id); else next.add(hit.id);
       ed.setSelection(next);
     } else if (!ed.selection.has(hit.id)) { ed.setPicking(true); ed.setSelection([hit.id]); }
-    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(items), moved: false, id: hit.id, dbl, cell, enter, again };
+    // A link on a part of its text opens once let go, not dragged (see endGesture).
+    const url = e.button === 0 && !e.shiftKey && !e.altKey && ed.editingId !== hit.id ? linkPartAt(hit, w) ?? undefined : undefined;
+    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(items), moved: false, id: hit.id, dbl, cell, enter, again, url };
     return;
   }
   ed.lastTap = { id: '', t: 0 };
