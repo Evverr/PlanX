@@ -56,6 +56,13 @@ export type Gesture =
 const GUIDE_SNAP = 6;
 /** How close to a square angle (in degrees) a turn sticks to it. */
 const ROTATE_SNAP = 3;
+/** What's resized to whole and half days on a timeline. */
+const SNAPS_TO_DAYS = new Set(['task', 'sticky', 'rect', 'ellipse', 'polygon']);
+/** The timeline an item is on: the one holding it, else one its middle is over. */
+function timelineOf(ed: Editor, it: Item): Item | undefined {
+  const all = ed.shown(), c = { x: it.x + it.w / 2, y: it.y + it.h / 2 };
+  return all.find((t) => t.tl && t.members?.includes(it.id)) ?? all.find((t) => t.tl && pointInRect(c, t));
+}
 
 /** The pointer moved to `sp` on screen (`w` on the board) with the gesture going on. */
 export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, w: Point): void {
@@ -160,6 +167,16 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         const k = Math.max(nw / w0, nh / h0);
         nw = Math.round(w0 * k);
         nh = Math.round(h0 * k);
+      }
+      // On a timeline ("Объекты", src/labs), a task, sticker or shape's side being moved goes to whole and
+      // half days (Alt, from the middle: as it likes); a sticker keeping its proportions.
+      const tl = sx && !e.altKey && !it.rot && SNAPS_TO_DAYS.has(it.type) ? timelineOf(ed, it) : undefined;
+      if (tl) {
+        const half = dayOf(tl) / 2, least = it.type === 'task' ? (it.tv ? 360 : TASK_MIN_W) : min;
+        const right = g.orig.x + w0, side = halfDay(tl, sx > 0 ? g.orig.x + nw : right - nw);
+        nw = sx > 0 ? side - g.orig.x : right - side;
+        if (nw < least) nw += Math.ceil((least - nw) / half) * half;
+        if (keep) nh = Math.round((h0 * nw) / w0);
       }
       if (it.type === 'text') nh = itemTextHeight(it, it.text, nw);
       // A task only wider or narrower, as tall as what's in it then (see canvas/task.ts).

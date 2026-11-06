@@ -1642,6 +1642,20 @@ export const checks = {
     await p.ev(`localStorage.removeItem('planx-my-objects')`);
   },
 
+  async '"Объекты": a sticker, a shape and a task resized on a timeline go to whole and half days'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.addTimeline({ x: 600, y: 400 }); })()`);
+    const tl = await p.ev(`(() => { const t = planx.board.list().find((i) => i.tl); return { x: t.x, y: t.y }; })()`);
+    for (const [type, w, h] of [['sticky', 100, 100], ['rect', 100, 60], ['task', 200, 52]]) {
+      const id = await p.ev(`(() => { const e = planx.editor, it = e.newItem('${type}', ${tl.x} + 19 + 23 * 3, ${tl.y} + 60, { w: ${w}, h: ${h} }); planx.board.add(it); e.setSelection([it.id]); return it.id; })()`);
+      await sleep(300);
+      const c = await p.ev(`(() => { const it = planx.board.get('${id}'), s = planx.editor.toScreen({ x: it.x + it.w, y: it.y + it.h }); return [s.x - 1, s.y - 1]; })()`);
+      await p.drag(c, [c[0] + 37, c[1] + 5]);
+      const off = await p.ev(`(() => { const it = planx.board.get('${id}'); return (it.x + it.w - ${tl.x} - 19) / 11.5; })()`);
+      expect(Math.abs(off - Math.round(off)) < 1e-6, `${type}: its right side on a half day (${off})`).toBe(true);
+      await p.ev(`planx.board.remove(['${id}'])`);
+    }
+  },
+
   async '"Объекты": a timeline dragged off the menu onto the board is put there'(p) {
     await p.click(await p.at('.tools [data-key="objects"]'));
     await p.drag(await p.at('.objects-menu .menu-row'), [700, 450], { steps: 16 });
