@@ -181,4 +181,13 @@ export const checks = {
     expect(await p.ev(`document.documentElement.dataset.resizing === undefined`), 'glides again after').toBe(true);
     await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1200, height: 800, deviceScaleFactor: 1, mobile: false });
   },
+
+  async 'the emoji popup goes as another rail button is pressed: the last pressed is what\'s open'(p) {
+    await p.key('i', 'KeyI', 73);
+    await sleep(250);
+    expect(!!(await p.rect('.icon-pick')), 'open').toBe(true);
+    await p.click(await p.at('.tools button[aria-label="Фигуры"]'));
+    await sleep(250);
+    expect(!!(await p.rect('.icon-pick:not(.gone)')), 'gone with the shapes pressed').toBe(false);
+  },
 };

@@ -100,6 +100,16 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     window.addEventListener('pointerdown', close, true);
     return () => window.removeEventListener('pointerdown', close, true);
   }, [variants]);
+  // The emoji popup goes as another of the rail's buttons is pressed: what's open is the last pressed.
+  useEffect(() => {
+    if (!iconsOpen) return;
+    const close = (e: PointerEvent) => {
+      const b = (e.target as Element | null)?.closest?.('.tools [data-key], .tools-more [data-more-key]'), key = b?.getAttribute('data-key') ?? b?.getAttribute('data-more-key');
+      if (key && key !== 'smile') onToggleIcons();
+    };
+    window.addEventListener('pointerdown', close, true);
+    return () => window.removeEventListener('pointerdown', close, true);
+  }, [iconsOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filePicker = useRef<HTMLInputElement>(null);
   /** Where pictures from the file dialog go: a drop point when the picture button was dragged onto the board. */
