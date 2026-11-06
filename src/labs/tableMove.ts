@@ -212,6 +212,9 @@ function insertPluses(ed: Editor, it: Item): Array<{ key: TablePlus; p: Point; s
     const s = ed.toScreen({ x: it.x, y: it.y + sum(rows.slice(0, b)) }), p = { x: s.x + PLUS_IN, y: s.y }, key: TablePlus = `row@${b}`;
     out.push({ key, p, seen: at.row === b - 1 || (insOut.has(`${it.id}:${key}`) && near(p)) });
   }
+  // One under the pointer (lit) is the only one out till the pointer's off it.
+  const lit = hotPlus?.includes('@') ? out.find((q) => q.key === hotPlus && q.seen) : undefined;
+  if (lit) for (const q of out) q.seen = q === lit;
   insOut = new Set(out.filter((q) => q.seen).map((q) => `${it.id}:${q.key}`));
   return out;
 }
