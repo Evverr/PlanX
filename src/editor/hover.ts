@@ -47,11 +47,12 @@ export function sideAt(ed: Editor, it: Item, w: Point): 'w' | 'h' | 'l' | 't' | 
   const near = ed.reach(4), corner = ed.reach(10);
   const along = (v: number, from: number, size: number) => v >= from + corner && v <= from + size - corner;
   if (Math.abs(p.x - (b.x + b.w)) <= near && along(p.y, b.y, b.h)) return 'w';
-  if (it.type !== 'text' && Math.abs(p.y - (b.y + b.h)) <= near && along(p.x, b.x, b.w)) return 'h';
+  // (Text and tasks only wider or narrower: a task's top and bottom left to a double click on it.)
+  if (it.type !== 'text' && it.type !== 'task' && Math.abs(p.y - (b.y + b.h)) <= near && along(p.x, b.x, b.w)) return 'h';
   // The left and top sides too, the other side staying put (an instance stretches from its corner only).
   if (it.inst) return null;
   if (Math.abs(p.x - b.x) <= near && along(p.y, b.y, b.h)) return 'l';
-  if (it.type !== 'text' && Math.abs(p.y - b.y) <= near && along(p.x, b.x, b.w)) return 't';
+  if (it.type !== 'text' && it.type !== 'task' && Math.abs(p.y - b.y) <= near && along(p.x, b.x, b.w)) return 't';
   return null;
 }
 
