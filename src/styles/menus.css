@@ -34,9 +34,10 @@
 .menu-line { flex: none; height: 1px; margin: var(--s4) calc(var(--s14) + var(--s2) - var(--menu-pad-r)) var(--s4) var(--s2); background: #6E6E6E; opacity: .1; }
 .board-menu.plain .menu-line { margin-right: calc(var(--s18) + var(--s2) - var(--menu-pad-r)); }
 /* A menu with switches or dots at its rows' ends: those make its right edge, the usual room after them
-   (not as much as before the text), 20 between them and the longest row's text. */
+   (not as much as before the text), 20 between a switch and the longest row's text, 30 for dots. */
 .board-menu:has(> .menu-item > .menu-row > :is(.menu-switch, .size-dots)) { --menu-pad-r: var(--s18); }
-.menu-row > span:has(+ :is(.menu-switch, .size-dots)) { margin-right: calc(var(--s20) - var(--s11)); }
+.menu-row > span:has(+ .menu-switch) { margin-right: calc(var(--s20) - var(--s11)); }
+.menu-row > span:has(+ .size-dots) { margin-right: calc(var(--s20) + var(--s10) - var(--s11)); }
 /* The switch: a 24×14 track, grey with the knob at its left, blue with it at its right when on. */
 .menu-switch { position: relative; flex: none; margin-left: auto; width: var(--e24); height: var(--e24); }
 /* The panels' size: three dots at the row's end (a stand-in till they're drawn), the chosen one blue. */
