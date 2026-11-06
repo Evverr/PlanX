@@ -88,7 +88,7 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         if (e.altKey) g.orig = ed.dragCopies(g.orig);
       }
       // ("Узел на линии", src/labs: Cmd or Ctrl held, from the start or on the way, what's in a line comes out of it.)
-      if (!g.pulled && !e.altKey && (e.metaKey || e.ctrlKey) && labOn('linkJoint') && [...g.orig.keys()].some((id) => board.get(id)?.joint)) {
+      if (!g.pulled && !e.altKey && (e.metaKey || e.ctrlKey) && labOn('linkJoint')) {
         g.pulled = true;
         pullOut(ed, g.orig.keys());
       }

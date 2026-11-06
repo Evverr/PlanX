@@ -142,20 +142,38 @@ export function rejoined(ed: Editor, gone: Set<string>): Link[] {
   return out;
 }
 
-/** Dragged with Cmd (or Ctrl) held: what's in a line among `ids` comes out of it, the line one again as
- *  it was (see rejoined). */
+/** Dragged with Cmd (or Ctrl) held: what's in a line among `ids` (put into it, or with just two lines
+ *  to it, whichever way they run) comes out of it, the two one line between their other ends, each end's
+ *  arrowhead, side and nodes as they were. */
 export function pullOut(ed: Editor, ids: Iterable<string>): void {
-  const b = ed.board, links = b.linkList();
+  const b = ed.board;
   for (const id of ids) {
-    if (!b.get(id)?.joint) continue;
-    const [line] = rejoined(ed, new Set([id]));
-    const halves = links.filter((l) => l.to === id || l.from === id).map((l) => l.id);
+    const it = b.get(id), touching = b.linkList().filter((l) => l.from === id || l.to === id);
+    if (!it || touching.length !== 2) continue;
+    const line = throughOne(id, touching[0], touching[1]);
     b.transact(() => {
-      b.update(id, { joint: undefined });
-      if (line) { b.remove(halves); b.addLink(line); }
+      if (it.joint) b.update(id, { joint: undefined });
+      if (line) { b.remove(touching.map((l) => l.id)); b.addLink(line); }
     });
   }
   ed.requestRender();
+}
+
+/** Two links meeting at `id` as one, between their other ends (none if those are the same). */
+function throughOne(id: string, a: Link, z: Link): Link | null {
+  // Each half from its other end to `id`: that end, its arrowhead there, its side, its nodes that way.
+  const half = (l: Link) => {
+    const atFrom = l.from !== id, end = atFrom ? l.from : l.to, via = l.via ?? [];
+    const head = atFrom ? l.heads === 'start' || l.heads === 'both' : l.heads === undefined || l.heads === 'both';
+    return { end, head, side: atFrom ? l.fromSide : l.toSide, at: atFrom ? l.fromAt : l.toAt, via: atFrom ? via : [...via].reverse() };
+  };
+  // The one coming in first, if one does.
+  const [p, q] = a.to === id || z.from === id ? [half(a), half(z)] : [half(z), half(a)];
+  if (p.end === q.end || p.end === id || q.end === id) return null;
+  const via = [...p.via, ...[...q.via].reverse()], sided = !!(p.side && q.side);
+  return { id: uid(), from: p.end, to: q.end, style: a.style, color: a.color, lo: a.lo, dash: a.dash, lw: a.lw,
+    ...(p.head ? { heads: q.head ? 'both' as const : 'start' as const } : q.head ? {} : { heads: 'none' as const }),
+    ...(via.length && { via }), ...(sided && { fromSide: p.side, toSide: q.side, fromAt: p.at, toAt: q.at }) };
 }
 
 /** Puts `it` into the line at its middle `p` on stretch `at`: the line made two, through it. */

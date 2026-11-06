@@ -706,6 +706,12 @@ export const checks = {
     await p.mouse('mouseReleased', 550, 500);
     await sleep(200);
     expect(await p.ev(`!!planx.board.get('r').joint + ' ' + planx.board.linkList().map((l) => l.from + '>' + l.to).join()`), 'Cmd on the way: out').toBe('false a>c');
+    // Not put in, but with two lines out of it (arrows at the others): one line between them, both ends arrowed.
+    await p.ev(`(() => { const b = planx.board; b.remove(b.linkList().map((l) => l.id)); b.update('r', { x: 500, y: 320 });
+      b.addLink({ id: 'l1', from: 'r', to: 'a', style: 'straight' }); b.addLink({ id: 'l2', from: 'r', to: 'c', style: 'straight' }); planx.editor.setSelection([]); })()`);
+    await sleep(100);
+    await p.drag([550, 350], [550, 550], { modifiers: 4 });
+    expect(await p.ev(`planx.board.linkList().map((l) => l.from + '>' + l.to + ':' + (l.heads ?? 'end')).join()`), 'two out of it: one, arrowed both ways').toBe('a>c:both');
   },
 
   async '"Узел на линии": a sticker dragged off the rail onto a picked line\'s middle goes into it'(p) {
