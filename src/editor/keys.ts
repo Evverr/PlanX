@@ -1,7 +1,7 @@
 import type { Tool } from './tools';
 import { readPictures } from '../canvas/pictures';
 import type { Editor } from './editor';
-import { isLocked, labOn } from '../labs/labs';
+import { heldInPlace, labOn } from '../labs/labs';
 import { holdZoomBox } from '../labs/zoomBox';
 import { zoomKey } from '../labs/zoomKeys';
 import { cancelNib, finishNib, nibPoints, undoNibCorner } from '../labs/nib';
@@ -85,7 +85,7 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
     const s = e.shiftKey ? 10 : 1;
     const dx = e.key === 'ArrowLeft' ? -s : e.key === 'ArrowRight' ? s : 0;
     const dy = e.key === 'ArrowUp' ? -s : e.key === 'ArrowDown' ? s : 0;
-    ed.board.transact(() => ed.selectedItems().filter((it) => !isLocked(it)).forEach((it) => ed.board.update(it.id, { x: it.x + dx, y: it.y + dy })));
+    ed.board.transact(() => ed.selectedItems().filter((it) => !heldInPlace(it, ed.board.list())).forEach((it) => ed.board.update(it.id, { x: it.x + dx, y: it.y + dy })));
     return;
   }
   if (e.code === 'KeyI') { window.dispatchEvent(new CustomEvent('planx:toggle-icons')); return; }
