@@ -37,7 +37,14 @@ export function pressTask(ed: Editor, it: Item, w: Point, sp: Point): boolean {
   else if (part === 'arrow') setView(board, it, it.tv ? undefined : taskOpen());
   else if (part === 'more') setView(board, it, 'full');
   else if (part === 'cancel') setView(board, it, undefined);
-  else if (part === 'keep') board.update(it.id, { keep: it.keep ? undefined : true });
+  else if (part === 'keep') {
+    board.update(it.id, { keep: it.keep ? undefined : true });
+    // Ticked: a word on why not to.
+    if (!it.keep) window.dispatchEvent(new CustomEvent('planx:confirm', { detail: {
+      text: 'Рекомендуем оставлять задачи свернутыми, это поможет держать всю схему в аккуратном состоянии. Если вы оставите задачу развернутой, она всегда будет сверху над другими объектами.',
+      action: 'Понятно', only: true, ok: () => {},
+    } }));
+  }
   else if (part === 'finish') board.transact(() => { setStatus(board, it.id, 'done'); setView(board, { ...it, st: 'done' }, undefined); });
   else if (part === 'add') {
     const n = addSub(board, it);

@@ -64,7 +64,9 @@ export class Board {
         out.push(it);
         this.itemIndex.set(id, it);
       });
-      out.sort((a, b) => a.z - b.z || (a.id < b.id ? -1 : 1));
+      // (A task kept open, «Не сворачивать», lies over everything else.)
+      const over = (it: Item) => (it.type === 'task' && it.tv && it.keep ? 1 : 0);
+      out.sort((a, b) => over(a) - over(b) || a.z - b.z || (a.id < b.id ? -1 : 1));
       this.itemCache = out;
     }
     return this.itemCache;

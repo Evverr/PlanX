@@ -99,6 +99,13 @@ export const checks = {
     await sleep(450);
     await p.click(await at('(t, l) => ({ x: t.x + l.keep.x + 9, y: t.y + l.keep.y + 16 })'));
     expect((await t()).keep, 'kept open').toBe(true);
+    await sleep(100);
+    expect(await p.ev(`document.querySelector('.pop.confirm')?.textContent.includes('Рекомендуем оставлять задачи свернутыми')`), 'why not to, said').toBe(true);
+    await p.click(await p.at('.pop.confirm .btn.primary'));
+    await sleep(100);
+    await p.ev(`planx.board.add(planx.editor.newItem('sticky', planx.board.get('${id}').x, planx.board.get('${id}').y, { id: 'atop', z: 999 }))`);
+    expect(await p.ev(`planx.board.list().at(-1).id`), 'over what is put later').toBe(id);
+    await p.ev(`planx.board.remove(['atop'])`);
     await p.key('Escape', 'Escape', 27);
     await p.click([1100, 100]);
     await sleep(100);
