@@ -36,8 +36,8 @@ function drawLock(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, fade: num
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowColor = 'transparent';
-  // Our padlock (lock-2-solid), 16 across in the middle.
-  drawIcon(ctx, 'lock-2-solid', x - 8, y - 8, 16, dark() ? '#D5D9E0' : '#5D6575');
+  // Our padlock (lock-l-solid: square, no keyhole), 16 across in the middle.
+  drawIcon(ctx, 'lock-l-solid', x - 8, y - 8, 16, dark() ? '#D5D9E0' : '#5D6575');
   ctx.restore();
   ctx.globalAlpha = 1;
 }
