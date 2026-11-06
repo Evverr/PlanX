@@ -19,6 +19,8 @@ const TITLE = { weight: 500, family: FAMILY }, TEXT = { weight: 400, family: FAM
 /** Where the title starts, and where its first line's middle is (the ring's and the arrow's too). */
 const TITLE_X = 47, MID = 26;
 const STATUS = 22, ARROW = 24;
+/** Round the header's edge, what's left to a double click (not the ring's or the arrow's). */
+const EDGE = 6;
 /** Where the people's names start and their circles' middle; a row's height; a subtask's. */
 const LABEL_X = 47, NAME_X = 200, AVATAR_X = 182, ROW = 33, SUB = 38, SUB_X = 48, SUB_TEXT_X = 79;
 /** The buttons as the panels' (.btn in popups.css): 32 tall, their text 12 bold Inter with 14 each side. */
@@ -95,11 +97,12 @@ const near = (p: Point, x: number, y: number, r: number) => Math.hypot(p.x - x, 
 
 export function taskPartAt(it: Item, p: Point): TaskPart | null {
   const l = taskLayout(it), q = { x: p.x - it.x, y: p.y - it.y };
-  // The header: its ends the ring's and the arrow's (corners and all), the title's text the title,
-  // the rest of it the header itself (a double click there opens it further).
+  // The header: its ends the ring's and the arrow's (but for 6 round its edge), the title's text the
+  // title, the rest of it the header itself (a double click there opens it further).
   if (q.y >= 0 && q.y < l.head && q.x >= 0 && q.x <= l.w) {
-    if (q.x < TITLE_X - 6) return 'status';
-    if (q.x > l.w - 47) return 'arrow';
+    const inner = q.y >= EDGE && q.y <= l.head - EDGE;
+    if (inner && q.x >= EDGE && q.x < TITLE_X - 6) return 'status';
+    if (inner && q.x > l.w - 47 && q.x <= l.w - EDGE) return 'arrow';
     const lh = lineH(TITLE_FS), lines = wrapText(it.text || 'Название задачи', l.title.w, (t) => widthOf(t, TITLE_FS, 500)), row = Math.floor((q.y - l.title.y) / lh);
     return row >= 0 && row < lines.length && q.x >= l.title.x && q.x <= l.title.x + widthOf(lines[row], TITLE_FS, 500) ? 'title' : 'head';
   }

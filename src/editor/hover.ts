@@ -5,6 +5,7 @@ import { hitItem, hitLink, instanceBounds, linkBox, linkHandles, linkShape, onAu
 import { DOT_GAP, dotGap, HANDLE } from '../canvas/renderer';
 import { instanceGlyph, instancePlus, objectArrow } from '../model/components';
 import { taskButtonAt } from './tasks';
+import { taskPartAt } from '../canvas/task';
 import { onCodeCopy } from '../labs/codeBlock';
 import { branchWays, buttonKey, foldBadge, mindButtons, type MindButtonAt, type Way } from '../model/mind';
 import { frameButtonAt } from './frames';
@@ -269,6 +270,8 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
     // A task's ring (a component that comes with PlanX) is clicked through its states.
     if ((hit?.type === 'task' && ed.editingId !== hit.id && taskButtonAt(hit, w)) || (hit?.type === 'audio' && onAudioButton(hit, w))
       || (hit && ed.editingId !== hit.id && linkPartAt(hit, w))) cursor = 'pointer';
+    // A task's title: the text cursor, as it's typed in there (on a double click), not the card's.
+    else if (hit?.type === 'task' && ed.editingId !== hit.id && taskPartAt(hit, w) === 'title') cursor = 'text';
     else if (hit && !isLocked(hit)) cursor = alt ? 'copy' : 'move';
   }
   ed.canvas.style.cursor = cursor;
