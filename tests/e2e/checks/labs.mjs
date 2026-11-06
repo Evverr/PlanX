@@ -19,6 +19,10 @@ export const checks = {
     await p.cdp('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 400, y: 280, deltaX: 0, deltaY: 60 });
     await sleep(100);
     expect(await p.ev('JSON.stringify(planx.editor.cam)'), 'the code scrolled, not the board').toBe(cam);
+    // Scrolled to its end: the board stays put still.
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 400, y: 280, deltaX: 0, deltaY: 3000 });
+    await sleep(100);
+    expect(await p.ev('JSON.stringify(planx.editor.cam)'), 'at its end, the board not scrolled either').toBe(cam);
     await p.ev(`window.clip = null; navigator.clipboard.writeText = async (t) => { window.clip = t; }`);
     await p.click([200 + 420 - 26, 150 + 22]);
     await sleep(100);
