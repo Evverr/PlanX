@@ -18,7 +18,7 @@ export const checks = {
     await p.key('Escape', 'Escape', 27);
     await sleep(200);
     const it = await p.ev(`planx.board.list().find((i) => i.code)`);
-    expect([it.type, it.code, it.text.split('\n').length, it.h].join(), 'kept, as tall as its lines').toBe(`rect,js,3,${Math.ceil(40 + 3 * 21 + 16)}`);
+    expect([it.type, it.code, it.text.split('\n').length, it.h].join(), 'kept, as tall as its lines').toBe(`rect,js,3,${Math.ceil(56 + 3 * 21 + 16)}`);
     expect(await p.ev(`!!document.querySelector('.tfmt')`), 'no text panel').toBe(false);
     await p.click(await p.at('.bar.panel .code-lang .fpick'));
     await sleep(100);

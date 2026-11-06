@@ -4,9 +4,9 @@ import { font } from '../canvas/text';
 
 /**
  * "Код": a block of code, put on the board by its button on the right rail. It's a rectangle with
- * `code` set to its language: drawn as a card of its own (not in a rectangle's colours), its language
- * over the code, the code in a monospace font, coloured as the language has it, every line as typed
- * (none broken), the block growing to fit it. Typed in, the text over it is see-through, so the code
+ * `code` set to its language: drawn as a dark card of its own, as code editors are (in either theme),
+ * its language on a band at its top, the lines numbered, the code in a monospace font, coloured as the
+ * language has it, every line as typed (none broken), the block growing to fit it. Typed in, the text over it is see-through, so the code
  * stays coloured while it's typed. The language is picked on its panel (CodeLang.tsx).
  */
 
@@ -120,13 +120,17 @@ function pieces(lang: Lang, text: string): Piece[] {
   return out;
 }
 
-/** Colours as GitHub's, light and dark. */
-const LIGHT: Record<Kind | 'ink', string> = { ink: '#24292F', com: '#6E7781', str: '#0A3069', num: '#0550AE', kw: '#CF222E', fn: '#8250DF', type: '#953800', attr: '#0550AE', tag: '#116329' };
-const DARK: Record<Kind | 'ink', string> = { ink: '#E6EDF3', com: '#8B949E', str: '#A5D6FF', num: '#79C0FF', kw: '#FF7B72', fn: '#D2A8FF', type: '#FFA657', attr: '#79C0FF', tag: '#7EE787' };
-const CARD = { light: { bg: '#FFFFFF', edge: '#E1E4EA' }, dark: { bg: '#17191E', edge: '#30333A' } };
+/** The code's colours, as GitHub's dark ones. */
+const INK: Record<Kind | 'ink', string> = { ink: '#E6E7EC', com: '#8B949E', str: '#A5D6FF', num: '#79C0FF', kw: '#FF7B72', fn: '#D2A8FF', type: '#FFA657', attr: '#79C0FF', tag: '#7EE787' };
+/** The card: its band at the top, the rest, the language's name, the line numbers, what's shown with no code. */
+const CARD = { band: '#191922', bg: '#1F1F2A', name: '#E6E7EC', nums: '#A0A3B5', hint: '#5F6278', edge: 'rgba(255,255,255,0.06)' };
+export const CODE_HINT = 'Введите код...';
 
-/** The code's size, how far it is from the sides, the language's line over it, and how tall a line is. */
-export const CODE_FS = 14, CODE_PAD = 16, CODE_TOP = 40, CODE_LINE = 1.5;
+/** The code's size; the band; where the language's name and the line numbers start, and the code; how
+ *  far the code keeps from the right side, the band and the bottom; how tall a line is; the corners. */
+export const CODE_FS = 14, CODE_BAND = 44, CODE_NAME = 16, CODE_NUMS = 24, CODE_LEFT = 72, CODE_PAD = 16, CODE_BOTTOM = 16, CODE_LINE = 1.5, CODE_RAD = 16;
+/** Where the code's first line starts, from the top. */
+export const CODE_TOP = CODE_BAND + 12;
 const sizeOf = (it: Item) => it.fs ?? CODE_FS;
 /** Tabs as two spaces, as the overlay shows them. */
 const linesOf = (text: string) => text.replace(/\t/g, '  ').split('\n');
@@ -147,8 +151,8 @@ const ensure = (f: string) => {
 /** Its size for the text: as tall as its lines, wide enough for the longest (it doesn't get narrower). */
 export function codeFit(it: Item, text: string): { w: number; h: number } | null {
   const fs = sizeOf(it), lines = linesOf(text);
-  const w = Math.max(it.w, Math.ceil(Math.max(...lines.map((l) => l.length)) * charWidth(fs) + CODE_PAD * 2 + 2));
-  const h = Math.ceil(CODE_TOP + lines.length * fs * CODE_LINE + CODE_PAD);
+  const w = Math.max(it.w, Math.ceil(Math.max(...lines.map((l) => l.length)) * charWidth(fs) + CODE_LEFT + CODE_PAD + 2));
+  const h = Math.ceil(CODE_TOP + lines.length * fs * CODE_LINE + CODE_BOTTOM);
   return w === it.w && h === it.h ? null : { w, h };
 }
 
@@ -156,49 +160,61 @@ export function codeFit(it: Item, text: string): { w: number; h: number } | null
 let live: { id: string; text: string } | null = null;
 export const setLiveCode = (id: string | null, text = '') => { live = id ? { id, text } : null; };
 
-/** The block: its card, its language's name, the code coloured, cut off at its edges. */
-export function drawCode(ctx: CanvasRenderingContext2D, it: Item, dark: boolean, muted: string, z: number, editing: boolean): void {
-  const card = dark ? CARD.dark : CARD.light, ink = dark ? DARK : LIGHT, r = Math.min(it.rad ?? 8, it.w / 2, it.h / 2);
+/** The block: its card and band, its language's name, the code coloured and its lines numbered, cut off
+ *  at its edges. */
+export function drawCode(ctx: CanvasRenderingContext2D, it: Item, z: number, editing: boolean): void {
+  const r = Math.min(it.rad ?? CODE_RAD, it.w / 2, it.h / 2);
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, r);
-  ctx.fillStyle = card.bg;
+  ctx.fillStyle = CARD.bg;
   ctx.fill();
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = card.edge;
-  ctx.stroke();
-  const fs = sizeOf(it);
-  if (fs * z < 2.5) return;
   ctx.save();
   ctx.clip();
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.font = font(12, 500);
-  ctx.fillStyle = muted;
-  ctx.fillText(langOf(it).label, it.x + CODE_PAD, it.y + CODE_TOP / 2);
-  const f = font(fs, 400, 'mono');
-  ensure(f);
-  ctx.font = f;
-  // On each line's baseline as the browser sets it in the overlay (see drawText in the renderer).
-  ctx.textBaseline = 'alphabetic';
-  const fm = ctx.measureText('Hg'), ascent = fm.fontBoundingBoxAscent, descent = fm.fontBoundingBoxDescent, cw = ctx.measureText('0').width;
-  const lh = fs * CODE_LINE, text = editing && live?.id === it.id ? live.text : it.text ?? '';
-  let row = 0, col = 0;
-  for (const [part, kind] of pieces(langOf(it), text.replace(/\t/g, '  '))) {
-    ctx.fillStyle = ink[kind ?? 'ink'];
-    const bits = part.split('\n');
-    bits.forEach((bit, i) => {
-      if (i > 0) { row++; col = 0; }
-      if (bit) ctx.fillText(bit, it.x + CODE_PAD + col * cw, it.y + CODE_TOP + row * lh + (lh - ascent - descent) / 2 + ascent);
-      col += bit.length;
-    });
+  ctx.fillStyle = CARD.band;
+  ctx.fillRect(it.x, it.y, it.w, CODE_BAND);
+  const fs = sizeOf(it);
+  if (fs * z >= 2.5) {
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = font(15, 500);
+    ctx.fillStyle = CARD.name;
+    ctx.fillText(langOf(it).label, it.x + CODE_NAME, it.y + CODE_BAND / 2);
+    const f = font(fs, 400, 'mono');
+    ensure(f);
+    ctx.font = f;
+    // On each line's baseline as the browser sets it in the overlay (see drawText in the renderer).
+    ctx.textBaseline = 'alphabetic';
+    const fm = ctx.measureText('Hg'), ascent = fm.fontBoundingBoxAscent, descent = fm.fontBoundingBoxDescent, cw = ctx.measureText('0').width;
+    const lh = fs * CODE_LINE, text = editing && live?.id === it.id ? live.text : it.text ?? '';
+    const base = (row: number) => it.y + CODE_TOP + row * lh + (lh - ascent - descent) / 2 + ascent;
+    const count = text.split('\n').length;
+    ctx.fillStyle = CARD.nums;
+    for (let i = 0; i < count; i++) ctx.fillText(String(i + 1), it.x + CODE_NUMS, base(i));
+    if (!text) {
+      ctx.fillStyle = CARD.hint;
+      ctx.fillText(CODE_HINT, it.x + CODE_LEFT, base(0));
+    }
+    let row = 0, col = 0;
+    for (const [part, kind] of pieces(langOf(it), text.replace(/\t/g, '  '))) {
+      ctx.fillStyle = INK[kind ?? 'ink'];
+      part.split('\n').forEach((bit, i) => {
+        if (i > 0) { row++; col = 0; }
+        if (bit) ctx.fillText(bit, it.x + CODE_LEFT + col * cw, base(row));
+        col += bit.length;
+      });
+    }
   }
   ctx.restore();
+  // A faint edge, for the dark theme's board.
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = CARD.edge;
+  ctx.stroke();
 }
 
 /** The rail's button: a block in the middle of the screen, typed in at once. */
 export function addCode(ed: Editor): void {
-  const c = ed.toWorld(innerWidth / 2, innerHeight / 2), w = 480, h = Math.ceil(CODE_TOP + CODE_FS * CODE_LINE + CODE_PAD);
-  const it = ed.newItem('rect', Math.round(c.x - w / 2), Math.round(c.y - h / 2), { w, h, code: CODE_LANG, text: '', fs: CODE_FS, ff: 'mono', ta: 'left', va: 'top' });
+  const c = ed.toWorld(innerWidth / 2, innerHeight / 2), w = 480, h = Math.ceil(CODE_TOP + CODE_FS * CODE_LINE + CODE_BOTTOM);
+  const it = ed.newItem('rect', Math.round(c.x - w / 2), Math.round(c.y - h / 2), { w, h, code: CODE_LANG, text: '', fs: CODE_FS, ff: 'mono', ta: 'left', va: 'top', rad: CODE_RAD });
   ed.addItem(it);
   ed.setTool('select');
   ed.setSelection([it.id]);
