@@ -394,7 +394,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         : ed.newItem(g.tool, g.at.x - d.w / 2, g.at.y - d.h / 2, g.tool === 'table' ? freshTable() : g.tool === 'mind' ? { text: MIND_TOPIC } : {});
       if (it.type === 'text') it.h = itemTextHeight(it);
       if (it.type === 'mind') Object.assign(it, mindSize(it), { x: Math.round(g.at.x - mindSize(it).w / 2) });
-      if (it.type === 'task') Object.assign(it, freshTask(it, g.at, taskOpen()));
+      if (it.type === 'task') Object.assign(it, freshTask(it, g.at));
       ed.addItem(it);
       ed.setTool('select');
       ed.setSelection([it.id]);

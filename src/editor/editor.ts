@@ -43,7 +43,6 @@ import { hiddenByLayers, layersVersion, newItemLayer } from '../labs/layers';
 import { zoomsWithKey } from '../labs/wheelZoom';
 import { codeFit, scrollCode } from '../labs/codeBlock';
 import { closeTask, fitTask, freshTask, renewTasks, taskTextPatch } from '../model/task';
-import { taskOpen } from '../labs/taskFull';
 
 export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -1039,7 +1038,7 @@ export class Editor {
     const c = this.toWorld(at.x, at.y), d = { ...DEFAULTS[type], ...extra };
     const it = this.newItem(type, c.x - d.w / 2, c.y - d.h / 2, extra);
     if (type === 'text') it.h = itemTextHeight(it);
-    if (type === 'task') Object.assign(it, freshTask(it, c, taskOpen()));
+    if (type === 'task') Object.assign(it, freshTask(it, c));
     this.addItem(it);
     this.setTool('select');
     this.setSelection([it.id]);
