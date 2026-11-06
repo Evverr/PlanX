@@ -194,13 +194,17 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
 
   const moreZone = sort.moreZone(hidden);
   /** A rail button; in the "more" row (`inMenu`) it closes the row when used. */
-  const railButton = (key: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}, inMenu = false): ReactNode => (
-    <button key={key} {...(inMenu ? sort.moreItem(key) : sort.item(key))} className={`fb ${on ? 'on' : ''} ${on && labs.solidTool ? 'solid-on' : ''} ${sort.lifted(key) ? 'lifted' : ''}`}
-      title={label} aria-label={label.replace(/ \(.*\)$/, '')} {...extra}
-      onClick={() => { onClick?.(); if (inMenu) setMoreOpen(false); }}>
-      <PanelIcon name={on && labs.solidTool ? SOLID[icon] ?? icon : icon} />
-    </button>
-  );
+  const railButton = (key: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}, inMenu = false): ReactNode => {
+    // Picked: solid on blue ("Сплошная выбранная иконка"; the line tool with "Связи инструментом" too).
+    const solid = on && (labs.solidTool || (labs.linkTool && key === 'lines'));
+    return (
+      <button key={key} {...(inMenu ? sort.moreItem(key) : sort.item(key))} className={`fb ${on ? 'on' : ''} ${solid ? 'solid-on' : ''} ${sort.lifted(key) ? 'lifted' : ''}`}
+        title={label} aria-label={label.replace(/ \(.*\)$/, '')} {...extra}
+        onClick={() => { onClick?.(); if (inMenu) setMoreOpen(false); }}>
+        <PanelIcon name={solid ? SOLID[icon] ?? icon : icon} />
+      </button>
+    );
+  };
   const item = (key: string, inMenu = false): ReactNode => {
     const button = (k: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}) =>
       railButton(k, on, label, icon, onClick, extra, inMenu);
@@ -215,7 +219,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     // "Комментарии" (src/labs): a click on the board puts a comment there.
     if (key === 'comments') return labs.comments ? button(key, tool === 'comment', 'Комментарий', 'comment', () => editor.setTool(tool === 'comment' ? 'select' : 'comment'), { 'aria-pressed': tool === 'comment' }) : null;
     // "Линии" (src/labs): the line tool, from any item to any other; held, the ways a line runs.
-    if (key === 'lines') return labs.lineTool ? button(key, tool === 'link', 'Линия (C; зажмите — вид линии)', 'path', () => editor.setTool(tool === 'link' ? 'select' : 'link'), { 'aria-pressed': tool === 'link' }) : null;
+    if (key === 'lines') return labs.lineTool || labs.linkTool ? button(key, tool === 'link', 'Линия (C; зажмите — вид линии)', 'path', () => editor.setTool(tool === 'link' ? 'select' : 'link'), { 'aria-pressed': tool === 'link' }) : null;
     if (key === 'objects') return labs.objects ? button(key, objecting || variants === 'objects', 'Объекты', 'package', () => setVariants(variants === 'objects' ? null : 'objects'), { 'aria-expanded': variants === 'objects' }) : null;
     if (key === 'image') return button(key, false, 'Картинка', 'image', () => { pictureAt.current = undefined; filePicker.current?.click(); });
     if (key === 'audio') return button(key, recorderOpen, 'Аудиозаметка', 'microphone', onToggleRecorder, { 'aria-expanded': recorderOpen });

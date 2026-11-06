@@ -614,6 +614,8 @@ export class Editor {
       hotDot: this.hotDot,
       hotHandle: this.hotHandle,
       linkDots: this.tool === 'link' && !this.gesture ? this.linkDots : null,
+      linkTool: labOn('linkTool'),
+      allDots: labOn('linkTool') && this.tool === 'link' && !this.gesture,
       hotPlus: this.hotPlus,
       plusFade,
       plusOn,

@@ -160,7 +160,8 @@ export function onRotate(ed: Editor, it: Item, w: Point): boolean {
 
 /** The link dot under the point, if any. */
 export function dotAt(ed: Editor, it: Item, w: Point): Side | null {
-  if (it.type === 'mind' || it.inst || it.host) return null;
+  // ("Связи инструментом", src/labs: only with the line tool.)
+  if (it.type === 'mind' || it.inst || it.host || labOn('linkTool')) return null;
   return anyDotAt(ed, it, w);
 }
 
@@ -177,7 +178,12 @@ export function anyDotAt(ed: Editor, it: Item, w: Point): Side | null {
 /** With the line tool ("Линии", src/labs): the item under the pointer shows its link dots (any item,
  *  mind map nodes too), and keeps them while the pointer's on one, to be pressed and dragged from. */
 function lineToolHover(ed: Editor, w: Point): void {
-  const shown = ed.linkDots ? ed.board.get(ed.linkDots) : undefined, dot = shown ? anyDotAt(ed, shown, w) : null;
+  let shown = ed.linkDots ? ed.board.get(ed.linkDots) : undefined, dot = shown ? anyDotAt(ed, shown, w) : null;
+  // ("Связи инструментом": every item's dots show, so any of them is taken, the topmost first.)
+  if (!dot && labOn('linkTool')) {
+    const near = ed.shown().filter((i) => i.type !== 'mind' && !i.inst && !i.host).reverse().find((i) => anyDotAt(ed, i, w));
+    if (near) { shown = near; dot = anyDotAt(ed, near, w); }
+  }
   const hit = dot ? shown : hitItem(ed.shown(), w, ed.cam.z);
   const id = hit && !hit.inst ? hit.id : null;
   if (id !== ed.linkDots || dot !== ed.hotDot) { ed.linkDots = id; ed.hotDot = dot; ed.requestRender(); }

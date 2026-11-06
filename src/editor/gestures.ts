@@ -411,7 +411,8 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
           : { id: uid(), from: g.from, to: g.target };
         if (ed.linkStyle) l.style = ed.linkStyle;
         board.addLink(l);
-        ed.setTool('select');
+        // ("Связи инструментом": the line tool stays, for the next one.)
+        if (!labOn('linkTool')) ed.setTool('select');
         ed.setSelection([l.id]);
       }
       ed.requestRender();
