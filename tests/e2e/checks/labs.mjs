@@ -800,6 +800,7 @@ export const checks = {
     await p.mouse('mouseMoved', 551, 316);
     await sleep(50);
     expect(await plusesAt([[551, 316]]), 'kept, near it').toBe('col@2');
+    expect(await plusesAt([[660, 314]]), 'lit, the only one out').toBe('-');
     // None on the top or left edge, wherever the pointer is.
     await p.mouse('mouseMoved', 291, 360);
     await sleep(50);
