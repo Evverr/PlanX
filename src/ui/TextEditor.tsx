@@ -138,7 +138,13 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
       onBlur={commit}
       onKeyDown={(e) => {
         e.stopPropagation();
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        if (field && editor.editingCell === 0 && ((e.key === 'Enter' && (e.metaKey || e.ctrlKey)) || e.key === 'Escape')) {
+          // A task's description done with on Cmd+Enter (Ctrl+Enter) or Esc, Enter a new line in it: the task closed.
+          e.preventDefault();
+          commit();
+          const it = editor.board.get(id);
+          if (it?.tv) setView(editor.board, it, undefined);
+        } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
           // Cmd+Enter is done with it: the text kept and nothing left picked; in a component being changed,
           // done with that too.
           e.preventDefault();
@@ -152,13 +158,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           if (!it) return;
           if (!it.tv) setView(editor.board, it, taskOpen());
           editor.startEditing(id, 0, 'end');
-        } else if (field && editor.editingCell === 0 && ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Escape')) {
-          // Its description done with on Enter (Shift+Enter, a new line) or Esc: the task closed.
-          e.preventDefault();
-          commit();
-          const it = editor.board.get(id);
-          if (it?.tv) setView(editor.board, it, undefined);
-        } else if (field && e.key === 'Enter' && !e.shiftKey) {
+        } else if (field && editor.editingCell && e.key === 'Enter' && !e.shiftKey) {
           // A subtask done with on Enter, the next one after it begun.
           e.preventDefault();
           const cell = editor.editingCell, typed = e.currentTarget.value.trim();
