@@ -17,7 +17,7 @@ export const TASK_W = 293, TASK_OPEN_W = 494;
 /** Its corners' radius, at its outer edge. */
 export const TASK_RAD = 12;
 const TITLE_FS = 16, TEXT_FS = 14, FAMILY = 'inter';
-const TITLE = { weight: 500, family: FAMILY }, TEXT = { weight: 400, family: FAMILY };
+const TEXT = { weight: 400, family: FAMILY };
 /** Where the title starts, and where its first line's middle is (the ring's and the arrow's too). */
 const TITLE_X = 47, MID = 26;
 const STATUS = 22, ARROW = 24;
@@ -69,10 +69,18 @@ const widthOf = (text: string, size: number, weight: number) => {
 };
 const buttonW = (text: string) => Math.ceil(widthOf(text, BUTTON_FONT.size, BUTTON_FONT.weight)) + BUTTON_PAD * 2;
 
+/** Its title on one line: cut off with "…" where it's wider than there's room for. */
+export function titleLine(text: string, w: number): string {
+  if (widthOf(text, TITLE_FS, 500) <= w) return text;
+  let n = text.length;
+  while (n > 0 && widthOf(text.slice(0, n).trimEnd() + '…', TITLE_FS, 500) > w) n--;
+  return text.slice(0, n).trimEnd() + '…';
+}
+
 export function taskLayout(it: Item, w = it.w): TaskLayout {
-  const titleW = Math.max(40, w - TITLE_X * 2);
-  const th = textBlockHeight(it.text || ' ', titleW, TITLE_FS, TITLE);
-  const top = MID - lineH(TITLE_FS) / 2, head = Math.max(52, Math.ceil(top * 2 + th));
+  // The title on one line (see titleLine), the header as tall as ever.
+  const titleW = Math.max(40, w - TITLE_X * 2), th = lineH(TITLE_FS);
+  const top = MID - th / 2, head = 52;
   const out: TaskLayout = { w, h: head, head, title: { x: TITLE_X, y: top, w: titleW, h: th } };
   if (!it.tv) return out;
   const descW = Math.max(80, w - TITLE_X - 79), dy = head + 22;
@@ -116,8 +124,8 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
     const on = (cx: number, half: number) => Math.abs(q.x - cx) <= half + AROUND && Math.abs(q.y - MID) <= half + AROUND;
     if (on(15 + STATUS / 2, STATUS / 2)) return 'status';
     if (on(l.w - 35 + ARROW / 2, ARROW / 2)) return 'arrow';
-    const lh = lineH(TITLE_FS), lines = wrapText(it.text || 'Название задачи', l.title.w, (t) => widthOf(t, TITLE_FS, 500)), row = Math.floor((q.y - l.title.y) / lh);
-    return row >= 0 && row < lines.length && q.x >= l.title.x && q.x <= l.title.x + widthOf(lines[row], TITLE_FS, 500) ? 'title' : 'head';
+    const line = titleLine(it.text || 'Название задачи', l.title.w);
+    return q.y >= l.title.y && q.y <= l.title.y + l.title.h && q.x >= l.title.x && q.x <= l.title.x + widthOf(line, TITLE_FS, 500) ? 'title' : 'head';
   }
   if (l.more && near(q, l.more.x + ARROW / 2, l.more.y + ARROW / 2, ARROW / 2 + 4)) return 'more';
   if (l.desc && inRect(q, l.desc)) return 'desc';
@@ -281,7 +289,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
     });
     ctx.globalAlpha = 1;
   };
-  if (typing !== null) lines(it.text || 'Название задачи', l.title, TITLE_FS, 500, it.text ? look.ink : look.muted);
+  if (typing !== null) lines(titleLine(it.text || 'Название задачи', l.title.w), { ...l.title, w: Infinity }, TITLE_FS, 500, it.text ? look.ink : look.muted);
   if (!l.desc) return;
   if (typing !== 0) lines(it.desc || DESC_HINT, l.desc, TEXT_FS, 400, it.desc ? look.ink : look.muted, it.desc ? 0.8 : 1);
   if (l.more) drawIcon(ctx, 'chevron-down-m', x + l.more.x, y + l.more.y, ARROW, arrowInk('more'));
