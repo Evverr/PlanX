@@ -239,7 +239,6 @@
 
 .history-delete { width: var(--e24); height: var(--e24); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--s4); background: none; cursor: pointer; visibility: hidden; }
 .history-delete .pi { width: 18px; height: 18px; }
-.history-delete:hover { background: var(--fmt-hover); }
 .history-row:hover .history-delete { visibility: visible; }
 
 /* "Слои": a row a layer, the picked one tinted; its tick, name, how many it holds, "Сюда". */
@@ -255,7 +254,6 @@
 .layers-add { width: 100%; }
 .layer-delete { width: var(--e24); height: var(--e24); display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--s4); background: none; color: var(--ink); cursor: pointer; visibility: hidden; }
 .layer-delete .pi { width: 18px; height: 18px; }
-.layer-delete:hover { background: var(--fmt-hover); }
 .layer-row:hover .layer-delete { visibility: visible; }
 
 /* "Стекло" (src/labs/glass.ts): the panels and popups 84% their colour, what's behind them blurred 12px.

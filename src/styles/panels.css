@@ -13,6 +13,9 @@
 .ib { position: relative; width: var(--e40); height: var(--e40); border: 0; background: transparent; border-radius: var(--s6); display: grid; place-items: center; cursor: pointer; color: var(--ink); padding: 0; transition: background-color .12s ease-out; }
 /* Hovers everywhere match the tool panel's (.fb): a neutral grey, the pressed state light blue. */
 .ib:hover { background: var(--fmt-hover); }
+/* A trash can (as «Удалить» in the menus): under the pointer on a light red, itself red. */
+.ib.danger:hover, :is(.history-delete, .layer-delete):hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
+.ib.danger:hover .pi, :is(.history-delete, .layer-delete):hover .pi { background: var(--danger); }
 .ib.on { background: var(--fmt-on); }
 .ib svg { width: 20px; height: 20px; }
 .ib svg.stroke { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
