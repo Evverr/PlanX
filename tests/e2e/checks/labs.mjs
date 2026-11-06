@@ -340,7 +340,7 @@ export const checks = {
     await sleep(300);
   },
 
-  async '"Связи инструментом": no dots on what\'s picked; «Линии» (or C) puts out every item\'s, a mind map node\'s under the pointer, the cursor kept, things moved as usual'(p) {
+  async '"Связи инструментом": no dots on what\'s picked; «Связи» on the zoom bar (or C) puts out every item\'s, a mind map node\'s under the pointer, the cursor kept, things moved as usual'(p) {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('linkTool', true))()`);
     await sleep(100);
     const { a, c } = await stickers(p);
@@ -382,6 +382,26 @@ export const checks = {
     await sleep(100);
     expect(await p.ev(`planx.editor.plusNode()?.id ?? 'no buttons'`), 'the dots away: its buttons again').toBe('m');
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('linkTool', false))()`);
+  },
+
+  async 'the dark theme in "Настройки", not on the zoom bar; the link dots\' switch there instead'(p) {
+    expect(await p.ev(`!!document.querySelector('.bar.zoom [aria-label="Тёмная тема"], .bar.zoom [aria-label="Светлая тема"]')`), 'none on the bar').toBe(false);
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('linkTool', true))()`);
+    await sleep(100);
+    expect(!!(await p.rect('.bar.zoom button[aria-label="Связи"]')), 'the dots\' switch on it').toBe(true);
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('linkTool', false))()`);
+    await p.click(await p.at('.topbar button[aria-label="Меню"]'));
+    await p.ev(`[...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Настройки')).click()`);
+    await sleep(300);
+    const flip = () => p.ev(`[...document.querySelectorAll('.settings-row')].find((r) => r.textContent.includes('Тёмная тема')).click()`);
+    const was = await p.ev(`document.documentElement.dataset.theme`);
+    await flip();
+    await sleep(100);
+    expect(await p.ev(`document.documentElement.dataset.theme`), 'the other theme').toBe(was === 'dark' ? 'light' : 'dark');
+    await flip();
+    await sleep(100);
+    expect(await p.ev(`document.documentElement.dataset.theme`), 'back').toBe(was);
+    await p.escape();
   },
 
   async '"Фон доски": three dots in the board menu pick lines, dots or nothing on the background'(p) {

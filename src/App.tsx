@@ -29,6 +29,7 @@ import type { Item, Link } from './model/types';
 import { Labs } from './labs/LabsLayer';
 import { labOn, useLabs } from './labs/labs';
 import { morphPanel } from './labs/textButton';
+import { toggleDots, useDotsOn } from './labs/linkTool';
 import { joinDropped } from './labs/linkJoint';
 import { HelpPop } from './ui/HelpPop';
 import { useFollowing } from './labs/presence';
@@ -150,7 +151,9 @@ export function App({ boardId }: { boardId: string }) {
   const [recorder, setRecorder] = useState(false);
   // Buttons in the top bar and the zoom panel can be rearranged by holding them.
   const topSort = useSortable('planx-order-top2', ['logo', 'sep', 'title', 'menu', 'new', 'clear', 'sep3', 'undo', 'redo'], 'x');
-  const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'share', 'help', 'theme', 'fit', 'dock', 'people'], 'x');
+  // (The theme's button is in "Настройки" now; the link dots' switch has its place.)
+  const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'share', 'help', 'links', 'fit', 'dock', 'people'], 'x', { theme: 'links' });
+  const dots = useDotsOn();
 
   // The top bar and the zoom bar can be moved and made shorter by hand (see panels/bar.ts).
   const topBar = useBar(topSort.ref, { name: 'topbar', home: 'top', from: 'left', docked, keys: { x: 'planx-topbar-x', w: 'planx-topbar-w', far: 'planx-topbar-low' } });
@@ -422,8 +425,9 @@ export function App({ boardId }: { boardId: string }) {
         'zoom-out': <button className="ib" title="Отдалить (−)" aria-label="Отдалить" onClick={() => editor.zoomCenter(1 / 1.25)}><PanelIcon name="zoom-out" /></button>,
         zoom: <button className="zpct" title="Масштаб 100%" onClick={() => editor.zoomCenter(1 / editor.cam.z)}>{Math.round(ui.cam.z * 100)}%</button>,
         'zoom-in': <button className="ib" title="Приблизить (+)" aria-label="Приблизить" onClick={() => editor.zoomCenter(1.25)}><PanelIcon name="zoom-in" /></button>,
-        theme: <button className="ib" title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'} aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-          onClick={toggleTheme}><PanelIcon name={theme === 'dark' ? 'sun' : 'moon'} /></button>,
+        // "Связи инструментом" (src/labs): the link dots out on everything, or away.
+        links: labs.linkTool ? <button className={`ib ${dots ? 'on' : ''}`} title="Связи (C)" aria-label="Связи" aria-pressed={dots}
+          onClick={() => toggleDots(editor)}><PanelIcon name={dots ? 'path-solid' : 'path'} /></button> : undefined,
         fit: <button className="ib fit" title="Показать всё (Shift+1)" aria-label="Показать всё" onClick={() => editor.fit()}><PanelIcon name="screen" /></button>,
         help: <button className={`ib ${pop === 'help' ? 'on' : ''}`} title="Подсказки" aria-label="Подсказки" onClick={() => { toggle('help'); setMinimap(false); }}><PanelIcon name="question" /></button>,
         // A component can't take the ref, so the dock button sits in a wrapper.
@@ -483,7 +487,7 @@ export function App({ boardId }: { boardId: string }) {
       )}
 
       {dialog === 'profile' && <ProfileDialog name={conn.me.name} onRename={(n) => conn.rename(n)} onClose={() => setDialog(null)} />}
-      {dialog === 'settings' && <SettingsDialog onClose={() => setDialog(null)} />}
+      {dialog === 'settings' && <SettingsDialog onClose={() => setDialog(null)} dark={theme === 'dark'} onDark={toggleTheme} />}
 
       {pop === 'name' && <NamePopover name={conn.me.name} onSave={(n) => { conn.rename(n); setPop(null); }} />}
 
