@@ -16,7 +16,7 @@ import { zoomFade, zoomSize } from '../labs/zoomFade';
 import { gripsOn } from '../labs/tableMove';
 import { gridKind } from '../labs/boardGrid';
 import { drawCode } from '../labs/codeBlock';
-import { drawTaskCard } from './task';
+import { drawTaskCard, TASK_RAD } from './task';
 import { dotsAlways, dotsUnder } from '../labs/linkTool';
 import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
@@ -133,7 +133,7 @@ export interface InkStroke { pts: Point[]; color: string; width: number; hl: boo
 
 /** Corner radius of everything with corners except stickers, in board units. */
 const CORNER = 8;
-const corner = (it: Item) => (it.type === 'rect' ? it.rad ?? CORNER : it.type === 'image' ? it.rad ?? 0 : it.type === 'frame' || it.type === 'task' ? CORNER
+const corner = (it: Item) => (it.type === 'rect' ? it.rad ?? CORNER : it.type === 'image' ? it.rad ?? 0 : it.type === 'frame' ? CORNER : it.type === 'task' ? TASK_RAD
   // A mind map node's: the central topic's rounder.
   : it.type === 'mind' ? Math.min(it.h / 2, it.parent ? 10 : 14) : 0);
 

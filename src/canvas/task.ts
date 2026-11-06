@@ -14,6 +14,8 @@ import type { Point, Rect } from './geometry';
 
 /** Closed and opened, how wide it starts. */
 export const TASK_W = 293, TASK_OPEN_W = 494;
+/** Its corners' radius, at its outer edge. */
+export const TASK_RAD = 12;
 const TITLE_FS = 16, TEXT_FS = 14, FAMILY = 'inter';
 const TITLE = { weight: 500, family: FAMILY }, TEXT = { weight: 400, family: FAMILY };
 /** Where the title starts, and where its first line's middle is (the ring's and the arrow's too). */
@@ -203,7 +205,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   // The card, its edge 2 wide inside it; its header tinted, the whole of it when closed. Opened, it
   // lies over the board with a shadow.
   ctx.beginPath();
-  ctx.roundRect(x + 1, y + 1, l.w - 2, l.h - 2, 11);
+  ctx.roundRect(x + 1, y + 1, l.w - 2, l.h - 2, TASK_RAD - 1);
   ctx.fillStyle = it.tv ? bg : tint;
   if (it.tv) {
     ctx.save();
@@ -220,7 +222,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
     ctx.fill();
   }
   ctx.beginPath();
-  ctx.roundRect(x + 1, y + 1, l.w - 2, l.h - 2, 11);
+  ctx.roundRect(x + 1, y + 1, l.w - 2, l.h - 2, TASK_RAD - 1);
   ctx.strokeStyle = edge;
   ctx.lineWidth = 2;
   ctx.stroke();
