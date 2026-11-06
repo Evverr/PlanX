@@ -1,8 +1,7 @@
 import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
-import { center, hitItem, hitLink, instanceBounds, linkBox, linkShape, onAudioButton, onTaskBox, pointInRect } from '../canvas/geometry';
-import { copyId } from '../model/components';
-import { TASK_STATES } from '../model/builtins';
+import { center, hitItem, hitLink, instanceBounds, linkBox, linkShape, onAudioButton } from '../canvas/geometry';
+import { pressTask } from './tasks';
 import { toggleAudio } from '../canvas/audio';
 import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, tickAt, objectArrowAt, pickedUnder } from './hover';
 import { grabbableLine } from './tables';
@@ -85,11 +84,6 @@ export function press(ed: Editor, e: PointerEvent): void {
     // Held: the open hand closes.
     ed.canvas!.style.cursor = 'grabbing';
     return;
-  }
-  // A task's ring ("Задача-компонент", src/labs) moves it on to its next state, picked or not.
-  if (ed.tool === 'select' && e.button === 0 && !e.shiftKey && !e.altKey && hit?.host) {
-    const task = board.get(hit.host), ring = task?.inst && TASK_STATES.includes(task.inst) ? board.get(copyId(task.id, '@task-ring')) : undefined;
-    if (task && ring && !isLocked(task) && pointInRect(w, ring)) { ed.nextTaskState(task.id); return; }
   }
   // First pick the instance; the next press enters it, without depending on double-click timing.
   // With a child picked, its siblings can be picked directly too. Shift keeps group selection, and
@@ -288,11 +282,8 @@ export function press(ed: Editor, e: PointerEvent): void {
     window.dispatchEvent(new CustomEvent('planx:peek', { detail: fb.id }));
     return;
   }
-  // A task's checkbox ticks it off (or back on) instead of picking the task up.
-  if (hit?.type === 'task' && !entering && !e.shiftKey && onTaskBox(hit, w, ed.cam.z)) {
-    board.update(hit.id, { done: hit.done ? undefined : true });
-    return;
-  }
+  // A task's buttons (its ring, arrows, a subtask's ring, the people…) do their thing instead of picking it up.
+  if (hit?.type === 'task' && !entering && !e.shiftKey && e.button === 0 && ed.editingId !== hit.id && pressTask(ed, hit, w, sp)) return;
   // An audio note's button plays it (or stops it) instead of picking it up.
   if (hit?.type === 'audio' && !entering && !e.shiftKey && onAudioButton(hit, w)) {
     toggleAudio(hit, () => ed.requestRender());

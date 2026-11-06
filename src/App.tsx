@@ -8,6 +8,7 @@ import { SelectionPanel } from './ui/SelectionPanel';
 import { usePanelPlace } from './labs/panelPlace';
 import { TextEditor } from './ui/TextEditor';
 import { TextPanel } from './ui/FormatPanel';
+import { TaskPop } from './ui/TaskPop';
 import { PanelIcon } from './ui/PanelIcon';
 import { asOne } from './labs/multi';
 import { DockButton, useDock } from './ui/panels/dock';
@@ -210,7 +211,7 @@ export function App({ boardId }: { boardId: string }) {
   // Several picked with text ("Несколько сразу", src/labs): the panel takes them as one.
   // What has text the panel sets: text, basic stickers, tasks, tables, shapes (not mind map nodes, nor a
   // component's title); several picked with text ("Несколько сразу", src/labs) taken as one.
-  const textItem = selItems.length === 1 && ['text', 'sticky', 'task', 'table', 'rect', 'ellipse', 'polygon'].includes(selItems[0].type) && !selItems[0].code ? selItems[0] : asOne(selItems) ?? undefined;
+  const textItem = selItems.length === 1 && ['text', 'sticky', 'table', 'rect', 'ellipse', 'polygon'].includes(selItems[0].type) && !selItems[0].code ? selItems[0] : asOne(selItems) ?? undefined;
   const labs = useLabs();
   // "Кнопка T" (src/labs): the text panel instead of the selection panel, asked for by its T, till the
   // next press on the board (or something else picked).
@@ -454,7 +455,9 @@ export function App({ boardId }: { boardId: string }) {
       {/* A table cell is typed into as if it were an item of its own, the size of the cell. */}
       {editing && (editing.type === 'table' && ui.editingCell !== null
         ? <TextEditor key={`${editing.id}:${ui.editingCell}`} editor={editor} item={cellItem(editing, ui.editingCell)} />
-        : <TextEditor key={editing.id} editor={editor} item={editing} />)}
+        : <TextEditor key={editing.type === 'task' ? `${editing.id}:${ui.editingCell}` : editing.id} editor={editor} item={editing} />)}
+      {/* A task's people and date, picked where its row was pressed. */}
+      <TaskPop editor={editor} me={conn.me} peers={peers} />
 
       {pop === 'clear' && (
         <div className="pop confirm" role="dialog" aria-label="Очистить доску">

@@ -1,6 +1,5 @@
 import type { Item, Link } from './types';
 import { alignOf } from './types';
-import { BUILTINS } from './builtins';
 import { descendants } from './mind';
 
 /**
@@ -146,10 +145,13 @@ export function syncOps(items: Item[], links: Link[], fit?: (it: Item) => number
   };
   const wanted = new Set<string>(), wantedLinks = new Set<string>();
   for (const inst of items.filter((i) => i.inst)) {
-    // One that comes with PlanX (see model/builtins.ts) is laid out from its frame at 0, 0, its copies
-    // stacked over the instance (just above it, in their order).
-    const builtin = BUILTINS.get(inst.inst!);
-    const comp = builtin?.frame ?? byId.get(inst.inst!);
+    // A task of before, one that came with PlanX ("@task-…"): kept as it is, till it's made a task (see
+    // renewTasks in model/task.ts).
+    if (inst.inst!.startsWith('@')) {
+      for (const c of items.filter((i) => i.host === inst.id)) wanted.add(c.id);
+      continue;
+    }
+    const comp = byId.get(inst.inst!);
     // With its component gone, an instance is left an ordinary frame, its copies ordinary items.
     if (!comp?.comp) {
       patch(inst.id, { inst: undefined });
@@ -157,8 +159,7 @@ export function syncOps(items: Item[], links: Link[], fit?: (it: Item) => number
       continue;
     }
     // An instance put inside its own component (or copies of copies of copies) would never end.
-    const inside = builtin ? builtin.items.map((i) => ({ ...i, z: inst.z + (i.z + 1) / 100 }))
-      : layered(inst, contents(comp, byId, items).filter((i) => i.id.split('~').length < 4)), ids = new Set(inside.map((i) => i.id));
+    const inside = layered(inst, contents(comp, byId, items).filter((i) => i.id.split('~').length < 4)), ids = new Set(inside.map((i) => i.id));
     if (ids.has(inst.id)) continue;
     // A folded component keeps where it was and its size unfolded.
     const dx = inst.x - comp.x, dy = inst.y - comp.y, cw = comp.fold?.w ?? comp.w, ch = comp.fold?.h ?? comp.h;

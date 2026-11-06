@@ -1,5 +1,5 @@
-import { baseWeight, DEFAULTS, type Item, type ListKind } from '../model/types';
-import { TASK_INSET } from './geometry';
+import { baseWeight, type Item, type ListKind } from '../model/types';
+import { taskSize } from './task';
 import { FOLD_FS, FOLD_H, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP, FOLD_TITLE_MAX } from '../model/frame';
 
 export const FONT_FAMILY = 'Onest, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
@@ -98,9 +98,6 @@ export function textBlockHeight(text: string, width: number, size: number, style
 export const itemTextHeight = (it: Item, text = it.text ?? '', width = it.w): number =>
   measureTextHeight(withList(text || ' ', it.ls), width, it.fs ?? 20, fontOf(it));
 
-/** Height a task needs: its lines between the side insets plus 10 above and below, at least its usual height. */
-export const taskHeight = (it: Item, text = it.text ?? '', width = it.w): number =>
-  Math.max(DEFAULTS.task.h, measureTextHeight(withList(text || ' ', it.ls), width - TASK_INSET * 2 - 20, it.fs ?? 16, fontOf(it)) + 20);
 
 /** Narrowest a mind map node gets (it grows as wide as its text, lines breaking only where it's typed so). */
 const MIND_MIN_W = 48;
@@ -129,4 +126,4 @@ export function foldedSize(title: string): { w: number; h: number } {
 
 /** Height a text item or task needs for its text; other items have none to fit. */
 export const fitHeight = (it: Item, text = it.text ?? '', width = it.w): number | null =>
-  it.type === 'text' ? itemTextHeight(it, text, width) : it.type === 'task' ? taskHeight(it, text, width) : null;
+  it.type === 'text' ? itemTextHeight(it, text, width) : it.type === 'task' ? taskSize({ ...it, text }, width).h : null;

@@ -83,8 +83,19 @@ export interface Item {
   /** Audio notes: length in seconds and a coarse waveform, 0…1 per bar. */
   dur?: number;
   peaks?: number[];
-  /** A task that has been ticked off. */
+  /** A task ticked off, as tasks were before they had a status (see statusOf in model/task.ts). */
   done?: boolean;
+  /** Tasks (see model/task.ts): their status; opened to their description (`desc`) or all of them
+   *  (`full`), else only the title; the description, the subtasks, who set it and who does it, by when
+   *  ("YYYY-MM-DDTHH:mm"), and how wide it was closed (opened, it's wider). */
+  st?: TaskStatus;
+  tv?: 'desc' | 'full';
+  desc?: string;
+  subs?: Subtask[];
+  boss?: Person;
+  doer?: Person;
+  due?: string;
+  cw?: number;
   /** Tables: column widths, row heights and the cells' text row by row (see model/table.ts). */
   cols?: number[];
   rows?: number[];
@@ -148,6 +159,10 @@ export interface Item {
 export type Side = 'top' | 'right' | 'bottom' | 'left';
 export type TextAlign = 'left' | 'center' | 'right';
 export type ListKind = 'bullet' | 'number';
+export type TaskStatus = 'todo' | 'doing' | 'done';
+export interface Subtask { t: string; done?: boolean }
+/** Someone on the board, by their name and colour (as their cursor's). */
+export interface Person { n: string; c: string }
 
 /** Font weight of text left as it was made: plain for text, heavier on stickers and shapes. */
 export const baseWeight = (type: ItemType): number => (type === 'text' || type === 'table' ? 400 : type === 'sticky' ? 500 : 600);
@@ -269,7 +284,7 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   emoji: { w: 27, h: 27 },
   ink: { w: 1, h: 1 },
   image: { w: 200, h: 150 },
-  task: { w: 180, h: 110, color: 'blue', fs: 16, text: '' },
+  task: { w: 293, h: 52, color: 'blue', fs: 16, text: '' },
   table: { w: 360, h: 120, fs: 14 },
   audio: { w: 300, h: 64 },
   polygon: { w: 160, h: 150, color: 'purple', fs: 16, text: '', ta: 'left', va: 'top' },
@@ -278,16 +293,16 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
 
 export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse', 'polygon', 'task', 'mind'];
 /** What has an outline whose colour can be set apart from the fill. */
-export const STROKABLE: ItemType[] = ['rect', 'ellipse', 'polygon', 'task'];
+export const STROKABLE: ItemType[] = ['rect', 'ellipse', 'polygon'];
 /** A plain frame (not a component, its instance or a timeline): filled and outlined as a rectangle is. */
 const plainFrame = (it: Item) => it.type === 'frame' && !it.comp && !it.inst && !it.tl;
 /** Whether an item's fill (or its outline) can be given a colour. */
 export const fillable = (it: Item): boolean => COLORABLE.includes(it.type) || plainFrame(it);
 export const strokable = (it: Item): boolean => STROKABLE.includes(it.type) || plainFrame(it);
-export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'task', 'table', 'polygon', 'mind'];
+export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'table', 'polygon', 'mind'];
 /** What can be turned by its top right corner (a frame along with what it holds). Tables, mind map
  *  nodes and audio notes stay square to the board. */
-export const ROTATABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'polygon', 'task', 'icon', 'emoji', 'image', 'ink', 'frame'];
+export const ROTATABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'polygon', 'icon', 'emoji', 'image', 'ink', 'frame'];
 export const EDITABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'frame', 'task', 'table', 'polygon', 'mind'];
 
 export const uid = (): string =>

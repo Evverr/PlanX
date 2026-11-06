@@ -2,7 +2,9 @@ import type { Item, Link, Side } from '../model/types';
 import { DEFAULTS, ROTATABLE, textPad, textPadY, uid } from '../model/types';
 import type { PathNode, Point, Rect } from '../canvas/geometry';
 import { anchorAt, angleOf, boxOf, center, hitItem, linkBox, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedFrom, toLocal, turn } from '../canvas/geometry';
-import { fitHeight, itemTextHeight, mindSize } from '../canvas/text';
+import { itemTextHeight, mindSize } from '../canvas/text';
+import { taskSize } from '../canvas/task';
+import { taskFieldAt } from './tasks';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, freshTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
 import { shapeStyle } from './shapeStyle';
@@ -158,8 +160,8 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         nh = Math.round(h0 * k);
       }
       if (it.type === 'text') nh = itemTextHeight(it, it.text, nw);
-      // A task can be made taller by hand, never shorter than its text.
-      if (it.type === 'task') nh = Math.max(nh, fitHeight(it, it.text, nw)!);
+      // A task only wider or narrower, as tall as what's in it then (see canvas/task.ts).
+      if (it.type === 'task') { nw = Math.max(it.tv ? 360 : 200, nw); nh = taskSize(it, nw).h; }
       // Text wrapping onto more lines (or fewer) takes the text just under it along.
       const moves = pushedBelow(it, nh - it.h, board.list());
       board.transact(() => {
@@ -358,7 +360,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // (A timeline neither folds nor has a title.)
         if (it?.tl) { /* nothing */ }
         else if (it?.type === 'frame' && !it.inst && (it.fold || toLocal(it, g.start).y >= it.y)) ed.setFolded(it.id, !it.fold);
-        else if (!it?.inst) ed.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : null);
+        else if (!it?.inst) ed.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : it?.type === 'task' ? taskFieldAt(it, g.start) : null);
       } else if (g.again && !g.cell && under(ed, g.id, g.start)) {
         // "Клик сквозь": what's under it there is picked instead.
         ed.setSelection([under(ed, g.id, g.start)!.id]);
@@ -377,8 +379,6 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       board.endGesture();
       return;
     case 'place': {
-      // "Задача-компонент" (src/labs): a task is the component that comes with PlanX.
-      if (g.tool === 'task' && labOn('taskComponent')) { ed.addTask(g.at); return; }
       if (g.tool === 'timeline') { ed.addTimeline(g.at); return; }
       const d = DEFAULTS[g.tool];
       const it = g.tool === 'text'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boxOf, polyPoints, distToSegment, edgePoint, elbowRoute, linkShape, spreadElbows, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, onTaskBox, rectContains, resizedAt, sidePoint, taskBox } from '../src/canvas/geometry';
+import { boxOf, polyPoints, distToSegment, edgePoint, elbowRoute, linkShape, spreadElbows, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, rectContains, resizedAt, sidePoint } from '../src/canvas/geometry';
 import { withList, wrapText } from '../src/canvas/text';
 import type { Item } from '../src/model/types';
 
@@ -75,18 +75,6 @@ describe('geometry', () => {
     expect(inkPoints(big)[1]).toEqual({ x: 200, y: 200 });
     expect(nearInk(big, { x: 150, y: 156 }, 1)).toBe(true);
     expect(nearInk(ink, { x: 50, y: 56 }, 1)).toBe(false);
-  });
-
-  it('finds the checkbox of a task in its top right corner', () => {
-    const task = box('task', { w: 260, h: 52 });
-    const c = taskBox(task);
-    expect(c).toEqual({ x: 242, y: 18, r: 10 });
-    expect(onTaskBox(task, c)).toBe(true);
-    expect(onTaskBox(task, { x: 30, y: 26 })).toBe(false);
-    // Same size on screen when zoomed in: half as big on the board at 200%.
-    expect(taskBox(task, 2)).toEqual({ x: 251, y: 9, r: 5 });
-    // Zoomed far out it stops at 30% of the card's height.
-    expect(taskBox(task, 0.1).r).toBeCloseTo(15.6);
   });
 
   it('a star takes a corner radius of its own: then its ten corners, filling its box', () => {

@@ -14,7 +14,7 @@ import { isLocked, labOn } from './labs';
 const FORMAT = ['fs', 'fw', 'ff', 'fi', 'fu', 'fx', 'tc', 'mk', 'ta', 'va', 'ls'] as const;
 
 /** Items the text panel takes as one. */
-export const TEXTUAL: Item['type'][] = ['text', 'sticky', 'task', 'table'];
+export const TEXTUAL: Item['type'][] = ['text', 'sticky', 'table'];
 
 /** One item standing for all the picked in the text panel: the first, with what they don't share
  *  left unset, as big as all of them; null unless the feature is on and they all have text. */

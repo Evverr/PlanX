@@ -493,27 +493,6 @@ export function distToSegment(p: Point, a: Point, b: Point): number {
   return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
 }
 
-/** Tasks: the round checkbox sits in the top right corner, in a strip this wide; the text fills the rest. */
-/** The checkbox keeps its size on screen at any zoom (in screen pixels here), until zooming out far
- *  enough that it would outgrow the card. The text, centred, keeps TASK_INSET board units clear on
- *  each side (on top of the usual padding) so it stays off the checkbox. */
-export const TASK_INSET = 18;
-export const TASK_BOX_R = 10;
-const TASK_BOX_GAP = 8;
-
-/** The checkbox's centre and radius on the board at this zoom. */
-export function taskBox(it: Rect, zoom = 1): Point & { r: number } {
-  const k = Math.min(1 / zoom, (it.h * 0.3) / TASK_BOX_R), r = TASK_BOX_R * k, gap = TASK_BOX_GAP * k;
-  return { x: it.x + it.w - r - gap, y: it.y + r + gap, r };
-}
-
-/** Whether the point is on a task's checkbox, with a little room around it. */
-export function onTaskBox(it: Item, p: Point, zoom = 1): boolean {
-  const c = taskBox(it, zoom);
-  p = toLocal(it, p);
-  return Math.hypot(p.x - c.x, p.y - c.y) <= c.r * 1.5;
-}
-
 /** Audio notes: the play button's centre and radius, scaled with the card's height (drawn 64 high). */
 export const audioButton = (it: Rect): Point & { r: number } => {
   const k = it.h / 64;

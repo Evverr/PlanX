@@ -10,7 +10,7 @@ export type Status = 'connecting' | 'online' | 'offline';
 
 export interface Me { name: string; color: string }
 
-const PEER_COLORS = ['#E5484D', '#F76B15', '#2F9E44', '#1C7ED6', '#7048E8', '#D6409F', '#0C8599', '#AD7F00'];
+export const PEER_COLORS = ['#E5484D', '#F76B15', '#2F9E44', '#1C7ED6', '#7048E8', '#D6409F', '#0C8599', '#AD7F00'];
 const ANIMALS = ['Ёж', 'Лис', 'Барсук', 'Сова', 'Енот', 'Бобр', 'Кит', 'Рысь', 'Выдра', 'Лось', 'Тюлень', 'Сокол'];
 
 /** Board id from the address (?board=…); null when there is none, and the shelf of boards opens instead. */
