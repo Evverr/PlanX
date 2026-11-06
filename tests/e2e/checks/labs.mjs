@@ -705,6 +705,41 @@ export const checks = {
     expect(await p.ev(`planx.board.get('m').fi`), 'its text in italics').toBe(true);
   },
 
+  async '"Перестановка в таблице": a double click on a table, a cell or a line, puts the pills out, only those of the column and row under the pointer; typing in a cell too'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [120, 120, 120], rows: [40, 40, 40], cells: Array(9).fill('') })); e.setSelection([]); })()`);
+    await sleep(300);
+    const on = () => p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`);
+    // Which pills the pointer finds over each column's top and by each row.
+    const pills = () => p.ev(`(async () => { const m = await import('/src/labs/tableMove.ts'), e = planx.editor;
+      return [[360, 291], [480, 291], [600, 291], [291, 320], [291, 360], [291, 400]].map(([x, y]) => { const g = m.gripAt(e, { x, y }); return g ? g.axis + g.index : '-'; }).join(); })()`);
+    const dbl = async ([x, y]) => { await p.mouse('mouseMoved', x, y); for (let i = 0; i < 2; i++) { await p.mouse('mousePressed', x, y); await p.mouse('mouseReleased', x, y); await sleep(60); } await sleep(250); };
+    // On the line between the first two columns.
+    await dbl([420, 330]);
+    expect(await on(), 'out').toBe(true);
+    await p.mouse('mouseMoved', 480, 360);
+    await sleep(100);
+    expect(await pills(), 'the middle column\'s and row\'s only').toBe('-,col1,-,-,row1,-');
+    await p.mouse('mouseMoved', 600, 400);
+    await sleep(100);
+    expect(await pills(), 'others as it moves').toBe('-,-,col2,-,-,row2');
+    // Off it: none; a click elsewhere puts them away.
+    await p.mouse('mouseMoved', 900, 600);
+    await sleep(100);
+    expect(await pills(), 'none').toBe('-,-,-,-,-,-');
+    await p.click([900, 600]);
+    expect(await on(), 'away').toBe(false);
+    // Typing in a cell: theirs, under the pointer.
+    await p.ev(`(() => { const e = planx.editor; e.setSelection(['t']); e.startEditing('t', 4); })()`);
+    await sleep(300);
+    await p.mouse('mouseMoved', 480, 360);
+    await sleep(100);
+    expect(await pills(), 'typing, the pointer over the text').toBe('-,col1,-,-,row1,-');
+    await p.ev(`planx.editor.stopEditing()`);
+    await sleep(100);
+    expect(await pills(), 'typing done: no pills').toBe('-,-,-,-,-,-');
+  },
+
   async '"Перестановка в таблице": a column dragged by its pill takes its cells along'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [100, 120, 140], rows: [40, 40, 40], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] })); e.setSelection(['t']); })()`);
@@ -741,7 +776,10 @@ export const checks = {
     expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'not out by a drag').toBe(false);
     await p.ev(`planx.board.update('t', { x: 300, y: 300 })`);
     await p.click([500, 330]);
-    expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'out by a second click').toBe(true);
+    expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'not by a slow second click').toBe(false);
+    for (let i = 0; i < 2; i++) { await p.mouse('mousePressed', 500, 330); await p.mouse('mouseReleased', 500, 330); await sleep(60); }
+    await p.ev(`planx.editor.stopEditing()`);
+    expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'out by a double click').toBe(true);
     // Along the way it moves, just past the table's edge is enough; across, 44 isn't reached by 30.
     await p.drag([360, 293], [360, 260]);
     expect((await p.ev(`planx.board.get('t')`)).cols.length, '30 off its side: kept').toBe(3);
