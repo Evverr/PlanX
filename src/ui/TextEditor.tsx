@@ -12,7 +12,7 @@ import { openSwap, swapKind } from '../labs/swap';
 import { linkedTexts } from '../labs/textPush';
 import { addSub, setView } from '../model/task';
 import { taskOpen } from '../labs/taskFull';
-import { CODE_BOTTOM, CODE_FS, CODE_LEFT, CODE_LINE, CODE_PAD, CODE_TOP, setLiveCode } from '../labs/codeBlock';
+import { CODE_BOTTOM, CODE_FS, CODE_LEFT, CODE_LINE, CODE_PAD, CODE_TOP, codeScroll, setLiveCode, setLiveScroll } from '../labs/codeBlock';
 
 /**
  * A textarea laid over the item being edited, scaled with the board so the
@@ -42,8 +42,28 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
     else el.select();
     const onCommit = () => commit();
     window.addEventListener('planx:commit-edit', onCommit);
+    // A block of code bigger than it is scrolls: from where it was, after the caret, and by the wheel
+    // (Shift: across), the code drawn under it with it.
+    const onScroll = () => { setLiveScroll(id, el.scrollLeft, el.scrollTop); editor.requestRender(); };
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const z = editor.cam.z;
+      el.scrollLeft += (e.shiftKey ? e.deltaX || e.deltaY : e.deltaX) / z;
+      if (!e.shiftKey) el.scrollTop += e.deltaY / z;
+    };
+    if (code) {
+      // (Once it's as big as the block: sized below.)
+      const sc = codeScroll(item);
+      requestAnimationFrame(() => { el.scrollLeft = sc.x; el.scrollTop = sc.y; onScroll(); });
+      el.addEventListener('scroll', onScroll);
+      el.addEventListener('wheel', onWheel, { passive: false });
+    }
     return () => {
       window.removeEventListener('planx:commit-edit', onCommit);
+      el.removeEventListener('scroll', onScroll);
+      el.removeEventListener('wheel', onWheel);
       commit();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

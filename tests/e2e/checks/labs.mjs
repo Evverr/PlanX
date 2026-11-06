@@ -56,6 +56,19 @@ export const checks = {
     expect(await p.ev(`document.querySelector('.bar.panel .code-lang .fpick').textContent`), 'shown on the panel').toBe('Python');
   },
 
+  async '"Код": code too long pasted in grows the block to the screen\'s bottom edge at most, the rest scrolled to'(p) {
+    await p.click(await p.at('.labs-rail button[aria-label="Код"]'));
+    await sleep(200);
+    await p.cdp('Input.insertText', { text: Array.from({ length: 120 }, (_, i) => `line(${i});`).join('\n') });
+    await sleep(200);
+    const bottom = () => p.ev(`(() => { const it = planx.board.list().find((i) => i.code); return Math.round(planx.editor.toScreen({ x: it.x, y: it.y + it.h }).y); })()`);
+    expect(await bottom() <= 800, 'down to the screen\'s edge at most').toBe(true);
+    expect(await p.ev(`document.querySelector('textarea.text-edit.code').scrollTop > 0`), 'scrolled to the caret, at the end').toBe(true);
+    await p.key('Escape', 'Escape', 27);
+    await sleep(200);
+    expect(await bottom() <= 800, 'kept so').toBe(true);
+  },
+
   async '"Настройки" (the board menu) have a switch for each feature on trial, and a switched off one goes away'(p) {
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'the timer button at first').toBeTruthy();
     const open = async (label) => {
