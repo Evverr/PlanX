@@ -1151,9 +1151,9 @@ function outlineOn(path: Path2D, it: Item): void {
 }
 
 /**
- * Links go on their own layer so that where one crosses an item it can be faded to 7.5%:
+ * Links go on their own layer so that where one crosses an item it can be faded to 8%:
  * the items' outlines are filled as one path (so overlaps don't fade twice) and cut out
- * at 92.5% strength. Frames (timelines too) fade the links crossing them, but not those with an end on
+ * at 92% strength. Frames (timelines too) fade the links crossing them, but not those with an end on
  * something they hold, else every link inside one would fade: links are drawn in groups by the frames
  * holding their ends, each group cut through all but those. Instances and components show no card of
  * their own, so nothing fades through them but what's in them.
@@ -1209,7 +1209,7 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
     const own = new Set(key ? key.split(',') : []), cut = new Path2D(items);
     for (const f of frames) if (!own.has(f.id)) outlineOn(cut, f);
     gc.globalCompositeOperation = 'destination-out';
-    gc.globalAlpha = 0.925;
+    gc.globalAlpha = 0.92;
     gc.fill(cut);
     lc.drawImage(groupLayer, 0, 0);
   }
