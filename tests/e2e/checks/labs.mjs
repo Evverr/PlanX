@@ -37,6 +37,23 @@ export const checks = {
     expect(await p.ev(`window.clip?.split('\\n').length`), 'all of it copied').toBe(14);
   },
 
+  async '"Код": an empty block clicked is typed in at once, to paste into'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      planx.board.add(e.newItem('rect', 300, 300, { id: 'c', code: 'js', text: '', w: 480, h: 120, fs: 14, ff: 'mono', rad: 16 })); e.setSelection([]); })()`);
+    await sleep(200);
+    await p.click([540, 380]);
+    await sleep(200);
+    expect(await p.ev('planx.editor.editingId'), 'typed in').toBe('c');
+    await p.cdp('Input.insertText', { text: 'let a = 1;' });
+    await p.key('Escape', 'Escape', 27);
+    await sleep(200);
+    expect(await p.ev(`planx.board.get('c').text`), 'pasted').toBe('let a = 1;');
+    // With code in it, a click picks it, as anything else.
+    await p.click([540, 380]);
+    await sleep(200);
+    expect(await p.ev('planx.editor.editingId'), 'not typed in').toBe(null);
+  },
+
   async '"Код": dragged off the right rail, a block put where it\'s let go'(p) {
     const at = await p.at('.labs-rail button[aria-label="Код"]');
     await p.drag(at, [500, 400], { steps: 16 });
