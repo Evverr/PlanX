@@ -124,6 +124,8 @@ export class Editor {
   linkDots: string | null = null;
   /** Shared: the link under the pointer, faintly lit. */
   hotLink: string | null = null;
+  /** The picked links' colours being set (their params open): drawn as they are, not blue. */
+  linksAsThey = false;
   /** The mind map node button under the pointer (see buttonKey). */
   hotPlus: string | null = null;
   /** How far each folded mind map node's count (by `id:way`) has moved out from the "+" to the chevron's
@@ -587,6 +589,7 @@ export class Editor {
       // (Only once it's going: taken hold of, it stays as it is till then.)
       links: relinked && g?.type === 'relink' && g.going ? this.shownLinks().filter((l) => l.id !== relinked.id) : this.shownLinks(),
       hotLink: g ? null : this.hotLink,
+      linksAsThey: this.linksAsThey,
       get: glide ? (id) => { const it = this.board.get(id); return it && glide(it); } : (id) => this.board.get(id),
       cam: this.cam,
       theme: this.theme,

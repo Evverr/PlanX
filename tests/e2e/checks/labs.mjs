@@ -1975,5 +1975,9 @@ export const checks = {
     await p.click(await p.at('.bar.panel button[aria-label="Цвет и стрелки линий"]'));
     await p.click(await p.at('.palette-pop button[aria-label="Цвет: green"]'));
     expect(await p.ev(`planx.board.linkList().map((l) => l.color).join()`), 'both green from the panel').toBe('green,green');
+    expect(await p.ev(`planx.editor.linksAsThey`), 'drawn in their colour, not blue, meanwhile').toBe(true);
+    await p.click(await p.at('.bar.panel button[aria-label="Цвет и стрелки линий"]'));
+    await sleep(100);
+    expect(await p.ev(`planx.editor.linksAsThey`), 'blue again once closed').toBe(false);
   },
 };
