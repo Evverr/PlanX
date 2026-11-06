@@ -3,7 +3,7 @@ import type { Editor } from '../editor/editor';
 import type { Item, Person } from '../model/types';
 import type { TaskKeep, TaskPick, TaskTip } from '../editor/tasks';
 import { PEER_COLORS, type Me } from '../collab/connection';
-import { fitTask } from '../model/task';
+import { fitTask, keepOpen } from '../model/task';
 
 /** A colour for someone typed in by hand: the same for the same name. */
 const colorFor = (name: string) => PEER_COLORS[[...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % PEER_COLORS.length];
@@ -67,7 +67,7 @@ export function TaskKeepPop({ editor }: { editor: Editor }) {
       <p>Рекомендуем оставлять задачи свернутыми, это поможет держать всю схему в аккуратном состоянии. Если вы оставите задачу развернутой, она всегда будет сверху над другими объектами.</p>
       <div className="row">
         <button className="btn" onClick={() => setAsk(null)}>Отменить</button>
-        <button className="btn primary" onClick={() => { editor.board.update(ask.id, { keep: true }); setAsk(null); }}>Не сворачивать</button>
+        <button className="btn primary" onClick={() => { keepOpen(editor.board, ask.id); setAsk(null); }}>Не сворачивать</button>
       </div>
     </div>
   );
