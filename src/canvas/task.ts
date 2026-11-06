@@ -27,7 +27,9 @@ const STATUS = 22, ARROW = 24;
 /** How far round the ring and the arrow a press is still theirs (the rest of the header a double click's). */
 const AROUND = 5;
 /** Where the people's names start and their circles' middle; a row's height; a subtask's. */
-const LABEL_X = 47, NAME_X = 200, AVATAR_X = 182, ROW = 33, SUB = 38, SUB_X = 48, SUB_TEXT_X = 79;
+const LABEL_X = 47, NAME_X = 200, AVATAR_X = 182, ROW = 33, SUB = 38;
+/** The subtasks under who does it: their rings on its picture's middle, their text where names start. */
+const SUB_X = AVATAR_X - 11, SUB_TEXT_X = NAME_X;
 /** The buttons as the panels' (.btn in popups.css): 32 tall, their text 12 bold Inter with 14 each side. */
 const BUTTON_H = 32, BUTTON_PAD = 14, BUTTON_FONT = { size: 12, weight: 600 };
 export const DESC_HINT = 'Добавить описание', SUB_HINT = 'Добавить подзадачу', KEEP_LABEL = 'Не сворачивать';
@@ -99,12 +101,13 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   }
   const keys = it.people ? (['boss', 'doer', 'due'] as const) : (['doer'] as const), r = d + 58 + ROW * (keys.length - 1);
   out.rows = keys.map((key, i) => ({ key, y: d + 58 + ROW * i }));
-  // (Its chevron's right end, 18 into the icon, where the lines across end.)
-  out.peopleAt = { x: w - 49 - 18, y: d + 58 - ARROW / 2 };
-  out.subsAt = r + 57;
+  // (Its chevron, a small one, 17 into the icon at its right end, 2 short of where the lines across end.)
+  out.peopleAt = { x: w - 49 - 2 - 17, y: d + 58 - ARROW / 2 };
+  // «Подзадачи:» as a row's label, the first of them level with it.
+  out.subsAt = r + 66;
   const n = it.subs?.length ?? 0;
-  out.subs = Array.from({ length: n + 1 }, (_, i) => r + 89 + i * SUB);
-  const last = r + 89 + n * SUB + STATUS;
+  out.subs = Array.from({ length: n + 1 }, (_, i) => r + 66 - STATUS / 2 + i * SUB);
+  const last = r + 66 - STATUS / 2 + n * SUB + STATUS;
   out.lines = [d + 25, r + 33, last + 27];
   const by = last + 27 + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - 43 - fw;
   out.finish = { x: fx, y: by, w: fw, h: BUTTON_H };
@@ -341,8 +344,8 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
     }
   }
   // The arrow showing who set it and by when too, or only who does it again.
-  if (l.peopleAt) drawIcon(ctx, it.people ? 'chevron-up-m' : 'chevron-down-m', x + l.peopleAt.x, y + l.peopleAt.y, ARROW, arrowInk('people'));
-  lines('Подзадачи:', { x: LABEL_X, y: l.subsAt, w: l.w - LABEL_X * 2, h: lineH(TEXT_FS) }, TEXT_FS, 400, look.ink, 0.8);
+  if (l.peopleAt) drawIcon(ctx, it.people ? 'chevron-up-s' : 'chevron-down-s', x + l.peopleAt.x, y + l.peopleAt.y, ARROW, arrowInk('people'));
+  label('Подзадачи:', l.subsAt);
   const subs = it.subs ?? [];
   l.subs.forEach((sy, i) => {
     const mid = sy + STATUS / 2, box = { x: SUB_TEXT_X, y: mid - lineH(TEXT_FS) / 2, w: l.w - SUB_TEXT_X - 47, h: lineH(TEXT_FS) };
