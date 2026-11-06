@@ -181,7 +181,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
         return;
       }
       press.current = null;
-      // ("Режим настройки", src/labs: only with it on.)
+      // ("Режим настройки меню", src/labs: only with it on.)
       if (canRearrange()) lift(p);
     }, HOLD_MS);
     press.current = p;
@@ -196,8 +196,8 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     if (Math.hypot(p.x - p.x0, p.y - p.y0) <= HOLD_SLOP) return;
     clearTimeout(p.timer);
     press.current = null;
-    // (With "Режим настройки" on, taken and moved at once anywhere.)
-    if (dropOut || customizeOn()) lift(p);
+    // ("Режим настройки меню": with it on, taken and moved at once anywhere; off, not even onto the board.)
+    if ((dropOut && canRearrange()) || customizeOn()) lift(p);
   };
   const pressUp = () => {
     const held = press.current?.held;
@@ -257,7 +257,6 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     if (!drag) return;
     const d = drag, dist = Math.hypot(e.clientX - d.x0, e.clientY - d.y0);
     const moved = d.moved || (d.zone === 'bar' ? Math.abs(along(e.clientX, e.clientY) - along(d.x0, d.y0)) > HOLD_SLOP || dist > HOLD_SLOP * 3 : dist > HOLD_SLOP);
-    // ("Режим настройки" off: only onto the board, not along the panel or into "more".)
     const sorts = canRearrange();
     // Over the other place (the open popover from the panel, the panel from the popover), it goes there.
     if (sorts && moved && d.zone === 'bar' && over('more', e)) { intoMore(d, e); return; }

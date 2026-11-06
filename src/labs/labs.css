@@ -217,7 +217,7 @@
 /* "Сплошная выбранная иконка": what's on on the tool rail, white on blue. */
 .fb.fb.solid-on::before, .fb.solid-on:hover:not(:disabled)::before { background: var(--fmt-on-ink); }
 .fb.solid-on .pi { background: #fff; }
-/* "Режим настройки" (customize.ts): the panels' buttons there to be taken. */
+/* "Режим настройки меню" (customize.ts): the panels' buttons there to be taken. */
 :root[data-customize] .sortable :is([data-key], [data-more-key]) { cursor: grab; }
 /* (The link dots' switch on the zoom bar, "Связи инструментом", on as a tool picked is.) */
 .ib.ib.solid-on, .ib.solid-on:hover { background: var(--fmt-on-ink); }

@@ -106,7 +106,7 @@ export const checks = {
     expect((await mainKeys(p, '.bar.zoom')).some((k) => k[0] === k0[2][0]), 'it is on the bar').toBeTruthy();
   },
 
-  async '"Режим настройки": the panels\' buttons stay put till it\'s on in the board menu; then they move, held or not'(p) {
+  async '"Режим настройки меню": the panels\' buttons stay put till it\'s on in the board menu, not even dragged onto the board; then they move, held or not'(p) {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('customize', true))()`);
     await sleep(100);
     const keys = async () => (await mainKeys(p, '.bar.zoom')).map((k) => k[0]).join();
@@ -115,9 +115,13 @@ export const checks = {
     const map = await at('map'), zin = await at('zoom-in');
     await carry(p, map, [[zin[0] - 30, zin[1]]]);
     expect(await keys(), 'off: as it was').toBe(before);
+    // Nor a rail button onto the board.
+    const n = await p.ev(`planx.board.list().length`), sticky = await p.rect('.tools button[aria-label="Заметки"]');
+    await p.drag([(sticky.l + sticky.r) / 2, (sticky.t + sticky.b) / 2], [600, 400], { steps: 16 });
+    expect(await p.ev(`planx.board.list().length`), 'off: nothing dragged onto the board').toBe(n);
     // On, from the board menu.
     await p.click(await p.at('.topbar button[aria-label="Меню"]'));
-    await p.ev(`[...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Режим настройки')).click()`);
+    await p.ev(`[...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Режим настройки меню')).click()`);
     await sleep(100);
     await p.escape();
     await sleep(200);

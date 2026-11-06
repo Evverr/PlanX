@@ -2,9 +2,9 @@ import { useSyncExternalStore } from 'react';
 import { labOn } from './labs';
 
 /**
- * "Режим настройки": in the board menu, a switch; on, the panels' buttons can be rearranged (taken and
- * dragged along their panel, held or not); off, they stay put (a rail button still goes onto the board
- * when dragged off it). Not kept: each time it's off at first.
+ * "Режим настройки меню": in the board menu, a switch; on, the panels' buttons can be rearranged (taken
+ * and dragged along their panel, held or not, or off the rail onto the board); off, they stay put. Not
+ * kept: each time it's off at first.
  */
 let on = false;
 const fns = new Set<() => void>();
