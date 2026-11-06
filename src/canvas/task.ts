@@ -156,6 +156,8 @@ const STRONG: Record<string, string> = {
   blue: '#003CFF', green: '#12A53A', orange: '#F28C00', yellow: '#E0B000', pink: '#E8457F', purple: '#7B4DFF', gray: '#7C8590', graphite: '#4E5560',
 };
 const BLUE = '#2A5BFF';
+/** A task done: its edge's and tint's colour. */
+const DONE_GREY = '#5A616C';
 
 const rgb = (hex: string) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
 const mix = (a: string, b: string, k: number) => {
@@ -212,8 +214,8 @@ const DATE = (due: string) => {
 /** The card. `typing` is the part being typed in (its text left to the overlay): null for the title,
  *  0 for the description, 1… for a subtask; undefined when none is. */
 export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typing: number | null | undefined, hot: string | null = null): void {
-  // Done, it's grey (a colour not given to those still to do).
-  const l = taskLayout(it), { x, y } = it, strong = strongOf(statusOf(it) === 'done' ? 'gray' : it.color);
+  // Done, it's grey, darker than the grey given to anything (a colour not given to those still to do).
+  const l = taskLayout(it), { x, y } = it, strong = statusOf(it) === 'done' ? DONE_GREY : strongOf(it.color);
   const bg = look.dark ? '#26272C' : '#FFFFFF', tint = mix(strong, bg, look.dark ? 0.16 : 0.05);
   const edge = `rgba(${rgb(strong.startsWith('#') ? strong : '#003CFF').join(',')}, 0.3)`;
   // The card, its edge 2 wide inside it; its header tinted, the whole of it when closed. Opened, it
