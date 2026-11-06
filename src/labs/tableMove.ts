@@ -347,6 +347,9 @@ export function endGrip(ed: Editor): void {
 
 const pick = () => getComputedStyle(document.documentElement).getPropertyValue('--fmt-on-ink').trim() || '#0080FF';
 
+/** A column or row taken off the table: how far it tilts (in radians), how long it takes to lift. */
+const TILT = -4 * Math.PI / 180, LIFT_MS = 140;
+
 /** How long a pill takes to grow and take its colour, or go back, in ms; a plus, a little quicker. */
 const PILL_TURN = 75, PLUS_TURN = 50;
 /** How far each pill is on its way to lit (1) or not (0), and since when. */
@@ -373,18 +376,42 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
   const color = pick(), z = ed.cam.z;
   ctx.save();
   ctx.fillStyle = color;
+  let dragShift: Point | null = null;
   if (drag && drag.grip.id === it.id) {
-    const { axis, index } = drag.grip, sizes = axis === 'col' ? colsOf(it) : rowsOf(it);
-    const d = axis === 'col' ? drag.at.x - drag.from.x : drag.at.y - drag.from.y, start = sum(sizes.slice(0, index));
-    const band = axis === 'col'
-      ? { x: it.x + start + d, y: it.y, w: sizes[index], h: it.h }
-      : { x: it.x, y: it.y + start + d, w: it.w, h: sizes[index] };
-    const a = ed.toScreen(band), away = off(ed, it);
-    // Off the table: red, to go when let go.
-    ctx.globalAlpha = away ? 0.18 : 0.12;
-    if (away) ctx.fillStyle = '#E5484D';
-    ctx.fillRect(a.x, a.y, band.w * z, band.h * z);
-    ctx.fillStyle = color;
+    const { axis, index } = drag.grip, sizes = axis === 'col' ? colsOf(it) : rowsOf(it), start = sum(sizes.slice(0, index));
+    const home = ed.toScreen(axis === 'col' ? { x: it.x + start, y: it.y } : { x: it.x, y: it.y + start });
+    const w = (axis === 'col' ? sizes[index] : it.w) * z, h = (axis === 'col' ? it.h : sizes[index]) * z;
+    // Along the table as it's moved; off it (to go when let go), lifted out of it: following the
+    // pointer every way, tilted, its shadow under it, red.
+    const away = off(ed, it), lift = litNow(ed, `${it.id}:lift`, away, LIFT_MS);
+    const full = { x: (drag.at.x - drag.from.x) * z, y: (drag.at.y - drag.from.y) * z }, along = axis === 'col' ? { x: full.x, y: 0 } : { x: 0, y: full.y };
+    dragShift = { x: along.x + (full.x - along.x) * lift, y: along.y + (full.y - along.y) * lift };
+    if (lift > 0) {
+      // A picture of it as it stands, taken from the board drawn under this (in the canvas's pixels).
+      const m = ctx.getTransform(), cx = home.x + dragShift.x + w / 2, cy = home.y + dragShift.y + h / 2, k = 1 + 0.04 * lift;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(TILT * lift);
+      ctx.scale(k, k);
+      ctx.globalAlpha = 1;
+      ctx.shadowColor = `rgba(0, 0, 0, ${0.22 * lift})`;
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetY = 8 * lift;
+      ctx.drawImage(ctx.canvas, m.a * home.x + m.e, m.d * home.y + m.f, w * m.a, h * m.d, -w / 2, -h / 2, w, h);
+      ctx.shadowColor = 'transparent';
+      ctx.fillStyle = '#E5484D';
+      ctx.globalAlpha = 0.18 * lift;
+      ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.restore();
+      // Where it was, faintly red.
+      ctx.fillStyle = '#E5484D';
+      ctx.globalAlpha = 0.1 * lift;
+      ctx.fillRect(home.x, home.y, w, h);
+      ctx.fillStyle = color;
+    } else {
+      ctx.globalAlpha = 0.12;
+      ctx.fillRect(home.x + along.x, home.y + along.y, w, h);
+    }
     const to = target(it);
     if (to !== index && !away) {
       // Past the one under the pointer when going on, before it when going back.
@@ -400,7 +427,7 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
     const shown = litNow(ed, `${it.id}:${g.axis}:${g.index}:seen`, seen(ed, it, g));
     if (!shown) continue;
     const dragged = drag?.grip.axis === g.axis && drag.grip.index === g.index;
-    const shift = dragged && drag ? (g.axis === 'col' ? { x: (drag.at.x - drag.from.x) * z, y: 0 } : { x: 0, y: (drag.at.y - drag.from.y) * z }) : { x: 0, y: 0 };
+    const shift = dragged && dragShift ? dragShift : { x: 0, y: 0 };
     const on = dragged || (hot?.axis === g.axis && hot.index === g.index), lit = litNow(ed, `${it.id}:${g.axis}:${g.index}`, on);
     // Under the pointer or dragged: 1.2 × 1.4 times as big, in the selection frame's blue, going there
     // and back smoothly.
@@ -477,9 +504,9 @@ function drawPuffs(ctx: CanvasRenderingContext2D, ed: Editor): void {
   if (!puffs.length) return;
   ctx.save();
   ctx.fillStyle = '#fff';
-  // (A faint shadow, for white on white.)
-  ctx.shadowColor = 'rgba(0, 0, 0, .12)';
-  ctx.shadowBlur = 4;
+  // (A shadow, for white on the light board.)
+  ctx.shadowColor = 'rgba(0, 0, 0, .22)';
+  ctx.shadowBlur = 8;
   for (const p of puffs) {
     const k = (now - p.t) / PUFF, e = 1 - (1 - k) ** 2;
     ctx.globalAlpha = 0.9 * (1 - k);
