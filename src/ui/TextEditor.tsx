@@ -9,7 +9,7 @@ import { autoInk } from '../model/color';
 import { colsOf, rowsOf } from '../model/table';
 import { openSwap, swapKind } from '../labs/swap';
 import { linkedTexts } from '../labs/textPush';
-import { CODE_FS, CODE_LINE, CODE_PAD, CODE_TOP, setLiveCode } from '../labs/codeBlock';
+import { CODE_BOTTOM, CODE_FS, CODE_LEFT, CODE_LINE, CODE_PAD, CODE_TOP, setLiveCode } from '../labs/codeBlock';
 
 /**
  * A textarea laid over the item being edited, scaled with the board so the
@@ -51,11 +51,11 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   // A folded frame's title is typed in where it stands, inside the bar.
   const folded = isFrame && !!item.fold;
   const fs = folded ? FOLD_FS : isFrame ? 15 : item.fs ?? (code ? CODE_FS : 16);
-  const pad = code ? CODE_PAD : textPad(item), padY = code ? CODE_TOP : textPadY(item);
+  const pad = code ? CODE_LEFT : textPad(item), padY = code ? CODE_TOP : textPadY(item);
   // A task's text starts right of its checkbox.
   const inset = item.type === 'task' ? TASK_INSET : 0;  // a task's text keeps clear of its checkbox
   const width = folded ? Math.max(160, item.w - FOLD_PAD - FOLD_TITLE_GAP - FOLD_ICON - FOLD_RIGHT)
-    : isFrame ? Math.max(160, item.w * 0.6) : item.w - inset * 2 - pad * 2;
+    : isFrame ? Math.max(160, item.w * 0.6) : code ? item.w - CODE_LEFT - CODE_PAD : item.w - inset * 2 - pad * 2;
   const top = folded ? item.y + (item.h - 26) / 2 : isFrame ? item.y - 30 : item.y + padY;
   const p = editor.toScreen({ x: item.x + (folded ? FOLD_PAD : isFrame ? 0 : inset + pad), y: top });
 
@@ -65,7 +65,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
     const el = ref.current;
     if (!el) return;
     let top = 0;
-    if (code) el.style.height = `${Math.max(0, item.h - CODE_TOP - CODE_PAD)}px`;
+    if (code) el.style.height = `${Math.max(0, item.h - CODE_TOP - CODE_BOTTOM)}px`;
     else if (item.type !== 'text' && !isFrame) {
       // As tall as the canvas lays the lines out (exactly, not rounded), so they land where it drew them.
       const content = Math.min(textBlockHeight(el.value, width, fs, fontOf(item)), item.h - padY * 2);
@@ -101,7 +101,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           color: item.tc && (item.tc.startsWith('#') ? item.tc : TEXT_COLORS[item.tc]) || autoInk(item, siblingTints(editor.board.list())) || undefined,
         }),
         padding: isFrame ? '0 4px' : 0,
-        ...(code && { color: 'transparent', caretColor: 'var(--ink)', whiteSpace: 'pre', overflowWrap: 'normal', tabSize: 2 }),
+        ...(code && { color: 'transparent', caretColor: '#E6E7EC', whiteSpace: 'pre', overflowWrap: 'normal', tabSize: 2 }),
       }}
       // A mind map node dragged by its text moves, as it would anywhere else on it.
       onPointerDown={item.type === 'mind' ? (e) => {
