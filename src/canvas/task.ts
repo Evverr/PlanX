@@ -31,7 +31,13 @@ export const DESC_HINT = 'Добавить описание', SUB_HINT = 'Доб
 /** The box of «Не сворачивать», and its label after it. */
 const KEEP_BOX = 18, KEEP_GAP = 8;
 
-export const statusOf = (it: Item): TaskStatus => it.st ?? (it.done ? 'done' : 'todo');
+/** How much of its subtasks is done (0 to 1), when it has some: its ring shows that instead. */
+export const progressOf = (it: Item): number | null => (it.subs?.length ? it.subs.filter((s) => s.done).length / it.subs.length : null);
+/** Its status: with subtasks, done once they all are, being done once one is. */
+export const statusOf = (it: Item): TaskStatus => {
+  const pr = progressOf(it);
+  return pr === null ? it.st ?? (it.done ? 'done' : 'todo') : pr === 1 ? 'done' : pr > 0 ? 'doing' : 'todo';
+};
 /** What a click on its ring makes it: to do, being done, done, round again. */
 export const nextStatus = (s: TaskStatus): TaskStatus => (s === 'todo' ? 'doing' : s === 'doing' ? 'done' : 'todo');
 
@@ -160,8 +166,9 @@ const strongOf = (color: string | undefined) => (color?.startsWith('#') ? color 
 /** `px`: the screen's pixels in a unit of the board (for the shadow, which the canvas doesn't scale). */
 export interface TaskLook { surface: string; ink: string; muted: string; dark: boolean; z: number; px: number }
 
-/** The ring of a status (or a subtask's: to do or done), its middle at x, y. */
-export function drawStatus(ctx: CanvasRenderingContext2D, x: number, y: number, s: TaskStatus, look: TaskLook): void {
+/** The ring of a status (or a subtask's: to do or done), its middle at x, y; being done, `part` of it
+ *  round in blue (three quarters; with subtasks, as much as of them is done). */
+export function drawStatus(ctx: CanvasRenderingContext2D, x: number, y: number, s: TaskStatus, look: TaskLook, part = 0.75): void {
   const r = STATUS / 2;
   ctx.save();
   if (s === 'done') {
@@ -186,7 +193,7 @@ export function drawStatus(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.stroke();
     if (s === 'doing') {
       ctx.beginPath();
-      ctx.arc(x, y, r - 1.5, -Math.PI / 2, Math.PI);
+      ctx.arc(x, y, r - 1.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * part);
       ctx.strokeStyle = BLUE;
       ctx.lineWidth = 2.5;
       ctx.lineCap = 'round';
@@ -247,7 +254,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   ctx.fillText(tag, x + l.w - 16 - pw / 2 + 0.25, y + 1.5);
   ctx.letterSpacing = '0px';
   const st = statusOf(it);
-  drawStatus(ctx, x + 15 + STATUS / 2, y + MID, st, look);
+  drawStatus(ctx, x + 15 + STATUS / 2, y + MID, st, look, progressOf(it) ?? 0.75);
   // The arrows darker under the pointer.
   const arrowInk = (part: string) => (hot === `task:${it.id}:${part}` ? (look.dark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.75)') : look.dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)');
   drawIcon(ctx, it.tv ? 'chevron-up-m' : 'chevron-down-m', x + l.w - 35, y + MID - ARROW / 2, ARROW, arrowInk('arrow'));

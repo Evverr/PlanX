@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextStatus, statusOf } from '../src/canvas/task';
+import { nextStatus, progressOf, statusOf } from '../src/canvas/task';
 import { taskTextPatch } from '../src/model/task';
 import type { Item } from '../src/model/types';
 
@@ -10,6 +10,12 @@ describe('tasks', () => {
     expect([nextStatus('todo'), nextStatus('doing'), nextStatus('done')]).toEqual(['doing', 'done', 'todo']);
     expect(statusOf(task({ done: true }))).toBe('done');
     expect(statusOf(task())).toBe('todo');
+  });
+
+  it('with subtasks, are as far on as they are', () => {
+    const subs = (...done: boolean[]) => done.map((d) => ({ t: 'П', done: d || undefined }));
+    expect([progressOf(task()), progressOf(task({ subs: subs(true, false, false, false) }))]).toEqual([null, 0.25]);
+    expect([statusOf(task({ st: 'done', subs: subs(false) })), statusOf(task({ subs: subs(true, false) })), statusOf(task({ subs: subs(true, true) }))]).toEqual(['todo', 'doing', 'done']);
   });
 
   it('keep what is typed in each part; an empty subtask goes', () => {
