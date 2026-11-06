@@ -7,7 +7,7 @@ import { linkWidth } from '../canvas/renderer';
  * "Узел на линии": with a line picked, a text, sticker, shape or emoji dragged onto one of its middle
  * circles stands in the line's middle there and becomes a part of it: the line is two then, from its
  * start to it and from it to its end (each with its middle circle), stopping 3 short of it either side
- * (see linkShape), and moving it moves the line.
+ * (see linkShape), and moving it moves the line. Dragged with Cmd (Ctrl) held, it comes out again.
  */
 
 /** What can be put into a line: those, and the game stickers (pictures). */
@@ -140,6 +140,22 @@ export function rejoined(ed: Editor, gone: Set<string>): Link[] {
       ...(via.length && { via }), ...(sided && { fromSide: a.fromSide, toSide: z.toSide, fromAt: a.fromAt, toAt: z.toAt }) });
   }
   return out;
+}
+
+/** Dragged with Cmd (or Ctrl) held: what's in a line among `ids` comes out of it, the line one again as
+ *  it was (see rejoined). */
+export function pullOut(ed: Editor, ids: Iterable<string>): void {
+  const b = ed.board, links = b.linkList();
+  for (const id of ids) {
+    if (!b.get(id)?.joint) continue;
+    const [line] = rejoined(ed, new Set([id]));
+    const halves = links.filter((l) => l.to === id || l.from === id).map((l) => l.id);
+    b.transact(() => {
+      b.update(id, { joint: undefined });
+      if (line) { b.remove(halves); b.addLink(line); }
+    });
+  }
+  ed.requestRender();
 }
 
 /** Puts `it` into the line at its middle `p` on stretch `at`: the line made two, through it. */

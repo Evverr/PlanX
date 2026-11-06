@@ -10,6 +10,7 @@ import { branchCrosses, canMoveTo, foldedWays, folding, mindWay, moveBranch } fr
 import { clamp, MAX_Z } from './camera';
 import { zoomToBox } from '../labs/zoomBox';
 import { showGrips } from '../labs/tableMove';
+import { pullOut } from '../labs/linkJoint';
 import { noteMindMoved } from '../labs/tidyMind';
 import { rotateCursor } from './cursors';
 import { MIND_TOPIC, type PenTool } from './tools';
@@ -85,6 +86,8 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         ed.setMoving(true);
         board.beginGesture();
         if (e.altKey) g.orig = ed.dragCopies(g.orig);
+        // ("Узел на линии", src/labs: with Cmd or Ctrl, what's in a line comes out of it.)
+        else if ((e.metaKey || e.ctrlKey) && labOn('linkJoint')) pullOut(ed, g.orig.keys());
       }
       // With Shift held as it's dragged, what's dragged lines up with what's on screen around it when near.
       let sx = 0, sy = 0;
