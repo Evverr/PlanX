@@ -801,6 +801,7 @@ export const checks = {
     await sleep(50);
     expect(await plusesAt([[551, 316]]), 'kept, near it').toBe('col@2');
     expect(await plusesAt([[660, 314]]), 'lit, the only one out').toBe('-');
+    expect(await pills(), 'the pills as before it, no other column\'s').toBe('-,col1,-,row0,-,-');
     // None on the top or left edge, wherever the pointer is.
     await p.mouse('mouseMoved', 291, 360);
     await sleep(50);
