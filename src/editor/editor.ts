@@ -583,7 +583,7 @@ export class Editor {
     // "Связи инструментом" (src/labs): the dots out on everything, with the cursor.
     const dotsMode = labOn('linkTool') && dotsOn() && this.tool === 'select';
     drawScene(this.ctx, {
-      items: glide ? this.shown().map(glide) : this.shown(),
+      items: this.withTyped(glide ? this.shown().map(glide) : this.shown()),
       // (Only once it's going: taken hold of, it stays as it is till then.)
       links: relinked && g?.type === 'relink' && g.going ? this.shownLinks().filter((l) => l.id !== relinked.id) : this.shownLinks(),
       hotLink: g ? null : this.hotLink,
@@ -1413,6 +1413,18 @@ export class Editor {
 
   /** What's typed so far in the item being typed in (see previewText). */
   private typed: { id: string; text: string } | null = null;
+
+  /** A task as it's drawn while typed in: with what's typed so far, so what's under the part being
+   *  typed in moves down as it grows (a subtask emptied kept till it's done with). */
+  private withTyped(items: Item[]): Item[] {
+    const t = this.typed, cell = this.editingCell;
+    if (!t || t.id !== this.editingId || (cell && !t.text.trim())) return items;
+    return items.map((it) => {
+      if (it.id !== t.id || it.type !== 'task') return it;
+      const patch = taskTextPatch(it, cell, t.text);
+      return patch ? { ...it, ...patch } : it;
+    });
+  }
 
   /** Called by the text overlay with its final value. */
   commitText(id: string, text: string): void {
