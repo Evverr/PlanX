@@ -8,7 +8,7 @@ import { SelectionPanel } from './ui/SelectionPanel';
 import { usePanelPlace } from './labs/panelPlace';
 import { TextEditor } from './ui/TextEditor';
 import { TextPanel } from './ui/FormatPanel';
-import { TaskPop, TaskTipBubble } from './ui/TaskPop';
+import { TaskKeepPop, TaskPop, TaskTipBubble } from './ui/TaskPop';
 import { PanelIcon } from './ui/PanelIcon';
 import { asOne } from './labs/multi';
 import { DockButton, useDock } from './ui/panels/dock';
@@ -459,6 +459,7 @@ export function App({ boardId }: { boardId: string }) {
       {/* A task's people and date, picked where its row was pressed. */}
       <TaskPop editor={editor} me={conn.me} peers={peers} />
       <TaskTipBubble />
+      <TaskKeepPop editor={editor} />
 
       {pop === 'clear' && (
         <div className="pop confirm" role="dialog" aria-label="Очистить доску">

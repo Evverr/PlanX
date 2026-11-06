@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Item, Person } from '../model/types';
-import type { TaskPick, TaskTip } from '../editor/tasks';
+import type { TaskKeep, TaskPick, TaskTip } from '../editor/tasks';
 import { PEER_COLORS, type Me } from '../collab/connection';
 import { fitTask } from '../model/task';
 
@@ -32,6 +32,45 @@ export function TaskTipBubble() {
   if (!tip) return null;
   // Its pointer's tip 4 over the point (the pointer 6 tall under the 37 tall bubble).
   return <div key={tip.at} className="tip above task-tip" role="tooltip" style={{ left: tip.x, top: tip.y - 37 - 10 }}>{tip.text}</div>;
+}
+
+/** «Не сворачивать» pressed: why it's better closed, by its box (under it, or over it where there's no
+ *  room); ticked by «Не сворачивать» here, not by «Отменить», Esc or a press elsewhere. */
+export function TaskKeepPop({ editor }: { editor: Editor }) {
+  const [ask, setAsk] = useState<TaskKeep | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const on = (e: Event) => setAsk((e as CustomEvent<TaskKeep>).detail);
+    window.addEventListener('planx:task-keep', on);
+    return () => window.removeEventListener('planx:task-keep', on);
+  }, []);
+  useEffect(() => {
+    if (!ask) return;
+    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setAsk(null); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); setAsk(null); } };
+    window.addEventListener('pointerdown', close, true);
+    window.addEventListener('keydown', esc, true);
+    return () => { window.removeEventListener('pointerdown', close, true); window.removeEventListener('keydown', esc, true); };
+  }, [ask]);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || !ask) return;
+    const h = el.offsetHeight, w = el.offsetWidth;
+    // (Not where the confirmations stand, at the bottom with the top bar there.)
+    el.style.bottom = 'auto';
+    el.style.left = `${Math.max(12, Math.min(ask.x - 16, innerWidth - w - 12))}px`;
+    el.style.top = `${ask.bottom + 12 + h > innerHeight - 12 ? Math.max(12, ask.top - 12 - h) : ask.bottom + 12}px`;
+  }, [ask]);
+  if (!ask) return null;
+  return (
+    <div ref={ref} className="pop confirm task-keep" role="alertdialog" aria-label="Не сворачивать">
+      <p>Рекомендуем оставлять задачи свернутыми, это поможет держать всю схему в аккуратном состоянии. Если вы оставите задачу развернутой, она всегда будет сверху над другими объектами.</p>
+      <div className="row">
+        <button className="btn" onClick={() => setAsk(null)}>Отменить</button>
+        <button className="btn primary" onClick={() => { editor.board.update(ask.id, { keep: true }); setAsk(null); }}>Не сворачивать</button>
+      </div>
+    </div>
+  );
 }
 
 export function TaskPop({ editor, me, peers }: { editor: Editor; me: Me; peers: Array<{ name: string; color: string }> }) {

@@ -36,10 +36,11 @@ export const progressOf = (it: Item): number | null => (it.subs?.length ? it.sub
 /** Its status: with subtasks, done once they all are, being done once one is. */
 export const statusOf = (it: Item): TaskStatus => {
   const pr = progressOf(it);
-  return pr === null ? it.st ?? (it.done ? 'done' : 'todo') : pr === 1 ? 'done' : pr > 0 ? 'doing' : 'todo';
+  // (Being done set by hand before, without subtasks: to do.)
+  return pr === null ? (it.st === 'done' || (!it.st && it.done) ? 'done' : 'todo') : pr === 1 ? 'done' : pr > 0 ? 'doing' : 'todo';
 };
-/** What a click on its ring makes it: to do, being done, done, round again. */
-export const nextStatus = (s: TaskStatus): TaskStatus => (s === 'todo' ? 'doing' : s === 'doing' ? 'done' : 'todo');
+/** What a click on its ring makes it: done, or to do again (being done is for those with subtasks, as far as they are). */
+export const nextStatus = (s: TaskStatus): TaskStatus => (s === 'done' ? 'todo' : 'done');
 
 /** Where everything on it is, from its top left corner. */
 export interface TaskLayout {
@@ -211,7 +212,8 @@ const DATE = (due: string) => {
 /** The card. `typing` is the part being typed in (its text left to the overlay): null for the title,
  *  0 for the description, 1… for a subtask; undefined when none is. */
 export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typing: number | null | undefined, hot: string | null = null): void {
-  const l = taskLayout(it), { x, y } = it, strong = strongOf(it.color);
+  // Done, it's grey (a colour not given to those still to do).
+  const l = taskLayout(it), { x, y } = it, strong = strongOf(statusOf(it) === 'done' ? 'gray' : it.color);
   const bg = look.dark ? '#26272C' : '#FFFFFF', tint = mix(strong, bg, look.dark ? 0.16 : 0.05);
   const edge = `rgba(${rgb(strong.startsWith('#') ? strong : '#003CFF').join(',')}, 0.3)`;
   // The card, its edge 2 wide inside it; its header tinted, the whole of it when closed. Opened, it

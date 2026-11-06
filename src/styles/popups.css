@@ -133,3 +133,6 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 .task-avatar { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #fff; font: 600 11px Inter, var(--ui); font-style: normal; }
 .task-pop :is(.task-name, .task-due) { display: block; width: 100%; box-sizing: border-box; margin: var(--s6) 0; padding: var(--s7) var(--s10); border: 1px solid var(--line); border-radius: var(--s8); background: transparent; color: var(--ink); font: 400 var(--s14) Inter, var(--ui); outline: none; }
 .task-pop :is(.task-name, .task-due):focus { border-color: var(--fmt-on-ink); }
+/* «Не сворачивать» on a task asked about by its box (ui/TaskPop.tsx): 1.6 times as wide, its text across all of it. */
+.confirm.task-keep { width: calc(var(--e286) * 1.6); }
+.confirm.task-keep p { max-width: none; }

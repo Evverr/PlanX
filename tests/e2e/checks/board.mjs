@@ -21,7 +21,7 @@ const dblClick = async (p, [x, y]) => {
 };
 
 export const checks = {
-  async 'a task: put opened to its description, title then description typed in, closed on Ctrl+Enter; its ring goes round its statuses; opened by its arrow and a double click on its header (to its description first, «Задача сразу целиком» off); subtasks; closed by Esc or a click elsewhere, unless «Не сворачивать»; with subtasks, done by them; «Завершить»'(p) {
+  async 'a task: put opened to its description, title then description typed in, closed on Ctrl+Enter; its ring makes it done or to do; opened by its arrow and a double click on its header (to its description first, «Задача сразу целиком» off); subtasks; closed by Esc or a click elsewhere, unless «Не сворачивать»; with subtasks, done by them; «Завершить»'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('task'); })()`);
     // (Low enough to be all on screen closed: it's put opened, by its middle.)
     await p.click([400, 400]);
@@ -44,9 +44,6 @@ export const checks = {
     // Where a part of it is on the screen, from its layout.
     const at = (expr) => p.ev(`(async () => { const t = planx.board.get('${id}'), l = (await import('/src/canvas/task.ts')).taskLayout(t), s = planx.editor.toScreen((${expr})(t, l)); return [s.x, s.y]; })()`);
     const ring = await at('(t) => ({ x: t.x + 26, y: t.y + 26 })');
-    await p.click(ring);
-    expect((await t()).st, 'being done').toBe('doing');
-    await sleep(450);
     await p.click(ring);
     expect((await t()).st, 'done').toBe('done');
     await sleep(450);
@@ -97,12 +94,20 @@ export const checks = {
     await sleep(450);
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
     await sleep(450);
-    await p.click(await at('(t, l) => ({ x: t.x + l.keep.x + 9, y: t.y + l.keep.y + 16 })'));
-    expect((await t()).keep, 'kept open').toBe(true);
+    const keepBox = await at('(t, l) => ({ x: t.x + l.keep.x + 9, y: t.y + l.keep.y + 16 })');
+    await p.click(keepBox);
     await sleep(100);
-    expect(await p.ev(`document.querySelector('.pop.confirm')?.textContent.includes('Рекомендуем оставлять задачи свернутыми')`), 'why not to, said').toBe(true);
-    await p.click(await p.at('.pop.confirm .btn.primary'));
+    expect(await p.ev(`document.querySelector('.task-keep')?.textContent.includes('Рекомендуем оставлять задачи свернутыми')`), 'why not to, said first').toBe(true);
+    const pop = await p.rect('.task-keep');
+    expect(Math.abs(pop.t - keepBox[1]) < 80, 'by its box').toBe(true);
+    await p.click(await p.at('.task-keep .btn:not(.primary)'));
     await sleep(100);
+    expect([(await t()).keep ?? false, !!(await p.rect('.task-keep'))].join(), '«Отменить»: not ticked').toBe('false,false');
+    await p.click(keepBox);
+    await sleep(100);
+    await p.click(await p.at('.task-keep .btn.primary'));
+    await sleep(100);
+    expect((await t()).keep, '«Не сворачивать»: kept open').toBe(true);
     await p.ev(`planx.board.add(planx.editor.newItem('sticky', planx.board.get('${id}').x, planx.board.get('${id}').y, { id: 'atop', z: 999 }))`);
     expect(await p.ev(`planx.board.list().at(-1).id`), 'over what is put later').toBe(id);
     await p.ev(`planx.board.remove(['atop'])`);
