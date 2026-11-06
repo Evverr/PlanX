@@ -181,8 +181,8 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
         return;
       }
       press.current = null;
-      // ("Режим настройки меню", src/labs: only with it on.)
-      if (canRearrange()) lift(p);
+      // ("Режим настройки меню", src/labs: with it off, lifted only to go onto the board.)
+      if (canRearrange() || dropOut) lift(p);
     }, HOLD_MS);
     press.current = p;
   };
@@ -196,8 +196,9 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     if (Math.hypot(p.x - p.x0, p.y - p.y0) <= HOLD_SLOP) return;
     clearTimeout(p.timer);
     press.current = null;
-    // ("Режим настройки меню": with it on, taken and moved at once anywhere; off, not even onto the board.)
-    if ((dropOut && canRearrange()) || customizeOn()) lift(p);
+    // ("Режим настройки меню": with it on, taken and moved at once anywhere; off, only onto the board,
+    // not among the others, see dragMove.)
+    if (dropOut || customizeOn()) lift(p);
   };
   const pressUp = () => {
     const held = press.current?.held;
