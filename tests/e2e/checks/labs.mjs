@@ -9,6 +9,22 @@ const stickers = (p) => p.ev(`(() => { const e = planx.editor, b = planx.board, 
 const select = (p, id) => p.ev(`planx.editor.setSelection(['${id}'])`);
 
 export const checks = {
+  async '"Код": its copy button copies the code; a block too small for its code scrolls it by the wheel'(p) {
+    const text = Array.from({ length: 14 }, (_, i) => `const line${i} = "очень длинная строка кода номер ${i}, чтобы не влезла";`).join('\\n');
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('rect', 200, 150, { id: 'c', code: 'js', text: '${text}', w: 420, h: 200, fs: 14, ff: 'mono', rad: 16 })); e.setSelection([]); })()`);
+    await sleep(300);
+    const cam = await p.ev('JSON.stringify(planx.editor.cam)');
+    await p.mouse('mouseMoved', 400, 280);
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 400, y: 280, deltaX: 0, deltaY: 60 });
+    await sleep(100);
+    expect(await p.ev('JSON.stringify(planx.editor.cam)'), 'the code scrolled, not the board').toBe(cam);
+    await p.ev(`window.clip = null; navigator.clipboard.writeText = async (t) => { window.clip = t; }`);
+    await p.click([200 + 420 - 26, 150 + 22]);
+    await sleep(100);
+    expect(await p.ev(`window.clip?.split('\\n').length`), 'all of it copied').toBe(14);
+  },
+
   async '"Код": a block from the right rail, typed in at once, coloured, growing with its lines; its language picked on its panel'(p) {
     await p.click(await p.at('.labs-rail button[aria-label="Код"]'));
     await sleep(200);

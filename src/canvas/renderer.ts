@@ -411,7 +411,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'ellipse':
     case 'polygon': {
       // A block of code ("Код", src/labs): a card of its own.
-      if (it.code) { drawCode(ctx, it, cam.z, editing); break; }
+      if (it.code) { drawCode(ctx, it, cam.z, editing, s.hotPlus); break; }
       const none = it.color === 'none';
       ctx.beginPath();
       if (it.type === 'rect') ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.rad ?? CORNER, it.w / 2, it.h / 2));

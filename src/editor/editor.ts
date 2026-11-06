@@ -41,7 +41,7 @@ import { finishNib, nibPoints } from '../labs/nib';
 import { nodeEditing, shapedBy } from '../labs/paths';
 import { hiddenByLayers, layersVersion, newItemLayer } from '../labs/layers';
 import { zoomsWithKey } from '../labs/wheelZoom';
-import { codeFit } from '../labs/codeBlock';
+import { codeFit, scrollCode } from '../labs/codeBlock';
 import { fitTask, freshTask, renewTasks, taskTextPatch } from '../model/task';
 
 export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
@@ -716,6 +716,9 @@ export class Editor {
 
   wheel(e: WheelEvent, sp: Point = this.local(e)): void {
     e.preventDefault();
+    // Over a block of code that doesn't fit ("Код", src/labs), its code scrolls.
+    const code = this.shown().filter((i) => i.code && pointInRect(this.toWorld(sp.x, sp.y), i)).pop();
+    if (code && scrollCode(code, e, this.cam.z)) { this.requestRender(); return; }
     const m = wheelMove(e, this.cam, zoomsWithKey());
     if ('zoom' in m) this.zoomAt(sp.x, sp.y, m.zoom);
     else {

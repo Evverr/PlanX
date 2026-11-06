@@ -1,6 +1,8 @@
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { font } from '../canvas/text';
+import { drawIcon } from '../icons/icons';
+import type { Point } from '../canvas/geometry';
 
 /**
  * "Код": a block of code, put on the board by its button on the right rail. It's a rectangle with
@@ -156,13 +158,54 @@ export function codeFit(it: Item, text: string): { w: number; h: number } | null
   return w === it.w && h === it.h ? null : { w, h };
 }
 
+/** How far each block's code is scrolled (here only, not shared), when it doesn't fit its block. */
+const scrolls = new Map<string, Point>();
+/** How big its code is, and how much of it the block shows. */
+function overflow(it: Item, text = it.text ?? '') {
+  const fs = sizeOf(it), lines = linesOf(text), cw = charWidth(fs);
+  const content = { w: Math.max(...lines.map((l) => l.length)) * cw, h: lines.length * fs * CODE_LINE };
+  const view = { w: Math.max(1, it.w - CODE_LEFT - CODE_PAD), h: Math.max(1, it.h - CODE_TOP - CODE_BOTTOM) };
+  return { content, view, x: Math.max(0, content.w - view.w), y: Math.max(0, content.h - view.h) };
+}
+const scrollOf = (it: Item): Point => {
+  const s = scrolls.get(it.id), o = overflow(it);
+  return { x: Math.min(o.x, s?.x ?? 0), y: Math.min(o.y, s?.y ?? 0) };
+};
+
+/** The wheel over a block whose code doesn't fit it scrolls the code (Shift: across); whether it did. */
+export function scrollCode(it: Item, e: WheelEvent, z: number): boolean {
+  if (e.ctrlKey || e.metaKey) return false;
+  const o = overflow(it);
+  if (!o.x && !o.y) return false;
+  const s = scrollOf(it), dx = (e.shiftKey ? e.deltaY : e.deltaX) / z, dy = (e.shiftKey ? 0 : e.deltaY) / z;
+  const next = { x: Math.max(0, Math.min(o.x, s.x + dx)), y: Math.max(0, Math.min(o.y, s.y + dy)) };
+  // At its end, the board scrolls on.
+  if (next.x === s.x && next.y === s.y) return false;
+  scrolls.set(it.id, next);
+  return true;
+}
+
+/** The copy button at the right end of its band: its middle, and how near it takes a press. */
+const COPY = 20;
+const copyAt = (it: Item): Point => ({ x: it.x + it.w - CODE_PAD - COPY / 2, y: it.y + CODE_BAND / 2 });
+export const onCodeCopy = (it: Item, p: Point): boolean => !!it.code && Math.abs(p.x - copyAt(it).x) <= 14 && Math.abs(p.y - copyAt(it).y) <= 14;
+/** When a block was copied, its tick shown that long instead. */
+let copied: { id: string; at: number } | null = null;
+const COPIED_MS = 1200;
+export function copyCode(it: Item, redraw: () => void): void {
+  void navigator.clipboard?.writeText(it.text ?? '');
+  copied = { id: it.id, at: performance.now() };
+  redraw();
+  setTimeout(redraw, COPIED_MS + 20);
+}
+
 /** The text being typed in a block, drawn coloured under the see-through overlay. */
 let live: { id: string; text: string } | null = null;
 export const setLiveCode = (id: string | null, text = '') => { live = id ? { id, text } : null; };
 
 /** The block: its card and band, its language's name, the code coloured and its lines numbered, cut off
  *  at its edges. */
-export function drawCode(ctx: CanvasRenderingContext2D, it: Item, z: number, editing: boolean): void {
+export function drawCode(ctx: CanvasRenderingContext2D, it: Item, z: number, editing: boolean, hot: string | null = null): void {
   const r = Math.min(it.rad ?? CODE_RAD, it.w / 2, it.h / 2);
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, r);
@@ -179,6 +222,11 @@ export function drawCode(ctx: CanvasRenderingContext2D, it: Item, z: number, edi
     ctx.font = font(15, 500);
     ctx.fillStyle = CARD.name;
     ctx.fillText(langOf(it).label, it.x + CODE_NAME, it.y + CODE_BAND / 2);
+    // Its copy button (a tick a moment once it's copied), brighter under the pointer.
+    const c = copyAt(it), done = copied?.id === it.id && performance.now() - copied.at < COPIED_MS;
+    ctx.globalAlpha = done || hot === `code:${it.id}` ? 1 : 0.6;
+    drawIcon(ctx, done ? 'check-m' : 'copy', c.x - COPY / 2, c.y - COPY / 2, COPY, CARD.name);
+    ctx.globalAlpha = 1;
     const f = font(fs, 400, 'mono');
     ensure(f);
     ctx.font = f;
@@ -186,10 +234,19 @@ export function drawCode(ctx: CanvasRenderingContext2D, it: Item, z: number, edi
     ctx.textBaseline = 'alphabetic';
     const fm = ctx.measureText('Hg'), ascent = fm.fontBoundingBoxAscent, descent = fm.fontBoundingBoxDescent, cw = ctx.measureText('0').width;
     const lh = fs * CODE_LINE, text = editing && live?.id === it.id ? live.text : it.text ?? '';
-    const base = (row: number) => it.y + CODE_TOP + row * lh + (lh - ascent - descent) / 2 + ascent;
+    // Scrolled (not while typed in, when it grows to fit), within the body: the numbers only up and down.
+    const sc = editing ? { x: 0, y: 0 } : scrollOf(it);
+    ctx.beginPath();
+    ctx.rect(it.x, it.y + CODE_BAND, it.w, it.h - CODE_BAND);
+    ctx.clip();
+    const base = (row: number) => it.y + CODE_TOP - sc.y + row * lh + (lh - ascent - descent) / 2 + ascent;
     const count = text.split('\n').length;
     ctx.fillStyle = CARD.nums;
     for (let i = 0; i < count; i++) ctx.fillText(String(i + 1), it.x + CODE_NUMS, base(i));
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(it.x + CODE_LEFT - 4, it.y + CODE_BAND, it.w - CODE_LEFT + 4, it.h - CODE_BAND);
+    ctx.clip();
     if (!text) {
       ctx.fillStyle = CARD.hint;
       ctx.fillText(CODE_HINT, it.x + CODE_LEFT, base(0));
@@ -199,9 +256,26 @@ export function drawCode(ctx: CanvasRenderingContext2D, it: Item, z: number, edi
       ctx.fillStyle = INK[kind ?? 'ink'];
       part.split('\n').forEach((bit, i) => {
         if (i > 0) { row++; col = 0; }
-        if (bit) ctx.fillText(bit, it.x + CODE_LEFT + col * cw, base(row));
+        if (bit) ctx.fillText(bit, it.x + CODE_LEFT - sc.x + col * cw, base(row));
         col += bit.length;
       });
+    }
+    ctx.restore();
+    // Where it's scrolled to, when it doesn't fit: a white pill at 20% along each way it overflows.
+    const o = overflow(it, text);
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    const T = 4, gap = 4;
+    if (!editing && o.y) {
+      const track = it.h - CODE_BAND - gap * 2, len = Math.max(20, (track * o.view.h) / o.content.h);
+      ctx.beginPath();
+      ctx.roundRect(it.x + it.w - gap - T, it.y + CODE_BAND + gap + ((track - len) * sc.y) / o.y, T, len, T / 2);
+      ctx.fill();
+    }
+    if (!editing && o.x) {
+      const track = it.w - CODE_LEFT - gap * 2, len = Math.max(20, (track * o.view.w) / o.content.w);
+      ctx.beginPath();
+      ctx.roundRect(it.x + CODE_LEFT + ((track - len) * sc.x) / o.x, it.y + it.h - gap - T, len, T, T / 2);
+      ctx.fill();
     }
   }
   ctx.restore();
