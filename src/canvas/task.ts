@@ -113,20 +113,23 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
     out.h = Math.ceil(d + 40);
     return out;
   }
-  const keys = it.people ? (['boss', 'doer', 'due'] as const) : (['doer'] as const), r = d + 58 + ROW * (keys.length - 1);
-  out.rows = keys.map((key, i) => ({ key, y: d + 58 + ROW * i }));
-  // (Its chevron, a small one, 17 into the icon at its right end, 2 short of where the lines across end.)
-  out.peopleAt = { x: w - PAD - 2 - 17, y: d + 58 - ARROW / 2 };
+  // Under the description its subtasks, then who does it (and who set it, by when): each block between
+  // lines across, a block's first row 33 under the line over it, its last 33 over the line under it.
   // «Подзадачи:» as a row's label, the first of them level with it.
-  out.subsAt = r + 66;
+  out.subsAt = d + 25 + 33;
   // Each subtask as tall as its lines (the row adding one, one), the next 38 on from its first line.
   const lh = lineH(TEXT_FS), subW = Math.max(40, w - SUB_TEXT_X - PAD);
   out.subH = [...(it.subs ?? []).map((sub) => textBlockHeight(sub.t || 'Подзадача', subW, TEXT_FS, { weight: 400, family: FAMILY })), lh];
   out.subs = [];
-  let sy = r + 66 - STATUS / 2;
+  let sy = out.subsAt - STATUS / 2;
   for (const h of out.subH) { out.subs.push(sy); sy += SUB + h - lh; }
-  const last = out.subs[out.subs.length - 1] + STATUS;
-  out.lines = [d + 25, r + 33, last + 27];
+  const subsEnd = out.subs[out.subs.length - 1] + STATUS + 27, first = subsEnd + 33;
+  const keys = it.people ? (['boss', 'doer', 'due'] as const) : (['doer'] as const), r = first + ROW * (keys.length - 1);
+  out.rows = keys.map((key, i) => ({ key, y: first + ROW * i }));
+  // (Its chevron, a small one, 17 into the icon at its right end, 2 short of where the lines across end.)
+  out.peopleAt = { x: w - PAD - 2 - 17, y: first - ARROW / 2 };
+  const last = r + 33 - 27;
+  out.lines = [d + 25, subsEnd, r + 33];
   const by = last + 27 + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - PAD - fw;
   out.finish = { x: fx, y: by, w: fw, h: BUTTON_H };
   out.cancel = { x: fx - 10 - cw, y: by, w: cw, h: BUTTON_H };
