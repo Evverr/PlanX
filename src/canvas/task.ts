@@ -227,19 +227,19 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   ctx.lineWidth = 2;
   ctx.stroke();
   if (TITLE_FS * look.z < 2.5) return;
-  // In the middle of its top edge, a pill saying what it is, of the edge's colour, in white.
+  // At the right of its top edge, a pill saying what it is, of the edge's colour, in white.
   ctx.font = font(9, 600, FAMILY);
   ctx.letterSpacing = '0.5px';
   const tag = 'ЗАДАЧА', pw = ctx.measureText(tag).width + 12;
   ctx.beginPath();
-  ctx.roundRect(x + (l.w - pw) / 2, y + 1 - 7, pw, 14, 7);
+  ctx.roundRect(x + l.w - 16 - pw, y + 1 - 7, pw, 14, 7);
   ctx.fillStyle = mix(strong.startsWith('#') ? strong : '#003CFF', bg, 0.3);
   ctx.fill();
   ctx.fillStyle = '#FFFFFF';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   // (The letters' spacing comes after each, the last one's too: half of it back.)
-  ctx.fillText(tag, x + l.w / 2 + 0.25, y + 1.5);
+  ctx.fillText(tag, x + l.w - 16 - pw / 2 + 0.25, y + 1.5);
   ctx.letterSpacing = '0px';
   const st = statusOf(it);
   drawStatus(ctx, x + 15 + STATUS / 2, y + MID, st, look);
