@@ -105,4 +105,28 @@ export const checks = {
     await carry(p, k0[2].slice(1), [m0[1].slice(1)]);
     expect((await mainKeys(p, '.bar.zoom')).some((k) => k[0] === k0[2][0]), 'it is on the bar').toBeTruthy();
   },
+
+  async '"Режим настройки": the panels\' buttons stay put till it\'s on in the board menu; then they move, held or not'(p) {
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('customize', true))()`);
+    await sleep(100);
+    const keys = async () => (await mainKeys(p, '.bar.zoom')).map((k) => k[0]).join();
+    const at = async (key) => (await mainKeys(p, '.bar.zoom')).find((k) => k[0] === key).slice(1);
+    const before = await keys();
+    const map = await at('map'), zin = await at('zoom-in');
+    await carry(p, map, [[zin[0] - 30, zin[1]]]);
+    expect(await keys(), 'off: as it was').toBe(before);
+    // On, from the board menu.
+    await p.click(await p.at('.topbar button[aria-label="Меню"]'));
+    await p.ev(`[...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Режим настройки')).click()`);
+    await sleep(100);
+    await p.escape();
+    await sleep(200);
+    await carry(p, map, [[zin[0] - 30, zin[1]]]);
+    expect(await keys() !== before, 'on: held, it moves').toBe(true);
+    const now = await keys(), m2 = await at('map'), share = await at('share');
+    await p.drag(m2, [share[0] + 30, share[1]], { steps: 16 });
+    await sleep(400);
+    expect(await keys() !== now, 'on: taken and moved at once, too').toBe(true);
+    await p.ev(`(async () => { (await import('/src/labs/customize.ts')).setCustomize(false); (await import('/src/labs/labs.ts')).setLab('customize', false); })()`);
+  },
 };
