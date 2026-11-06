@@ -133,6 +133,8 @@ export interface Item {
   grow?: { w: number; h: number };
   sw?: number;
   hl?: boolean;
+  /** A rectangle that's a block of code ("Код", src/labs): its language, a key of LANGS in labs/codeBlock.ts. */
+  code?: string;
   /** The address the item leads to (src/labs, "Ссылка в тексте"). */
   url?: string;
   /** Links on parts of its text, by character (see model/textLinks.ts). */

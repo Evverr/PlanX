@@ -9,6 +9,7 @@ import { autoInk } from '../model/color';
 import { colsOf, rowsOf } from '../model/table';
 import { openSwap, swapKind } from '../labs/swap';
 import { linkedTexts } from '../labs/textPush';
+import { CODE_FS, CODE_LINE, CODE_PAD, CODE_TOP, setLiveCode } from '../labs/codeBlock';
 
 /**
  * A textarea laid over the item being edited, scaled with the board so the
@@ -22,6 +23,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   const commit = () => {
     if (done.current || !ref.current) return;
     done.current = true;
+    if (code) setLiveCode(null);
     editor.commitText(id, ref.current.value);
   };
 
@@ -29,6 +31,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   useLayoutEffect(() => {
     const el = ref.current!;
     el.value = item.text ?? '';
+    if (code) setLiveCode(id, el.value);
     el.focus();
     if (editor.editCaret === 'end') el.setSelectionRange(el.value.length, el.value.length);
     else el.select();
@@ -43,10 +46,12 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
 
   const z = editor.cam.z;
   const isFrame = item.type === 'frame';
+  // A block of code ("Код", src/labs): typed in see-through over the code drawn coloured, no line broken.
+  const code = !!item.code;
   // A folded frame's title is typed in where it stands, inside the bar.
   const folded = isFrame && !!item.fold;
-  const fs = folded ? FOLD_FS : isFrame ? 15 : item.fs ?? 16;
-  const pad = textPad(item), padY = textPadY(item);
+  const fs = folded ? FOLD_FS : isFrame ? 15 : item.fs ?? (code ? CODE_FS : 16);
+  const pad = code ? CODE_PAD : textPad(item), padY = code ? CODE_TOP : textPadY(item);
   // A task's text starts right of its checkbox.
   const inset = item.type === 'task' ? TASK_INSET : 0;  // a task's text keeps clear of its checkbox
   const width = folded ? Math.max(160, item.w - FOLD_PAD - FOLD_TITLE_GAP - FOLD_ICON - FOLD_RIGHT)
@@ -60,7 +65,8 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
     const el = ref.current;
     if (!el) return;
     let top = 0;
-    if (item.type !== 'text' && !isFrame) {
+    if (code) el.style.height = `${Math.max(0, item.h - CODE_TOP - CODE_PAD)}px`;
+    else if (item.type !== 'text' && !isFrame) {
       // As tall as the canvas lays the lines out (exactly, not rounded), so they land where it drew them.
       const content = Math.min(textBlockHeight(el.value, width, fs, fontOf(item)), item.h - padY * 2);
       el.style.height = `${content}px`;
@@ -74,9 +80,10 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   return (
     <textarea
       ref={ref}
-      className={`text-edit ${item.type} ${folded ? 'folded' : ''} ${item.color === 'none' ? 'nofill' : ''}`}
+      className={`text-edit ${item.type} ${code ? 'code' : ''} ${folded ? 'folded' : ''} ${item.color === 'none' ? 'nofill' : ''}`}
       aria-label="Текст"
       spellCheck={false}
+      wrap={code ? 'off' : undefined}
       // "Замена двойным кликом": a shape typed in shows its neighbours on a double click on its text too.
       onDoubleClick={() => { if (swapKind(item)) openSwap(item.id); }}
       style={{
@@ -84,8 +91,8 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         height: item.type === 'text' ? item.h : isFrame ? 26 : undefined,
         transform: `scale(${z})`,
         fontSize: fs,
-        lineHeight: isFrame ? '26px' : LINE_HEIGHT,
-        fontWeight: isFrame ? 600 : fontOf(item).weight,
+        lineHeight: isFrame ? '26px' : code ? CODE_LINE : LINE_HEIGHT,
+        fontWeight: isFrame ? 600 : code ? 400 : fontOf(item).weight,
         ...(!isFrame && {
           fontFamily: item.ff ? FONTS[item.ff]?.css : undefined,
           fontStyle: item.fi ? 'italic' : undefined,
@@ -94,6 +101,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           color: item.tc && (item.tc.startsWith('#') ? item.tc : TEXT_COLORS[item.tc]) || autoInk(item, siblingTints(editor.board.list())) || undefined,
         }),
         padding: isFrame ? '0 4px' : 0,
+        ...(code && { color: 'transparent', caretColor: 'var(--ink)', whiteSpace: 'pre', overflowWrap: 'normal', tabSize: 2 }),
       }}
       // A mind map node dragged by its text moves, as it would anywhere else on it.
       onPointerDown={item.type === 'mind' ? (e) => {
@@ -108,6 +116,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         window.addEventListener('pointerup', stop);
       } : undefined}
       onInput={(e) => {
+        if (code) { setLiveCode(id, e.currentTarget.value); editor.previewText(id, e.currentTarget.value); editor.requestRender(); return; }
         if (item.type === 'text' || item.type === 'task' || item.type === 'mind') editor.previewText(id, e.currentTarget.value);
         if (item.type !== 'text' && !isFrame) {
           const el = e.currentTarget, content = Math.min(textBlockHeight(el.value, width, fs, fontOf(item)), item.h - padY * 2);
@@ -140,6 +149,10 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           if (e.repeat) return;
           done.current = true;
           editor.removeMindNode(id);
+        } else if (code && e.key === 'Tab' && !e.shiftKey) {
+          // In code, Tab indents by two spaces.
+          e.preventDefault();
+          document.execCommand('insertText', false, '  ');
         } else if (e.key === 'Tab' && editor.board.get(id)?.type === 'table' && editor.editingCell !== null) {
           // In a table, Tab goes on typing in the next cell (along the row, then the next row), Shift+Tab
           // the one before; not past the first or the last.

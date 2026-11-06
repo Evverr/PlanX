@@ -5,6 +5,7 @@ import { boxOf } from '../canvas/geometry';
 import { Glyph } from '../ui/glyphs';
 import { labOn, subscribeLabs, useLabs } from './labs';
 import { LabsRail, type RailButton } from './LabsRail';
+import { addCode } from './codeBlock';
 import { drawLabs, laser, LASER_FADE, pillAt, toggleReaction } from './overlays';
 import { LabsPresence, useFollowing } from './presence';
 import { cameraFor, flyTo, stopFlight } from './camera';
@@ -277,7 +278,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
 
   const toggle = (p: LabPop) => setPop((cur) => (cur === p ? null : p));
   const summon = () => setToast(presence.summon() ? 'Все участники перенесены к вам' : 'На доске пока никого нет. Откройте ссылку на доску во втором окне');
-  const all: Record<'export' | 'pdf' | 'search' | 'layers' | 'history' | 'timer' | 'laser' | 'follow', RailButton> = {
+  const all: Record<'export' | 'pdf' | 'search' | 'layers' | 'history' | 'timer' | 'laser' | 'follow' | 'codeBlock', RailButton> = {
     export: { icon: 'cloud-download', title: 'Экспорт в PNG', on: pop === 'export', onClick: () => toggle('export') },
     pdf: { icon: 'file', title: 'Экспорт в PDF', on: pop === 'pdf', onClick: () => toggle('pdf') },
     search: { icon: 'search', title: 'Поиск по доске (Ctrl+F)', on: pop === 'search', onClick: () => toggle('search') },
@@ -286,6 +287,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     timer: { icon: 'timer', title: 'Общий таймер', on: pop === 'timer', onClick: () => toggle('timer') },
     laser: { icon: 'magic-wand', title: 'Лазерная указка (K)', on: laserOn, onClick: () => setLaserOn(!laserOn) },
     follow: { icon: 'meeting-point', title: 'Позвать всех ко мне', onClick: summon },
+    codeBlock: { icon: 'code', title: 'Код', onClick: () => addCode(editor) },
   };
   const buttons = Object.fromEntries(Object.entries(all).filter(([id]) => labs[id as keyof typeof all]));
 

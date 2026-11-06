@@ -15,6 +15,7 @@ import { labOn } from '../labs/labs';
 import { zoomFade, zoomSize } from '../labs/zoomFade';
 import { gripsOn } from '../labs/tableMove';
 import { gridKind } from '../labs/boardGrid';
+import { drawCode } from '../labs/codeBlock';
 import { dotsAlways, dotsUnder } from '../labs/linkTool';
 import { isBuiltin } from '../model/builtins';
 import { drawnLinks } from '../model/textLinks';
@@ -402,6 +403,8 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'rect':
     case 'ellipse':
     case 'polygon': {
+      // A block of code ("Код", src/labs): a card of its own.
+      if (it.code) { drawCode(ctx, it, theme.dim < 1, theme.muted, cam.z, editing); break; }
       const none = it.color === 'none';
       ctx.beginPath();
       if (it.type === 'rect') ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.rad ?? CORNER, it.w / 2, it.h / 2));

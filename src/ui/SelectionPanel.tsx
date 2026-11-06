@@ -10,6 +10,7 @@ import { ColorPicker } from './ColorPicker';
 import { crowds, EDGE, fitPopovers, shownRects } from '../layout';
 import { useLabs } from '../labs/labs';
 import { AlignButton, LockButton, ReactButton, TidyButton } from '../labs/SelectionLabs';
+import { CodeLang } from '../labs/CodeLang';
 import { ItemMenuButton, LinkParams } from '../labs/ContextMenu';
 import { boxOf, instanceBounds } from '../canvas/geometry';
 import { placeOver } from './FormatPanel';
@@ -19,7 +20,7 @@ import { canCrop, croppingId, subscribeCrop, toggleCrop } from '../labs/imageCro
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['colors', 'text', 'align', 'tidy', 'rows', 'cols', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+const ORDER = ['lang', 'colors', 'text', 'align', 'tidy', 'rows', 'cols', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -397,7 +398,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   // An instance picked alone, or something in one (not of a built-in component: those aren't changed).
   const inOne = items.length === 1 ? (items[0].host ? editor.board.get(items[0].host) : items[0]) : undefined;
   const editInst = inOne?.inst && !inOne.inst.startsWith('@') ? inOne.id : null;
-  const colored = items.some((i) => fillable(i) || i.type === 'icon' || i.type === 'ink');
+  const colored = items.some((i) => (fillable(i) && !i.code) || i.type === 'icon' || i.type === 'ink');
   const btn = (icon: PanelIconName, title: string, fn: () => void) => (
     <button className={`ib ${icon === 'trashcan' ? 'danger' : ''}`} title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
   );
@@ -415,6 +416,8 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
         redraw();
       }}>
       {sort.renderFit({
+        // A block of code's language ("Код", src/labs).
+        lang: labs.codeBlock && items.length === 1 && items[0].code ? <CodeLang key={items[0].id} editor={editor} item={items[0]} /> : undefined,
         // All the colours are under the palette: a table's own when it's selected alone.
         // (Picking something else closes the palette: the key changes with the selection.)
         colors: tables.length === 1 && items.length === 1 ? <TableColors key={tables[0].id} editor={editor} table={tables[0]} cells={cells} />

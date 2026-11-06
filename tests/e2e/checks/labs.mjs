@@ -9,6 +9,25 @@ const stickers = (p) => p.ev(`(() => { const e = planx.editor, b = planx.board, 
 const select = (p, id) => p.ev(`planx.editor.setSelection(['${id}'])`);
 
 export const checks = {
+  async '"Код": a block from the right rail, typed in at once, coloured, growing with its lines; its language picked on its panel'(p) {
+    await p.click(await p.at('.labs-rail button[aria-label="Код"]'));
+    await sleep(200);
+    expect(await p.ev(`!!document.querySelector('textarea.text-edit.code')`), 'typed in at once').toBe(true);
+    await p.cdp('Input.insertText', { text: 'function hello(name) {\n  return `Привет, ${name}!`;\n}' });
+    await sleep(100);
+    await p.key('Escape', 'Escape', 27);
+    await sleep(200);
+    const it = await p.ev(`planx.board.list().find((i) => i.code)`);
+    expect([it.type, it.code, it.text.split('\n').length, it.h].join(), 'kept, as tall as its lines').toBe(`rect,js,3,${Math.ceil(40 + 3 * 21 + 16)}`);
+    expect(await p.ev(`!!document.querySelector('.tfmt')`), 'no text panel').toBe(false);
+    await p.click(await p.at('.bar.panel .code-lang .fpick'));
+    await sleep(100);
+    await p.click(await p.at('.code-lang .tf-item:nth-child(3)'));
+    await sleep(100);
+    expect(await p.ev(`planx.board.list().find((i) => i.code).code`), 'Python').toBe('py');
+    expect(await p.ev(`document.querySelector('.bar.panel .code-lang .fpick').textContent`), 'shown on the panel').toBe('Python');
+  },
+
   async '"Настройки" (the board menu) have a switch for each feature on trial, and a switched off one goes away'(p) {
     expect(!!(await p.rect('.labs-rail button[aria-label="Общий таймер"]')), 'the timer button at first').toBeTruthy();
     const open = async (label) => {
@@ -1030,7 +1049,7 @@ export const checks = {
     expect((await p.rect('.labs-rail')).r, 'at the right edge').toBe(1200 - 12);
     const keys = () => p.ev(`[...document.querySelectorAll('.labs-rail > [data-key]')].map((e) => { const r = e.getBoundingClientRect(); return [e.dataset.key, Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)]; })`);
     const k0 = await keys();
-    expect(k0.map((k) => k[0]).join(), 'in order').toBe('export,pdf,search,layers,history,timer,laser,follow');
+    expect(k0.map((k) => k[0]).join(), 'in order').toBe('export,pdf,search,layers,history,timer,laser,follow,codeBlock');
     // Brought to the fourth one's middle, it passes the two before that, as on the tool rail.
     await carry(p, k0[0].slice(1), [k0[3].slice(1)]);
     const k1 = (await keys()).map((k) => k[0]);
@@ -1481,6 +1500,17 @@ export const checks = {
     await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: at[0], y: at[1], button: 'left', buttons: 0, clickCount: 1, modifiers: 4 });
     await sleep(200);
     expect(await p.ev('window.opened'), 'Cmd+click on the blue part opens it').toBe('https://docs.example.com');
+    await p.ev('window.opened = null');
+    await p.click(at);
+    await sleep(100);
+    expect(await p.ev('window.opened'), 'a plain click on it too').toBe('https://docs.example.com');
+    await p.ev('window.opened = null; planx.editor.setSelection([])');
+    const x0 = await p.ev(`planx.board.get('tx').x`);
+    await p.drag(at, [at[0] + 40, at[1] + 30]);
+    await sleep(100);
+    expect([await p.ev('window.opened'), await p.ev(`planx.board.get('tx').x`) - x0].join(), 'dragged from it, the text moves').toBe(',40');
+    await p.ev(`planx.board.update('tx', { x: ${x0}, y: planx.board.get('tx').y - 30 })`);
+    await sleep(100);
     await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: at[0], y: at[1], button: 'right', buttons: 2, clickCount: 1 });
     await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: at[0], y: at[1], button: 'right', buttons: 0, clickCount: 1 });
     await sleep(200);

@@ -42,6 +42,7 @@ import { finishNib, nibPoints } from '../labs/nib';
 import { nodeEditing, shapedBy } from '../labs/paths';
 import { hiddenByLayers, layersVersion, newItemLayer } from '../labs/layers';
 import { zoomsWithKey } from '../labs/wheelZoom';
+import { codeFit } from '../labs/codeBlock';
 
 export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -1448,6 +1449,7 @@ export class Editor {
         const patch: Partial<Item> = { text: value, ...mindFit(this, it, value), ...(it.fold && { w: foldedSize(value).w }), ...(it.links && { links: remapLinks(it.text ?? '', value, it.links) }) };
         const h = fitHeight(it, value);
         if (h) Object.assign(patch, { h }, it.rot && resizedAt(it, it.w, h));
+        if (it.code) Object.assign(patch, codeFit(it, value));
         const moves = h ? pushedBelow(it, h - it.h, this.board.list()) : new Map<string, Point>();
         this.board.transact(() => {
           this.board.update(id, patch);
@@ -1517,6 +1519,9 @@ export class Editor {
     const it = this.board.get(id);
     const h = it && fitHeight(it, text);
     if (it && h && h !== it.h) this.fitTo(it, h);
+    // A block of code ("Код", src/labs) grows with it.
+    const fit = it?.code ? codeFit(it, text) : null;
+    if (fit) this.board.update(id, fit);
     if (it?.type === 'mind') {
       // A node growing (a line taller, or wider under its parent) moves its neighbours along, so
       // nothing overlaps.
