@@ -181,20 +181,20 @@ function plusAt(ed: Editor, it: Item, which: EndPlus): Point {
   const p = ed.toScreen(which === 'row' ? { x: it.x + it.w / 2, y: it.y + it.h } : { x: it.x + it.w, y: it.y + it.h / 2 });
   return which === 'row' ? { x: p.x, y: p.y - PLUS_IN } : { x: p.x - PLUS_IN, y: p.y };
 }
-/** The pluses on the lines (and edges) by the column and the row the pointer's in, a little smaller, just
- *  inside the table: on its top edge between columns, on its left edge between rows, by their pills.
- *  All of them, each with whether it shows. */
-const INS_R = PLUS_R * 0.8;
+/** The pluses on the lines (and edges) by the column and the row the pointer's in, smaller, just inside
+ *  the table: on its top edge after the column, on its left edge under the row, by their pills. All of
+ *  them, each with whether it shows. */
+const INS_R = PLUS_R * 0.56;
 function insertPluses(ed: Editor, it: Item): Array<{ key: TablePlus; p: Point; seen: boolean }> {
   const at = drag ? { col: -1, row: -1 } : pointedAt(ed, it), out: Array<{ key: TablePlus; p: Point; seen: boolean }> = [];
   const cols = colsOf(it), rows = rowsOf(it);
   for (let b = 0; b <= cols.length; b++) {
     const s = ed.toScreen({ x: it.x + sum(cols.slice(0, b)), y: it.y });
-    out.push({ key: `col@${b}`, p: { x: s.x, y: s.y + PLUS_IN }, seen: at.col === b - 1 || at.col === b });
+    out.push({ key: `col@${b}`, p: { x: s.x, y: s.y + PLUS_IN }, seen: at.col === b - 1 });
   }
   for (let b = 0; b <= rows.length; b++) {
     const s = ed.toScreen({ x: it.x, y: it.y + sum(rows.slice(0, b)) });
-    out.push({ key: `row@${b}`, p: { x: s.x + PLUS_IN, y: s.y }, seen: at.row === b - 1 || at.row === b });
+    out.push({ key: `row@${b}`, p: { x: s.x + PLUS_IN, y: s.y }, seen: at.row === b - 1 });
   }
   return out;
 }
@@ -313,19 +313,19 @@ export function endGrip(ed: Editor): void {
 
 const pick = () => getComputedStyle(document.documentElement).getPropertyValue('--fmt-on-ink').trim() || '#0080FF';
 
-/** How long a pill takes to grow and take its colour, or go back, in ms. */
-const PILL_TURN = 75;
+/** How long a pill takes to grow and take its colour, or go back, in ms; a plus, a little quicker. */
+const PILL_TURN = 75, PLUS_TURN = 50;
 /** How far each pill is on its way to lit (1) or not (0), and since when. */
 const turns = new Map<string, { on: boolean; from: number; at: number }>();
-function litNow(ed: Editor, key: string, on: boolean): number {
+function litNow(ed: Editor, key: string, on: boolean, ms = PILL_TURN): number {
   const now = performance.now(), at = (t: { on: boolean; from: number; at: number }) => {
-    const k = Math.min(1, (now - t.at) / PILL_TURN), e = 1 - (1 - k) * (1 - k);
+    const k = Math.min(1, (now - t.at) / ms), e = 1 - (1 - k) * (1 - k);
     return t.from + ((t.on ? 1 : 0) - t.from) * e;
   };
   let t = turns.get(key);
   if (!t) { if (!on) return 0; turns.set(key, (t = { on, from: 0, at: now })); }
   else if (t.on !== on) turns.set(key, (t = { on, from: at(t), at: now }));
-  if (now - t.at < PILL_TURN) ed.requestRender();
+  if (now - t.at < ms) ed.requestRender();
   else if (!t.on) turns.delete(key);
   return at(t);
 }
@@ -394,18 +394,19 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
   }
   // The pluses, faint and a tenth smaller till the pointer's on one.
   if (!drag) for (const w of ['row', 'col'] as const) {
-    const c = plusAt(ed, it, w), on = hotPlus === w, r = on ? PLUS_R : PLUS_R * 0.9;
+    // Under the pointer: full size and strength, growing there and back smoothly.
+    const c = plusAt(ed, it, w), on = litNow(ed, `${it.id}:${w}:hot`, hotPlus === w, PLUS_TURN), r = PLUS_R * (0.9 + 0.1 * on);
     // Coming in at the new edge.
     const t = cameIn[w], k = t === undefined ? 1 : Math.min(1, (performance.now() - t) / PLUS_IN_MS);
     if (k < 1) ed.requestRender(); else delete cameIn[w];
-    ctx.globalAlpha = (on ? 1 : 0.5) * k;
+    ctx.globalAlpha = (0.5 + 0.5 * on) * k;
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = (on ? 1 : 0.75) * k;
+    ctx.globalAlpha = (0.75 + 0.25 * on) * k;
     ctx.strokeStyle = '#fff';
-    ctx.lineWidth = on ? 2 : 1.5;
+    ctx.lineWidth = 1.5 + 0.5 * on;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(c.x - r * 0.45, c.y); ctx.lineTo(c.x + r * 0.45, c.y);
@@ -416,15 +417,15 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
   for (const q of insertPluses(ed, it)) {
     const shown = litNow(ed, `${it.id}:${q.key}:seen`, q.seen);
     if (!shown) continue;
-    const on = hotPlus === q.key, r = on ? INS_R : INS_R * 0.9;
-    ctx.globalAlpha = (on ? 1 : 0.5) * shown;
+    const on = litNow(ed, `${it.id}:${q.key}:hot`, hotPlus === q.key, PLUS_TURN), r = INS_R * (0.9 + 0.1 * on);
+    ctx.globalAlpha = (0.5 + 0.5 * on) * shown;
     ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(q.p.x, q.p.y, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = (on ? 1 : 0.75) * shown;
+    ctx.globalAlpha = (0.75 + 0.25 * on) * shown;
     ctx.strokeStyle = '#fff';
-    ctx.lineWidth = on ? 2 : 1.5;
+    ctx.lineWidth = (1.5 + 0.5 * on) * 0.8;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(q.p.x - r * 0.45, q.p.y); ctx.lineTo(q.p.x + r * 0.45, q.p.y);
