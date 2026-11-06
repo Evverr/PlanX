@@ -21,7 +21,7 @@ const dblClick = async (p, [x, y]) => {
 };
 
 export const checks = {
-  async 'a task: put opened in full, title then description typed in, closed on Enter; its ring goes round its statuses; opened by its arrow and a double click on its header (to its description first, «Задача сразу целиком» off); subtasks; «Завершить»'(p) {
+  async 'a task: put opened in full, title then description typed in, closed on Ctrl+Enter; its ring goes round its statuses; opened by its arrow and a double click on its header (to its description first, «Задача сразу целиком» off); subtasks; «Завершить»'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('task'); })()`);
     // (Low enough to be all on screen closed: it's put opened in full, by its middle.)
     await p.click([400, 400]);
@@ -35,10 +35,12 @@ export const checks = {
     await sleep(100);
     expect(await p.ev('planx.editor.editingCell'), 'Enter: on to its description').toBe(0);
     await p.cdp('Input.insertText', { text: 'Два литра' });
-    await p.key('Enter', 'Enter', 13);
+    for (const type of ['keyDown', 'keyUp']) await p.cdp('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, ...(type === 'keyDown' && { text: '\r' }) });
+    await p.cdp('Input.insertText', { text: 'и хлеб' });
+    await p.key('Enter', 'Enter', 13, 2);
     await sleep(100);
     it = await t();
-    expect([it.text, it.desc, it.tv ?? 'closed', it.w, await p.ev('planx.editor.editingId') ?? ''].join(), 'Enter again: done and closed').toBe('Купить молоко,Два литра,closed,293,');
+    expect([it.text, it.desc, it.tv ?? 'closed', it.w, await p.ev('planx.editor.editingId') ?? ''].join('|'), 'Enter in it a new line; Ctrl+Enter: done and closed').toBe('Купить молоко|Два литра\nи хлеб|closed|293|');
     // Where a part of it is on the screen, from its layout.
     const at = (expr) => p.ev(`(async () => { const t = planx.board.get('${id}'), l = (await import('/src/canvas/task.ts')).taskLayout(t), s = planx.editor.toScreen((${expr})(t, l)); return [s.x, s.y]; })()`);
     const ring = await at('(t) => ({ x: t.x + 26, y: t.y + 26 })');
