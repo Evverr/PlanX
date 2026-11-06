@@ -1,7 +1,8 @@
 import type { Item, Person, TaskStatus } from '../model/types';
 import { FILLS } from '../model/types';
 import { drawIcon } from '../icons/icons';
-import { font, LINE_HEIGHT, textBlockHeight, wrapText } from './text';
+import { font, LINE_HEIGHT, textBlockHeight, withList, wrapText } from './text';
+import { drawnLinks } from '../model/textLinks';
 import { DAY, TL_STEPS } from './timeline';
 import type { Point, Rect } from './geometry';
 
@@ -93,7 +94,8 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   const out: TaskLayout = { w, h: head, head, title: { x: TITLE_X, y: top, w: titleW, h: th } };
   if (!it.tv) return out;
   const descW = Math.max(80, w - PAD * 2), dy = head + 22;
-  const dh = textBlockHeight(it.desc || DESC_HINT, descW, TEXT_FS, TEXT);
+  // (Its description in a list, as drawn: each paragraph after its bullet or number.)
+  const dh = textBlockHeight(it.desc ? withList(it.desc, it.ls) : DESC_HINT, descW, TEXT_FS, TEXT);
   out.desc = { x: PAD, y: dy, w: descW, h: dh };
   const d = dy + dh;
   if (it.tv === 'desc') {
@@ -186,7 +188,9 @@ const mix = (a: string, b: string, k: number) => {
 const strongOf = (color: string | undefined) => (color?.startsWith('#') ? color : STRONG[color ?? 'blue'] ?? (FILLS[color ?? ''] && FILLS[color!] !== 'transparent' ? FILLS[color!] : STRONG.blue));
 
 /** `px`: the screen's pixels in a unit of the board (for the shadow, which the canvas doesn't scale). */
-export interface TaskLook { surface: string; ink: string; muted: string; dark: boolean; z: number; px: number }
+export interface TaskLook { surface: string; ink: string; muted: string; dark: boolean; z: number; px: number;
+  /** Links in its description: their blue, and where each piece of one was drawn, to be clicked. */
+  linkInk?: string; onLink?: (r: Rect & { url: string }) => void }
 
 /** The ring of a status (or a subtask's: to do or done), its middle at x, y; being done, `part` of it
  *  round in blue (three quarters; with subtasks, as much as of them is done). */
@@ -302,7 +306,33 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   };
   if (typing !== null) lines(titleLine(it.text || 'Название задачи', l.title.w), { ...l.title, w: Infinity }, TITLE_FS, 500, it.text ? look.ink : look.muted);
   if (!l.desc) return;
-  if (typing !== 0) lines(it.desc || DESC_HINT, l.desc, TEXT_FS, 400, it.desc ? look.ink : look.muted, it.desc ? 0.8 : 1);
+  if (typing !== 0 && !it.desc) lines(DESC_HINT, l.desc, TEXT_FS, 400, look.muted);
+  else if (typing !== 0) {
+    // In a list as it's set, links on parts of it blue and underlined (see model/textLinks.ts).
+    const text = withList(it.desc!, it.ls), links = it.links?.length ? drawnLinks(it.desc!, it.ls, it.links) : [];
+    const lh = lineH(TEXT_FS), linkInk = look.linkInk ?? BLUE;
+    ctx.font = font(TEXT_FS, 400, FAMILY);
+    let from = 0;
+    wrapText(text, l.desc.w, (t) => ctx.measureText(t).width).forEach((line, i) => {
+      const ly = y + l.desc!.y + lh * i, mid = ly + lh / 2, lx = x + l.desc!.x;
+      const at = text.indexOf(line, from), on = links.filter((k) => k.s < at + line.length && k.e > at);
+      from = at + line.length;
+      const cuts = [...new Set([0, line.length, ...on.flatMap((k) => [k.s - at, k.e - at]).filter((c) => c > 0 && c < line.length)])].sort((a, b) => a - b);
+      for (let c = 0; c + 1 < cuts.length; c++) {
+        const piece = line.slice(cuts[c], cuts[c + 1]), px = lx + ctx.measureText(line.slice(0, cuts[c])).width, pw = ctx.measureText(piece).width;
+        const link = on.find((k) => k.s - at <= cuts[c] && k.e - at >= cuts[c + 1]);
+        ctx.fillStyle = link ? linkInk : look.ink;
+        ctx.globalAlpha = link ? 1 : 0.8;
+        ctx.fillText(piece, px, mid);
+        if (link) {
+          ctx.globalAlpha = 0.4;
+          ctx.fillRect(px, mid + TEXT_FS * 0.55, pw, 1);
+          look.onLink?.({ x: px, y: ly, w: pw, h: lh, url: link.url });
+        }
+      }
+      ctx.globalAlpha = 1;
+    });
+  }
   if (l.more) drawIcon(ctx, 'chevron-down-m', x + l.more.x, y + l.more.y, ARROW, arrowInk('more'));
   if (!l.rows || !l.subs || !l.lines || !l.cancel || !l.finish || l.subsAt === undefined) return;
   ctx.fillStyle = look.dark ? 'rgba(255,255,255,0.1)' : '#DFE3E6';

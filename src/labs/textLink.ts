@@ -43,6 +43,7 @@ export const linkPartAt = (it: Item | null | undefined, w: Point): string | null
 /** What linking the typed text's s…e to an address (or unlinking it, for '') does: the text as typed
  *  so far goes in with it, the links there before moved along with it. */
 export function linkPartPatch(it: Item, typedText: string, s: number, e: number, typed: string): Partial<Item> {
-  const links = remapLinks(it.text ?? '', typedText, it.links);
-  return { text: typedText, links: setLink(links, s, e, normalUrl(typed)) };
+  // (A task's links are on its description.)
+  const task = it.type === 'task', links = remapLinks((task ? it.desc : it.text) ?? '', typedText, it.links);
+  return { [task ? 'desc' : 'text']: typedText, links: setLink(links, s, e, normalUrl(typed)) };
 }

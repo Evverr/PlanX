@@ -1,5 +1,6 @@
 import type { Board } from './board';
 import type { Item, TaskStatus } from './types';
+import { remapLinks } from './textLinks';
 import { taskSize, TASK_OPEN_W, TASK_W } from '../canvas/task';
 
 /**
@@ -61,7 +62,8 @@ export function addSub(board: Board, it: Item, after = (it.subs?.length ?? 0) - 
  *  left empty goes. */
 export function taskTextPatch(it: Item, field: number | null, value: string): Partial<Item> | null {
   if (field === null) return value === (it.text ?? '') ? null : { text: value };
-  if (field === 0) return value === (it.desc ?? '') ? null : { desc: value || undefined };
+  // (Links on parts of its description moved along with what's typed.)
+  if (field === 0) return value === (it.desc ?? '') ? null : { desc: value || undefined, ...(it.links && { links: remapLinks(it.desc ?? '', value, it.links) }) };
   const subs = [...(it.subs ?? [])], i = field - 1;
   if (!subs[i]) return null;
   if (!value.trim()) subs.splice(i, 1);
