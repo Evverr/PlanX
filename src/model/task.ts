@@ -13,12 +13,16 @@ export function setStatus(board: Board, id: string, st: TaskStatus): void {
   board.update(id, { st, done: undefined });
 }
 
-/** Opened to its description or all of it, or closed: wider opened, back to its width closed. */
+/** Opened to its description or all of it, or closed: wider opened, back to its width closed; opened,
+ *  on top of everything. */
 export function setView(board: Board, it: Item, tv: Item['tv']): void {
   const w = tv ? Math.max(it.w, it.tv ? it.w : TASK_OPEN_W) : it.cw ?? TASK_W;
-  const next = { ...it, tv, w };
-  board.update(it.id, { tv, w, h: taskSize(next).h, cw: tv && !it.tv ? it.w : tv ? it.cw : undefined });
+  const next = { ...it, tv, w }, top = Math.max(...board.list().map((i) => i.z));
+  board.update(it.id, { tv, w, h: taskSize(next).h, cw: tv && !it.tv ? it.w : tv ? it.cw : undefined, ...(tv && !it.tv && it.z < top && { z: top + 1 }) });
 }
+
+/** A double click on its header: closed, to its description, all of it, closed again. */
+export const nextView = (board: Board, it: Item): void => setView(board, it, !it.tv ? 'desc' : it.tv === 'desc' ? 'full' : undefined);
 
 /** Its height for what's in it now, with a change to it. */
 export const fitTask = (it: Item, patch: Partial<Item> = {}): number => taskSize({ ...it, ...patch }).h;

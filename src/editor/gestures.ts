@@ -3,7 +3,8 @@ import { DEFAULTS, ROTATABLE, textPad, textPadY, uid } from '../model/types';
 import type { PathNode, Point, Rect } from '../canvas/geometry';
 import { anchorAt, angleOf, boxOf, center, hitItem, linkBox, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedFrom, toLocal, turn } from '../canvas/geometry';
 import { itemTextHeight, mindSize } from '../canvas/text';
-import { taskSize } from '../canvas/task';
+import { onTaskHead, taskSize } from '../canvas/task';
+import { nextView } from '../model/task';
 import { taskFieldAt } from './tasks';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, freshTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
@@ -360,6 +361,8 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // (A timeline neither folds nor has a title.)
         if (it?.tl) { /* nothing */ }
         else if (it?.type === 'frame' && !it.inst && (it.fold || toLocal(it, g.start).y >= it.y)) ed.setFolded(it.id, !it.fold);
+        // A task's header goes on to the next of its views (its title typed in by Enter).
+        else if (it?.type === 'task' && onTaskHead(it, g.start)) nextView(board, it);
         else if (!it?.inst) ed.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : it?.type === 'task' ? taskFieldAt(it, g.start) : null);
       } else if (g.again && !g.cell && under(ed, g.id, g.start)) {
         // "Клик сквозь": what's under it there is picked instead.

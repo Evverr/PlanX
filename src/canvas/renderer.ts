@@ -278,6 +278,14 @@ function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: s
     }
     ctx.fillStyle = ink;
     const base = y + (l.lineHeight - ascent - descent) / 2 + ascent;
+    // A link underlined as a border under it would be: at the foot of its letters, in its own colour at 40%.
+    const underline = (x0: number, w: number, color: string) => {
+      ctx.fillStyle = color;
+      ctx.globalAlpha = textAlpha * 0.4;
+      ctx.fillRect(x0, base + descent - rule, w, rule);
+      ctx.globalAlpha = textAlpha;
+    };
+    if (line && it.url) { const tw = ctx.measureText(line).width; underline(align === 'center' ? x - tw / 2 : align === 'right' ? x - tw : x, tw, ink); }
     const at = text.indexOf(line, from), on = links?.filter((k) => k.s < at + line.length && k.e > at);
     from = at + line.length;
     if (!on?.length) ctx.fillText(line, x, base);
@@ -291,6 +299,7 @@ function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: s
         const link = on.find((k) => k.s - at <= cuts[i] && k.e - at >= cuts[i + 1]);
         ctx.fillStyle = link ? shade(LINK_INK, s.theme.dim) : ink;
         ctx.fillText(piece, px, base);
+        if (link) underline(px, ctx.measureText(piece).width, shade(LINK_INK, s.theme.dim));
         if (link && !it.rot) textLinkRects.push({ x: px, y, w: ctx.measureText(piece).width, h: l.lineHeight, url: link.url });
       }
       ctx.textAlign = align;
@@ -503,7 +512,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       ctx.globalAlpha = 1;
       break;
     case 'task':
-      drawTaskCard(ctx, it, { surface: theme.surface, ink: theme.ink, muted: theme.muted, dark: theme.dim < 1, z: cam.z }, editing ? s.editingCell : undefined);
+      drawTaskCard(ctx, it, { surface: theme.surface, ink: theme.ink, muted: theme.muted, dark: theme.dim < 1, z: cam.z, px: cam.z * s.dpr }, editing ? s.editingCell : undefined);
       break;
     case 'table':
       drawTable(ctx, it, s, editing ? s.editingCell : null);
