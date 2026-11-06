@@ -10,7 +10,7 @@
    6px below the top bar. */
 .menu-wrap { position: relative; display: flex; }
 .board-menu { position: absolute; left: round(calc(-6px * var(--k)), 1px); top: calc(100% + var(--s12)); z-index: 7; width: var(--e286); box-sizing: border-box;
-  display: flex; flex-direction: column; gap: 0; padding: var(--s13) var(--s18) var(--s17) var(--s14);
+  display: flex; flex-direction: column; gap: 0; padding: var(--s9) var(--s18) var(--s13) var(--s14);
   background: var(--surface); border-radius: var(--s12); box-shadow: 0 6px 6px rgba(0, 0, 0, .15); }
 .menu-item { position: relative; width: 100%; }
 .menu-row { position: relative; display: flex; align-items: center; gap: var(--s11); width: 100%; border: 0; background: none; padding: 0;
@@ -43,7 +43,7 @@
   box-shadow: 0 1px 1px rgba(0, 0, 0, .07); transition: left .15s ease-out, right .15s ease-out; }
 .menu-switch.on i { left: 45.83%; right: 12.5%; box-shadow: 0 1px 1px rgba(0, 0, 0, .17); }
 /* A further level opens beside its row, 3px over the menu's edge, its first row level with it. */
-.board-menu.sub { left: calc(100% + var(--s15)); top: round(calc(-13px * var(--k)), 1px); bottom: auto; }
+.board-menu.sub { left: calc(100% + var(--s15)); top: round(calc(-9px * var(--k)), 1px); bottom: auto; }
 /* Where the screen ends, it opens to the left instead, 3px over the menu's other edge. */
 .board-menu.sub.leftward { left: auto; right: calc(100% + var(--s11)); }
 .board-menu.plain > .menu-item > .board-menu.sub.leftward { right: calc(100% + var(--s15)); }
