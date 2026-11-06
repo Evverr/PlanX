@@ -10,7 +10,7 @@
    6px below the top bar. */
 .menu-wrap { position: relative; display: flex; }
 .board-menu { position: absolute; left: round(calc(-6px * var(--k)), 1px); top: calc(100% + var(--s12)); z-index: 7; width: var(--e286); box-sizing: border-box;
-  display: flex; flex-direction: column; gap: 0; padding: var(--s9) var(--s18) var(--s13) var(--s14);
+  display: flex; flex-direction: column; gap: 0; padding: var(--s9) var(--s18) var(--s9) var(--s14);
   background: var(--surface); border-radius: var(--s12); box-shadow: 0 6px 6px rgba(0, 0, 0, .15); }
 .menu-item { position: relative; width: 100%; }
 .menu-row { position: relative; display: flex; align-items: center; gap: var(--s11); width: 100%; border: 0; background: none; padding: 0;

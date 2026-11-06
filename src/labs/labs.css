@@ -135,7 +135,7 @@
 :root .params-group .params-colors .sw { margin: 0; }
 /* What scrolls, when the window's too small: inside, not the popup, whose glass (below) would scroll away. */
 .board-menu.params-pop { max-height: calc(100vh - 16px); padding-bottom: 0; }
-.params-body { min-height: 0; overflow-y: auto; margin: 0 calc(-1 * var(--s18)) 0 calc(-1 * var(--s14)); padding: 0 var(--s18) var(--s13) var(--s14); border-radius: 0 0 var(--s12) var(--s12); }
+.params-body { min-height: 0; overflow-y: auto; margin: 0 calc(-1 * var(--s18)) 0 calc(-1 * var(--s14)); padding: 0 var(--s18) var(--s9) var(--s14); border-radius: 0 0 var(--s12) var(--s12); }
 .params-row .menu-input input[type="range"] { width: var(--e110, 110px); padding: 0; border: 0; }
 .params-row .menu-input i { min-width: 3.2em; text-align: right; }
 /* Wide enough for a row of ten colours (the usual eight, none, any) in one line. */
