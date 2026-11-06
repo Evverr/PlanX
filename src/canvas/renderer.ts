@@ -15,6 +15,7 @@ import { labOn } from '../labs/labs';
 import { zoomFade, zoomSize } from '../labs/zoomFade';
 import { gripsOn } from '../labs/tableMove';
 import { gridKind } from '../labs/boardGrid';
+import { dotsAlways, dotsUnder } from '../labs/linkTool';
 import { isBuiltin } from '../model/builtins';
 import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
@@ -1425,11 +1426,11 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   }
   // With the line tool, the dots of the item under the pointer, whatever it is.
   const dotted = s.linkDots ? s.get(s.linkDots) : undefined;
-  if (dotted && (s.linkTool || !(s.selection.size === 1 && s.selection.has(dotted.id)))) drawDots(ctx, dotted, s);
+  if (dotted && (s.allDots ? dotsUnder(dotted, s.selection) : s.linkTool || !(s.selection.size === 1 && s.selection.has(dotted.id)))) drawDots(ctx, dotted, s);
   // And with "Связи инструментом", every other one's in sight.
   if (s.allDots) {
     const m = 20 / cam.z, view = { x: -cam.x / cam.z - m, y: -cam.y / cam.z - m, w: s.width / cam.z + m * 2, h: s.height / cam.z + m * 2 };
-    for (const it of s.items) if (it !== dotted && it.id !== dotted?.id && it.type !== 'mind' && !it.inst && !it.host && rectsIntersect(view, boxOf(it))) drawDots(ctx, it, s);
+    for (const it of s.items) if (it.id !== dotted?.id && dotsAlways(it, s.selection) && rectsIntersect(view, boxOf(it))) drawDots(ctx, it, s);
   }
 
   if (s.mindMove) {
