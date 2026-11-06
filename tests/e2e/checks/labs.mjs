@@ -37,7 +37,7 @@ export const checks = {
     expect(await p.ev(`window.clip?.split('\\n').length`), 'all of it copied').toBe(14);
   },
 
-  async '"Код": an empty block clicked is typed in at once, to paste into'(p) {
+  async '"Код": an empty block clicked is typed in at once, to paste into; Backspace there takes it away'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       planx.board.add(e.newItem('rect', 300, 300, { id: 'c', code: 'js', text: '', w: 480, h: 120, fs: 14, ff: 'mono', rad: 16 })); e.setSelection([]); })()`);
     await sleep(200);
@@ -52,6 +52,17 @@ export const checks = {
     await p.click([540, 380]);
     await sleep(200);
     expect(await p.ev('planx.editor.editingId'), 'not typed in').toBe(null);
+    // Emptied, Backspace pressed anew takes it away (held on from erasing, not).
+    await p.ev(`planx.board.update('c', { text: '' }); planx.editor.setSelection([])`);
+    await sleep(200);
+    await p.click([540, 380]);
+    await sleep(200);
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Backspace', code: 'Backspace', windowsVirtualKeyCode: 8, autoRepeat: true });
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Backspace', code: 'Backspace', windowsVirtualKeyCode: 8 });
+    expect(await p.ev(`!!planx.board.get('c')`), 'held on: kept').toBe(true);
+    await p.key('Backspace', 'Backspace', 8);
+    await sleep(100);
+    expect([await p.ev(`!!planx.board.get('c')`), await p.ev('planx.editor.editingId')].join(), 'pressed: gone, nothing typed in').toBe('false,');
   },
 
   async '"Код": dragged off the right rail, a block put where it\'s let go'(p) {

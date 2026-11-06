@@ -199,6 +199,14 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           e.preventDefault();
           done.current = true;
           editor.undoMindNode(id);
+        } else if (code && (e.key === 'Backspace' || e.key === 'Delete') && !e.currentTarget.value) {
+          // An empty block of code (a click types in it at once): Delete or Backspace pressed anew, not held
+          // on from erasing its code, takes it away.
+          e.preventDefault();
+          if (e.repeat) return;
+          commit();
+          editor.setSelection([id]);
+          editor.deleteSelection();
         } else if (item.type === 'mind' && item.parent && (e.key === 'Backspace' || e.key === 'Delete') && !e.currentTarget.value) {
           // An empty mind map node goes on Delete or Backspace pressed anew, not held on from erasing its text.
           e.preventDefault();
