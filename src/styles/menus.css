@@ -27,9 +27,8 @@
 .menu-more { position: absolute; right: round(calc(-5px * var(--k)), 1px); top: var(--s8); width: 24px; height: 24px; background: var(--fmt-ink);
   -webkit-mask: url(../ui/menu/drop.svg) center / contain no-repeat; mask: url(../ui/menu/drop.svg) center / contain no-repeat; }
 /* As far in from either side of the menu (whose left padding is the less, but in a plain one). */
-/* A line between groups: as far in from the menu's sides as its rows' text on the left, the same on the right. */
-.menu-line { flex: none; height: 1px; margin: 0 calc(var(--s14) - var(--s18)) 0 0; background: #6E6E6E; opacity: .1; }
-.board-menu.plain .menu-line { margin-right: 0; }
+.menu-line { flex: none; height: 1px; margin: var(--s4) calc(var(--s14) - var(--s18) - var(--s3)) var(--s4) calc(var(--s3) * -1); background: #6E6E6E; opacity: .1; }
+.board-menu.plain .menu-line { margin-right: calc(var(--s3) * -1); }
 /* The switch: a 24×14 track, grey with the knob at its left, blue with it at its right when on. */
 .menu-switch { position: absolute; right: round(calc(-2px * var(--k)), 1px); top: 50%; width: var(--e24); height: var(--e24); transform: translateY(-50%); }
 /* The panels' size: three dots at the row's end (a stand-in till they're drawn), the chosen one blue. */
