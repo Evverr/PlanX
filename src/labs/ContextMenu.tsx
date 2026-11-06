@@ -228,8 +228,8 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
           <div className="menu-line" />
         </>}
         {row('copy', 'Скопировать', run(() => { if (editor.copy()) onToast('Скопировано. Вставить: Ctrl+V или правым кликом'); }))}
-        {row('arrow-top-l', 'Переместить вверх', run(() => editor.bringToFront()))}
-        {row('arrow-down-l', 'Переместить вниз', run(() => editor.sendToBack()))}
+        {row('arrow-top-l', 'Переместить вверх', run(() => editor.shiftZ(1)))}
+        {row('arrow-down-l', 'Переместить вниз', run(() => editor.shiftZ(-1)))}
         {row('component', 'Сделать компонентом', run(() => editor.makeComponent()))}
         {editInst && row('edit-l', 'Редактировать компонент', run(() => editor.editComponentAt(editInst)))}
         {tidy && row('apps', 'Авторасположение', run(() => { if (tidyMind) editor.tidyMind(tidyMind); else startTidy(editor); editor.requestRender(); }))}

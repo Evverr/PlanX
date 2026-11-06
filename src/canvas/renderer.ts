@@ -189,6 +189,26 @@ const PICK_OUT = 80;
 /** What was picked at the last frame, and since when each no longer is (with whether it had its dots). */
 let picked = new Set<string>(), pickedAlone: string | null = null;
 const unpicked = new Map<string, { at: number; dots: boolean }>();
+/** Leaves out of what's drawn next the solid things drawn over an item (tasks, stickers, pictures,
+ *  tables, shapes filled in) not picked themselves: its selection frame stays under them, as it is. */
+function hiddenUnder(ctx: CanvasRenderingContext2D, it: Item, s: Scene, view: Rect) {
+  const at = s.items.findIndex((i) => i.id === it.id);
+  if (at < 0) return;
+  const b = boxOf(it), pad = 6 / s.cam.z;
+  const over = s.items.slice(at + 1).filter((o) => !s.selection.has(o.id) && !o.rot
+    && (o.type === 'task' || o.type === 'sticky' || o.type === 'image' || o.type === 'table' || ((o.type === 'rect' || o.type === 'ellipse') && o.color !== 'none'))
+    && o.x < b.x + b.w + pad && b.x - pad < o.x + o.w && o.y < b.y + b.h + pad && b.y - pad < o.y + o.h);
+  if (!over.length) return;
+  // (One cut after another, so where two of them meet stays cut.)
+  for (const o of over) {
+    ctx.beginPath();
+    ctx.rect(view.x, view.y, view.w, view.h);
+    if (o.type === 'ellipse') { ctx.moveTo(o.x + o.w, o.y + o.h / 2); ctx.ellipse(o.x + o.w / 2, o.y + o.h / 2, o.w / 2, o.h / 2, 0, 0, Math.PI * 2); }
+    else ctx.roundRect(o.x, o.y, o.w, o.h, corner(o));
+    ctx.clip('evenodd');
+  }
+}
+
 /** Selection outlines and handles, the link dots and selected links. */
 const SELECT_COLOR = '#4DA3FF';
 
@@ -1350,7 +1370,10 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     // An instance keeps its red title alone, without a selection frame.
     if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) {
       ctx.globalAlpha = PICK_FRAME;
+      ctx.save();
+      hiddenUnder(ctx, it, s, view);
       outline(ctx, it, cam.z, theme.pick, [], PICK_LINE, PICK_RAD);
+      ctx.restore();
       ctx.globalAlpha = 1;
     }
     // (A picture of the board has it as it is, and leaves the one on the board alone.)
