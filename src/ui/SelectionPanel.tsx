@@ -20,7 +20,7 @@ import { canCrop, croppingId, subscribeCrop, toggleCrop } from '../labs/imageCro
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['lang', 'colors', 'text', 'align', 'tidy', 'rows', 'cols', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+const ORDER = ['lang', 'sepLang', 'colors', 'text', 'align', 'tidy', 'rows', 'cols', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -418,6 +418,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
       {sort.renderFit({
         // A block of code's language ("Код", src/labs).
         lang: labs.codeBlock && items.length === 1 && items[0].code ? <CodeLang key={items[0].id} editor={editor} item={items[0]} /> : undefined,
+        sepLang: labs.codeBlock && items.length === 1 && items[0].code ? <div className="sep" /> : undefined,
         // All the colours are under the palette: a table's own when it's selected alone.
         // (Picking something else closes the palette: the key changes with the selection.)
         colors: tables.length === 1 && items.length === 1 ? <TableColors key={tables[0].id} editor={editor} table={tables[0]} cells={cells} />
