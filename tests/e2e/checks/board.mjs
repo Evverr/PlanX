@@ -46,6 +46,14 @@ export const checks = {
     await p.click(ring);
     expect((await t()).st, 'to do again').toBe('todo');
     await sleep(450);
+    // Dragged by its ring or its arrow, it moves, its status and view as they were.
+    for (const [part, dx] of [['(t) => ({ x: t.x + 26, y: t.y + 26 })', 60], ['(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })', -60]]) {
+      const x0 = (await t()).x;
+      await p.drag(await at(part), (await at(part)).map((v, i) => v + (i ? 0 : dx)));
+      it = await t();
+      expect([it.x - x0, it.st ?? 'todo', it.tv ?? 'closed'].join(), 'dragged, not clicked').toBe(`${dx},todo,closed`);
+      await sleep(450);
+    }
     await p.ev(`planx.board.add(planx.editor.newItem('sticky', 1200, 1200, { id: 'over', z: 50 }))`);
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
     it = await t();
