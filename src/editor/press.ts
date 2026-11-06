@@ -1,7 +1,7 @@
 import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
 import { center, hitItem, hitLink, instanceBounds, linkBox, linkShape, onAudioButton } from '../canvas/geometry';
-import { pressTask } from './tasks';
+import { taskButtonAt } from './tasks';
 import { copyCode, onCodeCopy } from '../labs/codeBlock';
 import { toggleAudio } from '../canvas/audio';
 import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, tickAt, objectArrowAt, pickedUnder } from './hover';
@@ -285,8 +285,6 @@ export function press(ed: Editor, e: PointerEvent): void {
   }
   // A block of code's copy button ("Код", src/labs).
   if (hit?.code && e.button === 0 && !e.shiftKey && ed.editingId !== hit.id && onCodeCopy(hit, w)) { copyCode(hit, () => ed.requestRender()); return; }
-  // A task's buttons (its ring, arrows, a subtask's ring, the people…) do their thing instead of picking it up.
-  if (hit?.type === 'task' && !entering && !e.shiftKey && e.button === 0 && ed.editingId !== hit.id && pressTask(ed, hit, w, sp)) return;
   // An audio note's button plays it (or stops it) instead of picking it up.
   if (hit?.type === 'audio' && !entering && !e.shiftKey && onAudioButton(hit, w)) {
     toggleAudio(hit, () => ed.requestRender());
@@ -313,7 +311,9 @@ export function press(ed: Editor, e: PointerEvent): void {
     } else if (!ed.selection.has(hit.id)) { ed.setPicking(true); ed.setSelection([hit.id]); }
     // A link on a part of its text opens once let go, not dragged (see endGesture).
     const url = e.button === 0 && !e.shiftKey && !e.altKey && ed.editingId !== hit.id ? linkPartAt(hit, w) ?? undefined : undefined;
-    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(items), moved: false, id: hit.id, dbl, cell, enter, again, url };
+    // A task's buttons (its ring, arrows, a subtask's ring, the people…) alike: dragged, it moves.
+    const tap = hit.type === 'task' && !entering && !e.shiftKey && e.button === 0 && ed.editingId !== hit.id && taskButtonAt(hit, w) ? sp : undefined;
+    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(items), moved: false, id: hit.id, dbl, cell, enter, again, url, tap };
     return;
   }
   ed.lastTap = { id: '', t: 0 };

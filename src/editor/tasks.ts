@@ -17,7 +17,7 @@ export function taskButtonAt(it: Item | null | undefined, w: Point): TaskPart | 
   return part === 'title' || part === 'desc' || part === 'head' || (typeof part === 'object' && part && !part.tick) ? null : part;
 }
 
-/** Does what a press on a task's button does; whether it was on one. */
+/** Does what a click on a task's button does (on letting go, not dragged); whether it was on one. */
 export function pressTask(ed: Editor, it: Item, w: Point, sp: Point): boolean {
   const part = taskButtonAt(it, w);
   if (!part) return false;
@@ -30,8 +30,8 @@ export function pressTask(ed: Editor, it: Item, w: Point, sp: Point): boolean {
   else if (part === 'add') {
     const n = addSub(board, it);
     ed.setSelection([it.id]);
-    // Typed in once let go: the press would take the typing's focus away.
-    window.addEventListener('pointerup', () => setTimeout(() => ed.startEditing(it.id, n + 1, 'end')), { once: true });
+    // (Done once let go, the press can't take the typing's focus away.)
+    setTimeout(() => ed.startEditing(it.id, n + 1, 'end'));
   } else if (part === 'boss' || part === 'doer' || part === 'due') {
     ed.setSelection([it.id]);
     window.dispatchEvent(new CustomEvent<TaskPick>('planx:task-pick', { detail: { id: it.id, field: part, x: sp.x, y: sp.y } }));

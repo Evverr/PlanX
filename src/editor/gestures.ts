@@ -5,7 +5,7 @@ import { anchorAt, angleOf, boxOf, center, hitItem, linkBox, linkShape, movedStr
 import { itemTextHeight, mindSize } from '../canvas/text';
 import { taskPartAt, taskSize } from '../canvas/task';
 import { freshTask, nextView } from '../model/task';
-import { taskFieldAt } from './tasks';
+import { pressTask, taskFieldAt } from './tasks';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, freshTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
 import { shapeStyle } from './shapeStyle';
@@ -31,7 +31,7 @@ import { under } from '../labs/clickThrough';
 export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string }
+  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string; tap?: Point }
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' | 'tl' | 'bl' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point; last?: Point }
@@ -345,6 +345,10 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       } else if (g.url) {
         // A link on a part of its text, clicked ("Ссылка в тексте", src/labs): opened in a new tab.
         window.open(g.url, '_blank', 'noopener');
+      } else if (g.tap) {
+        // A task's button, clicked (`tap`: where on screen, for a popup): what it does.
+        const it = board.get(g.id);
+        if (it) pressTask(ed, it, g.start, g.tap);
       } else if (g.dbl) {
         const it = board.get(g.id);
         // A path drawn with "Перо" (src/labs): its nodes to change.
