@@ -54,6 +54,8 @@
 .menu-row::before { content: ""; position: absolute; inset: 0 calc(-1 * var(--menu-pad-r)) 0 round(calc(-14px * var(--k)), 1px); z-index: -1; transition: background-color .12s ease-out; }
 .board-menu.plain > .menu-item > .menu-row::before { left: round(calc(-18px * var(--k)), 1px); }
 .menu-row:hover::before, .menu-row[aria-expanded="true"]::before { background: var(--fmt-hover); }
+/* A row under the pointer: its icon a little darker. */
+.menu-row:hover .menu-icon, .menu-row[aria-expanded="true"] .menu-icon { color: color-mix(in srgb, var(--icon-faint) 70%, var(--menu-ink)); }
 /* «Удалить»: under the pointer red, its text red, its icon as light as ever but reddish. */
 .menu-row.danger:hover::before { background: color-mix(in srgb, var(--danger) 10%, transparent); }
 .menu-row.danger:hover { color: var(--danger); }
