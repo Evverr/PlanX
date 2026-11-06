@@ -62,6 +62,15 @@ export const checks = {
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
     it = await t();
     expect([it.tv, it.w, it.z > 50].join(), 'its arrow: all of it, wider, on top').toBe('full,494,true');
+    // Who does it only, the arrow by it showing who set it and by when too, and back.
+    const rows = () => p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).rows.map((r) => r.key).join())()`);
+    expect(await rows(), 'who does it').toBe('doer');
+    for (const want of ['boss,doer,due', 'doer']) {
+      await sleep(450);
+      await p.click(await at('(t, l) => ({ x: t.x + l.peopleAt.x + 12, y: t.y + l.peopleAt.y + 12 })'));
+      expect(await rows(), 'rows shown').toBe(want);
+      expect((await t()).h, 'as tall as them').toBe(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).h)()`));
+    }
     // «Задача сразу целиком» off: its description first, then all of it by the arrow under it.
     await sleep(450);
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));

@@ -54,10 +54,11 @@ export interface TaskLayout {
   desc?: Rect;
   /** Opened to its description: the arrow under it. */
   more?: Point;
-  /** Opened in full: the lines across, the rows' middles (who set it, who does it, by when), the
+  /** Opened in full: the lines across, the rows shown and their middles (who does it; with the arrow at
+   *  the right of the first, `peopleAt`, who set it and by when too), the
    *  subtasks' heading, each subtask's top (the last: the row adding one), the buttons, and «Не
    *  сворачивать» left of them. */
-  lines?: number[]; rows?: number[]; subsAt?: number; subs?: number[]; cancel?: Rect; finish?: Rect; keep?: Rect;
+  lines?: number[]; rows?: Array<{ key: 'boss' | 'doer' | 'due'; y: number }>; peopleAt?: Point; subsAt?: number; subs?: number[]; cancel?: Rect; finish?: Rect; keep?: Rect;
 }
 
 const lineH = (fs: number) => fs * LINE_HEIGHT;
@@ -96,12 +97,15 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
     out.h = Math.ceil(d + 40);
     return out;
   }
-  out.rows = [d + 58, d + 58 + ROW, d + 58 + ROW * 2];
-  out.subsAt = d + 181;
+  const keys = it.people ? (['boss', 'doer', 'due'] as const) : (['doer'] as const), r = d + 58 + ROW * (keys.length - 1);
+  out.rows = keys.map((key, i) => ({ key, y: d + 58 + ROW * i }));
+  // (Its chevron's right end, 18 into the icon, where the lines across end.)
+  out.peopleAt = { x: w - 49 - 18, y: d + 58 - ARROW / 2 };
+  out.subsAt = r + 57;
   const n = it.subs?.length ?? 0;
-  out.subs = Array.from({ length: n + 1 }, (_, i) => d + 213 + i * SUB);
-  const last = d + 213 + n * SUB + STATUS;
-  out.lines = [d + 25, d + 157, last + 27];
+  out.subs = Array.from({ length: n + 1 }, (_, i) => r + 89 + i * SUB);
+  const last = r + 89 + n * SUB + STATUS;
+  out.lines = [d + 25, r + 33, last + 27];
   const by = last + 27 + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - 43 - fw;
   out.finish = { x: fx, y: by, w: fw, h: BUTTON_H };
   out.cancel = { x: fx - 10 - cw, y: by, w: cw, h: BUTTON_H };
@@ -114,7 +118,7 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
 export const taskSize = (it: Item, w = it.w): { w: number; h: number } => ({ w, h: taskLayout(it, w).h });
 
 /** What a point on it (from its top left corner) is on. */
-export type TaskPart = 'status' | 'arrow' | 'more' | 'head' | 'title' | 'desc' | 'boss' | 'doer' | 'due' | 'add' | 'cancel' | 'finish' | 'keep'
+export type TaskPart = 'status' | 'arrow' | 'more' | 'people' | 'head' | 'title' | 'desc' | 'boss' | 'doer' | 'due' | 'add' | 'cancel' | 'finish' | 'keep'
   | { sub: number; tick: boolean };
 
 const inRect = (p: Point, r: Rect, pad = 0) => p.x >= r.x - pad && p.x <= r.x + r.w + pad && p.y >= r.y - pad && p.y <= r.y + r.h + pad;
@@ -133,10 +137,8 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
   }
   if (l.more && near(q, l.more.x + ARROW / 2, l.more.y + ARROW / 2, ARROW / 2 + 4)) return 'more';
   if (l.desc && inRect(q, l.desc)) return 'desc';
-  if (l.rows) {
-    const keys = ['boss', 'doer', 'due'] as const;
-    for (let i = 0; i < 3; i++) if (Math.abs(q.y - l.rows[i]) <= 14 && q.x >= AVATAR_X - 14 && q.x <= l.w - 47) return keys[i];
-  }
+  if (l.peopleAt && near(q, l.peopleAt.x + ARROW / 2, l.peopleAt.y + ARROW / 2, ARROW / 2 + 4)) return 'people';
+  if (l.rows) for (const r of l.rows) if (Math.abs(q.y - r.y) <= 14 && q.x >= AVATAR_X - 14 && q.x <= l.w - 47) return r.key;
   if (l.subs) {
     for (let i = 0; i < l.subs.length; i++) {
       if (q.y < l.subs[i] - 6 || q.y > l.subs[i] + STATUS + 6) continue;
@@ -325,17 +327,21 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
     ctx.fillText(p ? p.n : 'Не назначен', x + NAME_X, y + row);
     ctx.globalAlpha = 1;
   };
-  label('Постановщик', l.rows[0]);
-  person(it.boss, l.rows[0]);
-  label('Исполнитель', l.rows[1]);
-  person(it.doer, l.rows[1]);
-  label('Крайний срок', l.rows[2]);
-  drawIcon(ctx, 'calendar', x + AVATAR_X - 10, y + l.rows[2] - 12, 24, BLUE);
-  ctx.font = font(TEXT_FS, 400, FAMILY);
-  ctx.fillStyle = it.due ? look.ink : look.muted;
-  ctx.globalAlpha = it.due ? 0.8 : 1;
-  ctx.fillText(it.due ? DATE(it.due) : 'Не задан', x + NAME_X, y + l.rows[2]);
-  ctx.globalAlpha = 1;
+  for (const { key, y: ry } of l.rows) {
+    if (key === 'boss') { label('Постановщик', ry); person(it.boss, ry); }
+    else if (key === 'doer') { label('Исполнитель', ry); person(it.doer, ry); }
+    else {
+      label('Крайний срок', ry);
+      drawIcon(ctx, 'calendar', x + AVATAR_X - 10, y + ry - 12, 24, BLUE);
+      ctx.font = font(TEXT_FS, 400, FAMILY);
+      ctx.fillStyle = it.due ? look.ink : look.muted;
+      ctx.globalAlpha = it.due ? 0.8 : 1;
+      ctx.fillText(it.due ? DATE(it.due) : 'Не задан', x + NAME_X, y + ry);
+      ctx.globalAlpha = 1;
+    }
+  }
+  // The arrow showing who set it and by when too, or only who does it again.
+  if (l.peopleAt) drawIcon(ctx, it.people ? 'chevron-up-m' : 'chevron-down-m', x + l.peopleAt.x, y + l.peopleAt.y, ARROW, arrowInk('people'));
   lines('Подзадачи:', { x: LABEL_X, y: l.subsAt, w: l.w - LABEL_X * 2, h: lineH(TEXT_FS) }, TEXT_FS, 400, look.ink, 0.8);
   const subs = it.subs ?? [];
   l.subs.forEach((sy, i) => {
