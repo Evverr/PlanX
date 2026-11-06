@@ -4,7 +4,7 @@ import { center, hitItem, hitLink, instanceBounds, linkBox, linkShape, onAudioBu
 import { copyId } from '../model/components';
 import { TASK_STATES } from '../model/builtins';
 import { toggleAudio } from '../canvas/audio';
-import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, tickAt, objectArrowAt } from './hover';
+import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, tickAt, objectArrowAt, pickedUnder } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -48,7 +48,8 @@ export function press(ed: Editor, e: PointerEvent): void {
   const w = ed.toWorld(sp.x, sp.y);
   const items = board.list();
   // A frame takes clicks anywhere on its empty area, but links drawn across it come first.
-  let hit = hitItem(ed.shown(), w, ed.cam.z);
+  // What's picked is taken first, over what lies on it (see pickedUnder); Shift picks what's on it.
+  let hit = (e.button === 0 && !e.shiftKey ? pickedUnder(ed, w) : null) ?? hitItem(ed.shown(), w, ed.cam.z);
   const link = hit && hit.type !== 'frame' ? null : hitLink(ed.shownLinks(), (id) => board.get(id), w, ed.cam.z);
   if (link) hit = null;
   // Off the component being changed here: a click ends that once let go (see Editor.onPointerUp).

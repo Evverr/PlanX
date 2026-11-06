@@ -203,6 +203,15 @@ function dotsModeHover(ed: Editor, w: Point): boolean {
 /** The frame button under the point, of the topmost frame in sight that has one there. */
 export const frameButtonUnder = (ed: Editor, w: Point) => frameButtonAt(ed.shown(), w, ed.reach(4));
 
+/** What's picked, under the point (anywhere in its box), before what lies over it: a drawing covers
+ *  little of its box, and whatever's on it would be taken in its place. Not frames, which hold others. */
+export function pickedUnder(ed: Editor, w: Point): Item | null {
+  if (ed.tool !== 'select' || ed.editingId) return null;
+  const picked = ed.selectedItems().filter((it) => it.type !== 'frame' && !isLocked(it));
+  for (let i = picked.length - 1; i >= 0; i--) if (pointInRect(picked[i].rot ? toLocal(picked[i], w) : w, picked[i])) return picked[i];
+  return null;
+}
+
 /** With the pointer over the board and nothing being done: what's under it lights up (a link dot,
  *  a table line it has rested on, a mind map button) and the cursor says what a press would do. */
 export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
@@ -227,7 +236,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   const line = ed.lineRest?.armed ? ed.lineRest.line : null;
   if (!sameLine(line, ed.hotLine)) { ed.hotLine = line; ed.requestRender(); }
   // A link the pointer is on (where no item is over it, as a press would find it) is faintly lit.
-  const under = hitItem(ed.shown(), w, ed.cam.z);
+  const under = pickedUnder(ed, w) ?? hitItem(ed.shown(), w, ed.cam.z);
   const link = under && under.type !== 'frame' ? null : hitLink(ed.shownLinks(), (id) => ed.board.get(id), w, ed.cam.z);
   if ((link?.id ?? null) !== ed.hotLink) { ed.hotLink = link?.id ?? null; ed.requestRender(); }
   // The picked instance's diamond (or that of the one holding what's picked) is lit as "glyph:<its id>".
@@ -251,7 +260,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   else if (linkEndAt(ed, w)) cursor = 'grab';
   else if (link) cursor = 'pointer';
   else {
-    const hit = hitItem(ed.shown(), w, ed.cam.z);
+    const hit = pickedUnder(ed, w) ?? hitItem(ed.shown(), w, ed.cam.z);
     // A task's ring (a component that comes with PlanX) is clicked through its states.
     const ring = hit?.host && hit.from?.startsWith('@task-') ? ed.board.get(`${hit.host}~@task-ring`) : undefined;
     if ((hit?.type === 'task' && onTaskBox(hit, w, ed.cam.z)) || (hit?.type === 'audio' && onAudioButton(hit, w)) || (ring && pointInRect(w, ring))) cursor = 'pointer';
