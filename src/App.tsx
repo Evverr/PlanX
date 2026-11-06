@@ -210,7 +210,7 @@ export function App({ boardId }: { boardId: string }) {
   // Several picked with text ("Несколько сразу", src/labs): the panel takes them as one.
   // What has text the panel sets: text, basic stickers, tasks, tables, shapes (not mind map nodes, nor a
   // component's title); several picked with text ("Несколько сразу", src/labs) taken as one.
-  const textItem = selItems.length === 1 && ['text', 'sticky', 'task', 'table', 'rect', 'ellipse', 'polygon'].includes(selItems[0].type) ? selItems[0] : asOne(selItems) ?? undefined;
+  const textItem = selItems.length === 1 && ['text', 'sticky', 'task', 'table', 'rect', 'ellipse', 'polygon'].includes(selItems[0].type) && !selItems[0].code ? selItems[0] : asOne(selItems) ?? undefined;
   const labs = useLabs();
   // "Кнопка T" (src/labs): the text panel instead of the selection panel, asked for by its T, till the
   // next press on the board (or something else picked).

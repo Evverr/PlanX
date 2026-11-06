@@ -286,3 +286,8 @@
 /* The text panel's colour and highlight menus: a row of colours and opacity as in «Параметры». */
 .tf-menu.params-menu { display: block; width: round(calc(376px * var(--k)), 2px); padding: var(--s12) var(--s16); box-sizing: border-box; }
 .tf-menu.params-menu .params-group { padding: 0; }
+
+/* "Код": the block's language on its panel, the list rising over the panel as its other popups do
+   (falling under it when the panel's opened down from over the block). */
+.bar.panel .code-lang .tf-menu { top: auto; bottom: calc(100% + var(--s18)); --in-y: var(--slide); }
+.bar.panel.opens-down .code-lang .tf-menu { top: calc(100% + var(--s18)); bottom: auto; --in-y: calc(-1 * var(--slide)); }
