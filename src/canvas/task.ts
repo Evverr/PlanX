@@ -207,9 +207,9 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   ctx.fillStyle = it.tv ? bg : tint;
   if (it.tv) {
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowOffsetY = 2 * look.px;
-    ctx.shadowBlur = 4 * look.px;
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowOffsetY = 3 * look.px;
+    ctx.shadowBlur = 8 * look.px;
     ctx.fill();
     ctx.restore();
   } else ctx.fill();
