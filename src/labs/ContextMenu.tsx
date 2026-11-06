@@ -243,6 +243,12 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
 /** A line's parameters: its colour (any too) and opacity, dashed or not, its arrowheads, the way it runs. */
 export function LinkParams({ editor, ids }: { editor: Editor; ids: string[] }) {
   const [, redraw] = useState(0);
+  // While open, the links are drawn in their colours, not the selection's blue.
+  useEffect(() => {
+    editor.linksAsThey = true;
+    editor.requestRender();
+    return () => { editor.linksAsThey = false; editor.requestRender(); };
+  }, [editor]);
   // Several picked: shown as the first is, set on all of them.
   const links = ids.map((id) => editor.board.getLink(id)).filter((l): l is NonNullable<typeof l> => !!l), l = links[0];
   if (!l) return null;

@@ -125,6 +125,8 @@ export interface Scene {
   editingCell: number | null;
   /** The board being worked on (not a picture of it): what's unpicked fades out. */
   live?: boolean;
+  /** Picked links' colours being set: drawn in them, not in the selection's blue. */
+  linksAsThey?: boolean;
   /** Left see-through where nothing is drawn (a picture saved without the board's background). */
   noBackground?: boolean;
 }
@@ -1160,7 +1162,7 @@ function drawLinks(ctx: CanvasRenderingContext2D, s: Scene, view: Rect) {
       const l = s.links[k], shape = shapes[k]!;
       const look = linkLook(l, theme);
       gc.globalAlpha = l.lo ?? 1;
-      linkArrow(gc, shape, s.selection.has(l.id) ? SELECT_COLOR : look.color, cam.z, look.dash, look.heads, l.lw);
+      linkArrow(gc, shape, s.selection.has(l.id) && !s.linksAsThey ? SELECT_COLOR : look.color, cam.z, look.dash, look.heads, l.lw);
       // The one under the pointer a little bluer.
       if (l.id === s.hotLink && !s.selection.has(l.id)) {
         gc.globalAlpha = 0.4 * (l.lo ?? 1);
