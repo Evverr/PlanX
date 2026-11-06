@@ -6,8 +6,8 @@ import type { Item } from '../src/model/types';
 const task = (extra: Partial<Item> = {}): Item => ({ id: 't', type: 'task', x: 0, y: 0, w: 293, h: 52, z: 0, text: 'Купить', ...extra });
 
 describe('tasks', () => {
-  it('go round their statuses; a task ticked off before is done', () => {
-    expect([nextStatus('todo'), nextStatus('doing'), nextStatus('done')]).toEqual(['doing', 'done', 'todo']);
+  it('are done or to do by their ring; a task ticked off before is done', () => {
+    expect([nextStatus('todo'), nextStatus('doing'), nextStatus('done')]).toEqual(['done', 'done', 'todo']);
     expect(statusOf(task({ done: true }))).toBe('done');
     expect(statusOf(task())).toBe('todo');
   });

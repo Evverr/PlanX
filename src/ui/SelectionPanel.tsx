@@ -181,8 +181,10 @@ function ItemColors({ editor, items }: { editor: Editor; items: Item[] }) {
   // Mind map nodes on their own get their strong colours instead of the pale fills.
   const mind = colorable.length > 0 && colorable.every((i) => i.type === 'mind');
   const allowNone = colorable.every((i) => i.type !== 'sticky');
+  // Grey is for tasks done (see canvas/task.ts): not one to give them.
+  const tasks = colorable.some((i) => i.type === 'task');
   const swatches: Array<[string, string]> = target === 'text' ? TEXT_SWATCHES : mind ? MIND_PALETTE.map((c) => [c, c]) : target === 'fill'
-    ? Object.entries(FILLS).filter(([k]) => k !== 'none' || allowNone)
+    ? Object.entries(FILLS).filter(([k]) => (k !== 'none' || allowNone) && (k !== 'gray' || !tasks))
     : [...Object.entries(STROKE_COLORS).map(([k, v]): [string, string] => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--shape-stroke)')]), ['none', '']];
   const opacity = Number(same(target === 'fill' ? colorable.map((i) => String(fillOpacity(i))) : target === 'text' ? colorable.map((i) => String(i.to ?? 1))
     : strokable.map((i) => String(i.sc === 'none' ? 0 : i.so ?? 1))) ?? 1);

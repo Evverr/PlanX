@@ -1,13 +1,15 @@
 import type { Editor } from './editor';
 import type { Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
-import { nextStatus, progressOf, statusOf, taskPartAt, type TaskPart } from '../canvas/task';
+import { nextStatus, progressOf, statusOf, taskLayout, taskPartAt, type TaskPart } from '../canvas/task';
 import { addSub, setStatus, setView, toggleSub } from '../model/task';
 import { isLocked } from '../labs/labs';
 import { taskOpen } from '../labs/taskFull';
 
 /** Who set it, who does it, by when: picked in a popup at a screen point (see ui/TaskPop.tsx). */
 export interface TaskPick { id: string; field: 'boss' | 'doer' | 'due'; x: number; y: number }
+/** «Не сворачивать» pressed on a task: the popup asking first, by it (its box's left, top and bottom on the screen). */
+export interface TaskKeep { id: string; x: number; top: number; bottom: number }
 /** A word on a task, in a blue hint's bubble over a point on the screen (see ui/TaskPop.tsx). */
 export interface TaskTip { text: string; x: number; y: number }
 
@@ -38,12 +40,13 @@ export function pressTask(ed: Editor, it: Item, w: Point, sp: Point): boolean {
   else if (part === 'more') setView(board, it, 'full');
   else if (part === 'cancel') setView(board, it, undefined);
   else if (part === 'keep') {
-    board.update(it.id, { keep: it.keep ? undefined : true });
-    // Ticked: a word on why not to.
-    if (!it.keep) window.dispatchEvent(new CustomEvent('planx:confirm', { detail: {
-      text: 'Рекомендуем оставлять задачи свернутыми, это поможет держать всю схему в аккуратном состоянии. Если вы оставите задачу развернутой, она всегда будет сверху над другими объектами.',
-      action: 'Понятно', only: true, ok: () => {},
-    } }));
+    // Unticked at once; ticked once said yes to, in a popup by it saying why not to.
+    if (it.keep) board.update(it.id, { keep: undefined });
+    else {
+      const l = taskLayout(it), r = ed.canvas?.getBoundingClientRect(), dx = r?.left ?? 0, dy = r?.top ?? 0;
+      const a = ed.toScreen({ x: it.x + (l.keep?.x ?? 0), y: it.y + (l.keep?.y ?? 0) }), b = ed.toScreen({ x: it.x + (l.keep?.x ?? 0), y: it.y + (l.keep ? l.keep.y + l.keep.h : 0) });
+      window.dispatchEvent(new CustomEvent<TaskKeep>('planx:task-keep', { detail: { id: it.id, x: a.x + dx, top: a.y + dy, bottom: b.y + dy } }));
+    }
   }
   else if (part === 'finish') board.transact(() => { setStatus(board, it.id, 'done'); setView(board, { ...it, st: 'done' }, undefined); });
   else if (part === 'add') {
