@@ -1514,12 +1514,16 @@ export const checks = {
     expect(await at(), 'Shift+Tab: back up round to the last').toBe('c');
   },
 
-  async 'a task\'s description typed in has the text panel with its list and links only; a link in it opens on a click'(p) {
+  async 'a task\'s description typed in has the text panel, its font, list and links; a link in it opens on a click'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('task', 200, 150, { id: 'tk', text: 'Задача', w: 494, h: 52, tv: 'full', keep: true, desc: 'Смотри документацию тут' }));
       e.setSelection(['tk']); e.startEditing('tk', 0, 'end'); })()`);
     await sleep(900);
-    expect(await p.ev(`[...document.querySelectorAll('.tfmt button[aria-label]')].map((b) => b.getAttribute('aria-label')).filter((l) => l !== 'Действия').join()`), 'its list and links (and the actions\' menu)').toBe('Список,Ссылка');
+    expect(await p.ev(`['Жирный', 'Цвет текста', 'Список', 'Ссылка'].every((l) => document.querySelector('.tfmt button[aria-label="' + l + '"]'))`), 'the whole text panel').toBe(true);
+    expect(await p.ev(`document.querySelector('.tfmt .fpick')?.textContent.includes('Inter')`), 'its font as drawn').toBe(true);
+    await p.click(await p.at('.tfmt button[aria-label="Жирный"]'));
+    await sleep(100);
+    expect([await p.ev(`planx.board.get('tk').fw`), await p.ev(`getComputedStyle(document.querySelector('textarea.text-edit')).fontWeight`)].join(), 'bold, typed in bold').toBe('700,700');
     await p.ev(`document.querySelector('textarea.text-edit').setSelectionRange(7, 19)`);
     await p.click(await p.at('.tfmt button[aria-label="Ссылка"]'));
     await sleep(200);

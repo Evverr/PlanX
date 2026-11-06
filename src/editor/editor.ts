@@ -953,8 +953,8 @@ export class Editor {
     const v = value >= 1 ? undefined : Math.max(0, Math.round(value * 100) / 100);
     this.board.transact(() => {
       for (const it of this.selectedItems()) {
-        if (of === 'text' && HAS_FONT.includes(it.type)) this.board.update(it.id, { to: v });
-        if (of === 'mark' && HAS_FONT.includes(it.type)) this.board.update(it.id, { mo: Math.max(0, Math.round(value * 100) / 100) });
+        if (of === 'text' && (HAS_FONT.includes(it.type) || it.type === 'task')) this.board.update(it.id, { to: v });
+        if (of === 'mark' && (HAS_FONT.includes(it.type) || it.type === 'task')) this.board.update(it.id, { mo: Math.max(0, Math.round(value * 100) / 100) });
         // (A highlighter's line is see-through by default: fully opaque is kept as such.)
         if (of === 'icon' && (it.type === 'icon' || it.type === 'ink')) this.board.update(it.id, { fo: it.hl ? Math.max(0, Math.round(value * 100) / 100) : v });
         if (of === 'fill' && fillable(it)) this.board.update(it.id, { fo: it.type === 'mind' || it.type === 'frame' ? Math.max(0, Math.round(value * 100) / 100) : v });
@@ -992,8 +992,8 @@ export class Editor {
   /** Changes how the selected items' text looks; an undefined field goes back to the default.
    *  Text items are re-measured to fit, and again once a newly picked font has loaded. */
   setTextStyle(patch: Partial<Item>): void {
-    // (A task takes only a list, for its description.)
-    const items = this.selectedItems().filter((i) => HAS_FONT.includes(i.type) || (i.type === 'task' && Object.keys(patch).every((k) => k === 'ls')));
+    // (A task's for its description.)
+    const items = this.selectedItems().filter((i) => HAS_FONT.includes(i.type) || i.type === 'task');
     const refit = () => this.board.transact(() => {
       for (const it of items) {
         // One being typed in is measured with what's typed, not yet in the board.
@@ -1005,7 +1005,9 @@ export class Editor {
     this.board.transact(() => {
       for (const it of items) {
         // In a table, the cell being typed in takes it on its own; otherwise the whole table, every cell.
-        if (it.type !== 'table') this.board.update(it.id, patch);
+        // (A task's size is its description's, see descLook.)
+        if (it.type === 'task' && 'fs' in patch) { const { fs, ...rest } = patch; this.board.update(it.id, { ...rest, dfs: fs }); }
+        else if (it.type !== 'table') this.board.update(it.id, patch);
         else if (this.editingId === it.id && this.editingCell !== null) {
           this.board.update(it.id, withCellFormat(it, this.editingCell, patch));
           // ("Таблица помнит формат", src/labs: for the next cell.)
