@@ -2,6 +2,7 @@ import { cloneElement, createElement, useEffect, useLayoutEffect, useRef, useSta
 import { createPortal } from 'react-dom';
 import { PanelIcon } from './PanelIcon';
 import { readJSON, writeJSON } from '../storage';
+import { canRearrange, customizeOn } from '../labs/customize';
 
 /** How long to hold a button before it lifts, and how far the pointer may wander meanwhile; a lifted
  *  button let go without moving more than HOLD_SLOP still counts as a click. */
@@ -180,7 +181,8 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
         return;
       }
       press.current = null;
-      lift(p);
+      // ("Режим настройки", src/labs: only with it on.)
+      if (canRearrange()) lift(p);
     }, HOLD_MS);
     press.current = p;
   };
@@ -194,7 +196,8 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     if (Math.hypot(p.x - p.x0, p.y - p.y0) <= HOLD_SLOP) return;
     clearTimeout(p.timer);
     press.current = null;
-    if (dropOut) lift(p);
+    // (With "Режим настройки" on, taken and moved at once anywhere.)
+    if (dropOut || customizeOn()) lift(p);
   };
   const pressUp = () => {
     const held = press.current?.held;
@@ -254,9 +257,11 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     if (!drag) return;
     const d = drag, dist = Math.hypot(e.clientX - d.x0, e.clientY - d.y0);
     const moved = d.moved || (d.zone === 'bar' ? Math.abs(along(e.clientX, e.clientY) - along(d.x0, d.y0)) > HOLD_SLOP || dist > HOLD_SLOP * 3 : dist > HOLD_SLOP);
+    // ("Режим настройки" off: only onto the board, not along the panel or into "more".)
+    const sorts = canRearrange();
     // Over the other place (the open popover from the panel, the panel from the popover), it goes there.
-    if (moved && d.zone === 'bar' && over('more', e)) { intoMore(d, e); return; }
-    if (moved && (d.zone === 'more' || !els.current.has(d.key)) && over('bar', e)) { ontoBar(d, e); return; }
+    if (sorts && moved && d.zone === 'bar' && over('more', e)) { intoMore(d, e); return; }
+    if (sorts && moved && (d.zone === 'more' || !els.current.has(d.key)) && over('bar', e)) { ontoBar(d, e); return; }
     const out = !!dropOut && moved && !inside(zones[d.zone].box()?.getBoundingClientRect(), e, OUT_MARGIN);
     const next = { ...d, x: e.clientX, y: e.clientY, moved, out };
     if (out) {
@@ -269,7 +274,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     // Not where it's dragged (gone into "more", or back where it was when it went out over the board).
     const el = zones[d.zone].els.get(d.key);
     if (!el) { setDrag(next); return; }
-    const other = passed(next, el);
+    const other = sorts ? passed(next, el) : null;
     if (other) {
       const list = order.filter((k) => k !== d.key), after = order.indexOf(other) > order.indexOf(d.key);
       list.splice(list.indexOf(other) + (after ? 1 : 0), 0, d.key);

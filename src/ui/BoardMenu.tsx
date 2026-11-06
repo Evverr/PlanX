@@ -3,6 +3,7 @@ import { Glyph } from './glyphs';
 import { usePanelSize, type PanelSize } from './panels/size';
 import { setGridKind, useGridKind, type GridKind } from '../labs/boardGrid';
 import { useLabs } from '../labs/labs';
+import { setCustomize, useCustomize } from '../labs/customize';
 
 /**
  * The board's menu, opened from the button after its name (Figma "Mol / Menu right"): first the board
@@ -17,7 +18,7 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
 }) {
   const [on, setOn] = useState(false), [on2, setOn2] = useState(false);
   const [panelSize, setPanelSize] = usePanelSize();
-  const grid = useGridKind(), labs = useLabs();
+  const grid = useGridKind(), labs = useLabs(), customize = useCustomize();
   // A row with an arrow opens a further level beside it (the same menu again, or the one it brings)
   // while the pointer is on it (or its menu); `sub` is that row's label.
   const [sub, setSub] = useState<string | null>(null);
@@ -72,7 +73,10 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
       {level === 0 && labs.boardGrid
         ? row('apps', 'Фон', { end: <PickDots label="Фон" now={grid} of={[['lines', 'Линии'], ['dots', 'Точки'], ['none', 'Пусто']] as Array<[GridKind, string]>} onPick={setGridKind} /> })
         : row('link-settings', 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
-      {row('change-order', 'Оглавление', { light: true, onClick: () => setOn2(!on2), end: <Switch on={on2} /> })}
+      {/* "Режим настройки" (src/labs). */}
+      {level === 0 && labs.customize
+        ? row('change-order', 'Режим настройки', { onClick: () => setCustomize(!customize), end: <Switch on={customize} /> })
+        : row('change-order', 'Оглавление', { light: true, onClick: () => setOn2(!on2), end: <Switch on={on2} /> })}
     </div>
   );
 }

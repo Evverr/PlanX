@@ -71,8 +71,9 @@ async function openPage() {
       await until(() => p.ev(`!!document.querySelector('.topbar')`), 'the board');
       await p.ev('localStorage.clear()');
       // (The panel over what's picked, on trial, lies over what most checks press; links only by the line
-      // tool, on trial, take away the dots most checks pull links from: their own checks turn them on.)
-      await p.ev(`localStorage.setItem('planx-labs', '["panelOver", "linkTool"]')`);
+      // tool, on trial, take away the dots most checks pull links from; panels rearranged only in "Режим
+      // настройки", on trial, as most checks rearrange them: their own checks turn them on.)
+      await p.ev(`localStorage.setItem('planx-labs', '["panelOver", "linkTool", "customize"]')`);
       await cdp('Page.reload');
       await until(() => p.ev(`!!document.querySelector('.topbar')`), 'the board again');
       await sleep(300);

@@ -7,7 +7,7 @@ import { readJSON, readText, writeJSON, writeText } from '../storage';
  * browser. Everything they need lives in this folder; the app only asks labOn() where a feature
  * changes what it does, so one that isn't kept comes out by deleting its file and those few lines.
  */
-export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'taskComponent' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib' | 'softEraser' | 'layers' | 'solidTool' | 'history' | 'panelOver' | 'zoomFade' | 'zoomKeys' | 'tableMove' | 'textButton' | 'tableCut' | 'linkJoint' | 'tableLook' | 'imageCrop' | 'boardGrid' | 'linkTool';
+export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'taskComponent' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib' | 'softEraser' | 'layers' | 'solidTool' | 'history' | 'panelOver' | 'zoomFade' | 'zoomKeys' | 'tableMove' | 'textButton' | 'tableCut' | 'linkJoint' | 'tableLook' | 'imageCrop' | 'boardGrid' | 'linkTool' | 'customize';
 
 export interface Lab { id: LabId; label: string; icon: string; hint: string }
 
@@ -23,6 +23,7 @@ export const LABS: Lab[] = [
   { id: 'linkJoint', label: 'Узел на линии', icon: 'path', hint: 'Выделите линию и перетащите на её кружок посередине текст, стикер, фигуру или смайл: он станет частью линии. С Cmd (Ctrl) его можно вытащить обратно' },
   { id: 'tableLook', label: 'Таблица помнит формат', icon: 'table', hint: 'Выравнивание, жирность, размер, заданные в ячейке, переходят в следующую пустую ячейку' },
   { id: 'tableCut', label: 'Удаление строк и столбцов', icon: 'table', hint: 'Выделены целые строки или столбцы таблицы: Delete сначала стирает текст, второй раз — их самих' },
+  { id: 'customize', label: 'Режим настройки', icon: 'change-order', hint: 'В меню доски: включённый режим даёт переставлять кнопки на панелях, выключенный — нет' },
   { id: 'boardGrid', label: 'Фон доски', icon: 'apps', hint: 'В меню доски: три точки, линии на фоне, точки или ничего' },
   { id: 'imageCrop', label: 'Кроп картинки', icon: 'image', hint: 'На панели картинки: кнопка кропа. Края двигаются, шарик в левом нижнем углу скругляет. Отрезанное не вернуть, скругление можно менять' },
   { id: 'tableMove', label: 'Перестановка в таблице', icon: 'table', hint: 'Двойной клик по таблице: над столбцом и слева от строки под курсором ползунок, потяните, чтобы переставить' },
