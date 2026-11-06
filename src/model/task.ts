@@ -32,7 +32,7 @@ export function closeTask(board: Board, id: string): void {
 export const nextView = (board: Board, it: Item, open: Item['tv'] = 'desc'): void =>
   setView(board, it, !it.tv ? open : it.tv === 'desc' ? 'full' : undefined);
 
-/** A new task, its middle at `c`: opened (`open`: to its description, or all of it; closed, as wide as usual). */
+/** A new task, its middle at `c`: opened (`open`: to its description, as one put on the board comes, or all of it; closed, as wide as usual). */
 export function freshTask(it: Item, c: { x: number; y: number }, open: Item['tv'] = 'desc'): Item {
   const t = { ...it, tv: open, w: TASK_OPEN_W, cw: TASK_W }, h = taskSize(t).h;
   return { ...t, h, x: Math.round(c.x - TASK_OPEN_W / 2), y: Math.round(c.y - h / 2) };

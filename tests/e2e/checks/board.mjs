@@ -21,15 +21,15 @@ const dblClick = async (p, [x, y]) => {
 };
 
 export const checks = {
-  async 'a task: put opened in full, title then description typed in, closed on Ctrl+Enter; its ring goes round its statuses; opened by its arrow and a double click on its header (to its description first, «Задача сразу целиком» off); subtasks; closed by Esc or a click elsewhere, unless «Не сворачивать»; «Завершить»'(p) {
+  async 'a task: put opened to its description, title then description typed in, closed on Ctrl+Enter; its ring goes round its statuses; opened by its arrow and a double click on its header (to its description first, «Задача сразу целиком» off); subtasks; closed by Esc or a click elsewhere, unless «Не сворачивать»; «Завершить»'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('task'); })()`);
-    // (Low enough to be all on screen closed: it's put opened in full, by its middle.)
+    // (Low enough to be all on screen closed: it's put opened, by its middle.)
     await p.click([400, 400]);
     await sleep(200);
     const id = await p.ev(`planx.board.list().find((i) => i.type === 'task').id`);
     const t = () => p.ev(`planx.board.get('${id}')`);
     let it = await t();
-    expect([it.tv, it.w, await p.ev(`planx.editor.editingId`) === id].join(), 'opened in full, its title typed in').toBe('full,494,true');
+    expect([it.tv, it.w, await p.ev(`planx.editor.editingId`) === id].join(), 'opened to its description, its title typed in').toBe('desc,494,true');
     await p.cdp('Input.insertText', { text: 'Купить молоко' });
     await p.key('Enter', 'Enter', 13);
     await sleep(100);
@@ -91,7 +91,9 @@ export const checks = {
     await sleep(100);
     it = await t();
     expect([it.subs.map((s) => s.t).join(), it.tv ?? 'closed'].join('|'), 'two, the empty third gone; Esc: closed').toBe('Первая,Вторая|closed');
-    // «Не сворачивать» ticked: not closed by Esc, nor by a click elsewhere.
+    // «Не сворачивать» ticked: not closed by Esc, nor by a click elsewhere. (Its top near the screen's,
+    // for all of it to be on it.)
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 60 - planx.board.get('${id}').y, z: 1 }; e.camChanged(); })()`);
     await sleep(450);
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
     await sleep(450);
