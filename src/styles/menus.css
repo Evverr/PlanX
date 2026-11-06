@@ -23,7 +23,8 @@
 .menu-row { box-sizing: border-box; min-height: var(--e38); padding: var(--s7) 0; }
 /* A menu without icons sits 4px further in; in one with some, a row without lines its text up with
    theirs (an icon's 24px and the 11px after it). */
-.board-menu.plain { padding-left: var(--s18); --menu-pad-r: var(--s18); }
+/* (Without icons: twice the room after its text as before it.) */
+.board-menu.plain { padding-left: var(--s18); --menu-pad-r: calc(var(--s18) * 2); }
 .menu-row.indent { padding-left: var(--s35); }
 /* Rows touch (the 14px between them is 7px of each), so the pointer lights them up edge to edge. */
 .menu-more { position: absolute; right: round(calc(-5px * var(--k)), 1px); top: var(--s8); width: 24px; height: 24px; background: var(--fmt-ink);
@@ -31,7 +32,7 @@
 /* As far in from either side of the menu (whose left padding is the less, but in a plain one). */
 /* A line between groups: a little further in from the menu's left side than its rows, the same from its right. */
 .menu-line { flex: none; height: 1px; margin: var(--s4) calc(var(--s14) + var(--s2) - var(--menu-pad-r)) var(--s4) var(--s2); background: #6E6E6E; opacity: .1; }
-.board-menu.plain .menu-line { margin-right: var(--s2); }
+.board-menu.plain .menu-line { margin-right: calc(var(--s18) + var(--s2) - var(--menu-pad-r)); }
 /* A menu with switches or dots at its rows' ends: those make its right edge, the usual room after them
    (not as much as before the text), 20 between them and the longest row's text. */
 .board-menu:has(> .menu-item > .menu-row > :is(.menu-switch, .size-dots)) { --menu-pad-r: var(--s18); }
