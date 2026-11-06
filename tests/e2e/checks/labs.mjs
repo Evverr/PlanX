@@ -854,10 +854,7 @@ export const checks = {
     expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'not out by a drag').toBe(false);
     await p.ev(`planx.board.update('t', { x: 300, y: 300 })`);
     await p.click([500, 330]);
-    expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'not by a slow second click').toBe(false);
-    for (let i = 0; i < 2; i++) { await p.mouse('mousePressed', 500, 330); await p.mouse('mouseReleased', 500, 330); await sleep(60); }
-    await p.ev(`planx.editor.stopEditing()`);
-    expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'out by a double click').toBe(true);
+    expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'out by a second click').toBe(true);
     // Along the way it moves, just past the table's edge is enough; across, 44 isn't reached by 30.
     await p.drag([360, 293], [360, 260]);
     expect((await p.ev(`planx.board.get('t')`)).cols.length, '30 off its side: kept').toBe(3);

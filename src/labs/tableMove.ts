@@ -74,8 +74,8 @@ export function withRemoved(it: Item, axis: 'col' | 'row', index: number): Parti
   };
 }
 
-/** The table the pills are out for: put out by a double click on it (on a cell or a line), or by the
- *  gear on its panel; put away as something else is picked. Typing in one of its cells, they're out too. */
+/** The table the pills are out for: put out by a double click on it (on a cell or a line), a second
+ *  click on it, or by the gear on its panel; put away as something else is picked. Typing in one of its cells, they're out too. */
 let shownFor: string | null = null;
 const fns = new Set<() => void>();
 export const subscribeGrips = (fn: () => void) => { fns.add(fn); return () => { fns.delete(fn); }; };
@@ -97,15 +97,24 @@ export function toggleGrips(ed: Editor): void {
   if (it?.type === 'table') show(ed, shownFor === it.id ? null : it.id);
 }
 /** A press on the board (at `w` on it, `sp` on the screen): the second of a double click on a table
- *  (anywhere on it, its lines and edges too) puts its pills out. */
+ *  (anywhere on it, its lines and edges too) puts its pills out; so does a click on it picked already,
+ *  let go where it was pressed (a drag only moves it). */
 const DOUBLE_MS = 400, DOUBLE_PX = 6, EDGE_PX = 6;
 let lastPress: { id: string; t: number; x: number; y: number } | null = null;
+let clicked: { id: string; x: number; y: number } | null = null;
 export function pressedForGrips(ed: Editor, w: Point, sp: Point): void {
   const m = EDGE_PX / ed.cam.z;
   const it = ed.shown().filter((i) => i.type === 'table' && !i.rot && w.x >= i.x - m && w.x <= i.x + i.w + m && w.y >= i.y - m && w.y <= i.y + i.h + m).pop();
   const now = performance.now(), l = lastPress;
+  clicked = it && ed.selection.size === 1 && ed.selection.has(it.id) ? { id: it.id, ...sp } : null;
   if (it && l && l.id === it.id && now - l.t < DOUBLE_MS && Math.hypot(sp.x - l.x, sp.y - l.y) < DOUBLE_PX) { lastPress = null; show(ed, it.id); return; }
   lastPress = it ? { id: it.id, t: now, ...sp } : null;
+}
+/** Let go: where it was pressed, on the table picked already, its pills come out. */
+export function releasedForGrips(ed: Editor, sp: Point): void {
+  const c = clicked;
+  clicked = null;
+  if (c && Math.hypot(sp.x - c.x, sp.y - c.y) < DOUBLE_PX && ed.selection.size === 1 && ed.selection.has(c.id)) show(ed, c.id);
 }
 
 /** The table whose pills are out: the one selected alone (with them put out, or typed in), not locked
