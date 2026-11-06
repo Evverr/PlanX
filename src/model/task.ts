@@ -24,6 +24,12 @@ export function setView(board: Board, it: Item, tv: Item['tv']): void {
 /** A double click on its header: closed, to its description, all of it, closed again. */
 export const nextView = (board: Board, it: Item): void => setView(board, it, !it.tv ? 'desc' : it.tv === 'desc' ? 'full' : undefined);
 
+/** A new task, its middle at `c`: opened to its description (closed, as wide as usual). */
+export function freshTask(it: Item, c: { x: number; y: number }): Item {
+  const t = { ...it, tv: 'desc' as const, w: TASK_OPEN_W, cw: TASK_W }, h = taskSize(t).h;
+  return { ...t, h, x: Math.round(c.x - TASK_OPEN_W / 2), y: Math.round(c.y - h / 2) };
+}
+
 /** Its height for what's in it now, with a change to it. */
 export const fitTask = (it: Item, patch: Partial<Item> = {}): number => taskSize({ ...it, ...patch }).h;
 

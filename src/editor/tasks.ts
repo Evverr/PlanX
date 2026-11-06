@@ -14,7 +14,7 @@ export interface TaskPick { id: string; field: 'boss' | 'doer' | 'due'; x: numbe
 export function taskButtonAt(it: Item | null | undefined, w: Point): TaskPart | null {
   if (it?.type !== 'task' || isLocked(it)) return null;
   const part = taskPartAt(it, w);
-  return part === 'title' || part === 'desc' || (typeof part === 'object' && part && !part.tick) ? null : part;
+  return part === 'title' || part === 'desc' || part === 'head' || (typeof part === 'object' && part && !part.tick) ? null : part;
 }
 
 /** Does what a press on a task's button does; whether it was on one. */

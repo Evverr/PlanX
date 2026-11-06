@@ -21,7 +21,8 @@ const TITLE_X = 47, MID = 26;
 const STATUS = 22, ARROW = 24;
 /** Where the people's names start and their circles' middle; a row's height; a subtask's. */
 const LABEL_X = 47, NAME_X = 200, AVATAR_X = 182, ROW = 33, SUB = 38, SUB_X = 48, SUB_TEXT_X = 79;
-const BUTTON_H = 32, CANCEL_W = 76, FINISH_W = 96;
+/** The buttons as the panels' (.btn in popups.css): 32 tall, their text 12 bold Inter with 14 each side. */
+const BUTTON_H = 32, BUTTON_PAD = 14, BUTTON_FONT = { size: 12, weight: 600 };
 export const DESC_HINT = 'Добавить описание', SUB_HINT = 'Добавить подзадачу';
 
 export const statusOf = (it: Item): TaskStatus => it.st ?? (it.done ? 'done' : 'todo');
@@ -44,6 +45,16 @@ export interface TaskLayout {
 
 const lineH = (fs: number) => fs * LINE_HEIGHT;
 
+let measureCtx: CanvasRenderingContext2D | null = null;
+/** How wide a text is in a font of the card's (a rough guess with no canvas to measure on). */
+const widthOf = (text: string, size: number, weight: number) => {
+  if (typeof document === 'undefined') return text.length * size * 0.55;
+  measureCtx ??= document.createElement('canvas').getContext('2d')!;
+  measureCtx.font = font(size, weight, FAMILY);
+  return measureCtx.measureText(text).width;
+};
+const buttonW = (text: string) => Math.ceil(widthOf(text, BUTTON_FONT.size, BUTTON_FONT.weight)) + BUTTON_PAD * 2;
+
 export function taskLayout(it: Item, w = it.w): TaskLayout {
   const titleW = Math.max(40, w - TITLE_X * 2);
   const th = textBlockHeight(it.text || ' ', titleW, TITLE_FS, TITLE);
@@ -65,9 +76,9 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   out.subs = Array.from({ length: n + 1 }, (_, i) => d + 213 + i * SUB);
   const last = d + 213 + n * SUB + STATUS;
   out.lines = [d + 25, d + 157, last + 27];
-  const by = last + 27 + 24, fx = w - 43 - FINISH_W;
-  out.finish = { x: fx, y: by, w: FINISH_W, h: BUTTON_H };
-  out.cancel = { x: fx - 10 - CANCEL_W, y: by, w: CANCEL_W, h: BUTTON_H };
+  const by = last + 27 + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - 43 - fw;
+  out.finish = { x: fx, y: by, w: fw, h: BUTTON_H };
+  out.cancel = { x: fx - 10 - cw, y: by, w: cw, h: BUTTON_H };
   out.h = Math.ceil(by + BUTTON_H + 31);
   return out;
 }
@@ -76,21 +87,23 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
 export const taskSize = (it: Item, w = it.w): { w: number; h: number } => ({ w, h: taskLayout(it, w).h });
 
 /** What a point on it (from its top left corner) is on. */
-export type TaskPart = 'status' | 'arrow' | 'more' | 'title' | 'desc' | 'boss' | 'doer' | 'due' | 'add' | 'cancel' | 'finish'
+export type TaskPart = 'status' | 'arrow' | 'more' | 'head' | 'title' | 'desc' | 'boss' | 'doer' | 'due' | 'add' | 'cancel' | 'finish'
   | { sub: number; tick: boolean };
 
 const inRect = (p: Point, r: Rect, pad = 0) => p.x >= r.x - pad && p.x <= r.x + r.w + pad && p.y >= r.y - pad && p.y <= r.y + r.h + pad;
 const near = (p: Point, x: number, y: number, r: number) => Math.hypot(p.x - x, p.y - y) <= r;
 
-/** Whether a point is on its header (its title's band). */
-export const onTaskHead = (it: Item, p: Point): boolean => p.y - it.y < taskLayout(it).head && p.y >= it.y && p.x >= it.x && p.x <= it.x + it.w;
-
 export function taskPartAt(it: Item, p: Point): TaskPart | null {
   const l = taskLayout(it), q = { x: p.x - it.x, y: p.y - it.y };
-  if (near(q, 15 + STATUS / 2, MID, STATUS / 2 + 4)) return 'status';
-  if (near(q, l.w - 35 + ARROW / 2, MID, ARROW / 2 + 4)) return 'arrow';
+  // The header: its ends the ring's and the arrow's (corners and all), the title's text the title,
+  // the rest of it the header itself (a double click there opens it further).
+  if (q.y >= 0 && q.y < l.head && q.x >= 0 && q.x <= l.w) {
+    if (q.x < TITLE_X - 6) return 'status';
+    if (q.x > l.w - 47) return 'arrow';
+    const lh = lineH(TITLE_FS), lines = wrapText(it.text || 'Название задачи', l.title.w, (t) => widthOf(t, TITLE_FS, 500)), row = Math.floor((q.y - l.title.y) / lh);
+    return row >= 0 && row < lines.length && q.x >= l.title.x && q.x <= l.title.x + widthOf(lines[row], TITLE_FS, 500) ? 'title' : 'head';
+  }
   if (l.more && near(q, l.more.x + ARROW / 2, l.more.y + ARROW / 2, ARROW / 2 + 4)) return 'more';
-  if (inRect(q, l.title)) return 'title';
   if (l.desc && inRect(q, l.desc)) return 'desc';
   if (l.rows) {
     const keys = ['boss', 'doer', 'due'] as const;
@@ -180,7 +193,7 @@ const DATE = (due: string) => {
 
 /** The card. `typing` is the part being typed in (its text left to the overlay): null for the title,
  *  0 for the description, 1… for a subtask; undefined when none is. */
-export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typing: number | null | undefined): void {
+export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typing: number | null | undefined, hot: string | null = null): void {
   const l = taskLayout(it), { x, y } = it, strong = strongOf(it.color);
   const bg = look.dark ? '#26272C' : '#FFFFFF', tint = mix(strong, bg, look.dark ? 0.16 : 0.05);
   const edge = `rgba(${rgb(strong.startsWith('#') ? strong : '#003CFF').join(',')}, 0.3)`;
@@ -211,8 +224,9 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   if (TITLE_FS * look.z < 2.5) return;
   const st = statusOf(it);
   drawStatus(ctx, x + 15 + STATUS / 2, y + MID, st, look);
-  const arrowInk = look.dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)';
-  drawIcon(ctx, it.tv ? 'chevron-up-m' : 'chevron-down-m', x + l.w - 35, y + MID - ARROW / 2, ARROW, arrowInk);
+  // The arrows darker under the pointer.
+  const arrowInk = (part: string) => (hot === `task:${it.id}:${part}` ? (look.dark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.75)') : look.dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)');
+  drawIcon(ctx, it.tv ? 'chevron-up-m' : 'chevron-down-m', x + l.w - 35, y + MID - ARROW / 2, ARROW, arrowInk('arrow'));
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   /** Lines of text in a box, each on its middle, at a font. */
@@ -233,7 +247,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   if (typing !== null) lines(it.text || 'Название задачи', l.title, TITLE_FS, 500, it.text ? look.ink : look.muted);
   if (!l.desc) return;
   if (typing !== 0) lines(it.desc || DESC_HINT, l.desc, TEXT_FS, 400, it.desc ? look.ink : look.muted, it.desc ? 0.8 : 1);
-  if (l.more) drawIcon(ctx, 'chevron-down-m', x + l.more.x, y + l.more.y, ARROW, arrowInk);
+  if (l.more) drawIcon(ctx, 'chevron-down-m', x + l.more.x, y + l.more.y, ARROW, arrowInk('more'));
   if (!l.rows || !l.subs || !l.lines || !l.cancel || !l.finish || l.subsAt === undefined) return;
   ctx.fillStyle = look.dark ? 'rgba(255,255,255,0.1)' : '#DFE3E6';
   for (const ly of l.lines) ctx.fillRect(x + 49, y + ly, l.w - 98, 1);
@@ -293,16 +307,25 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
       ctx.restore();
     }
   });
-  // «Отмена» as plain text, «Завершить» blue.
+  // As the panels' buttons (.btn, .btn.primary): «Отмена» outlined faintly, «Завершить» in the blue gradient.
   const button = (r: Rect, text: string, solid: boolean) => {
+    ctx.beginPath();
+    ctx.roundRect(x + r.x, y + r.y, r.w, r.h, 7);
     if (solid) {
-      ctx.beginPath();
-      ctx.roundRect(x + r.x, y + r.y, r.w, r.h, 8);
-      ctx.fillStyle = BLUE;
+      const g = ctx.createLinearGradient(0, y + r.y, 0, y + r.y + r.h);
+      g.addColorStop(0, '#549BFF');
+      g.addColorStop(1, '#005FE3');
+      ctx.fillStyle = g;
       ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.roundRect(x + r.x + 0.5, y + r.y + 0.5, r.w - 1, r.h - 1, 6.5);
+      ctx.strokeStyle = look.dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
-    ctx.font = font(13, 500, FAMILY);
-    ctx.fillStyle = solid ? '#fff' : look.ink;
+    ctx.font = font(BUTTON_FONT.size, BUTTON_FONT.weight, FAMILY);
+    ctx.fillStyle = solid ? '#fff' : look.dark ? look.ink : '#2F2F2F';
     ctx.textAlign = 'center';
     ctx.fillText(text, x + r.x + r.w / 2, y + r.y + r.h / 2);
     ctx.textAlign = 'left';

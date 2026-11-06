@@ -248,7 +248,9 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if (mind !== ed.mindHover) { ed.mindHover = mind; ed.requestRender(); }
   const node = ed.plusNode();
   const tick = tickAt(ed, w), arrow = tick ? null : objectArrowAt(ed, w), plus = node ? plusAt(ed, node, w) : null;
-  const hot = plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : arrow ? `obj:${arrow.id}` : glyph;
+  // A task's arrow under the pointer, darker (see canvas/task.ts).
+  const tp = over?.type === 'task' && ed.editingId !== over.id ? taskButtonAt(over, w) : null;
+  const hot = plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : arrow ? `obj:${arrow.id}` : glyph ?? (tp === 'arrow' || tp === 'more' ? `task:${over!.id}:${tp}` : null);
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (linkHandleAt(ed, w)) cursor = 'move';
