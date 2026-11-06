@@ -117,7 +117,7 @@ export const checks = {
     await p.click(await p.at('.task-keep .btn.primary'));
     await sleep(100);
     expect((await t()).keep, '«Не сворачивать»: kept open').toBe(true);
-    await p.ev(`planx.board.add(planx.editor.newItem('sticky', planx.board.get('${id}').x, planx.board.get('${id}').y, { id: 'atop', z: 999 }))`);
+    await p.ev(`planx.board.add(planx.editor.newItem('sticky', planx.board.get('${id}').x, planx.board.get('${id}').y, { id: 'atop' }))`);
     expect(await p.ev(`planx.board.list().at(-1).id`), 'over what is put later').toBe(id);
     await p.ev(`planx.board.remove(['atop'])`);
     await p.key('Escape', 'Escape', 27);

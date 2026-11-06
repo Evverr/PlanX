@@ -22,6 +22,13 @@ export function setView(board: Board, it: Item, tv: Item['tv']): void {
   board.update(it.id, { tv, w, h: taskSize(next).h, cw: tv && !it.tv ? it.w : tv ? it.cw : undefined, ...(tv && !it.tv && it.z < top && { z: top + 1 }) });
 }
 
+/** Kept open («Не сворачивать»): lifted 500 over the board's top, over the others kept open too, to
+ *  stay over what's put on the board after (see Board.maxZ). */
+export function keepOpen(board: Board, id: string): void {
+  const all = board.list(), top = all.length ? all[all.length - 1].z : 0;
+  board.update(id, { keep: true, z: Math.max(top + 1, board.maxZ() + 500) });
+}
+
 /** Done with it (Esc, Cmd+Enter, picked no more): closed, unless it's to stay open («Не сворачивать»). */
 export function closeTask(board: Board, id: string): void {
   const it = board.get(id);
