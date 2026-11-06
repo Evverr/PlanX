@@ -26,7 +26,7 @@ import { drawGroup, endGroupScale, groupScaling, moveGroupScale, onGroupHandle, 
 import { subscribeGrid } from './boardGrid';
 import { cropCursor, cropDragging, croppingId, drawCrop, endCropDrag, moveCrop, pressCrop } from './imageCrop';
 import { afterUp as afterJoinUp, beforeUp as beforeJoinUp, drawJoint, notePress as noteJoinPress } from './linkJoint';
-import { drawGrips, endGrip, gripAt, gripDragging, moveGrip, pressedForGrips, pressPlus, releasedForGrips, setHotGrip, setHotPlus, startGrip, tablePlusAt } from './tableMove';
+import { drawGrips, endGrip, gripAt, gripDragging, moveGrip, pressedForGrips, pressPlus, setHotGrip, setHotPlus, startGrip, tablePlusAt, tablePointer } from './tableMove';
 import './labs.css';
 
 type LabPop = 'export' | 'pdf' | 'search' | 'timer' | 'layers' | 'history';
@@ -202,6 +202,8 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     };
     const onMove = (e: PointerEvent) => {
       if (drawing) addPoint(e);
+      // Over the board or the text being typed: which column and row of a table it's in.
+      if (labOn('tableMove')) tablePointer(editor, e.target === canvas() || (e.target as Element | null)?.closest?.('.text-edit') ? local(e) : null);
       if (cropDragging()) { moveCrop(editor, local(e)); return; }
       if (e.target === canvas() && !e.buttons && croppingId()) {
         const cur = cropCursor(editor, local(e));
@@ -244,7 +246,6 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
     const onUp = (e: PointerEvent) => {
       if (cropDragging()) endCropDrag();
       if (gripDragging()) endGrip(editor);
-      if (labOn('tableMove')) releasedForGrips(editor, { x: e.clientX, y: e.clientY });
       if (tidyDragging()) { const p = local(e); endTidyDrag(editor, editor.toWorld(p.x, p.y)); }
       if (groupScaling()) endGroupScale(editor);
       if (drawing) { drawing = false; presence.shareLaser(); }

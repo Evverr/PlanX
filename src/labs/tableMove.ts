@@ -58,8 +58,8 @@ export function withRemoved(it: Item, axis: 'col' | 'row', index: number): Parti
   };
 }
 
-/** The table the pills are out for: put out by a second click on it, or by the gear on its panel;
- *  put away as something else is picked. */
+/** The table the pills are out for: put out by a double click on it (on a cell or a line), or by the
+ *  gear on its panel; put away as something else is picked. Typing in one of its cells, they're out too. */
 let shownFor: string | null = null;
 const fns = new Set<() => void>();
 export const subscribeGrips = (fn: () => void) => { fns.add(fn); return () => { fns.delete(fn); }; };
@@ -80,28 +80,53 @@ export function toggleGrips(ed: Editor): void {
   const it = ed.selectedItems()[0];
   if (it?.type === 'table') show(ed, shownFor === it.id ? null : it.id);
 }
-/** A press on the table picked alone (at `w` on the board, `sp` on the screen), waiting to be let go
- *  where it was: a second click puts its pills out, a drag only moves it. */
-let clicked: { id: string; x: number; y: number } | null = null;
+/** A press on the board (at `w` on it, `sp` on the screen): the second of a double click on a table
+ *  (anywhere on it, its lines and edges too) puts its pills out. */
+const DOUBLE_MS = 400, DOUBLE_PX = 6, EDGE_PX = 6;
+let lastPress: { id: string; t: number; x: number; y: number } | null = null;
 export function pressedForGrips(ed: Editor, w: Point, sp: Point): void {
-  const it = ed.selection.size === 1 ? ed.selectedItems()[0] : undefined;
-  clicked = it?.type === 'table' && w.x >= it.x && w.x <= it.x + it.w && w.y >= it.y && w.y <= it.y + it.h ? { id: it.id, ...sp } : null;
-}
-/** Let go: there, without having moved, the pills come out. */
-export function releasedForGrips(ed: Editor, sp: Point): void {
-  const c = clicked;
-  clicked = null;
-  if (c && Math.hypot(sp.x - c.x, sp.y - c.y) < 4 && ed.selection.size === 1 && ed.selection.has(c.id)) show(ed, c.id);
+  const m = EDGE_PX / ed.cam.z;
+  const it = ed.shown().filter((i) => i.type === 'table' && !i.rot && w.x >= i.x - m && w.x <= i.x + i.w + m && w.y >= i.y - m && w.y <= i.y + i.h + m).pop();
+  const now = performance.now(), l = lastPress;
+  if (it && l && l.id === it.id && now - l.t < DOUBLE_MS && Math.hypot(sp.x - l.x, sp.y - l.y) < DOUBLE_PX) { lastPress = null; show(ed, it.id); return; }
+  lastPress = it ? { id: it.id, t: now, ...sp } : null;
 }
 
-/** The table whose pills are out: the one selected alone (with them put out), not locked, typed in or
- *  turned, close enough. */
+/** The table whose pills are out: the one selected alone (with them put out, or typed in), not locked
+ *  or turned, close enough. */
 function tableOf(ed: Editor): Item | null {
   const one = ed.selection.size === 1 ? [...ed.selection][0] : null;
   if (shownFor && one !== shownFor) show(ed, null);
-  if (!shownFor || ed.cam.z < GRIPS_FROM_Z) return null;
+  if ((!shownFor && (!one || ed.editingId !== one)) || ed.cam.z < GRIPS_FROM_Z) return null;
   const it = ed.selectedItems()[0];
-  return it?.type === 'table' && !isLocked(it) && !it.rot && ed.editingId !== it.id ? it : null;
+  return it?.type === 'table' && !isLocked(it) && !it.rot ? it : null;
+}
+
+/** Where the pointer is on the screen, over the board or the text being typed (none elsewhere): only the
+ *  pills of the column and the row it's in show. */
+let pointer: Point | null = null;
+export function tablePointer(ed: Editor, sp: Point | null): void {
+  if (pointer?.x === sp?.x && pointer?.y === sp?.y) return;
+  pointer = sp;
+  if (shownFor || ed.editingId) ed.requestRender();
+}
+/** The column and the row the pointer's in: in the table, or out past its top (for the column) or its
+ *  left (for the row) as far as their pills. */
+function pointedAt(ed: Editor, it: Item): { col: number; row: number } {
+  if (!pointer) return { col: -1, row: -1 };
+  const p = ed.toWorld(pointer.x, pointer.y), out = (OUT + THICK * HOT + REACH * HIT + 4) / ed.cam.z;
+  const find = (sizes: number[], d: number) => { let s = 0; for (let i = 0; i < sizes.length; i++) { s += sizes[i]; if (d <= s) return i; } return -1; };
+  const inX = p.x >= it.x && p.x <= it.x + it.w, inY = p.y >= it.y && p.y <= it.y + it.h;
+  return {
+    col: inX && p.y >= it.y - out && p.y <= it.y + it.h ? find(colsOf(it), p.x - it.x) : -1,
+    row: inY && p.x >= it.x - out && p.x <= it.x + it.w ? find(rowsOf(it), p.y - it.y) : -1,
+  };
+}
+/** Whether a pill shows: its column's or row's under the pointer, or it's being dragged. */
+function seen(ed: Editor, it: Item, g: Grip): boolean {
+  if (drag?.grip.axis === g.axis && drag.grip.index === g.index) return true;
+  const at = pointedAt(ed, it);
+  return g.axis === 'col' ? at.col === g.index : at.row === g.index;
 }
 
 /** Zoomed out further than this, the pills and pluses aren't out: 25% (a table's lines are taken to
@@ -159,6 +184,8 @@ export const setHotPlus = (ed: Editor, w: TablePlus | null) => {
 export function pressPlus(ed: Editor, w: TablePlus): void {
   const it = tableOf(ed);
   if (!it) return;
+  // (Typing in it, the typing's done first: the cells move.)
+  if (ed.editingId === it.id) ed.stopEditing();
   const c = plusAt(ed, it, w);
   held[w] = ed.toWorld(c.x, c.y);
   ed.board.update(it.id, withCount(it, w, 1));
@@ -170,6 +197,7 @@ export function gripAt(ed: Editor, sp: Point): Grip | null {
   const it = tableOf(ed);
   if (!it || drag) return null;
   for (const g of grips(it)) {
+    if (!seen(ed, it, g)) continue;
     const p = gripScreen(ed, g), [w, h] = g.axis === 'col' ? [LONG, THICK] : [THICK, LONG];
     if (Math.abs(sp.x - p.x) <= (w / 2 + REACH) * HIT && Math.abs(sp.y - p.y) <= (h / 2 + REACH) * HIT) return { id: g.id, axis: g.axis, index: g.index };
   }
@@ -189,6 +217,7 @@ let drag: { grip: Grip; from: Point; at: Point } | null = null;
 export const gripDragging = () => !!drag;
 
 export function startGrip(ed: Editor, grip: Grip, w: Point): void {
+  if (ed.editingId === grip.id) ed.stopEditing();
   drag = { grip, from: w, at: w };
   hot = grip;
   ed.requestRender();
@@ -291,6 +320,9 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
     }
   }
   for (const g of grips(it)) {
+    // Coming in and going as the pointer comes into its column or row and leaves it.
+    const shown = litNow(ed, `${it.id}:${g.axis}:${g.index}:seen`, seen(ed, it, g));
+    if (!shown) continue;
     const dragged = drag?.grip.axis === g.axis && drag.grip.index === g.index;
     const shift = dragged && drag ? (g.axis === 'col' ? { x: (drag.at.x - drag.from.x) * z, y: 0 } : { x: 0, y: (drag.at.y - drag.from.y) * z }) : { x: 0, y: 0 };
     const on = dragged || (hot?.axis === g.axis && hot.index === g.index), lit = litNow(ed, `${it.id}:${g.axis}:${g.index}`, on);
@@ -300,14 +332,14 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
     const cx = p.x + shift.x, cy = p.y + shift.y;
     ctx.beginPath();
     ctx.roundRect(cx - w / 2, cy - h / 2, w, h, (THICK * k) / 2);
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = shown;
     ctx.fillStyle = '#fff';
     ctx.fill();
-    ctx.globalAlpha = 0.3 + (PICK_FRAME - 0.3) * lit;
+    ctx.globalAlpha = (0.3 + (PICK_FRAME - 0.3) * lit) * shown;
     ctx.fillStyle = color;
     ctx.fill();
     // Three white dots along it: a thing to take hold of.
-    ctx.globalAlpha = 1;
+    ctx.globalAlpha = shown;
     ctx.fillStyle = '#fff';
     const step = 3.5 * k, r = 0.75 * k;
     ctx.beginPath();
