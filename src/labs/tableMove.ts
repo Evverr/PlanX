@@ -348,7 +348,7 @@ export function endGrip(ed: Editor): void {
 const pick = () => getComputedStyle(document.documentElement).getPropertyValue('--fmt-on-ink').trim() || '#0080FF';
 
 /** A column or row taken off the table: how far it tilts (in radians), how long it takes to lift. */
-const TILT = -4 * Math.PI / 180, LIFT_MS = 140;
+const TILT = -(4 / 3) * Math.PI / 180, LIFT_MS = 140;
 
 /** How long a pill takes to grow and take its colour, or go back, in ms; a plus, a little quicker. */
 const PILL_TURN = 75, PLUS_TURN = 50;
@@ -382,7 +382,7 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
     const home = ed.toScreen(axis === 'col' ? { x: it.x + start, y: it.y } : { x: it.x, y: it.y + start });
     const w = (axis === 'col' ? sizes[index] : it.w) * z, h = (axis === 'col' ? it.h : sizes[index]) * z;
     // Along the table as it's moved; off it (to go when let go), lifted out of it: following the
-    // pointer every way, tilted, its shadow under it, red.
+    // pointer every way, a little tilted, its shadow under it, as it looks.
     const away = off(ed, it), lift = litNow(ed, `${it.id}:lift`, away, LIFT_MS);
     const full = { x: (drag.at.x - drag.from.x) * z, y: (drag.at.y - drag.from.y) * z }, along = axis === 'col' ? { x: full.x, y: 0 } : { x: 0, y: full.y };
     dragShift = { x: along.x + (full.x - along.x) * lift, y: along.y + (full.y - along.y) * lift };
@@ -398,16 +398,7 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
       ctx.shadowBlur = 18;
       ctx.shadowOffsetY = 8 * lift;
       ctx.drawImage(ctx.canvas, m.a * home.x + m.e, m.d * home.y + m.f, w * m.a, h * m.d, -w / 2, -h / 2, w, h);
-      ctx.shadowColor = 'transparent';
-      ctx.fillStyle = '#E5484D';
-      ctx.globalAlpha = 0.18 * lift;
-      ctx.fillRect(-w / 2, -h / 2, w, h);
       ctx.restore();
-      // Where it was, faintly red.
-      ctx.fillStyle = '#E5484D';
-      ctx.globalAlpha = 0.1 * lift;
-      ctx.fillRect(home.x, home.y, w, h);
-      ctx.fillStyle = color;
     } else {
       ctx.globalAlpha = 0.12;
       ctx.fillRect(home.x + along.x, home.y + along.y, w, h);
@@ -504,12 +495,9 @@ function drawPuffs(ctx: CanvasRenderingContext2D, ed: Editor): void {
   if (!puffs.length) return;
   ctx.save();
   ctx.fillStyle = '#fff';
-  // (A shadow, for white on the light board.)
-  ctx.shadowColor = 'rgba(0, 0, 0, .22)';
-  ctx.shadowBlur = 8;
   for (const p of puffs) {
     const k = (now - p.t) / PUFF, e = 1 - (1 - k) ** 2;
-    ctx.globalAlpha = 0.9 * (1 - k);
+    ctx.globalAlpha = 1 - k;
     for (let i = 0; i < 7; i++) {
       const a = (i / 7) * Math.PI * 2 + 0.4, d = 6 + 22 * e, r = (4 + (i % 3) * 2) * (1 + 1.2 * e);
       ctx.beginPath();
