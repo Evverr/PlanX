@@ -4,7 +4,7 @@ import { alignOf, TEXT_COLORS, textPad, textPadY, type Item } from '../model/typ
 import { fontOf, FONTS, LINE_HEIGHT, textBlockHeight } from '../canvas/text';
 import { FOLD_FS, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP } from '../model/frame';
 import { center } from '../canvas/geometry';
-import { TASK_FONT, taskFieldBox } from '../canvas/task';
+import { descLook, TASK_FONT, taskFieldBox } from '../canvas/task';
 import { addChild, siblingOf, siblingTints } from '../model/mind';
 import { autoInk } from '../model/color';
 import { colsOf, rowsOf } from '../model/table';
@@ -76,7 +76,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   // A folded frame's title is typed in where it stands, inside the bar.
   const folded = isFrame && !!item.fold;
   // A task: its title, description or a subtask, where the card has it (see canvas/task.ts).
-  const field = item.type === 'task' ? taskFieldBox(item, editor.editingCell) : null;
+  const field = item.type === 'task' ? taskFieldBox(item, editor.editingCell) : null, desc = field && editor.editingCell === 0 ? descLook(item) : null;
   // A task's title or a subtask: on one line, scrolled across as it's typed past its end.
   const sub = item.type === 'task' && editor.editingCell !== 0;
   const fs = field ? field.fs : folded ? FOLD_FS : isFrame ? 15 : item.fs ?? (code ? CODE_FS : 16);
@@ -93,7 +93,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
     if (!el) return;
     let top = 0;
     if (code) el.style.height = `${Math.max(0, item.h - CODE_TOP - CODE_BOTTOM)}px`;
-    else if (field) el.style.height = `${sub ? field.h : textBlockHeight(el.value, width, fs, { weight: field.weight, family: TASK_FONT })}px`;
+    else if (field) el.style.height = `${sub ? field.h : textBlockHeight(el.value, width, fs, { weight: field.weight, family: desc?.family ?? TASK_FONT, italic: desc?.italic })}px`;
     else if (item.type !== 'text' && !isFrame) {
       // As tall as the canvas lays the lines out (exactly, not rounded), so they land where it drew them.
       const content = Math.min(textBlockHeight(el.value, width, fs, fontOf(item)), item.h - padY * 2);
@@ -132,6 +132,9 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         ...(code && { color: 'transparent', caretColor: '#E6E7EC', whiteSpace: 'pre', overflowWrap: 'normal', tabSize: 2 }),
         ...(field && { fontFamily: FONTS[TASK_FONT].css, fontWeight: field.weight, fontStyle: undefined, textAlign: 'left', textDecoration: undefined, color: 'var(--ink)',
           ...(sub && { whiteSpace: 'pre', overflowWrap: 'normal' }) }),
+        // Its description as the text panel sets it (see descLook).
+        ...(desc && { fontFamily: FONTS[desc.family]?.css, fontStyle: desc.italic ? 'italic' : undefined, textAlign: desc.align,
+          textDecoration: [desc.under && 'underline', desc.strike && 'line-through'].filter(Boolean).join(' ') || undefined, color: desc.color ?? 'var(--ink)' }),
       }}
       // A mind map node dragged by its text moves, as it would anywhere else on it.
       onPointerDown={item.type === 'mind' ? (e) => {
@@ -149,7 +152,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         if (code) { setLiveCode(id, e.currentTarget.value); editor.previewText(id, e.currentTarget.value); editor.requestRender(); return; }
         if (item.type === 'text' || item.type === 'task' || item.type === 'mind') editor.previewText(id, e.currentTarget.value);
         if (field) {
-          if (!sub) e.currentTarget.style.height = `${textBlockHeight(e.currentTarget.value, width, fs, { weight: field.weight, family: TASK_FONT })}px`;
+          if (!sub) e.currentTarget.style.height = `${textBlockHeight(e.currentTarget.value, width, fs, { weight: field.weight, family: desc?.family ?? TASK_FONT, italic: desc?.italic })}px`;
         } else if (item.type !== 'text' && !isFrame) {
           const el = e.currentTarget, content = Math.min(textBlockHeight(el.value, width, fs, fontOf(item)), item.h - padY * 2);
           el.style.height = `${content}px`;

@@ -1,5 +1,5 @@
 import type { Item, Person, TaskStatus } from '../model/types';
-import { FILLS } from '../model/types';
+import { FILLS, MARK_COLORS, TEXT_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
 import { font, LINE_HEIGHT, textBlockHeight, withList, wrapText } from './text';
 import { drawnLinks } from '../model/textLinks';
@@ -21,15 +21,14 @@ export const TASK_MIN_W = DAY * Math.max(...TL_STEPS);
 /** Its corners' radius, at its outer edge. */
 export const TASK_RAD = 12;
 const TITLE_FS = 16, TEXT_FS = 14, FAMILY = 'inter';
-const TEXT = { weight: 400, family: FAMILY };
 /** Where the title starts, and where its first line's middle is (the ring's and the arrow's too). */
 const TITLE_X = 47, MID = 26;
 const STATUS = 22, ARROW = 24;
 /** How far round the ring and the arrow a press is still theirs (the rest of the header a double click's). */
 const AROUND = 5;
 /** Where the people's names start and their circles' middle; a row's height; a subtask's. */
-/** What's under the header keeps this far from its sides (7 more than the header's ring from its left). */
-const PAD = 22;
+/** What's under the header keeps this far from its sides (9 more than the header's ring from its left). */
+const PAD = 24;
 const LABEL_X = PAD, NAME_X = PAD + 153, AVATAR_X = PAD + 135, ROW = 33, SUB = 38;
 /** The subtasks under who does it: their rings on its picture's middle, their text where names start. */
 const SUB_X = AVATAR_X - 11, SUB_TEXT_X = NAME_X;
@@ -78,6 +77,16 @@ const widthOf = (text: string, size: number, weight: number) => {
 };
 const buttonW = (text: string) => Math.ceil(widthOf(text, BUTTON_FONT.size, BUTTON_FONT.weight)) + BUTTON_PAD * 2;
 
+/** Its description's look, set by the text panel on the task (its title keeps the card's): size, font,
+ *  weight, slant, alignment, colour (none: the card's ink) and how see-through, highlight, lines. */
+export function descLook(it: Item) {
+  return {
+    fs: it.dfs ?? TEXT_FS, weight: it.fw ?? 400, family: it.ff ?? FAMILY, italic: !!it.fi, align: it.ta ?? 'left',
+    color: it.tc ? (it.tc.startsWith('#') ? it.tc : TEXT_COLORS[it.tc] || undefined) : undefined, alpha: it.to,
+    mark: it.mk ? MARK_COLORS[it.mk] ?? it.mk : undefined, markAlpha: it.mo ?? 0.45, under: !!it.fu, strike: !!it.fx,
+  };
+}
+
 /** Its title on one line: cut off with "…" where it's wider than there's room for. */
 export function titleLine(text: string, w: number): string {
   if (widthOf(text, TITLE_FS, 500) <= w) return text;
@@ -95,7 +104,7 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   if (!it.tv) return out;
   const descW = Math.max(80, w - PAD * 2), dy = head + 22;
   // (Its description in a list, as drawn: each paragraph after its bullet or number.)
-  const dh = textBlockHeight(it.desc ? withList(it.desc, it.ls) : DESC_HINT, descW, TEXT_FS, TEXT);
+  const dl = descLook(it), dh = textBlockHeight(it.desc ? withList(it.desc, it.ls) : DESC_HINT, descW, dl.fs, { weight: dl.weight, family: dl.family, italic: dl.italic });
   out.desc = { x: PAD, y: dy, w: descW, h: dh };
   const d = dy + dh;
   if (it.tv === 'desc') {
@@ -163,7 +172,7 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
 /** Where a part's text is typed in (on the board): the title, the description, a subtask. */
 export function taskFieldBox(it: Item, field: number | null): Rect & { fs: number; weight: number } {
   const l = taskLayout(it);
-  if (field === 0 && l.desc) return { x: it.x + l.desc.x, y: it.y + l.desc.y, w: l.desc.w, h: l.desc.h, fs: TEXT_FS, weight: 400 };
+  if (field === 0 && l.desc) return { x: it.x + l.desc.x, y: it.y + l.desc.y, w: l.desc.w, h: l.desc.h, fs: descLook(it).fs, weight: descLook(it).weight };
   if (field !== null && field > 0 && l.subs) {
     const y = l.subs[field - 1] + STATUS / 2 - lineH(TEXT_FS) / 2;
     return { x: it.x + SUB_TEXT_X, y: it.y + y, w: l.w - SUB_TEXT_X - PAD, h: lineH(TEXT_FS), fs: TEXT_FS, weight: 400 };
@@ -308,25 +317,34 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   if (!l.desc) return;
   if (typing !== 0 && !it.desc) lines(DESC_HINT, l.desc, TEXT_FS, 400, look.muted);
   else if (typing !== 0) {
-    // In a list as it's set, links on parts of it blue and underlined (see model/textLinks.ts).
-    const text = withList(it.desc!, it.ls), links = it.links?.length ? drawnLinks(it.desc!, it.ls, it.links) : [];
-    const lh = lineH(TEXT_FS), linkInk = look.linkInk ?? BLUE;
-    ctx.font = font(TEXT_FS, 400, FAMILY);
+    // As the text panel set it, in a list as it's set, links on parts of it blue and underlined (see
+    // model/textLinks.ts).
+    const dl = descLook(it), text = withList(it.desc!, it.ls), links = it.links?.length ? drawnLinks(it.desc!, it.ls, it.links) : [];
+    const lh = lineH(dl.fs), linkInk = look.linkInk ?? BLUE, ink = dl.color ?? look.ink, alpha = dl.alpha ?? (dl.color ? 1 : 0.8), rule = Math.max(1, dl.fs / 14);
+    ctx.font = font(dl.fs, dl.weight, dl.family, dl.italic);
     let from = 0;
     wrapText(text, l.desc.w, (t) => ctx.measureText(t).width).forEach((line, i) => {
-      const ly = y + l.desc!.y + lh * i, mid = ly + lh / 2, lx = x + l.desc!.x;
+      const ly = y + l.desc!.y + lh * i, mid = ly + lh / 2, lw = ctx.measureText(line).width;
+      const lx = x + l.desc!.x + (dl.align === 'center' ? (l.desc!.w - lw) / 2 : dl.align === 'right' ? l.desc!.w - lw : 0);
+      if (line && dl.mark) {
+        ctx.globalAlpha = dl.markAlpha;
+        ctx.fillStyle = dl.mark;
+        ctx.fillRect(lx - 2, ly + lh * 0.06, lw + 4, lh * 0.88);
+      }
       const at = text.indexOf(line, from), on = links.filter((k) => k.s < at + line.length && k.e > at);
       from = at + line.length;
       const cuts = [...new Set([0, line.length, ...on.flatMap((k) => [k.s - at, k.e - at]).filter((c) => c > 0 && c < line.length)])].sort((a, b) => a - b);
       for (let c = 0; c + 1 < cuts.length; c++) {
         const piece = line.slice(cuts[c], cuts[c + 1]), px = lx + ctx.measureText(line.slice(0, cuts[c])).width, pw = ctx.measureText(piece).width;
         const link = on.find((k) => k.s - at <= cuts[c] && k.e - at >= cuts[c + 1]);
-        ctx.fillStyle = link ? linkInk : look.ink;
-        ctx.globalAlpha = link ? 1 : 0.8;
+        ctx.fillStyle = link ? linkInk : ink;
+        ctx.globalAlpha = alpha;
         ctx.fillText(piece, px, mid);
+        if (dl.under && !link) ctx.fillRect(px, mid + dl.fs * 0.42, pw, rule);
+        if (dl.strike) ctx.fillRect(px, mid + dl.fs * 0.04 - rule / 2, pw, rule);
         if (link) {
-          ctx.globalAlpha = 0.4;
-          ctx.fillRect(px, mid + TEXT_FS * 0.55, pw, 1);
+          ctx.globalAlpha = alpha * 0.4;
+          ctx.fillRect(px, mid + dl.fs * 0.55, pw, rule);
           look.onLink?.({ x: px, y: ly, w: pw, h: lh, url: link.url });
         }
       }
@@ -335,7 +353,8 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   }
   if (l.more) drawIcon(ctx, 'chevron-down-m', x + l.more.x, y + l.more.y, ARROW, arrowInk('more'));
   if (!l.rows || !l.subs || !l.lines || !l.cancel || !l.finish || l.subsAt === undefined) return;
-  ctx.fillStyle = look.dark ? 'rgba(255,255,255,0.1)' : '#DFE3E6';
+  // (The lines across half as strong as the panels' line grey.)
+  ctx.fillStyle = look.dark ? 'rgba(255,255,255,0.05)' : 'rgba(223,227,230,0.5)';
   for (const ly of l.lines) ctx.fillRect(x + PAD, y + ly, l.w - PAD * 2, 1);
   const label = (text: string, row: number) => {
     ctx.font = font(TEXT_FS, 400, FAMILY);

@@ -59,9 +59,6 @@ function pickedPart(editor: Editor, item: Item): Part | null {
   return { s: el.selectionStart, e: el.selectionEnd, text: el.value };
 }
 
-/** A task's description gets the panel's list and links only (its font and colours are the card's). */
-const forItem = <T extends Partial<Record<string, React.ReactElement>>>(item: Item, all: T): T =>
-  item.type === 'task' ? ({ list: all.list, link: all.link } as unknown as T) : all;
 
 /** The link's menu: its address to type (Enter sets it), and to open it or take it off; for a part of
  *  the text, that part's. */
@@ -174,10 +171,12 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
   /** Applies a change and closes the menu it came from. */
   const set = (patch: Partial<Item>, keepOpen = false) => { editor.setTextStyle(patch); if (!keepOpen) setMenu(null); };
 
-  const fs = item.fs ?? DEFAULTS[item.type].fs ?? 16;
-  const bold = (item.fw ?? baseWeight(item.type)) >= 600;
+  // (A task's for its description, as the card has it by default: Inter 14, on the left; see descLook.)
+  const task = item.type === 'task', baseFont = task ? 'inter' : 'onest';
+  const fs = task ? item.dfs ?? 14 : item.fs ?? DEFAULTS[item.type].fs ?? 16;
+  const bold = (item.fw ?? (task ? 400 : baseWeight(item.type))) >= 600;
   const heading = HEADINGS.find(([, size]) => size === fs && bold);
-  const align = alignOf(item);
+  const align = task ? item.ta ?? 'left' : alignOf(item);
   const textColor = hex(item.tc, TEXT_COLORS);
   const mark = hex(item.mk, MARK_COLORS);
 
@@ -188,16 +187,16 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
       {...sort.container} onPointerDown={(e) => { if (!(e.target as Element).closest('input')) e.preventDefault(); sort.container.onPointerDown(e); }}>
       {/* (As the actions' button at the other end: as far in, its hover as big.) */}
       {onBack && <button className="fb back" title="Назад" aria-label="Назад" data-nosort onClick={onBack}><Icon name="chevron-left" /></button>}
-      {sort.renderFit(forItem(item, {
+      {sort.renderFit({
         font: <span className="sort-wrap"><Drop open={menu === 'font'} menu={Object.entries(FONTS).map(([k, f]) => (
-          <button key={k} className={`tf-item ${(item.ff ?? 'onest') === k ? 'on' : ''}`} style={{ fontFamily: f.css }}
-            onClick={() => set({ ff: k === 'onest' ? undefined : k })}>{f.label}</button>
+          <button key={k} className={`tf-item ${(item.ff ?? baseFont) === k ? 'on' : ''}`} style={{ fontFamily: f.css }}
+            onClick={() => set({ ff: k === baseFont ? undefined : k })}>{f.label}</button>
         ))}>
-          <Pick value={FONTS[item.ff ?? 'onest']?.label ?? 'Onest'} label="Шрифт" onClick={() => toggle('font')} />
+          <Pick value={FONTS[item.ff ?? baseFont]?.label ?? 'Onest'} label="Шрифт" onClick={() => toggle('font')} />
         </Drop></span>,
         gap: <div className="fsep" />,
         style: <span className="sort-wrap"><Drop open={menu === 'style'} menu={<>
-          <button className={`tf-item ${heading ? '' : 'on'}`} onClick={() => set({ fs: DEFAULTS[item.type].fs, fw: undefined })}>Обычный</button>
+          <button className={`tf-item ${heading ? '' : 'on'}`} onClick={() => set({ fs: task ? undefined : DEFAULTS[item.type].fs, fw: undefined })}>Обычный</button>
           {HEADINGS.map(([label, size]) => (
             <button key={label} className={`tf-item ${heading?.[0] === label ? 'on' : ''}`} style={{ fontSize: Math.round(size * 0.55), fontWeight: 700 }}
               onClick={() => set({ fs: size, fw: 700 })}>{label}</button>
@@ -256,7 +255,7 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
         }} />}>
           <Btn icon="link" label="Ссылка" on={!!item.url || menu === 'link'} onClick={() => { setPart(pickedPart(editor, item)); toggle('link'); }} />
         </Drop></span> : undefined,
-      }), textRoom() - (labs.contextMenu ? MENU_BUTTON : 0), 'above')}
+      }, textRoom() - (labs.contextMenu ? MENU_BUTTON : 0), 'above')}
       {/* The right click's menu, always at the right end ("Меню по правому клику", src/labs). */}
       {labs.contextMenu && <ItemMenuButton className="fb" />}
     </div>
