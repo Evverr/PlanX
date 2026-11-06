@@ -162,7 +162,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
   const run = (fn: () => void) => () => { fn(); setAt(null); };
   const row = (icon: string, label: string, fn: () => void) => (
     <div className="menu-item">
-      <button className="menu-row" role="menuitem" onClick={fn}>
+      <button className={`menu-row ${label === 'Удалить' ? 'danger' : ''}`} role="menuitem" onClick={fn}>
         <Glyph id={icon} className="menu-icon" />
         <span>{label}</span>
       </button>

@@ -10,7 +10,7 @@
    6px below the top bar. */
 .menu-wrap { position: relative; display: flex; }
 .board-menu { position: absolute; left: round(calc(-6px * var(--k)), 1px); top: calc(100% + var(--s12)); z-index: 7; width: var(--e286); box-sizing: border-box;
-  display: flex; flex-direction: column; gap: 0; padding: var(--s9) var(--s18) var(--s9) var(--s14);
+  display: flex; flex-direction: column; gap: 0; padding: var(--s7) var(--s18) var(--s11) var(--s14);
   background: var(--surface); border-radius: var(--s12); box-shadow: 0 6px 6px rgba(0, 0, 0, .15); }
 .menu-item { position: relative; width: 100%; }
 .menu-row { position: relative; display: flex; align-items: center; gap: var(--s11); width: 100%; border: 0; background: none; padding: 0;
@@ -43,7 +43,7 @@
   box-shadow: 0 1px 1px rgba(0, 0, 0, .07); transition: left .15s ease-out, right .15s ease-out; }
 .menu-switch.on i { left: 45.83%; right: 12.5%; box-shadow: 0 1px 1px rgba(0, 0, 0, .17); }
 /* A further level opens beside its row, 3px over the menu's edge, its first row level with it. */
-.board-menu.sub { left: calc(100% + var(--s15)); top: round(calc(-9px * var(--k)), 1px); bottom: auto; }
+.board-menu.sub { left: calc(100% + var(--s15)); top: round(calc(-7px * var(--k)), 1px); bottom: auto; }
 /* Where the screen ends, it opens to the left instead, 3px over the menu's other edge. */
 .board-menu.sub.leftward { left: auto; right: calc(100% + var(--s11)); }
 .board-menu.plain > .menu-item > .board-menu.sub.leftward { right: calc(100% + var(--s15)); }
@@ -52,6 +52,10 @@
 .menu-row::before { content: ""; position: absolute; inset: 0 round(calc(-18px * var(--k)), 1px) 0 round(calc(-14px * var(--k)), 1px); z-index: -1; transition: background-color .12s ease-out; }
 .board-menu.plain > .menu-item > .menu-row::before { left: round(calc(-18px * var(--k)), 1px); }
 .menu-row:hover::before, .menu-row[aria-expanded="true"]::before { background: var(--fmt-hover); }
+/* «Удалить»: under the pointer red, its text red, its icon as light as ever but reddish. */
+.menu-row.danger:hover::before { background: color-mix(in srgb, var(--danger) 10%, transparent); }
+.menu-row.danger:hover { color: var(--danger); }
+.menu-row.danger:hover .menu-icon { color: color-mix(in srgb, var(--danger) 55%, var(--surface)); }
 
 /* The shapes' gear menu: beside their panel, its foot level with the panel's. A row can end in a
    number to type (the corners' rounding), in px. */
