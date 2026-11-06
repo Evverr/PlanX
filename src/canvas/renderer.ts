@@ -89,6 +89,10 @@ export interface Scene {
   hotHandle?: boolean;
   /** With the line tool, the item whose link dots show. */
   linkDots?: string | null;
+  /** "Связи инструментом" (src/labs): what's picked shows no link dots; with the line tool (`allDots`),
+   *  every item in sight shows them (a mind map node only under the pointer, as `linkDots`). */
+  linkTool?: boolean;
+  allDots?: boolean;
   /** The mind map node button under the pointer, drawn full size and strength; the others are smaller and faint. */
   hotPlus: string | null;
   /** How far the node buttons have faded in, 0…1: they come a moment after the node is picked. */
@@ -1222,7 +1226,7 @@ function drawDots(ctx: CanvasRenderingContext2D, it: Item, s: Scene, fade = 1) {
   ctx.lineWidth = 2 / cam.z;
   const now = performance.now();
   for (const side of SIDES) {
-    const p = sidePoint(it, side, dotGap(it, side, now) / cam.z), key = `${it.id}:${side}`, hot = side === s.hotDot;
+    const p = sidePoint(it, side, dotGap(it, side, now) / cam.z), key = `${it.id}:${side}`, hot = side === s.hotDot && (!s.allDots || it.id === s.linkDots);
     let t = dotTurns.get(key);
     if (!t) dotTurns.set(key, (t = { hot, from: hot ? 1 : 0, at: 0 }));
     else if (t.hot !== hot) dotTurns.set(key, (t = { hot, from: dotLit(t, now), at: now }));
@@ -1369,7 +1373,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       ctx.globalAlpha = PICK_FADE * (1 - k);
       ctx.fill();
       ctx.stroke();
-      drawDots(ctx, it, s, 1 - k);
+      if (!s.linkTool) drawDots(ctx, it, s, 1 - k);
     }
     ctx.globalAlpha = 1;
   }
@@ -1416,12 +1420,17 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       ctx.fill();
       ctx.stroke();
       ctx.globalAlpha = 1;
-      drawDots(ctx, it, s);
+      if (!s.linkTool) drawDots(ctx, it, s);
     }
   }
   // With the line tool, the dots of the item under the pointer, whatever it is.
   const dotted = s.linkDots ? s.get(s.linkDots) : undefined;
-  if (dotted && !(s.selection.size === 1 && s.selection.has(dotted.id))) drawDots(ctx, dotted, s);
+  if (dotted && (s.linkTool || !(s.selection.size === 1 && s.selection.has(dotted.id)))) drawDots(ctx, dotted, s);
+  // And with "Связи инструментом", every other one's in sight.
+  if (s.allDots) {
+    const m = 20 / cam.z, view = { x: -cam.x / cam.z - m, y: -cam.y / cam.z - m, w: s.width / cam.z + m * 2, h: s.height / cam.z + m * 2 };
+    for (const it of s.items) if (it !== dotted && it.id !== dotted?.id && it.type !== 'mind' && !it.inst && !it.host && rectsIntersect(view, boxOf(it))) drawDots(ctx, it, s);
+  }
 
   if (s.mindMove) {
     const { from, to } = s.mindMove;
