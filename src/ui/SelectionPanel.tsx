@@ -463,8 +463,9 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
           : items.length > 0 && !(items.length === 1 && items[0].comp) ? btn('component', 'Компонент из выделенного', () => editor.makeComponent()) : undefined,
         // An instance can be cut loose from its component.
         detach: items.some((i) => i.inst) ? btn('component-off', 'Отвязать от компонента (Ctrl+Alt+B)', () => editor.detachInstances()) : undefined,
-        front: items.length > 0 ? btn('to-front', 'На передний план', () => editor.bringToFront()) : undefined,
-        back: items.length > 0 ? btn('to-back', 'На задний план', () => editor.sendToBack()) : undefined,
+        // A layer up or down past what it lies over (as Ctrl+↑, Ctrl+↓), not to the very top or bottom.
+        front: items.length > 0 ? btn('to-front', 'На слой выше', () => editor.shiftZ(1)) : undefined,
+        back: items.length > 0 ? btn('to-back', 'На слой ниже', () => editor.shiftZ(-1)) : undefined,
         duplicate: items.length > 0 ? btn('duplicate', 'Дублировать (Ctrl+D)', () => editor.duplicate()) : undefined,
         // Features on trial (src/labs), while they're switched on.
         text: onText ? btn('text', 'Текст и шрифт', onText) : undefined,
