@@ -367,6 +367,9 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // A task's button, clicked (`tap`: where on screen, for a popup): what it does.
         const it = board.get(g.id);
         if (it) pressTask(ed, it, g.start, g.tap);
+      } else if (board.get(g.id)?.code && !board.get(g.id)?.text && !g.dbl && ed.editingId !== g.id) {
+        // A block of code with nothing in it ("Код", src/labs), clicked: typed in at once, to paste into.
+        ed.startEditing(g.id, null, 'end');
       } else if (g.dbl) {
         const it = board.get(g.id);
         // A path drawn with "Перо" (src/labs): its nodes to change.

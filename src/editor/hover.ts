@@ -282,6 +282,8 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
       || (hit && ed.editingId !== hit.id && linkPartAt(hit, w))) cursor = 'pointer';
     // A task's title: the text cursor, as it's typed in there (on a double click), not the card's.
     else if (hit?.type === 'task' && ed.editingId !== hit.id && taskPartAt(hit, w) === 'title') cursor = 'text';
+    // (A block of code with nothing in it: a click types in it.)
+    else if (hit?.code && !hit.text && ed.editingId !== hit.id) cursor = 'text';
     else if (hit && !isLocked(hit)) cursor = alt ? 'copy' : 'move';
   }
   ed.canvas.style.cursor = cursor;
