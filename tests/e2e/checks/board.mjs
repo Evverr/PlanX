@@ -40,9 +40,10 @@ export const checks = {
     await p.click(ring);
     expect((await t()).st, 'to do again').toBe('todo');
     await sleep(450);
+    await p.ev(`planx.board.add(planx.editor.newItem('sticky', 1200, 1200, { id: 'over', z: 50 }))`);
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
     let it = await t();
-    expect([it.tv, it.w].join(), 'opened to its description, wider').toBe('desc,494');
+    expect([it.tv, it.w, it.z > 50].join(), 'opened to its description, wider, on top').toBe('desc,494,true');
     await sleep(450);
     await p.click(await at('(t, l) => ({ x: t.x + l.more.x + 12, y: t.y + l.more.y + 12 })'));
     expect((await t()).tv, 'all of it').toBe('full');
@@ -74,6 +75,13 @@ export const checks = {
     await p.click(await at('(t, l) => ({ x: t.x + l.finish.x + 40, y: t.y + l.finish.y + 16 })'));
     it = await t();
     expect([it.st, it.tv ?? 'closed', it.w, it.h].join(), '«Завершить»: done and closed').toBe('done,closed,293,52');
+    // A double click on its header: its description, all of it, closed again.
+    for (const want of ['desc', 'full', 'closed']) {
+      await sleep(450);
+      await dblClick(p, await at('(t) => ({ x: t.x + 150, y: t.y + 26 })'));
+      await sleep(100);
+      expect((await t()).tv ?? 'closed', 'the next view').toBe(want);
+    }
   },
 
   async 'tasks of before become tasks of now: a ticked card done, a built-in one by its title and note'(p) {

@@ -82,6 +82,9 @@ export type TaskPart = 'status' | 'arrow' | 'more' | 'title' | 'desc' | 'boss' |
 const inRect = (p: Point, r: Rect, pad = 0) => p.x >= r.x - pad && p.x <= r.x + r.w + pad && p.y >= r.y - pad && p.y <= r.y + r.h + pad;
 const near = (p: Point, x: number, y: number, r: number) => Math.hypot(p.x - x, p.y - y) <= r;
 
+/** Whether a point is on its header (its title's band). */
+export const onTaskHead = (it: Item, p: Point): boolean => p.y - it.y < taskLayout(it).head && p.y >= it.y && p.x >= it.x && p.x <= it.x + it.w;
+
 export function taskPartAt(it: Item, p: Point): TaskPart | null {
   const l = taskLayout(it), q = { x: p.x - it.x, y: p.y - it.y };
   if (near(q, 15 + STATUS / 2, MID, STATUS / 2 + 4)) return 'status';
@@ -131,7 +134,8 @@ const mix = (a: string, b: string, k: number) => {
 };
 const strongOf = (color: string | undefined) => (color?.startsWith('#') ? color : STRONG[color ?? 'blue'] ?? (FILLS[color ?? ''] && FILLS[color!] !== 'transparent' ? FILLS[color!] : STRONG.blue));
 
-export interface TaskLook { surface: string; ink: string; muted: string; dark: boolean; z: number }
+/** `px`: the screen's pixels in a unit of the board (for the shadow, which the canvas doesn't scale). */
+export interface TaskLook { surface: string; ink: string; muted: string; dark: boolean; z: number; px: number }
 
 /** The ring of a status (or a subtask's: to do or done), its middle at x, y. */
 export function drawStatus(ctx: CanvasRenderingContext2D, x: number, y: number, s: TaskStatus, look: TaskLook): void {
@@ -180,11 +184,19 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   const l = taskLayout(it), { x, y } = it, strong = strongOf(it.color);
   const bg = look.dark ? '#26272C' : '#FFFFFF', tint = mix(strong, bg, look.dark ? 0.16 : 0.05);
   const edge = `rgba(${rgb(strong.startsWith('#') ? strong : '#003CFF').join(',')}, 0.3)`;
-  // The card, its edge 2 wide inside it; its header tinted, the whole of it when closed.
+  // The card, its edge 2 wide inside it; its header tinted, the whole of it when closed. Opened, it
+  // lies over the board with a shadow.
   ctx.beginPath();
   ctx.roundRect(x + 1, y + 1, l.w - 2, l.h - 2, 11);
   ctx.fillStyle = it.tv ? bg : tint;
-  ctx.fill();
+  if (it.tv) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowOffsetY = 2 * look.px;
+    ctx.shadowBlur = 4 * look.px;
+    ctx.fill();
+    ctx.restore();
+  } else ctx.fill();
   if (it.tv) {
     ctx.beginPath();
     ctx.roundRect(x + 2, y + 2, l.w - 4, l.head - 4, [10, 10, 0, 0]);
