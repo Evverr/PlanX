@@ -311,9 +311,10 @@ export const checks = {
     await p.click(await p.at('.topbar button[aria-label="Меню"]'));
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.board-menu .menu-row')].find((b) => b.textContent === 'Настройки').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     await sleep(150);
-    const row = () => p.ev(`(() => { const r = document.querySelector('.modal.settings .settings-list:not(.labs-list) .settings-row'); return r.querySelector('b').textContent.startsWith('Зум с') + ' ' + r.getAttribute('aria-checked'); })()`);
+    // (Second, after the theme.)
+    const row = () => p.ev(`(() => { const r = document.querySelector('.modal.settings .settings-list:not(.labs-list) .settings-row:nth-child(2)'); return r.querySelector('b').textContent.startsWith('Зум с') + ' ' + r.getAttribute('aria-checked'); })()`);
     expect(await row(), 'off at first').toBe('true false');
-    await p.click(await p.at('.modal.settings .settings-list:not(.labs-list) .settings-row'));
+    await p.click(await p.at('.modal.settings .settings-list:not(.labs-list) .settings-row:nth-child(2)'));
     expect(await row(), 'switched on').toBe('true true');
     await p.escape();
     await sleep(150);

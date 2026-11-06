@@ -12,7 +12,6 @@ import { isSeparator, useSortable } from './sortable';
 import { ToolPreview } from './ToolPreview';
 import { readText, writeText } from '../storage';
 import { labOn, useLabs } from '../labs/labs';
-import { toggleDots, useDotsOn } from '../labs/linkTool';
 import { joinDropped, railOver } from '../labs/linkJoint';
 import { ObjectsMenu, OBJECTS } from '../labs/ObjectsMenu';
 import { LinePanel } from '../labs/LinePanel';
@@ -89,7 +88,6 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
   const shapeIcon = SHAPES.find(([t]) => t === lastShape.current)?.[1] ?? 'landscape';
   // "Объекты" (src/labs): its button opens the menu of them; dragged off the rail, it makes the one used last.
   const labs = useLabs();
-  const dots = useDotsOn();
   const lastObject = useRef<Tool>('timeline');
   const objecting = OBJECTS.some(([t]) => t === tool);
   if (objecting) lastObject.current = tool;
@@ -197,11 +195,9 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
   const moreZone = sort.moreZone(hidden);
   /** A rail button; in the "more" row (`inMenu`) it closes the row when used. */
   const railButton = (key: string, on: boolean, label: string, icon: PanelIconName, onClick?: () => void, extra: object = {}, inMenu = false): ReactNode => {
-    // ("Связи инструментом": the «Линии» button with the dots out, solid, on its usual light blue, not on
-    // blue as a tool picked: it isn't one.)
-    const dots = labs.linkTool && key === 'lines', solid = on && (labs.solidTool || dots);
+    const solid = on && labs.solidTool;
     return (
-      <button key={key} {...(inMenu ? sort.moreItem(key) : sort.item(key))} className={`fb ${on ? 'on' : ''} ${on && labs.solidTool && !dots ? 'solid-on' : ''} ${sort.lifted(key) ? 'lifted' : ''}`}
+      <button key={key} {...(inMenu ? sort.moreItem(key) : sort.item(key))} className={`fb ${on ? 'on' : ''} ${solid ? 'solid-on' : ''} ${sort.lifted(key) ? 'lifted' : ''}`}
         title={label} aria-label={label.replace(/ \(.*\)$/, '')} {...extra}
         onClick={() => { onClick?.(); if (inMenu) setMoreOpen(false); }}>
         <PanelIcon name={solid ? SOLID[icon] ?? icon : icon} />
@@ -222,8 +218,8 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     // "Комментарии" (src/labs): a click on the board puts a comment there.
     if (key === 'comments') return labs.comments ? button(key, tool === 'comment', 'Комментарий', 'comment', () => editor.setTool(tool === 'comment' ? 'select' : 'comment'), { 'aria-pressed': tool === 'comment' }) : null;
     // "Линии" (src/labs): the line tool, from any item to any other; held, the ways a line runs.
-    // ("Связи инструментом", src/labs: it puts the link dots out, the tool as it is.)
-    if (key === 'lines' && labs.linkTool) return button(key, dots, 'Связи (C; зажмите — вид линии)', 'path', () => toggleDots(editor), { 'aria-pressed': dots });
+    // ("Связи инструментом", src/labs: its switch is on the zoom bar instead.)
+    if (key === 'lines' && labs.linkTool) return null;
     if (key === 'lines') return labs.lineTool ? button(key, tool === 'link', 'Линия (C; зажмите — вид линии)', 'path', () => editor.setTool(tool === 'link' ? 'select' : 'link'), { 'aria-pressed': tool === 'link' }) : null;
     if (key === 'objects') return labs.objects ? button(key, objecting || variants === 'objects', 'Объекты', 'package', () => setVariants(variants === 'objects' ? null : 'objects'), { 'aria-expanded': variants === 'objects' }) : null;
     if (key === 'image') return button(key, false, 'Картинка', 'image', () => { pictureAt.current = undefined; filePicker.current?.click(); });

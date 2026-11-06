@@ -65,12 +65,16 @@ export function ProfileDialog({ name, onRename, onClose }: { name: string; onRen
   );
 }
 
-/** "Настройки" (the board menu): every feature on trial ("Нововведения", src/labs) with its switch. */
-export function SettingsDialog({ onClose }: { onClose: () => void }) {
+/** "Настройки" (the board menu): the theme and such, then every feature on trial ("Нововведения", src/labs) with its switch. */
+export function SettingsDialog({ onClose, dark, onDark }: { onClose: () => void; dark: boolean; onDark: () => void }) {
   const labs = useLabs(), byKey = useZoomsWithKey(), glass = useGlass();
   return (
     <Modal title="Настройки" onClose={onClose} className="settings">
       <div className="settings-list">
+        <button className="settings-row" role="menuitemcheckbox" aria-checked={dark} onClick={onDark}>
+          <span><b>Тёмная тема</b><i>Тёмная доска и панели</i></span>
+          <Switch on={dark} />
+        </button>
         <button className="settings-row" role="menuitemcheckbox" aria-checked={byKey} onClick={() => setZoomsWithKey(!byKey)}>
           <span><b>Зум с {zoomKeyName()}</b><i>{`Масштаб — ${zoomKeyName()} + колесо, а просто колесо листает доску по вертикали. Выключено: масштаб просто колесом`}</i></span>
           <Switch on={byKey} />
