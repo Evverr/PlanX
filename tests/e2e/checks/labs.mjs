@@ -1631,6 +1631,14 @@ export const checks = {
     await p.ev(`localStorage.removeItem('planx-my-objects')`);
   },
 
+  async '"Объекты": a timeline dragged off the menu onto the board is put there'(p) {
+    await p.click(await p.at('.tools [data-key="objects"]'));
+    await p.drag(await p.at('.objects-menu .menu-row'), [700, 450], { steps: 16 });
+    await sleep(200);
+    expect(await p.ev(`planx.board.list().filter((i) => i.tl).length`), 'one put').toBe(1);
+    expect(await p.ev(`!!document.querySelector('.objects-menu')`), 'the menu gone').toBe(false);
+  },
+
   async '"Объекты": the rail button opens the menu, a timeline is put with a click, holds what is put on it, in half days'(p) {
     await p.click(await p.at('.tools [data-key="objects"]'));
     expect(await p.ev(`document.querySelector('.objects-menu .menu-row span')?.textContent`), 'the menu').toBe('Таймлайн');
