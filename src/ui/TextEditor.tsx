@@ -10,7 +10,7 @@ import { autoInk } from '../model/color';
 import { colsOf, rowsOf } from '../model/table';
 import { openSwap, swapKind } from '../labs/swap';
 import { linkedTexts } from '../labs/textPush';
-import { addSub, setView } from '../model/task';
+import { addSub, closeTask, setView } from '../model/task';
 import { taskOpen } from '../labs/taskFull';
 import { CODE_BOTTOM, CODE_FS, CODE_LEFT, CODE_LINE, CODE_PAD, CODE_TOP, codeScroll, setLiveCode, setLiveScroll } from '../labs/codeBlock';
 
@@ -158,12 +158,12 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
       onBlur={commit}
       onKeyDown={(e) => {
         e.stopPropagation();
-        if (field && editor.editingCell === 0 && ((e.key === 'Enter' && (e.metaKey || e.ctrlKey)) || e.key === 'Escape')) {
-          // A task's description done with on Cmd+Enter (Ctrl+Enter) or Esc, Enter a new line in it: the task closed.
+        if (field && ((e.key === 'Enter' && (e.metaKey || e.ctrlKey)) || e.key === 'Escape')) {
+          // A task's part done with on Cmd+Enter (Ctrl+Enter) or Esc (Enter a new line in its description):
+          // the task closed, unless it's to stay open («Не сворачивать»).
           e.preventDefault();
           commit();
-          const it = editor.board.get(id);
-          if (it?.tv) setView(editor.board, it, undefined);
+          closeTask(editor.board, id);
         } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
           // Cmd+Enter is done with it: the text kept and nothing left picked; in a component being changed,
           // done with that too.

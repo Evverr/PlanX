@@ -27,6 +27,7 @@ export function pressTask(ed: Editor, it: Item, w: Point, sp: Point): boolean {
   else if (part === 'arrow') setView(board, it, it.tv ? undefined : taskOpen());
   else if (part === 'more') setView(board, it, 'full');
   else if (part === 'cancel') setView(board, it, undefined);
+  else if (part === 'keep') board.update(it.id, { keep: it.keep ? undefined : true });
   else if (part === 'finish') board.transact(() => { setStatus(board, it.id, 'done'); setView(board, { ...it, st: 'done' }, undefined); });
   else if (part === 'add') {
     const n = addSub(board, it);

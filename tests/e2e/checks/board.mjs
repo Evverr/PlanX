@@ -21,7 +21,7 @@ const dblClick = async (p, [x, y]) => {
 };
 
 export const checks = {
-  async 'a task: put opened in full, title then description typed in, closed on Ctrl+Enter; its ring goes round its statuses; opened by its arrow and a double click on its header (to its description first, «Задача сразу целиком» off); subtasks; «Завершить»'(p) {
+  async 'a task: put opened in full, title then description typed in, closed on Ctrl+Enter; its ring goes round its statuses; opened by its arrow and a double click on its header (to its description first, «Задача сразу целиком» off); subtasks; closed by Esc or a click elsewhere, unless «Не сворачивать»; «Завершить»'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('task'); })()`);
     // (Low enough to be all on screen closed: it's put opened in full, by its middle.)
     await p.click([400, 400]);
@@ -89,7 +89,26 @@ export const checks = {
     await sleep(100);
     await p.key('Escape', 'Escape', 27);
     await sleep(100);
-    expect((await t()).subs.map((s) => s.t).join(), 'two, the empty third gone').toBe('Первая,Вторая');
+    it = await t();
+    expect([it.subs.map((s) => s.t).join(), it.tv ?? 'closed'].join('|'), 'two, the empty third gone; Esc: closed').toBe('Первая,Вторая|closed');
+    // «Не сворачивать» ticked: not closed by Esc, nor by a click elsewhere.
+    await sleep(450);
+    await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
+    await sleep(450);
+    await p.click(await at('(t, l) => ({ x: t.x + l.keep.x + 9, y: t.y + l.keep.y + 16 })'));
+    expect((await t()).keep, 'kept open').toBe(true);
+    await p.key('Escape', 'Escape', 27);
+    await p.click([1100, 100]);
+    await sleep(100);
+    expect((await t()).tv, 'still open after Esc and a click elsewhere').toBe('full');
+    await p.click(await at('(t, l) => ({ x: t.x + l.keep.x + 9, y: t.y + l.keep.y + 16 })'));
+    await sleep(100);
+    await p.click([1100, 100]);
+    await sleep(100);
+    expect((await t()).tv ?? 'closed', 'unticked: closed by a click elsewhere').toBe('closed');
+    await sleep(450);
+    await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
+    await sleep(100);
     await p.click(await at('(t, l) => ({ x: t.x + 59, y: t.y + l.subs[0] + 11 })'));
     expect((await t()).subs.map((s) => !!s.done).join(), 'the first ticked off').toBe('true,false');
     it = await t();

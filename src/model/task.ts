@@ -21,6 +21,12 @@ export function setView(board: Board, it: Item, tv: Item['tv']): void {
   board.update(it.id, { tv, w, h: taskSize(next).h, cw: tv && !it.tv ? it.w : tv ? it.cw : undefined, ...(tv && !it.tv && it.z < top && { z: top + 1 }) });
 }
 
+/** Done with it (Esc, Cmd+Enter, picked no more): closed, unless it's to stay open («Не сворачивать»). */
+export function closeTask(board: Board, id: string): void {
+  const it = board.get(id);
+  if (it?.type === 'task' && it.tv && !it.keep) setView(board, it, undefined);
+}
+
 /** A double click on its header: closed, opened (`open`: to its description, or all of it), all of it,
  *  closed again. */
 export const nextView = (board: Board, it: Item, open: Item['tv'] = 'desc'): void =>
