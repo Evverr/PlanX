@@ -27,7 +27,9 @@ const STATUS = 22, ARROW = 24;
 /** How far round the ring and the arrow a press is still theirs (the rest of the header a double click's). */
 const AROUND = 5;
 /** Where the people's names start and their circles' middle; a row's height; a subtask's. */
-const LABEL_X = 47, NAME_X = 200, AVATAR_X = 182, ROW = 33, SUB = 38;
+/** What's under the header keeps this far from its sides (3 more than the header's ring from its left). */
+const PAD = 18;
+const LABEL_X = PAD, NAME_X = PAD + 153, AVATAR_X = PAD + 135, ROW = 33, SUB = 38;
 /** The subtasks under who does it: their rings on its picture's middle, their text where names start. */
 const SUB_X = AVATAR_X - 11, SUB_TEXT_X = NAME_X;
 /** The buttons as the panels' (.btn in popups.css): 32 tall, their text 12 bold Inter with 14 each side. */
@@ -90,9 +92,9 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   const top = MID - th / 2, head = 52;
   const out: TaskLayout = { w, h: head, head, title: { x: TITLE_X, y: top, w: titleW, h: th } };
   if (!it.tv) return out;
-  const descW = Math.max(80, w - TITLE_X - 79), dy = head + 22;
+  const descW = Math.max(80, w - PAD * 2), dy = head + 22;
   const dh = textBlockHeight(it.desc || DESC_HINT, descW, TEXT_FS, TEXT);
-  out.desc = { x: TITLE_X, y: dy, w: descW, h: dh };
+  out.desc = { x: PAD, y: dy, w: descW, h: dh };
   const d = dy + dh;
   if (it.tv === 'desc') {
     out.more = { x: w - 35, y: d };
@@ -102,14 +104,14 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   const keys = it.people ? (['boss', 'doer', 'due'] as const) : (['doer'] as const), r = d + 58 + ROW * (keys.length - 1);
   out.rows = keys.map((key, i) => ({ key, y: d + 58 + ROW * i }));
   // (Its chevron, a small one, 17 into the icon at its right end, 2 short of where the lines across end.)
-  out.peopleAt = { x: w - 49 - 2 - 17, y: d + 58 - ARROW / 2 };
+  out.peopleAt = { x: w - PAD - 2 - 17, y: d + 58 - ARROW / 2 };
   // «Подзадачи:» as a row's label, the first of them level with it.
   out.subsAt = r + 66;
   const n = it.subs?.length ?? 0;
   out.subs = Array.from({ length: n + 1 }, (_, i) => r + 66 - STATUS / 2 + i * SUB);
   const last = r + 66 - STATUS / 2 + n * SUB + STATUS;
   out.lines = [d + 25, r + 33, last + 27];
-  const by = last + 27 + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - 43 - fw;
+  const by = last + 27 + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - PAD - fw;
   out.finish = { x: fx, y: by, w: fw, h: BUTTON_H };
   out.cancel = { x: fx - 10 - cw, y: by, w: cw, h: BUTTON_H };
   out.keep = { x: LABEL_X, y: by, w: Math.ceil(KEEP_BOX + KEEP_GAP + widthOf(KEEP_LABEL, TEXT_FS, 400)), h: BUTTON_H };
@@ -141,13 +143,13 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
   if (l.more && near(q, l.more.x + ARROW / 2, l.more.y + ARROW / 2, ARROW / 2 + 4)) return 'more';
   if (l.desc && inRect(q, l.desc)) return 'desc';
   if (l.peopleAt && near(q, l.peopleAt.x + ARROW / 2, l.peopleAt.y + ARROW / 2, ARROW / 2 + 4)) return 'people';
-  if (l.rows) for (const r of l.rows) if (Math.abs(q.y - r.y) <= 14 && q.x >= AVATAR_X - 14 && q.x <= l.w - 47) return r.key;
+  if (l.rows) for (const r of l.rows) if (Math.abs(q.y - r.y) <= 14 && q.x >= AVATAR_X - 14 && q.x <= l.w - PAD - 24) return r.key;
   if (l.subs) {
     for (let i = 0; i < l.subs.length; i++) {
       if (q.y < l.subs[i] - 6 || q.y > l.subs[i] + STATUS + 6) continue;
-      if (i === l.subs.length - 1) return q.x >= SUB_X - 4 && q.x <= l.w - 47 ? 'add' : null;
+      if (i === l.subs.length - 1) return q.x >= SUB_X - 4 && q.x <= l.w - PAD ? 'add' : null;
       if (near(q, SUB_X + STATUS / 2, l.subs[i] + STATUS / 2, STATUS / 2 + 4)) return { sub: i, tick: true };
-      if (q.x >= SUB_TEXT_X && q.x <= l.w - 47) return { sub: i, tick: false };
+      if (q.x >= SUB_TEXT_X && q.x <= l.w - PAD) return { sub: i, tick: false };
     }
   }
   if (l.cancel && inRect(q, l.cancel)) return 'cancel';
@@ -162,7 +164,7 @@ export function taskFieldBox(it: Item, field: number | null): Rect & { fs: numbe
   if (field === 0 && l.desc) return { x: it.x + l.desc.x, y: it.y + l.desc.y, w: l.desc.w, h: l.desc.h, fs: TEXT_FS, weight: 400 };
   if (field !== null && field > 0 && l.subs) {
     const y = l.subs[field - 1] + STATUS / 2 - lineH(TEXT_FS) / 2;
-    return { x: it.x + SUB_TEXT_X, y: it.y + y, w: l.w - SUB_TEXT_X - 47, h: lineH(TEXT_FS), fs: TEXT_FS, weight: 400 };
+    return { x: it.x + SUB_TEXT_X, y: it.y + y, w: l.w - SUB_TEXT_X - PAD, h: lineH(TEXT_FS), fs: TEXT_FS, weight: 400 };
   }
   return { x: it.x + l.title.x, y: it.y + l.title.y, w: l.title.w, h: l.title.h, fs: TITLE_FS, weight: 500 };
 }
@@ -304,7 +306,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   if (l.more) drawIcon(ctx, 'chevron-down-m', x + l.more.x, y + l.more.y, ARROW, arrowInk('more'));
   if (!l.rows || !l.subs || !l.lines || !l.cancel || !l.finish || l.subsAt === undefined) return;
   ctx.fillStyle = look.dark ? 'rgba(255,255,255,0.1)' : '#DFE3E6';
-  for (const ly of l.lines) ctx.fillRect(x + 49, y + ly, l.w - 98, 1);
+  for (const ly of l.lines) ctx.fillRect(x + PAD, y + ly, l.w - PAD * 2, 1);
   const label = (text: string, row: number) => {
     ctx.font = font(TEXT_FS, 400, FAMILY);
     ctx.fillStyle = look.ink;
@@ -348,7 +350,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   label('Подзадачи:', l.subsAt);
   const subs = it.subs ?? [];
   l.subs.forEach((sy, i) => {
-    const mid = sy + STATUS / 2, box = { x: SUB_TEXT_X, y: mid - lineH(TEXT_FS) / 2, w: l.w - SUB_TEXT_X - 47, h: lineH(TEXT_FS) };
+    const mid = sy + STATUS / 2, box = { x: SUB_TEXT_X, y: mid - lineH(TEXT_FS) / 2, w: l.w - SUB_TEXT_X - PAD, h: lineH(TEXT_FS) };
     if (i === subs.length) {
       drawIcon(ctx, 'plus-s', x + SUB_X - 1, y + sy - 1, 24, look.muted);
       lines(SUB_HINT, box, TEXT_FS, 400, look.muted);

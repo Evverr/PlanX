@@ -132,7 +132,7 @@ export const checks = {
     await sleep(450);
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
     await sleep(100);
-    await p.click(await at('(t, l) => ({ x: t.x + 182, y: t.y + l.subs[0] + 11 })'));
+    await p.click(await at('(t, l) => ({ x: t.x + 153, y: t.y + l.subs[0] + 11 })'));
     expect((await t()).subs.map((s) => !!s.done).join(), 'the first ticked off').toBe('true,false');
     it = await t();
     expect(it.h, 'as tall as all of it').toBe(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).h)()`));
@@ -144,7 +144,7 @@ export const checks = {
     expect([it.st ?? 'todo', it.tv, await p.ev(`document.querySelector('.tip.task-tip')?.textContent`)].join('|'), 'not done, said why')
       .toBe('todo|full|Задачу можно выполнить, только выполнив все подзадачи');
     await sleep(450);
-    await p.click(await at('(t, l) => ({ x: t.x + 182, y: t.y + l.subs[1] + 11 })'));
+    await p.click(await at('(t, l) => ({ x: t.x + 153, y: t.y + l.subs[1] + 11 })'));
     expect(await p.ev(`(async () => (await import('/src/canvas/task.ts')).statusOf(planx.board.get('${id}')))()`), 'done with them all').toBe('done');
     await sleep(450);
     await p.click(await at('(t, l) => ({ x: t.x + l.finish.x + 20, y: t.y + l.finish.y + 16 })'));
