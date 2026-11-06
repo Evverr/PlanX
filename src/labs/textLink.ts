@@ -7,7 +7,8 @@ import { labOn } from './labs';
 /**
  * "Ссылка в тексте": text, a sticker, a shape or a task can lead to an address. Its text turns blue;
  * Cmd+click (Ctrl+click) on it opens the address in a new tab. Or a part of its text, picked while
- * typing, can: just that part blue (see model/textLinks.ts).
+ * typing, can: just that part blue (see model/textLinks.ts), opened by a plain click on it (pressed and
+ * let go without dragging: dragged, the item moves).
  */
 
 /** An address as typed, made one a browser opens: "example.com" -> "https://example.com". */
@@ -34,6 +35,10 @@ export function openLink(it: Item | null | undefined, w: Point): boolean {
   window.open(url, '_blank', 'noopener');
   return true;
 }
+
+/** The address of a link on a part of the item's text, at the board point, when the feature is on. */
+export const linkPartAt = (it: Item | null | undefined, w: Point): string | null =>
+  labOn('textLink') && it?.links?.length ? linkInTextAt(w) : null;
 
 /** What linking the typed text's s…e to an address (or unlinking it, for '') does: the text as typed
  *  so far goes in with it, the links there before moved along with it. */

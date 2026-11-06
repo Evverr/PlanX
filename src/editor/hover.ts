@@ -12,6 +12,7 @@ import { restOn, sameLine, tableLineAt, warmTable } from './tables';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
 import { dotsAlways, dotsOn, dotsUnder } from '../labs/linkTool';
+import { linkPartAt } from '../labs/textLink';
 import { zoomShows, zoomSize } from '../labs/zoomFade';
 
 /** How far outside a corner (in screen pixels) the pointer turns the item. */
@@ -263,7 +264,8 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
     const hit = pickedUnder(ed, w) ?? hitItem(ed.shown(), w, ed.cam.z);
     // A task's ring (a component that comes with PlanX) is clicked through its states.
     const ring = hit?.host && hit.from?.startsWith('@task-') ? ed.board.get(`${hit.host}~@task-ring`) : undefined;
-    if ((hit?.type === 'task' && onTaskBox(hit, w, ed.cam.z)) || (hit?.type === 'audio' && onAudioButton(hit, w)) || (ring && pointInRect(w, ring))) cursor = 'pointer';
+    if ((hit?.type === 'task' && onTaskBox(hit, w, ed.cam.z)) || (hit?.type === 'audio' && onAudioButton(hit, w)) || (ring && pointInRect(w, ring))
+      || (hit && ed.editingId !== hit.id && linkPartAt(hit, w))) cursor = 'pointer';
     else if (hit && !isLocked(hit)) cursor = alt ? 'copy' : 'move';
   }
   ed.canvas.style.cursor = cursor;
