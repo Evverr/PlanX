@@ -7,6 +7,7 @@ import { zoomKey } from '../labs/zoomKeys';
 import { cancelNib, finishNib, nibPoints, undoNibCorner } from '../labs/nib';
 import { nodeEditing, stopNodeEdit } from '../labs/paths';
 import { cutLines } from '../labs/tableCut';
+import { toggleDots } from '../labs/linkTool';
 
 /** Keys a tool is picked with. */
 const TOOL_KEYS: Record<string, Tool> = { KeyV: 'select', KeyH: 'hand', KeyN: 'sticky', KeyS: 'sticky', KeyT: 'text', KeyR: 'rect', KeyO: 'ellipse', KeyC: 'link', KeyL: 'link', KeyF: 'frame', KeyP: 'pen', KeyM: 'marker', KeyE: 'eraser' };
@@ -88,6 +89,8 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
     return;
   }
   if (e.code === 'KeyI') { window.dispatchEvent(new CustomEvent('planx:toggle-icons')); return; }
+  // ("Связи инструментом", src/labs: C puts the link dots out, or away, instead of the line tool.)
+  if (TOOL_KEYS[e.code] === 'link' && labOn('linkTool')) { toggleDots(ed); return; }
   if (TOOL_KEYS[e.code]) ed.setTool(TOOL_KEYS[e.code]);
 }
 

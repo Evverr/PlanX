@@ -15,6 +15,7 @@ import { nibPress } from '../labs/nib';
 import { nodeEditing, pressNode } from '../labs/paths';
 import { swapKind } from '../labs/swap';
 import { openLink } from '../labs/textLink';
+import { dotsOn } from '../labs/linkTool';
 import { startComment } from '../labs/comments';
 
 /** A press on the board: works out what it starts (a gesture followed till it's let go) or does at
@@ -224,6 +225,12 @@ export function press(ed: Editor, e: PointerEvent): void {
   if (unfold) {
     ed.setCollapsed(unfold.id, unfold.way, false);
     ed.setSelection([]);
+    return;
+  }
+  // "Связи инструментом" (src/labs) with its dots out: a dot under the pointer, of anything, starts a link.
+  const modeIt = labOn('linkTool') && dotsOn() && ed.linkDots ? board.get(ed.linkDots) : undefined, modeSide = modeIt && !isLocked(modeIt) ? anyDotAt(ed, modeIt, w) : null;
+  if (modeIt && modeSide) {
+    ed.gesture = { type: 'link', from: modeIt.id, fromSide: modeSide, to: w, target: null };
     return;
   }
   const dot = single && !ed.editingId && !isLocked(single) ? dotAt(ed, single, w) : null;

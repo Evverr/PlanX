@@ -31,6 +31,7 @@ import { pushedBelow } from '../labs/textPush';
 import { holdZoomBox } from '../labs/zoomBox';
 import { rejoined } from '../labs/linkJoint';
 import { croppingId } from '../labs/imageCrop';
+import { dotsOn } from '../labs/linkTool';
 import { showGrips } from '../labs/tableMove';
 import { carryCellFormat, noteCellFormat } from '../labs/tableLook';
 import { holds as mindTidyOn, mindTidyKept, restartMindTidy, resumeMindTidy } from '../labs/tidyMind';
@@ -591,6 +592,8 @@ export class Editor {
     if (leaving > 0) this.requestRender();
     else this.plusLeaving = null;
     const glide = this.gliding();
+    // "Связи инструментом" (src/labs): the dots out on everything, with the cursor.
+    const dotsMode = labOn('linkTool') && dotsOn() && this.tool === 'select';
     drawScene(this.ctx, {
       items: glide ? this.shown().map(glide) : this.shown(),
       // (Only once it's going: taken hold of, it stays as it is till then.)
@@ -613,9 +616,9 @@ export class Editor {
       byFinger: this.byFinger,
       hotDot: this.hotDot,
       hotHandle: this.hotHandle,
-      linkDots: this.tool === 'link' && !this.gesture ? this.linkDots : null,
+      linkDots: (this.tool === 'link' || dotsMode) && !this.gesture ? this.linkDots : null,
       linkTool: labOn('linkTool'),
-      allDots: labOn('linkTool') && this.tool === 'link' && !this.gesture,
+      allDots: dotsMode && !this.gesture,
       hotPlus: this.hotPlus,
       plusFade,
       plusOn,
