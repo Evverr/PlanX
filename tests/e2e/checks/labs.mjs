@@ -1025,6 +1025,17 @@ export const checks = {
     expect(await p.ev(`!!planx.board.get('${ids.a}')`), 'deleted once unlocked').toBeFalsy();
   },
 
+  async 'what\'s in a locked frame (a timeline, a group) is neither dragged nor deleted'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('frame', 200, 150, { id: 'f', w: 500, h: 400, members: ['s'], lock: true }));
+      b.add(e.newItem('sticky', 300, 250, { id: 's', w: 100, h: 100 })); e.setSelection([]); })()`);
+    await sleep(300);
+    await p.drag([350, 300], [500, 400]);
+    expect(await p.ev(`planx.board.get('s').x`), 'not dragged').toBe(300);
+    await p.key('Delete', 'Delete', 46);
+    expect(await p.ev(`!!planx.board.get('s')`), 'not deleted').toBe(true);
+  },
+
   async 'a reaction goes on from the panel, shows under the sticker and comes off with a click there'(p) {
     const ids = await stickers(p);
     await select(p, ids.c);

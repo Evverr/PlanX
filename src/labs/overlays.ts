@@ -4,6 +4,7 @@ import type { Point } from '../canvas/geometry';
 import { boxOf } from '../canvas/geometry';
 import { font } from '../canvas/text';
 import { drawEmoji } from '../emoji/emoji';
+import { drawIcon } from '../icons/icons';
 import { labOn, myId } from './labs';
 import { zoomFade, zoomFading, zoomSize } from './zoomFade';
 
@@ -17,7 +18,7 @@ export const REACTIONS = ['emoji-27', 'emoji-24', 'emoji-23', 'emoji-25', 'emoji
 
 const dark = () => document.documentElement.dataset.theme === 'dark';
 
-/** A small round badge with a padlock, at the item's top right corner. */
+/** A small round badge with our padlock, at the item's top right corner. */
 function drawLock(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, fade: number, k: number) {
   const b = boxOf(it), p = ed.toScreen({ x: b.x + b.w, y: b.y });
   const x = Math.round(p.x) + 2, y = Math.round(p.y) - 2, r = 10;
@@ -35,19 +36,8 @@ function drawLock(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, fade: num
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowColor = 'transparent';
-  const ink = dark() ? '#D5D9E0' : '#5D6575';
-  ctx.strokeStyle = ink;
-  ctx.fillStyle = ink;
-  ctx.lineWidth = 1.6;
-  ctx.beginPath();
-  ctx.arc(x, y - 1.5, 2.8, Math.PI, 0);
-  ctx.lineTo(x + 2.8, y);
-  ctx.moveTo(x - 2.8, y);
-  ctx.lineTo(x - 2.8, y - 1.5);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.roundRect(x - 4.5, y - 0.5, 9, 6.5, 1.5);
-  ctx.fill();
+  // Our padlock (lock-2-solid), 16 across in the middle.
+  drawIcon(ctx, 'lock-2-solid', x - 8, y - 8, 16, dark() ? '#D5D9E0' : '#5D6575');
   ctx.restore();
   ctx.globalAlpha = 1;
 }

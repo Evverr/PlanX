@@ -93,6 +93,18 @@ export function useLabs(): Record<LabId, boolean> {
 /** Whether an item is locked in place (and the lock is switched on). */
 export const isLocked = (it: Item | undefined): boolean => !!it?.lock && labOn('lock');
 
+/** Whether an item stays where it is, not to be moved or deleted: locked itself, or in a frame (a
+ *  timeline, a group) that's locked, or in one in it. */
+export function heldInPlace(it: Item | undefined, items: Item[]): boolean {
+  if (!labOn('lock')) return false;
+  const seen = new Set<string>();
+  for (let cur = it; cur && !seen.has(cur.id); cur = items.find((f) => f.members?.includes(cur!.id))) {
+    if (cur.lock) return true;
+    seen.add(cur.id);
+  }
+  return false;
+}
+
 /** This browser's own id, for telling whose reaction is whose (the people's ids change each visit). */
 export function myId(): string {
   let id = readText('planx-labs-id');

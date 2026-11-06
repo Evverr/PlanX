@@ -35,7 +35,7 @@ import { showGrips } from '../labs/tableMove';
 import { carryCellFormat, noteCellFormat } from '../labs/tableLook';
 import { holds as mindTidyOn, mindTidyKept, restartMindTidy, resumeMindTidy } from '../labs/tidyMind';
 import { clearComments } from '../labs/comments';
-import { isLocked, labOn, subscribeLabs } from '../labs/labs';
+import { heldInPlace, isLocked, labOn, subscribeLabs } from '../labs/labs';
 import { keepMyObject, myObjects } from '../labs/myObjects';
 import { finishNib, nibPoints } from '../labs/nib';
 import { nodeEditing, shapedBy } from '../labs/paths';
@@ -898,8 +898,8 @@ export class Editor {
   }
 
   deleteSelection(sure = false): void {
-    // Locked items stay (and stay selected), and what's in an instance goes only with it.
-    const ids = new Set([...this.selection].filter((id) => !isLocked(this.board.get(id)) && !this.board.get(id)?.host));
+    // Locked items stay (and stay selected), and what's in a locked frame; what's in an instance goes only with it.
+    const ids = new Set([...this.selection].filter((id) => !heldInPlace(this.board.get(id), this.board.list()) && !this.board.get(id)?.host));
     if (!ids.size) return;
     // A component's last instance going takes the component with it, once that's been said yes to.
     const all = this.board.list();
@@ -919,7 +919,7 @@ export class Editor {
     // A mind map node goes with everything branching from it, a folded frame with all it holds.
     const items = this.board.list(), folded = items.filter((i) => i.fold && ids.has(i.id));
     const held = folded.length ? [...this.carried(folded).keys()] : [];
-    const going = [...ids, ...held, ...descendants(ids, items)].filter((id) => !isLocked(this.board.get(id)));
+    const going = [...ids, ...held, ...descendants(ids, items)].filter((id) => !heldInPlace(this.board.get(id), items));
     // What was put into a line going: the line made one again ("Узел на линии", src/labs).
     const lines = labOn('linkJoint') ? rejoined(this, new Set(going)) : [];
     this.board.transact(() => {
@@ -1639,7 +1639,7 @@ export class Editor {
   dragSet(items: Item[]): Map<string, Point> {
     // What's in an instance moves only with it: one picked in it takes the whole instance along.
     const sel = new Map(items.filter((i) => this.selection.has(i.id)).map((i) => i.host ? this.board.get(i.host) : i)
-      .filter((i): i is Item => !!i && !isLocked(i)).map((i) => [i.id, i]));
+      .filter((i): i is Item => !!i && !heldInPlace(i, items)).map((i) => [i.id, i]));
     return carried(this.board, [...sel.values()], items);
   }
 
