@@ -42,6 +42,22 @@ export function withMoved(it: Item, axis: 'col' | 'row', from: number, to: numbe
   };
 }
 
+/** Fields with an empty column (or row) put in at `at` (0 before the first): as wide (or tall) as the one
+ *  before it; a new column's top cell formatted as the one before it (the header going on). */
+export function withInserted(it: Item, axis: 'col' | 'row', at: number): Partial<Item> {
+  const cols = colsOf(it), rows = rowsOf(it), n = cols.length, size = n * rows.length;
+  const cells = Array.from({ length: size }, (_, i) => cellText(it, i)), fmt = Array.from({ length: size }, (_, i) => it.cellFmt?.[i] ?? null);
+  const keepFmt = (f: typeof fmt) => (f.some(Boolean) ? f : undefined);
+  if (axis === 'col') {
+    const next = [...cols.slice(0, at), cols[Math.max(0, at - 1)], ...cols.slice(at)];
+    const regrid = <T>(all: T[], blank: (r: number, row: T[]) => T) => rows.flatMap((_, r) => { const row = all.slice(r * n, r * n + n); return [...row.slice(0, at), blank(r, row), ...row.slice(at)]; });
+    return { cols: next, w: sum(next), cells: regrid(cells, () => ''), cellFmt: keepFmt(regrid(fmt, (r, row) => (r === 0 ? row[Math.max(0, at - 1)] : null))) };
+  }
+  const next = [...rows.slice(0, at), rows[Math.max(0, at - 1)], ...rows.slice(at)];
+  return { rows: next, h: sum(next), cells: [...cells.slice(0, at * n), ...Array<string>(n).fill(''), ...cells.slice(at * n)],
+    cellFmt: keepFmt([...fmt.slice(0, at * n), ...Array<null>(n).fill(null), ...fmt.slice(at * n)]) };
+}
+
 /** Fields without column (or row) `index`: its size, cells' text and formatting gone with it; a table
  *  keeps at least one of each. */
 export function withRemoved(it: Item, axis: 'col' | 'row', index: number): Partial<Item> {
@@ -155,24 +171,44 @@ function grips(it: Item): Array<Grip & Point> {
  *  middle (a row more) and by its right edge in the middle (a column more); radius and how far in
  *  from the edge, on the screen. */
 const PLUS_R = 9, PLUS_IN = 14;
-export type TablePlus = 'row' | 'col';
-function plusAt(ed: Editor, it: Item, which: TablePlus): Point {
+/** A plus: at the end ('row', 'col'), or on a line between two (or on an edge), to put one in there:
+ *  'col@2' before the third column. */
+type EndPlus = 'row' | 'col';
+export type TablePlus = EndPlus | `${EndPlus}@${number}`;
+function plusAt(ed: Editor, it: Item, which: EndPlus): Point {
   const h = held[which];
   if (h) return ed.toScreen(h);
   const p = ed.toScreen(which === 'row' ? { x: it.x + it.w / 2, y: it.y + it.h } : { x: it.x + it.w, y: it.y + it.h / 2 });
   return which === 'row' ? { x: p.x, y: p.y - PLUS_IN } : { x: p.x - PLUS_IN, y: p.y };
+}
+/** The pluses on the lines (and edges) by the column and the row the pointer's in, a little smaller, just
+ *  inside the table: on its top edge between columns, on its left edge between rows, by their pills.
+ *  All of them, each with whether it shows. */
+const INS_R = PLUS_R * 0.8;
+function insertPluses(ed: Editor, it: Item): Array<{ key: TablePlus; p: Point; seen: boolean }> {
+  const at = drag ? { col: -1, row: -1 } : pointedAt(ed, it), out: Array<{ key: TablePlus; p: Point; seen: boolean }> = [];
+  const cols = colsOf(it), rows = rowsOf(it);
+  for (let b = 0; b <= cols.length; b++) {
+    const s = ed.toScreen({ x: it.x + sum(cols.slice(0, b)), y: it.y });
+    out.push({ key: `col@${b}`, p: { x: s.x, y: s.y + PLUS_IN }, seen: at.col === b - 1 || at.col === b });
+  }
+  for (let b = 0; b <= rows.length; b++) {
+    const s = ed.toScreen({ x: it.x, y: it.y + sum(rows.slice(0, b)) });
+    out.push({ key: `row@${b}`, p: { x: s.x + PLUS_IN, y: s.y }, seen: at.row === b - 1 || at.row === b });
+  }
+  return out;
 }
 /** The plus under a point on the canvas. */
 export function tablePlusAt(ed: Editor, sp: Point): TablePlus | null {
   const it = tableOf(ed);
   if (!it || drag) return null;
   for (const w of ['row', 'col'] as const) { const c = plusAt(ed, it, w); if (Math.hypot(sp.x - c.x, sp.y - c.y) <= PLUS_R + 2) return w; }
-  return null;
+  return insertPluses(ed, it).find((q) => q.seen && Math.hypot(sp.x - q.p.x, sp.y - q.p.y) <= INS_R + 2)?.key ?? null;
 }
 let hotPlus: TablePlus | null = null;
 /** A pressed plus stays where it was (on the board) while the pointer's on it, to be pressed again;
  *  left, it comes in at the table's new edge. */
-const held: Partial<Record<TablePlus, Point>> = {}, cameIn: Partial<Record<TablePlus, number>> = {};
+const held: Partial<Record<EndPlus, Point>> = {}, cameIn: Partial<Record<EndPlus, number>> = {};
 const PLUS_IN_MS = 160;
 export const setHotPlus = (ed: Editor, w: TablePlus | null) => {
   if (hotPlus === w) return;
@@ -180,15 +216,21 @@ export const setHotPlus = (ed: Editor, w: TablePlus | null) => {
   hotPlus = w;
   ed.requestRender();
 };
-/** A plus pressed: a row or column more, at the end. */
+/** A plus pressed: a row or column more, at the end, or put in where it is. */
 export function pressPlus(ed: Editor, w: TablePlus): void {
   const it = tableOf(ed);
   if (!it) return;
   // (Typing in it, the typing's done first: the cells move.)
   if (ed.editingId === it.id) ed.stopEditing();
-  const c = plusAt(ed, it, w);
-  held[w] = ed.toWorld(c.x, c.y);
-  ed.board.update(it.id, withCount(it, w, 1));
+  if (w.includes('@')) {
+    const [axis, at] = w.split('@');
+    ed.board.update(it.id, withInserted(it, axis as EndPlus, Number(at)));
+    ed.requestRender();
+    return;
+  }
+  const end = w as EndPlus, c = plusAt(ed, it, end);
+  held[end] = ed.toWorld(c.x, c.y);
+  ed.board.update(it.id, withCount(it, end, 1));
   ed.requestRender();
 }
 
@@ -368,6 +410,25 @@ export function drawGrips(ctx: CanvasRenderingContext2D, ed: Editor): void {
     ctx.beginPath();
     ctx.moveTo(c.x - r * 0.45, c.y); ctx.lineTo(c.x + r * 0.45, c.y);
     ctx.moveTo(c.x, c.y - r * 0.45); ctx.lineTo(c.x, c.y + r * 0.45);
+    ctx.stroke();
+  }
+  // Those on the lines by the column and row under the pointer, coming in and going with them.
+  for (const q of insertPluses(ed, it)) {
+    const shown = litNow(ed, `${it.id}:${q.key}:seen`, q.seen);
+    if (!shown) continue;
+    const on = hotPlus === q.key, r = on ? INS_R : INS_R * 0.9;
+    ctx.globalAlpha = (on ? 1 : 0.5) * shown;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(q.p.x, q.p.y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = (on ? 1 : 0.75) * shown;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = on ? 2 : 1.5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(q.p.x - r * 0.45, q.p.y); ctx.lineTo(q.p.x + r * 0.45, q.p.y);
+    ctx.moveTo(q.p.x, q.p.y - r * 0.45); ctx.lineTo(q.p.x, q.p.y + r * 0.45);
     ctx.stroke();
   }
   ctx.restore();

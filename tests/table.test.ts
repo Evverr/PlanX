@@ -89,6 +89,27 @@ describe('table rows and columns moved ("Перестановка в табли�
   });
 });
 
+describe('a row or column put in between ("Перестановка в таблице")', () => {
+  it('puts an empty column in, as wide as the one before it, the header going on, the table wider', async () => {
+    const { withInserted } = await import('../src/labs/tableMove');
+    const t = table({ cols: [100, 120, 140], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'], cellFmt: [{ fw: 700 }, null, null, null, null, null, null, null, null] });
+    const p = withInserted(t, 'col', 1);
+    expect(p.cols).toEqual([100, 100, 120, 140]);
+    expect(p.w).toBe(460);
+    expect(p.cells).toEqual(['a', '', 'b', 'c', 'd', '', 'e', 'f', 'g', '', 'h', 'i']);
+    expect(p.cellFmt?.[1]).toEqual({ fw: 700 });
+    expect(p.cellFmt?.[5]).toBe(null);
+  });
+  it('puts an empty row in, before the first too', async () => {
+    const { withInserted } = await import('../src/labs/tableMove');
+    const t = table({ cols: [100, 120, 140], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] });
+    const p = withInserted(t, 'row', 0);
+    expect(p.rows?.length).toBe(4);
+    expect(p.cells).toEqual(['', '', '', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']);
+    expect(withInserted(t, 'row', 3).cells?.slice(9)).toEqual(['', '', '']);
+  });
+});
+
 describe('a table as one is drawn', () => {
   it('is 4 by 5, with a bold light blue header and faint black lines, fainter down between columns', () => {
     const t = freshTable();

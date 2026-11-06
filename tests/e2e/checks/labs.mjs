@@ -792,6 +792,12 @@ export const checks = {
     await p.mouse('mouseMoved', 480, 360);
     await sleep(100);
     expect(await pills(), 'the middle column\'s and row\'s only').toBe('-,col1,-,-,row1,-');
+    // Pluses on the lines either side of them, just inside: one pressed puts one in there.
+    const plusesAt = (pts) => p.ev(`(async () => { const m = await import('/src/labs/tableMove.ts'); return ${JSON.stringify(pts)}.map(([x, y]) => m.tablePlusAt(planx.editor, { x, y }) ?? '-').join(); })()`);
+    expect(await plusesAt([[420, 314], [540, 314], [660, 314], [314, 340], [314, 380], [314, 420]]), 'by the column and row under the pointer').toBe('col@1,col@2,-,row@1,row@2,-');
+    await p.click([420, 314]);
+    const t = await p.ev(`planx.board.get('t')`);
+    expect(`${t.cols.length} ${t.w}`, 'a column put in').toBe('4 480');
     await p.mouse('mouseMoved', 600, 400);
     await sleep(100);
     expect(await pills(), 'others as it moves').toBe('-,-,col2,-,-,row2');
