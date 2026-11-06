@@ -150,11 +150,15 @@ const ensure = (f: string) => {
   if (!document.fonts.check(f)) void document.fonts.load(f);
 };
 
-/** Its size for the text: as tall as its lines, wide enough for the longest (it doesn't get narrower). */
-export function codeFit(it: Item, text: string): { w: number; h: number } | null {
+/** Its size for the text: as tall as its lines, wide enough for the longest (it doesn't get narrower);
+ *  with `room`, no bigger than that (to the screen's edges, say: the rest of the code scrolled to), or
+ *  than it is already, if it's bigger. */
+export function codeFit(it: Item, text: string, room?: { w: number; h: number }): { w: number; h: number } | null {
   const fs = sizeOf(it), lines = linesOf(text);
-  const w = Math.max(it.w, Math.ceil(Math.max(...lines.map((l) => l.length)) * charWidth(fs) + CODE_LEFT + CODE_PAD + 2));
-  const h = Math.ceil(CODE_TOP + lines.length * fs * CODE_LINE + CODE_BOTTOM);
+  const least = Math.ceil(CODE_TOP + 3 * fs * CODE_LINE + CODE_BOTTOM);
+  const maxW = room ? Math.max(it.w, room.w) : Infinity, maxH = room ? Math.max(it.h, room.h, least) : Infinity;
+  const w = Math.max(it.w, Math.min(maxW, Math.ceil(Math.max(...lines.map((l) => l.length)) * charWidth(fs) + CODE_LEFT + CODE_PAD + 2)));
+  const h = Math.min(maxH, Math.ceil(CODE_TOP + lines.length * fs * CODE_LINE + CODE_BOTTOM));
   return w === it.w && h === it.h ? null : { w, h };
 }
 
@@ -199,9 +203,16 @@ export function copyCode(it: Item, redraw: () => void): void {
   setTimeout(redraw, COPIED_MS + 20);
 }
 
-/** The text being typed in a block, drawn coloured under the see-through overlay. */
-let live: { id: string; text: string } | null = null;
-export const setLiveCode = (id: string | null, text = '') => { live = id ? { id, text } : null; };
+/** The text being typed in a block, drawn coloured under the see-through overlay, scrolled as it is. */
+let live: { id: string; text: string; sc: Point } | null = null;
+export const setLiveCode = (id: string | null, text = '') => { live = id ? { id, text, sc: live?.id === id ? live.sc : { x: 0, y: 0 } } : null; };
+/** The overlay scrolled (by the wheel, or after the caret): the code drawn under it too, and left there. */
+export function setLiveScroll(id: string, x: number, y: number): void {
+  if (live?.id === id) live.sc = { x, y };
+  scrolls.set(id, { x, y });
+}
+/** Where a block's code is scrolled to, for the overlay to start at. */
+export const codeScroll = (it: Item): Point => scrollOf(it);
 
 /** The block: its card and band, its language's name, the code coloured and its lines numbered, cut off
  *  at its edges. */
@@ -234,8 +245,8 @@ export function drawCode(ctx: CanvasRenderingContext2D, it: Item, z: number, edi
     ctx.textBaseline = 'alphabetic';
     const fm = ctx.measureText('Hg'), ascent = fm.fontBoundingBoxAscent, descent = fm.fontBoundingBoxDescent, cw = ctx.measureText('0').width;
     const lh = fs * CODE_LINE, text = editing && live?.id === it.id ? live.text : it.text ?? '';
-    // Scrolled (not while typed in, when it grows to fit), within the body: the numbers only up and down.
-    const sc = editing ? { x: 0, y: 0 } : scrollOf(it);
+    // Scrolled (typed in, as the overlay is), within the body: the numbers only up and down.
+    const sc = editing && live?.id === it.id ? live.sc : scrollOf(it);
     ctx.beginPath();
     ctx.rect(it.x, it.y + CODE_BAND, it.w, it.h - CODE_BAND);
     ctx.clip();
@@ -265,13 +276,13 @@ export function drawCode(ctx: CanvasRenderingContext2D, it: Item, z: number, edi
     const o = overflow(it, text);
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     const T = 5, gap = 4;
-    if (!editing && o.y) {
+    if (o.y) {
       const track = it.h - CODE_BAND - gap * 2, len = Math.max(20, (track * o.view.h) / o.content.h);
       ctx.beginPath();
       ctx.roundRect(it.x + it.w - gap - T, it.y + CODE_BAND + gap + ((track - len) * sc.y) / o.y, T, len, T / 2);
       ctx.fill();
     }
-    if (!editing && o.x) {
+    if (o.x) {
       const track = it.w - CODE_LEFT - gap * 2, len = Math.max(20, (track * o.view.w) / o.content.w);
       ctx.beginPath();
       ctx.roundRect(it.x + CODE_LEFT + ((track - len) * sc.x) / o.x, it.y + it.h - gap - T, len, T, T / 2);

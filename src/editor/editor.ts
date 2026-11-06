@@ -1426,6 +1426,12 @@ export class Editor {
     });
   }
 
+  /** How big a block of code may grow as it's typed or pasted in: to the screen's lower and right edges. */
+  private codeRoom(it: Item): { w: number; h: number } {
+    const end = this.toWorld(this.width, this.height);
+    return { w: end.x - it.x, h: end.y - it.y };
+  }
+
   /** Called by the text overlay with its final value. */
   commitText(id: string, text: string): void {
     if (this.typed?.id === id) this.typed = null;
@@ -1455,7 +1461,7 @@ export class Editor {
         const patch: Partial<Item> = { text: value, ...mindFit(this, it, value), ...(it.fold && { w: foldedSize(value).w }), ...(it.links && { links: remapLinks(it.text ?? '', value, it.links) }) };
         const h = fitHeight(it, value);
         if (h) Object.assign(patch, { h }, it.rot && resizedAt(it, it.w, h));
-        if (it.code) Object.assign(patch, codeFit(it, value));
+        if (it.code) Object.assign(patch, codeFit(it, value, this.codeRoom(it)));
         const moves = h ? pushedBelow(it, h - it.h, this.board.list()) : new Map<string, Point>();
         this.board.transact(() => {
           this.board.update(id, patch);
@@ -1532,7 +1538,7 @@ export class Editor {
     const h = it && fitHeight(it, text);
     if (it && h && h !== it.h) this.fitTo(it, h);
     // A block of code ("Код", src/labs) grows with it.
-    const fit = it?.code ? codeFit(it, text) : null;
+    const fit = it?.code ? codeFit(it, text, this.codeRoom(it)) : null;
     if (fit) this.board.update(id, fit);
     if (it?.type === 'mind') {
       // A node growing (a line taller, or wider under its parent) moves its neighbours along, so
