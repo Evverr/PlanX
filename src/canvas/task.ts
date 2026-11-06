@@ -1,0 +1,300 @@
+import type { Item, Person, TaskStatus } from '../model/types';
+import { FILLS } from '../model/types';
+import { drawIcon } from '../icons/icons';
+import { font, LINE_HEIGHT, textBlockHeight, wrapText } from './text';
+import type { Point, Rect } from './geometry';
+
+/**
+ * A task (from Женя's Figma, "Доски"): a card with its status (a ring: to do; a ring going round:
+ * being done; a blue tick: done) and its title. Its arrow opens it to its description, the arrow under
+ * that to all of it: who set it, who does it, by when, its subtasks (each ticked off on its own), and
+ * «Отмена» (closes it) and «Завершить» (done, and closed). Tinted in its colour (as a sticker's).
+ * Laid out here from its top left corner; its height is always what its contents take.
+ */
+
+/** Closed and opened, how wide it starts. */
+export const TASK_W = 293, TASK_OPEN_W = 494;
+const TITLE_FS = 16, TEXT_FS = 14, FAMILY = 'inter';
+const TITLE = { weight: 500, family: FAMILY }, TEXT = { weight: 400, family: FAMILY };
+/** Where the title starts, and where its first line's middle is (the ring's and the arrow's too). */
+const TITLE_X = 47, MID = 26;
+const STATUS = 22, ARROW = 24;
+/** Where the people's names start and their circles' middle; a row's height; a subtask's. */
+const LABEL_X = 47, NAME_X = 200, AVATAR_X = 182, ROW = 33, SUB = 38, SUB_X = 48, SUB_TEXT_X = 79;
+const BUTTON_H = 32, CANCEL_W = 76, FINISH_W = 96;
+export const DESC_HINT = 'Добавить описание', SUB_HINT = 'Добавить подзадачу';
+
+export const statusOf = (it: Item): TaskStatus => it.st ?? (it.done ? 'done' : 'todo');
+/** What a click on its ring makes it: to do, being done, done, round again. */
+export const nextStatus = (s: TaskStatus): TaskStatus => (s === 'todo' ? 'doing' : s === 'doing' ? 'done' : 'todo');
+
+/** Where everything on it is, from its top left corner. */
+export interface TaskLayout {
+  w: number; h: number;
+  /** The header's height; the title's box. */
+  head: number; title: Rect;
+  /** Opened: the description's box (its text, or what's shown with none). */
+  desc?: Rect;
+  /** Opened to its description: the arrow under it. */
+  more?: Point;
+  /** Opened in full: the lines across, the rows' middles (who set it, who does it, by when), the
+   *  subtasks' heading, each subtask's top (the last: the row adding one), the buttons. */
+  lines?: number[]; rows?: number[]; subsAt?: number; subs?: number[]; cancel?: Rect; finish?: Rect;
+}
+
+const lineH = (fs: number) => fs * LINE_HEIGHT;
+
+export function taskLayout(it: Item, w = it.w): TaskLayout {
+  const titleW = Math.max(40, w - TITLE_X * 2);
+  const th = textBlockHeight(it.text || ' ', titleW, TITLE_FS, TITLE);
+  const top = MID - lineH(TITLE_FS) / 2, head = Math.max(52, Math.ceil(top * 2 + th));
+  const out: TaskLayout = { w, h: head, head, title: { x: TITLE_X, y: top, w: titleW, h: th } };
+  if (!it.tv) return out;
+  const descW = Math.max(80, w - TITLE_X - 79), dy = head + 22;
+  const dh = textBlockHeight(it.desc || DESC_HINT, descW, TEXT_FS, TEXT);
+  out.desc = { x: TITLE_X, y: dy, w: descW, h: dh };
+  const d = dy + dh;
+  if (it.tv === 'desc') {
+    out.more = { x: w - 35, y: d };
+    out.h = Math.ceil(d + 40);
+    return out;
+  }
+  out.rows = [d + 58, d + 58 + ROW, d + 58 + ROW * 2];
+  out.subsAt = d + 181;
+  const n = it.subs?.length ?? 0;
+  out.subs = Array.from({ length: n + 1 }, (_, i) => d + 213 + i * SUB);
+  const last = d + 213 + n * SUB + STATUS;
+  out.lines = [d + 25, d + 157, last + 27];
+  const by = last + 27 + 24, fx = w - 43 - FINISH_W;
+  out.finish = { x: fx, y: by, w: FINISH_W, h: BUTTON_H };
+  out.cancel = { x: fx - 10 - CANCEL_W, y: by, w: CANCEL_W, h: BUTTON_H };
+  out.h = Math.ceil(by + BUTTON_H + 31);
+  return out;
+}
+
+/** Its size for what's in it (and opened or not). */
+export const taskSize = (it: Item, w = it.w): { w: number; h: number } => ({ w, h: taskLayout(it, w).h });
+
+/** What a point on it (from its top left corner) is on. */
+export type TaskPart = 'status' | 'arrow' | 'more' | 'title' | 'desc' | 'boss' | 'doer' | 'due' | 'add' | 'cancel' | 'finish'
+  | { sub: number; tick: boolean };
+
+const inRect = (p: Point, r: Rect, pad = 0) => p.x >= r.x - pad && p.x <= r.x + r.w + pad && p.y >= r.y - pad && p.y <= r.y + r.h + pad;
+const near = (p: Point, x: number, y: number, r: number) => Math.hypot(p.x - x, p.y - y) <= r;
+
+export function taskPartAt(it: Item, p: Point): TaskPart | null {
+  const l = taskLayout(it), q = { x: p.x - it.x, y: p.y - it.y };
+  if (near(q, 15 + STATUS / 2, MID, STATUS / 2 + 4)) return 'status';
+  if (near(q, l.w - 35 + ARROW / 2, MID, ARROW / 2 + 4)) return 'arrow';
+  if (l.more && near(q, l.more.x + ARROW / 2, l.more.y + ARROW / 2, ARROW / 2 + 4)) return 'more';
+  if (inRect(q, l.title)) return 'title';
+  if (l.desc && inRect(q, l.desc)) return 'desc';
+  if (l.rows) {
+    const keys = ['boss', 'doer', 'due'] as const;
+    for (let i = 0; i < 3; i++) if (Math.abs(q.y - l.rows[i]) <= 14 && q.x >= AVATAR_X - 14 && q.x <= l.w - 47) return keys[i];
+  }
+  if (l.subs) {
+    for (let i = 0; i < l.subs.length; i++) {
+      if (q.y < l.subs[i] - 6 || q.y > l.subs[i] + STATUS + 6) continue;
+      if (i === l.subs.length - 1) return q.x >= SUB_X - 4 && q.x <= l.w - 47 ? 'add' : null;
+      if (near(q, SUB_X + STATUS / 2, l.subs[i] + STATUS / 2, STATUS / 2 + 4)) return { sub: i, tick: true };
+      if (q.x >= SUB_TEXT_X && q.x <= l.w - 47) return { sub: i, tick: false };
+    }
+  }
+  if (l.cancel && inRect(q, l.cancel)) return 'cancel';
+  if (l.finish && inRect(q, l.finish)) return 'finish';
+  return null;
+}
+
+/** Where a part's text is typed in (on the board): the title, the description, a subtask. */
+export function taskFieldBox(it: Item, field: number | null): Rect & { fs: number; weight: number } {
+  const l = taskLayout(it);
+  if (field === 0 && l.desc) return { x: it.x + l.desc.x, y: it.y + l.desc.y, w: l.desc.w, h: l.desc.h, fs: TEXT_FS, weight: 400 };
+  if (field !== null && field > 0 && l.subs) {
+    const y = l.subs[field - 1] + STATUS / 2 - lineH(TEXT_FS) / 2;
+    return { x: it.x + SUB_TEXT_X, y: it.y + y, w: l.w - SUB_TEXT_X - 47, h: lineH(TEXT_FS), fs: TEXT_FS, weight: 400 };
+  }
+  return { x: it.x + l.title.x, y: it.y + l.title.y, w: l.title.w, h: l.title.h, fs: TITLE_FS, weight: 500 };
+}
+export const TASK_FONT = FAMILY;
+
+/** The strong colour each of the stickers' colours stands for here: its edge, its header's tint. */
+const STRONG: Record<string, string> = {
+  blue: '#003CFF', green: '#12A53A', orange: '#F28C00', yellow: '#E0B000', pink: '#E8457F', purple: '#7B4DFF', gray: '#7C8590', graphite: '#4E5560',
+};
+const BLUE = '#2A5BFF';
+
+const rgb = (hex: string) => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const mix = (a: string, b: string, k: number) => {
+  const [r1, g1, b1] = rgb(a), [r2, g2, b2] = rgb(b);
+  return `rgb(${Math.round(r1 * k + r2 * (1 - k))}, ${Math.round(g1 * k + g2 * (1 - k))}, ${Math.round(b1 * k + b2 * (1 - k))})`;
+};
+const strongOf = (color: string | undefined) => (color?.startsWith('#') ? color : STRONG[color ?? 'blue'] ?? (FILLS[color ?? ''] && FILLS[color!] !== 'transparent' ? FILLS[color!] : STRONG.blue));
+
+export interface TaskLook { surface: string; ink: string; muted: string; dark: boolean; z: number }
+
+/** The ring of a status (or a subtask's: to do or done), its middle at x, y. */
+export function drawStatus(ctx: CanvasRenderingContext2D, x: number, y: number, s: TaskStatus, look: TaskLook): void {
+  const r = STATUS / 2;
+  ctx.save();
+  if (s === 'done') {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = BLUE;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x - 4.6, y + 0.2);
+    ctx.lineTo(x - 1.4, y + 3.4);
+    ctx.lineTo(x + 4.8, y - 3);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.arc(x, y, r - 1, 0, Math.PI * 2);
+    ctx.strokeStyle = look.dark ? 'rgba(255,255,255,0.25)' : '#D3D8DE';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    if (s === 'doing') {
+      ctx.beginPath();
+      ctx.arc(x, y, r - 1.5, -Math.PI / 2, Math.PI);
+      ctx.strokeStyle = BLUE;
+      ctx.lineWidth = 2.5;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+const DATE = (due: string) => {
+  const [d, t] = due.split('T'), [y, m, day] = d.split('-');
+  return `${day}.${m}.${y}${t ? `  ${t}` : ''}`;
+};
+
+/** The card. `typing` is the part being typed in (its text left to the overlay): null for the title,
+ *  0 for the description, 1… for a subtask; undefined when none is. */
+export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typing: number | null | undefined): void {
+  const l = taskLayout(it), { x, y } = it, strong = strongOf(it.color);
+  const bg = look.dark ? '#26272C' : '#FFFFFF', tint = mix(strong, bg, look.dark ? 0.16 : 0.05);
+  const edge = `rgba(${rgb(strong.startsWith('#') ? strong : '#003CFF').join(',')}, 0.3)`;
+  // The card, its edge 2 wide inside it; its header tinted, the whole of it when closed.
+  ctx.beginPath();
+  ctx.roundRect(x + 1, y + 1, l.w - 2, l.h - 2, 11);
+  ctx.fillStyle = it.tv ? bg : tint;
+  ctx.fill();
+  if (it.tv) {
+    ctx.beginPath();
+    ctx.roundRect(x + 2, y + 2, l.w - 4, l.head - 4, [10, 10, 0, 0]);
+    ctx.fillStyle = tint;
+    ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.roundRect(x + 1, y + 1, l.w - 2, l.h - 2, 11);
+  ctx.strokeStyle = edge;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  if (TITLE_FS * look.z < 2.5) return;
+  const st = statusOf(it);
+  drawStatus(ctx, x + 15 + STATUS / 2, y + MID, st, look);
+  const arrowInk = look.dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)';
+  drawIcon(ctx, it.tv ? 'chevron-up-m' : 'chevron-down-m', x + l.w - 35, y + MID - ARROW / 2, ARROW, arrowInk);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  /** Lines of text in a box, each on its middle, at a font. */
+  const lines = (text: string, r: Rect, fs: number, weight: number, ink: string, alpha = 1, strike = false) => {
+    ctx.font = font(fs, weight, FAMILY);
+    ctx.fillStyle = ink;
+    ctx.globalAlpha = alpha;
+    const lh = lineH(fs);
+    wrapText(text, r.w, (t) => ctx.measureText(t).width).forEach((line, i) => {
+      const ly = y + r.y + lh * i + lh / 2;
+      ctx.fillText(line, x + r.x, ly);
+      if (strike && line) {
+        ctx.fillRect(x + r.x, ly - 0.5, ctx.measureText(line).width, 1);
+      }
+    });
+    ctx.globalAlpha = 1;
+  };
+  if (typing !== null) lines(it.text || 'Название задачи', l.title, TITLE_FS, 500, it.text ? look.ink : look.muted);
+  if (!l.desc) return;
+  if (typing !== 0) lines(it.desc || DESC_HINT, l.desc, TEXT_FS, 400, it.desc ? look.ink : look.muted, it.desc ? 0.8 : 1);
+  if (l.more) drawIcon(ctx, 'chevron-down-m', x + l.more.x, y + l.more.y, ARROW, arrowInk);
+  if (!l.rows || !l.subs || !l.lines || !l.cancel || !l.finish || l.subsAt === undefined) return;
+  ctx.fillStyle = look.dark ? 'rgba(255,255,255,0.1)' : '#DFE3E6';
+  for (const ly of l.lines) ctx.fillRect(x + 49, y + ly, l.w - 98, 1);
+  const label = (text: string, row: number) => {
+    ctx.font = font(TEXT_FS, 400, FAMILY);
+    ctx.fillStyle = look.ink;
+    ctx.globalAlpha = 0.6;
+    ctx.fillText(text, x + LABEL_X, y + row);
+    ctx.globalAlpha = 1;
+  };
+  const person = (p: Person | undefined, row: number) => {
+    ctx.beginPath();
+    ctx.arc(x + AVATAR_X, y + row, 12, 0, Math.PI * 2);
+    ctx.fillStyle = p ? p.c : look.dark ? 'rgba(255,255,255,0.15)' : '#DFE3E6';
+    ctx.fill();
+    if (p) {
+      ctx.font = font(11, 600, FAMILY);
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.n.slice(0, 1).toUpperCase(), x + AVATAR_X, y + row + 0.5);
+      ctx.textAlign = 'left';
+    }
+    ctx.font = font(TEXT_FS, 400, FAMILY);
+    ctx.fillStyle = p ? look.ink : look.muted;
+    ctx.globalAlpha = p ? 0.8 : 1;
+    ctx.fillText(p ? p.n : 'Не назначен', x + NAME_X, y + row);
+    ctx.globalAlpha = 1;
+  };
+  label('Постановщик', l.rows[0]);
+  person(it.boss, l.rows[0]);
+  label('Исполнитель', l.rows[1]);
+  person(it.doer, l.rows[1]);
+  label('Крайний срок', l.rows[2]);
+  drawIcon(ctx, 'calendar', x + AVATAR_X - 10, y + l.rows[2] - 12, 24, BLUE);
+  ctx.font = font(TEXT_FS, 400, FAMILY);
+  ctx.fillStyle = it.due ? look.ink : look.muted;
+  ctx.globalAlpha = it.due ? 0.8 : 1;
+  ctx.fillText(it.due ? DATE(it.due) : 'Не задан', x + NAME_X, y + l.rows[2]);
+  ctx.globalAlpha = 1;
+  lines('Подзадачи:', { x: LABEL_X, y: l.subsAt, w: l.w - LABEL_X * 2, h: lineH(TEXT_FS) }, TEXT_FS, 400, look.ink, 0.8);
+  const subs = it.subs ?? [];
+  l.subs.forEach((sy, i) => {
+    const mid = sy + STATUS / 2, box = { x: SUB_TEXT_X, y: mid - lineH(TEXT_FS) / 2, w: l.w - SUB_TEXT_X - 47, h: lineH(TEXT_FS) };
+    if (i === subs.length) {
+      drawIcon(ctx, 'plus-s', x + SUB_X - 1, y + sy - 1, 24, look.muted);
+      lines(SUB_HINT, box, TEXT_FS, 400, look.muted);
+      return;
+    }
+    const sub = subs[i];
+    drawStatus(ctx, x + SUB_X + STATUS / 2, y + mid, sub.done ? 'done' : 'todo', look);
+    if (typing !== i + 1) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x + box.x, y + box.y - 2, box.w, box.h + 4);
+      ctx.clip();
+      lines(sub.t || 'Подзадача', { ...box, w: Infinity }, TEXT_FS, 400, sub.t && !sub.done ? look.ink : look.muted, 1, !!sub.done);
+      ctx.restore();
+    }
+  });
+  // «Отмена» as plain text, «Завершить» blue.
+  const button = (r: Rect, text: string, solid: boolean) => {
+    if (solid) {
+      ctx.beginPath();
+      ctx.roundRect(x + r.x, y + r.y, r.w, r.h, 8);
+      ctx.fillStyle = BLUE;
+      ctx.fill();
+    }
+    ctx.font = font(13, 500, FAMILY);
+    ctx.fillStyle = solid ? '#fff' : look.ink;
+    ctx.textAlign = 'center';
+    ctx.fillText(text, x + r.x + r.w / 2, y + r.y + r.h / 2);
+    ctx.textAlign = 'left';
+  };
+  button(l.cancel, 'Отмена', false);
+  button(l.finish, 'Завершить', true);
+}

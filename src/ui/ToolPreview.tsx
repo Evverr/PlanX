@@ -20,8 +20,8 @@ export function ToolPreview({ tool, zoom }: { tool: Tool; zoom: number }) {
       return <span className="tp-text" style={{ fontSize: Math.max(11, 20 * k) }}>Текст</span>;
     case 'task':
       return (
-        <span className="tp-task" style={{ width: w, height: h, fontSize: Math.max(10, 16 * k), background: FILLS[d.color ?? 'blue'] }}>
-          <i style={{ width: 20, height: 20 }} />Задача
+        <span className="tp-task" style={{ width: w, height: h, fontSize: Math.max(10, 16 * k), borderRadius: 12 * k, paddingLeft: 15 * k, gap: 10 * k }}>
+          <i style={{ width: 22 * k, height: 22 * k }} />Задача
         </span>
       );
     case 'mind':

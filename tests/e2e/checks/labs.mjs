@@ -1432,29 +1432,6 @@ export const checks = {
     expect(await p.ev(`window.copied?.includes('?board=')`), 'the board\'s address copied').toBe(true);
   },
 
-  async '"Задача-компонент": a task is the built-in component, its ring clicked through its states, its own text kept'(p) {
-    await p.ev(`(() => { const e = planx.editor; e.addTask(e.toWorld(500, 400)); })()`);
-    await sleep(200);
-    const inst = await p.ev(`planx.board.list().find((i) => i.inst === '@task-open')?.id`);
-    expect(!!inst, 'a task to be done').toBe(true);
-    expect(await p.ev('planx.editor.editingId'), 'its title open for typing').toBe(`${inst}~@task-title`);
-    await p.cdp('Input.insertText', { text: 'Купить молоко' });
-    await p.ev('planx.editor.stopEditing()');
-    await sleep(200);
-    const ring = await p.ev(`(() => { const r = planx.board.get('${inst}~@task-ring'), s = planx.editor.toScreen({ x: r.x + r.w / 2, y: r.y + r.h / 2 }); return [s.x, s.y]; })()`);
-    const state = () => p.ev(`planx.board.get('${inst}').inst + ' ' + !!planx.board.get('${inst}~@task-check') + ' ' + planx.board.get('${inst}~@task-title').text`);
-    await p.click([900, 700]);
-    await p.click(ring);
-    expect(await state(), 'done: a tick, its text kept').toBe('@task-done true Купить молоко');
-    await sleep(450);
-    await p.click(ring);
-    expect(await state(), 'put off').toBe('@task-later false Купить молоко');
-    await sleep(450);
-    await p.click(ring);
-    expect(await state(), 'to be done again').toBe('@task-open false Купить молоко');
-    expect(await p.ev(`document.querySelectorAll('.swap-pop').length`), 'no neighbours to swap in a task').toBe(0);
-  },
-
   async '"Текст не слипается": Tab goes round the text items going together, Shift+Tab back'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board, { x, y } = e.toWorld(300, 200);
       b.add(e.newItem('text', x, y, { id: 'a', w: 200, h: 26, text: 'Первый' }));
@@ -1774,9 +1751,12 @@ export const checks = {
     await p.ev(`(() => { const e = planx.editor, b = planx.board, { x, y } = e.toWorld(300, 300);
       b.add(e.newItem('sticky', x, y, { id: 's', w: 100, h: 100 }));
       b.add(e.newItem('text', x + 150, y, { id: 't', w: 150, text: 'Подпись' }));
-      e.addTask({ x: x + 500, y: y + 100 }); e.stopEditing();
-      const task = b.list().find((i) => i.inst === '@task-open');
-      e.setSelection(['s', 't', task.id]); })()`);
+      b.add(e.newItem('frame', x - 900, y, { id: 'comp', comp: true, w: 300, h: 200, members: ['cr', 'ct'], text: 'Карточка' }));
+      b.add(e.newItem('rect', x - 880, y + 20, { id: 'cr', w: 200, h: 100 }));
+      b.add(e.newItem('text', x - 870, y + 30, { id: 'ct', w: 180, text: 'Что надо сделать' }));
+      b.add(e.newItem('frame', x + 400, y, { id: 'in', inst: 'comp', w: 300, h: 200, members: [] })); })()`);
+    await sleep(300);
+    await p.ev(`planx.editor.setSelection(['s', 't', 'in'])`);
     await sleep(200);
     const at = await p.ev(`(() => { const i = planx.board.get('s'), s = planx.editor.toScreen({ x: i.x + 30, y: i.y + 30 }); return [s.x, s.y]; })()`);
     await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: at[0], y: at[1], button: 'right', buttons: 2, clickCount: 1 });
@@ -1784,9 +1764,9 @@ export const checks = {
     await sleep(200);
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Параметры').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     const titles = await p.ev(`[...document.querySelectorAll('.params-pop .params-title')].map((t) => t.textContent).join(' | ')`);
-    expect(titles, 'each, the task by what is in it').toBe('Заметка | Текст «Подпись» | Прямоугольник | Эллипс | Текст «Что надо сделать» | Текст «Подробности»');
+    expect(titles, 'each, the instance by what is in it').toBe('Заметка | Текст «Подпись» | Прямоугольник | Текст 1 «Что надо сделать»');
     expect(await p.ev(`[...document.querySelectorAll('.params-pop .params-item')].map((i) => i.querySelectorAll('input[type=range]').length).join()`), 'an opacity for each colour (no text yet, no text colour)')
-      .toBe('1,1,2,2,1,1');
+      .toBe('1,1,2,1');
     await p.ev(`(() => { const r = document.querySelectorAll('.params-pop input[type=range]')[0]; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(r, '50'); r.dispatchEvent(new Event('input', { bubbles: true })); })()`);
     expect(await p.ev(`planx.board.get('s').fo`), 'the sticker half see-through').toBe(0.5);
   },

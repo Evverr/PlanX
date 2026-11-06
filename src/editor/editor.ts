@@ -14,8 +14,7 @@ import { readJSON, writeJSON } from '../storage';
 import { cameraFor, clamp, fittedTo, flyTo, freeArea, minZoomFor, wheelMove, zoomedAt } from './camera';
 import { copiesOf } from './copies';
 import { carried, hiddenIn, linksIn, membersOf, peekView, settled, stacked, unseen } from './frames';
-import { around, contents, copyId, firstInstance, hasComponents, stretched, syncOps } from '../model/components';
-import { BUILTINS, isBuiltin, nextTaskState, TASK_STATES } from '../model/builtins';
+import { around, contents, firstInstance, hasComponents, stretched, syncOps } from '../model/components';
 import { remapLinks } from '../model/textLinks';
 import { dayKey, TL_PAD, timelineSize } from '../canvas/timeline';
 import { DOODLE_SIZE } from '../canvas/doodles';
@@ -43,6 +42,7 @@ import { nodeEditing, shapedBy } from '../labs/paths';
 import { hiddenByLayers, layersVersion, newItemLayer } from '../labs/layers';
 import { zoomsWithKey } from '../labs/wheelZoom';
 import { codeFit } from '../labs/codeBlock';
+import { fitTask, renewTasks, taskTextPatch } from '../model/task';
 
 export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -213,6 +213,12 @@ export class Editor {
       if (s.canUndo !== this.ui.canUndo || s.canRedo !== this.ui.canRedo) this.emit();
     };
     for (const ev of ['stack-item-added', 'stack-item-popped', 'stack-cleared'] as const) board.undoManager.on(ev, history);
+    // Tasks of before made the tasks of now, and every task as tall as its contents (see model/task.ts),
+    // once the board's come in or changed, and once the fonts have.
+    let renew = 0;
+    const later = () => { clearTimeout(renew); renew = setTimeout(() => renewTasks(board, this.editingId), 300) as unknown as number; };
+    board.subscribe(later);
+    if (typeof document !== 'undefined') void document.fonts?.ready.then(later);
   }
 
   /* ---------- React bridge ---------- */
@@ -373,25 +379,10 @@ export class Editor {
     if (ops.add.length || ops.change.size || ops.remove.length || ops.addLinks.length || ops.removeLinks.length) this.board.sync(ops);
   }
 
-  /** "Задача" as a component that comes with PlanX (src/labs, "Задача-компонент"): a task to be done,
-   *  its middle at `c`, its title open for typing. */
-  addTask(c: Point): void {
-    const f = BUILTINS.get('@task-open')!.frame;
-    const it = this.newItem('frame', Math.round(c.x - f.w / 2), Math.round(c.y - f.h / 2), { w: f.w, h: f.h, inst: '@task-open', members: [], text: f.text });
-    this.board.beginGesture();
-    this.addItem(it);
-    this.syncNow();
-    this.board.endGesture();
-    this.setTool('select');
-    const title = copyId(it.id, '@task-title');
-    this.setSelection([title]);
-    this.startEditing(title);
-  }
-
   /** The component being changed (out, not put away): the one picked or holding what's picked, else one
    *  brought out in an instance's place, else any out. */
   componentInEdit(): Item | undefined {
-    const out = this.board.list().filter((c) => c.comp && !c.stowed && !isBuiltin(c.id));
+    const out = this.board.list().filter((c) => c.comp && !c.stowed);
     if (!out.length) return undefined;
     return this.pickedComponent(out) ?? out.find((c) => c.standsIn) ?? out[out.length - 1];
   }
@@ -536,13 +527,6 @@ export class Editor {
     this.addItem(it);
     this.setTool('select');
     this.setSelection([it.id]);
-  }
-
-  /** A task moved on to its next state (to be done, done, put off), by a click on its ring. */
-  nextTaskState(id: string): void {
-    const it = this.board.get(id);
-    if (!it?.inst || !TASK_STATES.includes(it.inst)) return;
-    this.board.update(id, { inst: nextTaskState(it.inst) });
   }
 
   requestRender(): void {
@@ -801,7 +785,7 @@ export class Editor {
     const was = [...this.selection];
     this.selection = new Set(ids);
     // The component being changed here is the last one worked in; someone else's stays theirs.
-    const here = this.pickedComponent(this.board.list().filter((c) => c.comp && !c.stowed && !isBuiltin(c.id)));
+    const here = this.pickedComponent(this.board.list().filter((c) => c.comp && !c.stowed));
     if (here) this.compHere = here.id;
     else if (this.compHere && this.board.get(this.compHere)?.stowed !== undefined) this.compHere = null;
     if (this.cells.length && (this.selection.size !== 1 || !this.selection.has(was[0]))) { this.cells = []; this.cellAnchor = null; }
@@ -911,7 +895,7 @@ export class Editor {
     if (!ids.size) return;
     // A component's last instance going takes the component with it, once that's been said yes to.
     const all = this.board.list();
-    const orphaned = [...new Set(all.filter((i) => ids.has(i.id) && i.inst && !isBuiltin(i.inst)).map((i) => i.inst!))]
+    const orphaned = [...new Set(all.filter((i) => ids.has(i.id) && i.inst && !i.inst.startsWith('@')).map((i) => i.inst!))]
       .filter((c) => !all.some((i) => i.inst === c && !ids.has(i.id) && !i.stowed) && this.board.get(c)?.stowed);
     if (orphaned.length && !sure) {
       window.dispatchEvent(new CustomEvent('planx:confirm', { detail: {
@@ -1038,7 +1022,6 @@ export class Editor {
   /** Makes what a tool makes, at its usual size, centred on a screen point (a tool dragged off the
    *  rail onto the board). Text, tasks and frames open for typing, as when made with the tool. */
   dropItem(tool: Tool, at: Point): void {
-    if (tool === 'task' && labOn('taskComponent')) { this.addTask(this.toWorld(at.x, at.y)); return; }
     if (tool === 'timeline') { this.addTimeline(this.toWorld(at.x, at.y)); return; }
     const type = (isPoly(tool) ? 'polygon' : tool) as ItemType;
     if (!DEFAULTS[type]) return;
@@ -1410,9 +1393,11 @@ export class Editor {
   startEditing(id: string, cell?: number | null, caret: 'all' | 'end' = 'all'): void {
     const it = this.board.get(id);
     if (!it || !EDITABLE.includes(it.type) || isLocked(it)) return;
+    // Another part of a task typed in: what was typed in the one before kept first.
+    if (it.type === 'task' && this.editingId === id && this.editingCell !== (cell ?? null)) window.dispatchEvent(new Event('planx:commit-edit'));
     this.editCaret = caret;
     this.editingId = id;
-    this.editingCell = it.type === 'table' ? cell ?? 0 : null;
+    this.editingCell = it.type === 'table' ? cell ?? 0 : it.type === 'task' ? cell ?? null : null;
     // An empty cell goes on as the last one was set ("Таблица помнит формат", src/labs).
     if (it.type === 'table' && labOn('tableLook')) carryCellFormat(this, it, this.editingCell!);
     this.selection = new Set([id]);
@@ -1432,7 +1417,11 @@ export class Editor {
     if (this.editingId === id) { this.editingId = null; this.editingCell = null; }
     if (it) {
       const value = text.replace(/\s+$/, '');
-      if (it.type === 'table') {
+      if (it.type === 'task') {
+        // Its title, its description or a subtask (see model/task.ts); as tall as it then takes.
+        const patch = taskTextPatch(it, cell, value);
+        if (patch) this.board.update(id, { ...patch, h: fitTask(it, patch) });
+      } else if (it.type === 'table') {
         if (cell !== null && value !== (it.cells?.[cell] ?? '')) {
           const cells = [...(it.cells ?? [])];
           cells[cell] = value;
@@ -1517,6 +1506,12 @@ export class Editor {
   previewText(id: string, text: string): void {
     this.typed = { id, text };
     const it = this.board.get(id);
+    // A task as tall as what's typed in its part takes.
+    if (it?.type === 'task') {
+      const patch = taskTextPatch(it, this.editingCell, text) ?? {}, h = fitTask(it, { ...patch, ...(this.editingCell && patch.subs && { subs: it.subs }) });
+      if (h !== it.h) this.board.update(id, { h });
+      return;
+    }
     const h = it && fitHeight(it, text);
     if (it && h && h !== it.h) this.fitTo(it, h);
     // A block of code ("Код", src/labs) grows with it.

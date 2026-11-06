@@ -3,12 +3,14 @@ import type { Editor } from '../editor/editor';
 import { alignOf, TEXT_COLORS, textPad, textPadY, type Item } from '../model/types';
 import { fontOf, FONTS, LINE_HEIGHT, textBlockHeight } from '../canvas/text';
 import { FOLD_FS, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP } from '../model/frame';
-import { center, TASK_INSET } from '../canvas/geometry';
+import { center } from '../canvas/geometry';
+import { TASK_FONT, taskFieldBox } from '../canvas/task';
 import { addChild, siblingOf, siblingTints } from '../model/mind';
 import { autoInk } from '../model/color';
 import { colsOf, rowsOf } from '../model/table';
 import { openSwap, swapKind } from '../labs/swap';
 import { linkedTexts } from '../labs/textPush';
+import { addSub } from '../model/task';
 import { CODE_BOTTOM, CODE_FS, CODE_LEFT, CODE_LINE, CODE_PAD, CODE_TOP, setLiveCode } from '../labs/codeBlock';
 
 /**
@@ -30,7 +32,9 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   // Filled in before the overlay is sized below, so it opens as tall as its text.
   useLayoutEffect(() => {
     const el = ref.current!;
-    el.value = item.text ?? '';
+    // A task's part: its description, a subtask, or its title.
+    const cell = editor.editingCell;
+    el.value = (item.type === 'task' && cell === 0 ? item.desc : item.type === 'task' && cell ? item.subs?.[cell - 1]?.t : item.text) ?? '';
     if (code) setLiveCode(id, el.value);
     el.focus();
     if (editor.editCaret === 'end') el.setSelectionRange(el.value.length, el.value.length);
@@ -50,14 +54,15 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   const code = !!item.code;
   // A folded frame's title is typed in where it stands, inside the bar.
   const folded = isFrame && !!item.fold;
-  const fs = folded ? FOLD_FS : isFrame ? 15 : item.fs ?? (code ? CODE_FS : 16);
+  // A task: its title, description or a subtask, where the card has it (see canvas/task.ts).
+  const field = item.type === 'task' ? taskFieldBox(item, editor.editingCell) : null;
+  const sub = item.type === 'task' && (editor.editingCell ?? 0) > 0;
+  const fs = field ? field.fs : folded ? FOLD_FS : isFrame ? 15 : item.fs ?? (code ? CODE_FS : 16);
   const pad = code ? CODE_LEFT : textPad(item), padY = code ? CODE_TOP : textPadY(item);
-  // A task's text starts right of its checkbox.
-  const inset = item.type === 'task' ? TASK_INSET : 0;  // a task's text keeps clear of its checkbox
-  const width = folded ? Math.max(160, item.w - FOLD_PAD - FOLD_TITLE_GAP - FOLD_ICON - FOLD_RIGHT)
-    : isFrame ? Math.max(160, item.w * 0.6) : code ? item.w - CODE_LEFT - CODE_PAD : item.w - inset * 2 - pad * 2;
-  const top = folded ? item.y + (item.h - 26) / 2 : isFrame ? item.y - 30 : item.y + padY;
-  const p = editor.toScreen({ x: item.x + (folded ? FOLD_PAD : isFrame ? 0 : inset + pad), y: top });
+  const width = field ? field.w : folded ? Math.max(160, item.w - FOLD_PAD - FOLD_TITLE_GAP - FOLD_ICON - FOLD_RIGHT)
+    : isFrame ? Math.max(160, item.w * 0.6) : code ? item.w - CODE_LEFT - CODE_PAD : item.w - pad * 2;
+  const top = field ? field.y : folded ? item.y + (item.h - 26) / 2 : isFrame ? item.y - 30 : item.y + padY;
+  const p = editor.toScreen({ x: field ? field.x : item.x + (folded ? FOLD_PAD : isFrame ? 0 : pad), y: top });
 
   // Centre the text vertically in stickers and shapes, like the canvas does; and turn it with a
   // turned item, about the item's centre.
@@ -66,6 +71,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
     if (!el) return;
     let top = 0;
     if (code) el.style.height = `${Math.max(0, item.h - CODE_TOP - CODE_BOTTOM)}px`;
+    else if (field) el.style.height = `${sub ? field.h : textBlockHeight(el.value, width, fs, { weight: field.weight, family: TASK_FONT })}px`;
     else if (item.type !== 'text' && !isFrame) {
       // As tall as the canvas lays the lines out (exactly, not rounded), so they land where it drew them.
       const content = Math.min(textBlockHeight(el.value, width, fs, fontOf(item)), item.h - padY * 2);
@@ -83,7 +89,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
       className={`text-edit ${item.type} ${code ? 'code' : ''} ${folded ? 'folded' : ''} ${item.color === 'none' ? 'nofill' : ''}`}
       aria-label="Текст"
       spellCheck={false}
-      wrap={code ? 'off' : undefined}
+      wrap={code || sub ? 'off' : undefined}
       // "Замена двойным кликом": a shape typed in shows its neighbours on a double click on its text too.
       onDoubleClick={() => { if (swapKind(item)) openSwap(item.id); }}
       style={{
@@ -102,6 +108,8 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         }),
         padding: isFrame ? '0 4px' : 0,
         ...(code && { color: 'transparent', caretColor: '#E6E7EC', whiteSpace: 'pre', overflowWrap: 'normal', tabSize: 2 }),
+        ...(field && { fontFamily: FONTS[TASK_FONT].css, fontWeight: field.weight, fontStyle: undefined, textAlign: 'left', textDecoration: undefined, color: 'var(--ink)',
+          ...(sub && { whiteSpace: 'pre', overflowWrap: 'normal' }) }),
       }}
       // A mind map node dragged by its text moves, as it would anywhere else on it.
       onPointerDown={item.type === 'mind' ? (e) => {
@@ -118,7 +126,9 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
       onInput={(e) => {
         if (code) { setLiveCode(id, e.currentTarget.value); editor.previewText(id, e.currentTarget.value); editor.requestRender(); return; }
         if (item.type === 'text' || item.type === 'task' || item.type === 'mind') editor.previewText(id, e.currentTarget.value);
-        if (item.type !== 'text' && !isFrame) {
+        if (field) {
+          if (!sub) e.currentTarget.style.height = `${textBlockHeight(e.currentTarget.value, width, fs, { weight: field.weight, family: TASK_FONT })}px`;
+        } else if (item.type !== 'text' && !isFrame) {
           const el = e.currentTarget, content = Math.min(textBlockHeight(el.value, width, fs, fontOf(item)), item.h - padY * 2);
           el.style.height = `${content}px`;
           if (item.va !== 'top') el.style.marginTop = `${((item.h - padY * 2 - content) / 2) * z}px`;
@@ -149,6 +159,13 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           if (e.repeat) return;
           done.current = true;
           editor.removeMindNode(id);
+        } else if (field && e.key === 'Enter' && !e.shiftKey && editor.editingCell !== 0) {
+          // A task's title is done with on Enter; a subtask too, and the next one after it begun.
+          e.preventDefault();
+          const cell = editor.editingCell, typed = e.currentTarget.value.trim();
+          commit();
+          const it = editor.board.get(id);
+          if (cell && typed && it) editor.startEditing(id, addSub(editor.board, it, cell - 1) + 1, 'end');
         } else if (code && e.key === 'Tab' && !e.shiftKey) {
           // In code, Tab indents by two spaces.
           e.preventDefault();

@@ -16,13 +16,13 @@ import { zoomFade, zoomSize } from '../labs/zoomFade';
 import { gripsOn } from '../labs/tableMove';
 import { gridKind } from '../labs/boardGrid';
 import { drawCode } from '../labs/codeBlock';
+import { drawTaskCard } from './task';
 import { dotsAlways, dotsUnder } from '../labs/linkTool';
-import { isBuiltin } from '../model/builtins';
 import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
 import { autoInk } from '../model/color';
 import cursorUrl from './cursor.svg';
-import { anchorAt, angleOf, linkBox, traceStar, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, pathNodes, flattenPath, linkHandles, spreadElbows, polyPoints, linkShape, nearestSide, pointInRect, rectsIntersect, sidePoint, SIDES, TASK_INSET, taskBox, type Bezier, type LinkShape } from './geometry';
+import { anchorAt, angleOf, linkBox, traceStar, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, pathNodes, flattenPath, linkHandles, spreadElbows, polyPoints, linkShape, nearestSide, pointInRect, rectsIntersect, sidePoint, SIDES, type Bezier, type LinkShape } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -136,8 +136,6 @@ const CORNER = 8;
 const corner = (it: Item) => (it.type === 'rect' ? it.rad ?? CORNER : it.type === 'image' ? it.rad ?? 0 : it.type === 'frame' || it.type === 'task' ? CORNER
   // A mind map node's: the central topic's rounder.
   : it.type === 'mind' ? Math.min(it.h / 2, it.parent ? 10 : 14) : 0);
-/** A ticked task's checkbox. */
-const DONE_COLOR = '#15C674';
 
 /** Size of the resize handle in screen pixels. */
 export const HANDLE = 12;
@@ -436,8 +434,8 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       // An instance shows only its red title after a hollow diamond (to its component), flush with
       // its contents, and that only while it's picked (as a whole or something inside it).
       if (it.inst) {
-        // One of a component that comes with PlanX (a task) shows nothing of its own.
-        if (isBuiltin(it.inst)) break;
+        // A task of before (see renewTasks in model/task.ts) shows nothing of its own.
+        if (it.inst.startsWith('@')) break;
         if (!s.selection.has(it.id) && ![...s.selection].some((id) => s.get(id)?.host === it.id)) break;
         const b = instanceBounds(it, s.items);
         ctx.font = font(15, 600);
@@ -505,7 +503,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       ctx.globalAlpha = 1;
       break;
     case 'task':
-      drawTask(ctx, it, s, editing);
+      drawTaskCard(ctx, it, { surface: theme.surface, ink: theme.ink, muted: theme.muted, dark: theme.dim < 1, z: cam.z }, editing ? s.editingCell : undefined);
       break;
     case 'table':
       drawTable(ctx, it, s, editing ? s.editingCell : null);
@@ -519,54 +517,6 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'ink':
       strokeInk(ctx, { pts: inkPoints(it), color: it.color ?? 'ink', width: (it.sw ?? 2) * it.w / (it.iw || it.w), hl: !!it.hl, op: it.fo, sharp: it.sharp }, theme);
       break;
-  }
-}
-
-/** A card with a round checkbox and the task's text; ticked off, the box turns green with a tick
- *  and the text goes grey and struck through. */
-function drawTask(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
-  const { theme, cam } = s, none = it.color === 'none';
-  // The card is a rectangle like any other, fill and outline alike.
-  ctx.beginPath();
-  ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(CORNER, it.w / 2, it.h / 2));
-  if (!none) {
-    ctx.globalAlpha = it.fo ?? 1;
-    ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : FILLS[it.color ?? 'blue'] ?? FILLS.blue, theme.dim);
-    ctx.fill();
-  }
-  const line = strokeOf(it, theme);
-  if (line) {
-    ctx.globalAlpha = it.so ?? 1;
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = line;
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-  // The box and its tick are drawn for a radius of 10 and scaled to the radius it has at this zoom.
-  const c = taskBox(it, cam.z), k = c.r / 10;
-  ctx.beginPath();
-  ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
-  if (it.done) {
-    ctx.fillStyle = DONE_COLOR;
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(c.x - 4.5 * k, c.y + 0.2 * k);
-    ctx.lineTo(c.x - 1.3 * k, c.y + 3.4 * k);
-    ctx.lineTo(c.x + 4.8 * k, c.y - 3 * k);
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2 * k;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-  } else {
-    // The card's own outline colour (the usual one when the card has none).
-    ctx.strokeStyle = strokeOf(it, theme) ?? strokeOf({ ...it, sc: undefined }, theme)!;
-    ctx.lineWidth = 1.6 * k;
-    ctx.stroke();
-  }
-  if (!editing) {
-    const ink = it.done ? theme.muted : none ? theme.ink : theme.stickyInk;
-    drawText(ctx, { ...it, x: it.x + TASK_INSET, w: it.w - TASK_INSET * 2, fx: it.fx || it.done, tc: it.done ? undefined : it.tc }, textPad(it), ink, true, s);
   }
 }
 

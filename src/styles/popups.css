@@ -79,8 +79,9 @@
 .tp-sticky { display: block; box-shadow: 0 2px 4px rgba(0, 0, 0, .15); }
 .tp-mind { display: block; white-space: nowrap; background: #fff; color: var(--ink); font-weight: 600; box-shadow: inset 3px 0 0 #A6D4FF, 0 1px 2px rgba(0, 0, 0, .07); }
 .tp-text { display: block; color: var(--ink); white-space: nowrap; }
-.tp-task { display: grid; place-items: center; position: relative; box-sizing: border-box; border: 2px solid var(--shape-stroke); border-radius: 8px; color: var(--sticky-ink); font-weight: 600; }
-.tp-task i { position: absolute; top: 8px; right: 8px; border-radius: 50%; border: 1.6px solid var(--shape-stroke); box-sizing: border-box; }
+/* A task closed, as canvas/task.ts draws it: its ring, its title. */
+.tp-task { display: flex; align-items: center; box-sizing: border-box; border: 2px solid rgba(0, 60, 255, .3); background: #F2F5FF; color: #000; font: 500 16px Inter, var(--ui); }
+.tp-task i { flex: none; border-radius: 50%; border: 1.5px solid #D3D8DE; box-sizing: border-box; }
 .tp-frame { display: block; box-sizing: border-box; position: relative; background: var(--frame); border: 1px solid var(--line); border-radius: 8px; }
 .tp-frame b { position: absolute; left: 2px; bottom: 100%; margin-bottom: 4px; color: var(--muted); font-weight: 600; white-space: nowrap; }
 .tp-svg { display: block; overflow: visible; fill: var(--surface); stroke: var(--line); stroke-width: 1; }
@@ -125,3 +126,10 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 /* Game stickers: bigger tiles, the drawing whole in each. */
 .doodle-grid { grid-template-columns: repeat(auto-fill, minmax(var(--e64, 64px), 1fr)); gap: var(--s6); }
 .pick-doodle { width: 52px; height: 52px; object-fit: contain; pointer-events: none; }
+
+/* A task's popup for who set it, who does it, by when (ui/TaskPop.tsx), where it was pressed. */
+.board-menu.task-pop { position: fixed; min-width: var(--e220, 220px); }
+.task-pop .menu-row.on { color: var(--fmt-on-ink); }
+.task-avatar { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #fff; font: 600 11px Inter, var(--ui); font-style: normal; }
+.task-pop :is(.task-name, .task-due) { display: block; width: 100%; box-sizing: border-box; margin: var(--s6) 0; padding: var(--s7) var(--s10); border: 1px solid var(--line); border-radius: var(--s8); background: transparent; color: var(--ink); font: 400 var(--s14) Inter, var(--ui); outline: none; }
+.task-pop :is(.task-name, .task-due):focus { border-color: var(--fmt-on-ink); }

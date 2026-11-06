@@ -7,7 +7,88 @@ const put = (p, code) => p.ev(`(() => { const e = planx.editor, b = planx.board,
 const screen = (p, x, y) => p.ev(`(() => { const s = planx.editor.toScreen({ x: ${x}, y: ${y} }); return [s.x, s.y]; })()`);
 const origin = (p) => p.ev(`planx.editor.toWorld(300, 200)`);
 
+/** A double click as the browser has it: the second press counted as such. */
+const dblClick = async (p, [x, y]) => {
+  await p.mouse('mouseMoved', x, y);
+  for (let i = 1; i <= 2; i++) {
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', buttons: 1, clickCount: i });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', buttons: 0, clickCount: i });
+  }
+};
+
 export const checks = {
+  async 'a task: its title typed in at once; its ring goes round its statuses; opened by its arrows; subtasks added, typed and ticked; «Завершить» is done and closes it'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('task'); })()`);
+    await p.click([400, 300]);
+    await sleep(200);
+    const id = await p.ev(`planx.board.list().find((i) => i.type === 'task').id`);
+    expect(await p.ev(`planx.editor.editingId`), 'its title open for typing').toBe(id);
+    await p.cdp('Input.insertText', { text: 'Купить молоко' });
+    await p.key('Enter', 'Enter', 13);
+    await sleep(100);
+    const t = () => p.ev(`planx.board.get('${id}')`);
+    expect([(await t()).text, await p.ev('planx.editor.editingId')].join(), 'Enter keeps it').toBe('Купить молоко,');
+    // Where a part of it is on the screen, from its layout.
+    const at = (expr) => p.ev(`(async () => { const t = planx.board.get('${id}'), l = (await import('/src/canvas/task.ts')).taskLayout(t), s = planx.editor.toScreen((${expr})(t, l)); return [s.x, s.y]; })()`);
+    const ring = await at('(t) => ({ x: t.x + 26, y: t.y + 26 })');
+    await p.click(ring);
+    expect((await t()).st, 'being done').toBe('doing');
+    await sleep(450);
+    await p.click(ring);
+    expect((await t()).st, 'done').toBe('done');
+    await sleep(450);
+    await p.click(ring);
+    expect((await t()).st, 'to do again').toBe('todo');
+    await sleep(450);
+    await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
+    let it = await t();
+    expect([it.tv, it.w].join(), 'opened to its description, wider').toBe('desc,494');
+    await sleep(450);
+    await p.click(await at('(t, l) => ({ x: t.x + l.more.x + 12, y: t.y + l.more.y + 12 })'));
+    expect((await t()).tv, 'all of it').toBe('full');
+    // The description, typed in on a double click.
+    await sleep(450);
+    await dblClick(p, await at('(t, l) => ({ x: t.x + l.desc.x + 20, y: t.y + l.desc.y + 8 })'));
+    await sleep(100);
+    expect(await p.ev('planx.editor.editingCell'), 'the description typed in').toBe(0);
+    await p.cdp('Input.insertText', { text: 'Два литра' });
+    await p.key('Escape', 'Escape', 27);
+    await sleep(100);
+    expect((await t()).desc, 'kept').toBe('Два литра');
+    // Subtasks: added by the last row, Enter going on to the next; an empty one goes.
+    await p.click(await at('(t, l) => ({ x: t.x + 120, y: t.y + l.subs[l.subs.length - 1] + 11 })'));
+    await sleep(100);
+    await p.cdp('Input.insertText', { text: 'Первая' });
+    await p.key('Enter', 'Enter', 13);
+    await sleep(100);
+    await p.cdp('Input.insertText', { text: 'Вторая' });
+    await p.key('Enter', 'Enter', 13);
+    await sleep(100);
+    await p.key('Escape', 'Escape', 27);
+    await sleep(100);
+    expect((await t()).subs.map((s) => s.t).join(), 'two, the empty third gone').toBe('Первая,Вторая');
+    await p.click(await at('(t, l) => ({ x: t.x + 59, y: t.y + l.subs[0] + 11 })'));
+    expect((await t()).subs.map((s) => !!s.done).join(), 'the first ticked off').toBe('true,false');
+    it = await t();
+    expect(it.h, 'as tall as all of it').toBe(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).h)()`));
+    await p.click(await at('(t, l) => ({ x: t.x + l.finish.x + 40, y: t.y + l.finish.y + 16 })'));
+    it = await t();
+    expect([it.st, it.tv ?? 'closed', it.w, it.h].join(), '«Завершить»: done and closed').toBe('done,closed,293,52');
+  },
+
+  async 'tasks of before become tasks of now: a ticked card done, a built-in one by its title and note'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board;
+      b.add(e.newItem('task', 100, 100, { id: 'old', w: 180, h: 110, text: 'Старая', done: true }));
+      b.add(e.newItem('frame', 400, 100, { id: 'bi', w: 335, h: 410, inst: '@task-later', members: [], text: 'Задача' }));
+      b.add(e.newItem('text', 460, 160, { id: 'bi~@task-title', host: 'bi', from: '@task-title', text: 'Позвонить' }));
+      b.add(e.newItem('text', 460, 200, { id: 'bi~@task-note', host: 'bi', from: '@task-note', text: 'Вечером' })); })()`);
+    await sleep(800);
+    const old = await p.ev(`(async () => { const t = planx.board.get('old'); return [(await import('/src/canvas/task.ts')).statusOf(t), t.h].join(); })()`);
+    expect(old, 'done, as tall as a closed one').toBe('done,52');
+    const bi = await p.ev(`(() => { const t = planx.board.get('bi'); return [t.type, t.text, t.desc, t.st, t.inst ?? '', planx.board.list().filter((i) => i.host === 'bi').length].join(); })()`);
+    expect(bi, 'made a task in its place').toBe('task,Позвонить,Вечером,todo,,0');
+  },
+
   async 'a frame folds into a bar on a double click, shows what it holds in a popup, and unfolds on another'(p) {
     const ids = await put(p, `
       const f = e.newItem('frame', X, Y, { w: 400, h: 300, members: [] }), s = e.newItem('sticky', X + 60, Y + 60), o = e.newItem('sticky', X + 600, Y + 60);
@@ -678,12 +759,12 @@ export const checks = {
     await p.ev(`planx.editor.setTool('task')`);
     await p.click([600, 420]);
     await sleep(300);
-    const over = () => p.ev(`(() => { const l = planx.board.list(), t = l.find((i) => i.inst === '@task-open'), r = planx.board.get('r'); const mine = l.filter((i) => i.host === t.id); return mine.length + ' ' + mine.every((i) => i.z > r.z) + ' ' + mine.every((i) => i.z < r.z); })()`);
-    expect(await over(), 'the task over the rectangle').toBe('4 true false');
-    await p.ev(`(() => { planx.editor.stopEditing(); planx.editor.setSelection([planx.board.list().find((i) => i.inst === '@task-open').id]); })()`);
+    const over = () => p.ev(`(() => { const t = planx.board.list().find((i) => i.type === 'task'), r = planx.board.get('r'); return t.z > r.z ? 'over' : 'under'; })()`);
+    expect(await over(), 'the task over the rectangle').toBe('over');
+    await p.ev(`(() => { planx.editor.stopEditing(); planx.editor.setSelection([planx.board.list().find((i) => i.type === 'task').id]); })()`);
     await p.key('ArrowDown', 'ArrowDown', 40, 4);
     await sleep(200);
-    expect(await over(), 'a layer down: all of it under').toBe('4 false true');
+    expect(await over(), 'a layer down: under').toBe('under');
     // An instance of one's own component alike.
     await p.ev(`(() => { const e = planx.editor, b = planx.board;
       b.add(e.newItem('frame', -800, 0, { id: 'comp', comp: true, w: 200, h: 200, members: ['cs'], z: -5 }));
