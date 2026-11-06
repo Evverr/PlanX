@@ -514,7 +514,8 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       ctx.globalAlpha = 1;
       break;
     case 'task':
-      drawTaskCard(ctx, it, { surface: theme.surface, ink: theme.ink, muted: theme.muted, dark: theme.dim < 1, z: cam.z, px: cam.z * s.dpr }, editing ? s.editingCell : undefined, s.hotPlus);
+      drawTaskCard(ctx, it, { surface: theme.surface, ink: theme.ink, muted: theme.muted, dark: theme.dim < 1, z: cam.z, px: cam.z * s.dpr,
+        linkInk: shade(LINK_INK, theme.dim), onLink: (r) => textLinkRects.push(r) }, editing ? s.editingCell : undefined, s.hotPlus);
       break;
     case 'table':
       drawTable(ctx, it, s, editing ? s.editingCell : null);

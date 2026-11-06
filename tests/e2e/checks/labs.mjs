@@ -1514,6 +1514,34 @@ export const checks = {
     expect(await at(), 'Shift+Tab: back up round to the last').toBe('c');
   },
 
+  async 'a task\'s description typed in has the text panel with its list and links only; a link in it opens on a click'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('task', 200, 150, { id: 'tk', text: 'Задача', w: 494, h: 52, tv: 'full', keep: true, desc: 'Смотри документацию тут' }));
+      e.setSelection(['tk']); e.startEditing('tk', 0, 'end'); })()`);
+    await sleep(900);
+    expect(await p.ev(`[...document.querySelectorAll('.tfmt button[aria-label]')].map((b) => b.getAttribute('aria-label')).filter((l) => l !== 'Действия').join()`), 'its list and links (and the actions\' menu)').toBe('Список,Ссылка');
+    await p.ev(`document.querySelector('textarea.text-edit').setSelectionRange(7, 19)`);
+    await p.click(await p.at('.tfmt button[aria-label="Ссылка"]'));
+    await sleep(200);
+    await p.cdp('Input.insertText', { text: 'docs.example.com' });
+    await p.key('Enter', 'Enter', 13);
+    await sleep(300);
+    expect(await p.ev(`JSON.stringify([planx.board.get('tk').text, planx.board.get('tk').links])`), 'on its description').toBe('["Задача",[{"s":7,"e":19,"url":"https://docs.example.com"}]]');
+    await p.click(await p.at('.tfmt button[aria-label="Список"]'));
+    await sleep(200);
+    await p.click(await p.at('.tfmt button[aria-label="Маркированный список"]'));
+    await sleep(200);
+    expect(await p.ev(`planx.board.get('tk').ls`), 'a list').toBe('bullet');
+    await p.ev(`planx.editor.stopEditing(); planx.editor.setSelection([]); window.opened = null; window.open = (u) => { window.opened = u; return null; }`);
+    await sleep(300);
+    expect(await p.ev(`planx.board.get('tk').h`), 'as tall as it').toBe(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('tk')).h)()`));
+    // On "документацию", after its bullet: a click opens it.
+    const at = await p.ev(`(async () => { const t = planx.board.get('tk'), l = (await import('/src/canvas/task.ts')).taskLayout(t); const s = planx.editor.toScreen({ x: t.x + l.desc.x + 120, y: t.y + l.desc.y + 9 }); return [s.x, s.y]; })()`);
+    await p.click(at);
+    await sleep(200);
+    expect(await p.ev('window.opened'), 'opened').toBe('https://docs.example.com');
+  },
+
   async '"Ссылка в тексте": a part picked while typing becomes the link, just it blue, Cmd+click on it opens it'(p) {
     await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 250); planx.board.add(e.newItem('text', x, y, { id: 'tx', w: 400, h: 26, text: 'Смотри документацию тут' })); e.setSelection(['tx']); e.startEditing('tx', null, 'end'); })()`);
     await sleep(900);

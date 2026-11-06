@@ -53,9 +53,15 @@ interface Part { s: number; e: number; text: string }
 /** What's picked in the text being typed in, if anything. */
 function pickedPart(editor: Editor, item: Item): Part | null {
   const el = document.querySelector<HTMLTextAreaElement>('textarea.text-edit');
-  if (!el || editor.editingId !== item.id || el.selectionStart === el.selectionEnd) return null;
+  if (!el || editor.editingId !== item.id) return null;
+  // (A task's description, nothing picked in it: all of it, a task having no link of its own.)
+  if (el.selectionStart === el.selectionEnd) return item.type === 'task' && el.value ? { s: 0, e: el.value.length, text: el.value } : null;
   return { s: el.selectionStart, e: el.selectionEnd, text: el.value };
 }
+
+/** A task's description gets the panel's list and links only (its font and colours are the card's). */
+const forItem = <T extends Partial<Record<string, React.ReactElement>>>(item: Item, all: T): T =>
+  item.type === 'task' ? ({ list: all.list, link: all.link } as unknown as T) : all;
 
 /** The link's menu: its address to type (Enter sets it), and to open it or take it off; for a part of
  *  the text, that part's. */
@@ -182,7 +188,7 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
       {...sort.container} onPointerDown={(e) => { if (!(e.target as Element).closest('input')) e.preventDefault(); sort.container.onPointerDown(e); }}>
       {/* (As the actions' button at the other end: as far in, its hover as big.) */}
       {onBack && <button className="fb back" title="Назад" aria-label="Назад" data-nosort onClick={onBack}><Icon name="chevron-left" /></button>}
-      {sort.renderFit({
+      {sort.renderFit(forItem(item, {
         font: <span className="sort-wrap"><Drop open={menu === 'font'} menu={Object.entries(FONTS).map(([k, f]) => (
           <button key={k} className={`tf-item ${(item.ff ?? 'onest') === k ? 'on' : ''}`} style={{ fontFamily: f.css }}
             onClick={() => set({ ff: k === 'onest' ? undefined : k })}>{f.label}</button>
@@ -250,7 +256,7 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
         }} />}>
           <Btn icon="link" label="Ссылка" on={!!item.url || menu === 'link'} onClick={() => { setPart(pickedPart(editor, item)); toggle('link'); }} />
         </Drop></span> : undefined,
-      }, textRoom() - (labs.contextMenu ? MENU_BUTTON : 0), 'above')}
+      }), textRoom() - (labs.contextMenu ? MENU_BUTTON : 0), 'above')}
       {/* The right click's menu, always at the right end ("Меню по правому клику", src/labs). */}
       {labs.contextMenu && <ItemMenuButton className="fb" />}
     </div>

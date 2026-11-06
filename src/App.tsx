@@ -211,7 +211,18 @@ export function App({ boardId }: { boardId: string }) {
   // Several picked with text ("Несколько сразу", src/labs): the panel takes them as one.
   // What has text the panel sets: text, basic stickers, tasks, tables, shapes (not mind map nodes, nor a
   // component's title); several picked with text ("Несколько сразу", src/labs) taken as one.
-  const textItem = selItems.length === 1 && ['text', 'sticky', 'table', 'rect', 'ellipse', 'polygon'].includes(selItems[0].type) && !selItems[0].code ? selItems[0] : asOne(selItems) ?? undefined;
+  // (A task's description too, while it's typed in: its list and links.)
+  const typingDesc = selItems.length === 1 && selItems[0].type === 'task' && editing?.id === selItems[0].id && ui.editingCell === 0;
+  // (Kept for it after the typing's gone to the panel's own field, the link's address, till a press on the board.)
+  const [descOf, setDescOf] = useState<string | null>(null);
+  useEffect(() => { if (typingDesc) setDescOf(selItems[0].id); else if (ui.editingId) setDescOf(null); }, [typingDesc, ui.editingId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const off = (e: PointerEvent) => { if (e.target === editor.canvas) setDescOf(null); };
+    window.addEventListener('pointerdown', off, true);
+    return () => window.removeEventListener('pointerdown', off, true);
+  }, [editor]);
+  const taskDesc = typingDesc || (selItems.length === 1 && descOf === selItems[0].id);
+  const textItem = selItems.length === 1 && (['text', 'sticky', 'table', 'rect', 'ellipse', 'polygon'].includes(selItems[0].type) && !selItems[0].code || taskDesc) ? selItems[0] : asOne(selItems) ?? undefined;
   const labs = useLabs();
   // "Кнопка T" (src/labs): the text panel instead of the selection panel, asked for by its T, till the
   // next press on the board (or something else picked).

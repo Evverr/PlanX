@@ -992,12 +992,13 @@ export class Editor {
   /** Changes how the selected items' text looks; an undefined field goes back to the default.
    *  Text items are re-measured to fit, and again once a newly picked font has loaded. */
   setTextStyle(patch: Partial<Item>): void {
-    const items = this.selectedItems().filter((i) => HAS_FONT.includes(i.type));
+    // (A task takes only a list, for its description.)
+    const items = this.selectedItems().filter((i) => HAS_FONT.includes(i.type) || (i.type === 'task' && Object.keys(patch).every((k) => k === 'ls')));
     const refit = () => this.board.transact(() => {
       for (const it of items) {
         // One being typed in is measured with what's typed, not yet in the board.
         const now = this.board.get(it.id), typed = this.typed?.id === it.id ? this.typed.text : undefined;
-        const h = now && fitHeight(now, typed);
+        const h = now?.type === 'task' ? fitTask(now, typed !== undefined ? taskTextPatch(now, this.editingCell, typed) ?? {} : {}) : now && fitHeight(now, typed);
         if (now && h && h !== now.h) this.fitTo(now, h);
       }
     });
