@@ -113,7 +113,7 @@ export const checks = {
     expect((await mainKeys(p, '.bar.zoom')).some((k) => k[0] === k0[2][0]), 'it is on the bar').toBeTruthy();
   },
 
-  async '"Режим настройки меню": the panels\' buttons stay put till it\'s on in the board menu, not even dragged onto the board; then they move, held or not'(p) {
+  async '"Режим настройки меню": the panels\' buttons stay put among the others till it\'s on in the board menu (dragged onto the board all the same); then they move, held or not'(p) {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('customize', true))()`);
     await sleep(100);
     const keys = async () => (await mainKeys(p, '.bar.zoom')).map((k) => k[0]).join();
@@ -122,10 +122,17 @@ export const checks = {
     const map = await at('map'), zin = await at('zoom-in');
     await carry(p, map, [[zin[0] - 30, zin[1]]]);
     expect(await keys(), 'off: as it was').toBe(before);
-    // Nor a rail button onto the board.
+    // A rail button onto the board all the same, the rail as it was.
+    const rail = (await mainKeys(p, '.tools')).map((k) => k[0]).join();
     const n = await p.ev(`planx.board.list().length`), sticky = await p.rect('.tools button[aria-label="Заметки"]');
-    await p.drag([(sticky.l + sticky.r) / 2, (sticky.t + sticky.b) / 2], [600, 400], { steps: 16 });
-    expect(await p.ev(`planx.board.list().length`), 'off: nothing dragged onto the board').toBe(n);
+    const from = [(sticky.l + sticky.r) / 2, (sticky.t + sticky.b) / 2];
+    await p.mouse('mouseMoved', ...from);
+    await p.mouse('mousePressed', ...from);
+    for (let i = 1; i <= 60; i++) { await p.mouse('mouseMoved', from[0] + ((600 - from[0]) * i) / 60, from[1] + ((400 - from[1]) * i) / 60); await sleep(10); }
+    await p.mouse('mouseReleased', 600, 400);
+    await sleep(200);
+    expect(await p.ev(`planx.board.list().length`), 'off: dragged onto the board, a sticky made').toBe(n + 1);
+    expect((await mainKeys(p, '.tools')).map((k) => k[0]).join(), 'the rail as it was').toBe(rail);
     // On, from the board menu.
     await p.click(await p.at('.topbar button[aria-label="Меню"]'));
     await p.ev(`[...document.querySelectorAll('.board-menu .menu-row')].find((r) => r.textContent.includes('Режим настройки меню')).click()`);
