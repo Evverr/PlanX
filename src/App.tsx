@@ -8,7 +8,7 @@ import { SelectionPanel } from './ui/SelectionPanel';
 import { usePanelPlace } from './labs/panelPlace';
 import { TextEditor } from './ui/TextEditor';
 import { TextPanel } from './ui/FormatPanel';
-import { TaskPop } from './ui/TaskPop';
+import { TaskPop, TaskTipBubble } from './ui/TaskPop';
 import { PanelIcon } from './ui/PanelIcon';
 import { asOne } from './labs/multi';
 import { DockButton, useDock } from './ui/panels/dock';
@@ -458,6 +458,7 @@ export function App({ boardId }: { boardId: string }) {
         : <TextEditor key={editing.type === 'task' ? `${editing.id}:${ui.editingCell}` : editing.id} editor={editor} item={editing} />)}
       {/* A task's people and date, picked where its row was pressed. */}
       <TaskPop editor={editor} me={conn.me} peers={peers} />
+      <TaskTipBubble />
 
       {pop === 'clear' && (
         <div className="pop confirm" role="dialog" aria-label="Очистить доску">

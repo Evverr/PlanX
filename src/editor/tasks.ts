@@ -8,6 +8,8 @@ import { taskOpen } from '../labs/taskFull';
 
 /** Who set it, who does it, by when: picked in a popup at a screen point (see ui/TaskPop.tsx). */
 export interface TaskPick { id: string; field: 'boss' | 'doer' | 'due'; x: number; y: number }
+/** A word on a task, in a blue hint's bubble over a point on the screen (see ui/TaskPop.tsx). */
+export interface TaskTip { text: string; x: number; y: number }
 
 /** The part of a task a press is on that does something at once: its ring, its arrows, a subtask's
  *  ring, adding a subtask, the people and the date, the buttons. Not its text: that's taken to move it,
@@ -26,7 +28,9 @@ export function pressTask(ed: Editor, it: Item, w: Point, sp: Point): boolean {
   // With subtasks, it's done by doing them: its ring and «Завершить» only say so.
   const pr = progressOf(it);
   if ((part === 'status' || part === 'finish') && pr !== null && pr < 1) {
-    window.dispatchEvent(new CustomEvent('planx:toast', { detail: { text: 'Задачу можно выполнить, только выполнив все подзадачи', bottom: true } }));
+    // (Over its ring: the hint's bubble pointing down at it, on the screen.)
+    const r = ed.canvas?.getBoundingClientRect(), s = ed.toScreen({ x: it.x + 26, y: it.y + 15 });
+    window.dispatchEvent(new CustomEvent<TaskTip>('planx:task-tip', { detail: { text: 'Задачу можно выполнить, только выполнив все подзадачи', x: s.x + (r?.left ?? 0), y: s.y + (r?.top ?? 0) } }));
     return true;
   }
   if (part === 'status') { if (pr === null) setStatus(board, it.id, nextStatus(statusOf(it))); }

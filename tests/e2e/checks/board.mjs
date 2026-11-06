@@ -120,7 +120,7 @@ export const checks = {
     await p.click(await at('(t, l) => ({ x: t.x + l.finish.x + 20, y: t.y + l.finish.y + 16 })'));
     await sleep(100);
     it = await t();
-    expect([it.st ?? 'todo', it.tv, await p.ev(`document.querySelector('.toast.bottom span')?.textContent`)].join('|'), 'not done, said why')
+    expect([it.st ?? 'todo', it.tv, await p.ev(`document.querySelector('.tip.task-tip')?.textContent`)].join('|'), 'not done, said why')
       .toBe('todo|full|Задачу можно выполнить, только выполнив все подзадачи');
     await sleep(450);
     await p.click(await at('(t, l) => ({ x: t.x + 59, y: t.y + l.subs[1] + 11 })'));
