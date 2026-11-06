@@ -138,6 +138,16 @@ export function tablePointer(ed: Editor, sp: Point | null): void {
 /** The column and the row the pointer's in: in the table, or out past its top (for the column) or its
  *  left (for the row) as far as their pills. */
 function pointedAt(ed: Editor, it: Item): { col: number; row: number } {
+  // On a plus (or near one that's out): as it was, so nothing else comes out till the pointer's off it.
+  const p0 = pointer;
+  if (held0?.id === it.id && (hotPlus || (p0 && insAt.some((q) => q.id === it.id && Math.hypot(p0.x - q.p.x, p0.y - q.p.y) <= INS_NEAR)))) return held0.at;
+  const at = pointedNow(ed, it);
+  held0 = { id: it.id, at };
+  return at;
+}
+/** The column and row the pointer was in, kept while it's on a plus. */
+let held0: { id: string; at: { col: number; row: number } } | null = null;
+function pointedNow(ed: Editor, it: Item): { col: number; row: number } {
   if (!pointer) return { col: -1, row: -1 };
   const p = ed.toWorld(pointer.x, pointer.y), out = (OUT + THICK * HOT + REACH * HIT + 4) / ed.cam.z;
   const find = (sizes: number[], d: number) => { let s = 0; for (let i = 0; i < sizes.length; i++) { s += sizes[i]; if (d <= s) return i; } return -1; };
@@ -199,6 +209,8 @@ const INS_R = PLUS_R * 0.644;
 const INS_NEAR = 15;
 /** The pluses out last time, kept while the pointer's near them. */
 let insOut = new Set<string>();
+/** And where they are on the screen. */
+let insAt: Array<{ id: string; p: Point }> = [];
 function insertPluses(ed: Editor, it: Item): Array<{ key: TablePlus; p: Point; seen: boolean }> {
   const at = drag ? { col: -1, row: -1 } : pointedAt(ed, it), out: Array<{ key: TablePlus; p: Point; seen: boolean }> = [];
   const near = (p: Point) => !drag && !!pointer && Math.hypot(pointer.x - p.x, pointer.y - p.y) <= INS_NEAR;
@@ -216,6 +228,7 @@ function insertPluses(ed: Editor, it: Item): Array<{ key: TablePlus; p: Point; s
   const lit = hotPlus?.includes('@') ? out.find((q) => q.key === hotPlus && q.seen) : undefined;
   if (lit) for (const q of out) q.seen = q === lit;
   insOut = new Set(out.filter((q) => q.seen).map((q) => `${it.id}:${q.key}`));
+  insAt = out.filter((q) => q.seen).map((q) => ({ id: it.id, p: q.p }));
   return out;
 }
 /** The plus under a point on the canvas. */
