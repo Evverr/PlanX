@@ -28,7 +28,7 @@ import { under } from '../labs/clickThrough';
 export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]> }
+  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]> }
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' | 'tl' | 'bl' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point; last?: Point }
@@ -86,8 +86,11 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         ed.setMoving(true);
         board.beginGesture();
         if (e.altKey) g.orig = ed.dragCopies(g.orig);
-        // ("Узел на линии", src/labs: with Cmd or Ctrl, what's in a line comes out of it.)
-        else if ((e.metaKey || e.ctrlKey) && labOn('linkJoint')) pullOut(ed, g.orig.keys());
+      }
+      // ("Узел на линии", src/labs: Cmd or Ctrl held, from the start or on the way, what's in a line comes out of it.)
+      if (!g.pulled && !e.altKey && (e.metaKey || e.ctrlKey) && labOn('linkJoint') && [...g.orig.keys()].some((id) => board.get(id)?.joint)) {
+        g.pulled = true;
+        pullOut(ed, g.orig.keys());
       }
       // With Shift held as it's dragged, what's dragged lines up with what's on screen around it when near.
       let sx = 0, sy = 0;
