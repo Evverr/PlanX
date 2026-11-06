@@ -1112,14 +1112,14 @@ function drawBackground(ctx: CanvasRenderingContext2D, s: Scene) {
 }
 
 /** The dots on the board's background ("Фон доски", src/labs): this far apart on the board at 100%, and
- *  as with the lines, four times as many or as few as it's zoomed, so they stay from DOTS_FROM to four
- *  times that apart on the screen, however far it's zoomed. Their radius on the screen. */
-const DOTS_STEP = 56 / 3, DOTS_FROM = 16, DOTS_R = 1;
+ *  three times as many or as few as it's zoomed, so they stay from DOTS_FROM to three times that apart
+ *  on the screen, however far it's zoomed. Their radius on the screen. */
+const DOTS_STEP = 56 / 3, DOTS_FROM = 16, DOTS_K = 3, DOTS_R = 1;
 function drawGridDots(ctx: CanvasRenderingContext2D, s: Scene) {
   const { cam, theme, width: W, height: H } = s;
   let step = DOTS_STEP;
-  while (step * cam.z < DOTS_FROM) step *= 4;
-  while (step * cam.z >= DOTS_FROM * 4) step /= 4;
+  while (step * cam.z < DOTS_FROM) step *= DOTS_K;
+  while (step * cam.z >= DOTS_FROM * DOTS_K) step /= DOTS_K;
   const px = step * cam.z;
   ctx.fillStyle = `rgba(${theme.grid}, .14)`;
   ctx.beginPath();
