@@ -9,8 +9,10 @@
    Inter 13 text 11px apart, 14px between rows, a faint line between groups; under its button,
    6px below the top bar. */
 .menu-wrap { position: relative; display: flex; }
-.board-menu { position: absolute; left: round(calc(-6px * var(--k)), 1px); top: calc(100% + var(--s12)); z-index: 7; width: var(--e286); box-sizing: border-box;
-  display: flex; flex-direction: column; gap: 0; padding: var(--s7) var(--s18) var(--s11) var(--s14);
+/* As wide as its longest row: as much room after its text as before it, the icon's included (--menu-pad-r). */
+.board-menu { position: absolute; left: round(calc(-6px * var(--k)), 1px); top: calc(100% + var(--s12)); z-index: 7; width: max-content; box-sizing: border-box;
+  --menu-pad-r: calc(var(--s14) + var(--e24) + var(--s11));
+  display: flex; flex-direction: column; gap: 0; padding: var(--s7) var(--menu-pad-r) var(--s11) var(--s14);
   background: var(--surface); border-radius: var(--s12); box-shadow: 0 6px 6px rgba(0, 0, 0, .15); }
 .menu-item { position: relative; width: 100%; }
 .menu-row { position: relative; display: flex; align-items: center; gap: var(--s11); width: 100%; border: 0; background: none; padding: 0;
@@ -21,14 +23,14 @@
 .menu-row { box-sizing: border-box; min-height: var(--e38); padding: var(--s7) 0; }
 /* A menu without icons sits 4px further in; in one with some, a row without lines its text up with
    theirs (an icon's 24px and the 11px after it). */
-.board-menu.plain { padding-left: var(--s18); }
+.board-menu.plain { padding-left: var(--s18); --menu-pad-r: var(--s18); }
 .menu-row.indent { padding-left: var(--s35); }
 /* Rows touch (the 14px between them is 7px of each), so the pointer lights them up edge to edge. */
 .menu-more { position: absolute; right: round(calc(-5px * var(--k)), 1px); top: var(--s8); width: 24px; height: 24px; background: var(--fmt-ink);
   -webkit-mask: url(../ui/menu/drop.svg) center / contain no-repeat; mask: url(../ui/menu/drop.svg) center / contain no-repeat; }
 /* As far in from either side of the menu (whose left padding is the less, but in a plain one). */
 /* A line between groups: a little further in from the menu's left side than its rows, the same from its right. */
-.menu-line { flex: none; height: 1px; margin: var(--s4) calc(var(--s14) - var(--s18) + var(--s2)) var(--s4) var(--s2); background: #6E6E6E; opacity: .1; }
+.menu-line { flex: none; height: 1px; margin: var(--s4) calc(var(--s14) + var(--s2) - var(--menu-pad-r)) var(--s4) var(--s2); background: #6E6E6E; opacity: .1; }
 .board-menu.plain .menu-line { margin-right: var(--s2); }
 /* The switch: a 24×14 track, grey with the knob at its left, blue with it at its right when on. */
 .menu-switch { position: absolute; right: round(calc(-2px * var(--k)), 1px); top: 50%; width: var(--e24); height: var(--e24); transform: translateY(-50%); }
@@ -49,7 +51,7 @@
 .board-menu.plain > .menu-item > .board-menu.sub.leftward { right: calc(100% + var(--s15)); }
 /* A row lights up under the pointer, and while its further level is open. */
 .menu-row { isolation: isolate; }
-.menu-row::before { content: ""; position: absolute; inset: 0 round(calc(-18px * var(--k)), 1px) 0 round(calc(-14px * var(--k)), 1px); z-index: -1; transition: background-color .12s ease-out; }
+.menu-row::before { content: ""; position: absolute; inset: 0 calc(-1 * var(--menu-pad-r)) 0 round(calc(-14px * var(--k)), 1px); z-index: -1; transition: background-color .12s ease-out; }
 .board-menu.plain > .menu-item > .menu-row::before { left: round(calc(-18px * var(--k)), 1px); }
 .menu-row:hover::before, .menu-row[aria-expanded="true"]::before { background: var(--fmt-hover); }
 /* «Удалить»: under the pointer red, its text red, its icon as light as ever but reddish. */
