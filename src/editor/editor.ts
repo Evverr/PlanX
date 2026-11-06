@@ -1541,7 +1541,7 @@ export class Editor {
     const it = this.board.get(id);
     // A task as tall as what's typed in its part takes.
     if (it?.type === 'task') {
-      const patch = taskTextPatch(it, this.editingCell, text) ?? {}, h = fitTask(it, { ...patch, ...(this.editingCell && patch.subs && { subs: it.subs }) });
+      const patch = taskTextPatch(it, this.editingCell, text) ?? {}, h = fitTask(it, { ...patch, ...(this.editingCell && !text.trim() && { subs: it.subs }) });
       if (h !== it.h) this.board.update(id, { h });
       return;
     }

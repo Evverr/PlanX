@@ -77,8 +77,8 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   const folded = isFrame && !!item.fold;
   // A task: its title, description or a subtask, where the card has it (see canvas/task.ts).
   const field = item.type === 'task' ? taskFieldBox(item, editor.editingCell) : null, desc = field && editor.editingCell === 0 ? descLook(item) : null;
-  // A task's title or a subtask: on one line, scrolled across as it's typed past its end.
-  const sub = item.type === 'task' && editor.editingCell !== 0;
+  // A task's title: on one line, scrolled across as it's typed past its end (its subtasks wrap, as drawn).
+  const sub = item.type === 'task' && editor.editingCell === null;
   const fs = field ? field.fs : folded ? FOLD_FS : isFrame ? 15 : item.fs ?? (code ? CODE_FS : 16);
   const pad = code ? CODE_LEFT : textPad(item), padY = code ? CODE_TOP : textPadY(item);
   const width = field ? field.w : folded ? Math.max(160, item.w - FOLD_PAD - FOLD_TITLE_GAP - FOLD_ICON - FOLD_RIGHT)
