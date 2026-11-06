@@ -340,39 +340,43 @@ export const checks = {
     await sleep(300);
   },
 
-  async '"Связи инструментом": no dots on what\'s picked; with the line tool on (solid on blue) every item\'s, a mind map node\'s under the pointer; it stays on after a link'(p) {
+  async '"Связи инструментом": no dots on what\'s picked; «Линии» (or C) puts out every item\'s, a mind map node\'s under the pointer, the cursor kept, things moved as usual'(p) {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('linkTool', true))()`);
     await sleep(100);
     const { a, c } = await stickers(p);
     await p.ev(`(() => { const e = planx.editor; planx.board.add(e.newItem('mind', ...Object.values(e.toWorld(500, 600)), { id: 'm', text: 'Тема', w: 120, h: 50 })); })()`);
-    // Where an item's right dot is, on the screen.
+    // Where an item's right dot is, and its middle, on the screen.
     const dot = (id) => p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'), r = await import('/src/canvas/renderer.ts'), e = planx.editor, it = planx.board.get('${id}');
       const s = e.toScreen(g.sidePoint(it, 'right', r.dotGap(it, 'right') / e.cam.z)), b = e.canvas.getBoundingClientRect(); return [s.x + b.left, s.y + b.top]; })()`);
+    const mid = (id) => p.ev(`(() => { const e = planx.editor, i = planx.board.get('${id}'), s = e.toScreen({ x: i.x + i.w / 2, y: i.y + i.h / 2 }), b = e.canvas.getBoundingClientRect(); return [s.x + b.left, s.y + b.top]; })()`);
     const links = () => p.ev(`planx.board.linkList().length`);
-    // Picked, with the selection tool: pulled from where its dot was, it's moved, not linked.
+    // Picked: pulled from where its dot was, it's moved, not linked.
     await p.ev(`planx.editor.setSelection(['${a}'])`);
     await sleep(100);
     const d = await dot(a);
     await p.drag(d, [d[0] + 40, d[1]]);
     expect(await links(), 'no link from a picked one').toBe(0);
     await p.ev(`planx.board.update('${a}', { x: planx.board.get('${a}').x - 40 })`);
-    // The line tool (by its key, its button maybe in the rail's "more"): solid on blue.
+    // C: the dots out, the cursor still the tool; the button lit (light blue, its icon solid blue).
     await p.key('c', 'KeyC', 67);
     await sleep(100);
-    expect(await p.ev(`(() => { const b = document.querySelector('button[aria-label="Линия"]'); return [planx.editor.tool, !b || b.classList.contains('solid-on')].join(); })()`), 'on, solid on blue').toBe('link,true');
+    expect(await p.ev(`(() => { const b = document.querySelector('button[aria-label="Связи"]'); return [planx.editor.tool, !b || b.classList.contains('on') && !b.classList.contains('solid-on')].join(); })()`), 'dots out, the cursor kept').toBe('select,true');
     // From the first's right dot (the pointer never on the item itself) to the second.
-    const from = await dot(a), to = await p.ev(`(() => { const e = planx.editor, i = planx.board.get('${c}'), s = e.toScreen({ x: i.x + i.w / 2, y: i.y + i.h / 2 }), b = e.canvas.getBoundingClientRect(); return [s.x + b.left, s.y + b.top]; })()`);
+    const from = await dot(a), to = await mid(c);
     await p.mouse('mouseMoved', from[0] + 2, from[1]);
     await sleep(100);
     expect(await p.ev(`[planx.editor.linkDots, planx.editor.hotDot].join()`), 'its dot taken').toBe(`${a},right`);
     await p.drag([from[0] + 2, from[1]], to);
     expect(await links(), 'linked').toBe(1);
-    expect(await p.ev(`planx.editor.tool`), 'still on').toBe('link');
+    // Things move as usual meanwhile.
+    const was = await p.ev(`planx.board.get('${c}').x`), at = await mid(c);
+    await p.drag(at, [at[0] + 50, at[1]]);
+    expect(await p.ev(`planx.board.get('${c}').x`) - was, 'moved').toBe(50);
     // A mind map node: its dots under the pointer.
     await p.mouse('mouseMoved', 560, 625);
     await sleep(100);
     expect(await p.ev(`planx.editor.linkDots`), 'the node\'s').toBe('m');
-    await p.ev(`planx.editor.setTool('select')`);
+    await p.key('c', 'KeyC', 67);
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('linkTool', false))()`);
   },
 

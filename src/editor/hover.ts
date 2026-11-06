@@ -11,6 +11,7 @@ import { rotateCursor } from './cursors';
 import { restOn, sameLine, tableLineAt, warmTable } from './tables';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
+import { dotsOn } from '../labs/linkTool';
 import { zoomShows, zoomSize } from '../labs/zoomFade';
 
 /** How far outside a corner (in screen pixels) the pointer turns the item. */
@@ -178,16 +179,24 @@ export function anyDotAt(ed: Editor, it: Item, w: Point): Side | null {
 /** With the line tool ("Линии", src/labs): the item under the pointer shows its link dots (any item,
  *  mind map nodes too), and keeps them while the pointer's on one, to be pressed and dragged from. */
 function lineToolHover(ed: Editor, w: Point): void {
-  let shown = ed.linkDots ? ed.board.get(ed.linkDots) : undefined, dot = shown ? anyDotAt(ed, shown, w) : null;
-  // ("Связи инструментом": every item's dots show, so any of them is taken, the topmost first.)
-  if (!dot && labOn('linkTool')) {
-    const near = ed.shown().filter((i) => i.type !== 'mind' && !i.inst && !i.host).reverse().find((i) => anyDotAt(ed, i, w));
-    if (near) { shown = near; dot = anyDotAt(ed, near, w); }
-  }
+  const shown = ed.linkDots ? ed.board.get(ed.linkDots) : undefined, dot = shown ? anyDotAt(ed, shown, w) : null;
   const hit = dot ? shown : hitItem(ed.shown(), w, ed.cam.z);
   const id = hit && !hit.inst ? hit.id : null;
   if (id !== ed.linkDots || dot !== ed.hotDot) { ed.linkDots = id; ed.hotDot = dot; ed.requestRender(); }
   ed.canvas!.style.cursor = id ? 'crosshair' : '';
+}
+
+/** "Связи инструментом" (src/labs) with its dots out: the dot under the pointer, of any item (the topmost
+ *  first; a mind map node's while the pointer's on it), taken to be pulled from. Whether there's one. */
+function dotsModeHover(ed: Editor, w: Point): boolean {
+  const was = ed.linkDots ? ed.board.get(ed.linkDots) : undefined;
+  let it = was && anyDotAt(ed, was, w) ? was : ed.shown().filter((i) => i.type !== 'mind' && !i.inst && !i.host).reverse().find((i) => anyDotAt(ed, i, w));
+  const dot = it ? anyDotAt(ed, it, w) : null;
+  if (!it) { const hit = hitItem(ed.shown(), w, ed.cam.z); it = hit?.type === 'mind' ? hit : undefined; }
+  const id = it?.id ?? null;
+  if (id !== ed.linkDots || dot !== ed.hotDot) { ed.linkDots = id; ed.hotDot = dot; ed.requestRender(); }
+  if (dot) ed.canvas!.style.cursor = 'crosshair';
+  return !!dot;
 }
 
 /** The frame button under the point, of the topmost frame in sight that has one there. */
@@ -198,6 +207,7 @@ export const frameButtonUnder = (ed: Editor, w: Point) => frameButtonAt(ed.shown
 export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if (ed.canvas && !ed.gesture && ed.tool === 'link') { lineToolHover(ed, w); return; }
   if (!ed.canvas || ed.gesture || ed.tool !== 'select') return;
+  if (labOn('linkTool') && dotsOn() && dotsModeHover(ed, w)) return;
   const picked = ed.selection.size === 1 ? ed.board.get([...ed.selection][0]) : undefined;
   // A locked item has no handles to take.
   const single = isLocked(picked) ? undefined : picked;
