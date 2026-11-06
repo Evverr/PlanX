@@ -126,12 +126,20 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
     const el = ref.current;
     if (!el || !at) return;
     if (placed.current) { el.style.left = `${placed.current.left}px`; el.style.top = `${placed.current.top}px`; return; }
-    // By its panel: level with its right end, above it or below.
+    // By its panel: level with its right end, above it or below; again as it takes another size (as
+    // wide as its rows, it does as their font comes in).
     if (at.from) {
-      const gap = 8, h = el.offsetHeight;
-      el.style.left = `${Math.max(gap, Math.min(innerWidth - gap - el.offsetWidth, at.from.right - el.offsetWidth))}px`;
-      el.style.top = `${Math.max(gap, Math.min(innerHeight - gap - h, rising(at.from) ? at.from.top - gap - h : at.from.bottom + gap))}px`;
-      return;
+      const from = at.from, place = () => {
+        // (Not once it's been dragged elsewhere by its top.)
+        if (placed.current) return;
+        const gap = 8, h = el.offsetHeight;
+        el.style.left = `${Math.max(gap, Math.min(innerWidth - gap - el.offsetWidth, from.right - el.offsetWidth))}px`;
+        el.style.top = `${Math.max(gap, Math.min(innerHeight - gap - h, rising(from) ? from.top - gap - h : from.bottom + gap))}px`;
+      };
+      place();
+      const sized = new ResizeObserver(place);
+      sized.observe(el);
+      return () => sized.disconnect();
     }
     el.style.left = `${Math.max(8, at.x + el.offsetWidth > innerWidth - 8 ? at.x - el.offsetWidth : at.x)}px`;
     el.style.top = `${Math.max(8, Math.min(at.y, innerHeight - 8 - el.offsetHeight))}px`;
