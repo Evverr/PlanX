@@ -16,8 +16,8 @@ export const dotsOn = () => on;
 export const useDotsOn = () => useSyncExternalStore(subscribeDots, dotsOn);
 
 /** Whether an item shows its dots with them out, the pointer anywhere: a mind map node only if it's a
- * central topic, not picked. */
-export const dotsAlways = (it: Item, picked: Set<string>) => (it.type === 'mind' ? !it.parent && !it.host && !picked.has(it.id) : !it.inst && !it.host);
+ * central topic, not picked; an instance (by its contents, see linkBox), not what's in it. */
+export const dotsAlways = (it: Item, picked: Set<string>) => (it.type === 'mind' ? !it.parent && !it.host && !picked.has(it.id) : !it.host);
 /** And under the pointer: any mind map node too, unless it's picked. */
 export const dotsUnder = (it: Item, picked: Set<string>) => dotsAlways(it, picked) || (it.type === 'mind' && !it.host && !picked.has(it.id));
 

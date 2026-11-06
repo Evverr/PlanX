@@ -2,7 +2,7 @@ import type { Board } from '../model/board';
 import type { Item, ItemType, Link, LinkStyle, Side } from '../model/types';
 import { DEFAULTS, EDITABLE, fillable, HAS_FONT, strokable, uid } from '../model/types';
 import type { PathNode, Point, Rect } from '../canvas/geometry';
-import { boundsOf, boxOf, center, instanceBounds, pointInRect, resizedAt } from '../canvas/geometry';
+import { boundsOf, boxOf, center, instanceBounds, linkBox, pointInRect, resizedAt, setInstanceBox } from '../canvas/geometry';
 import { clearTextCache, dotsMoving, drawScene, readTheme, type Camera, type Peer, type Scene, type Theme } from '../canvas/renderer';
 import { fitHeight, foldedSize, font, itemTextHeight, mindSize } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
@@ -197,6 +197,8 @@ export class Editor {
   private outside: Array<{ undo: () => void; depth: number; along?: boolean }> = [];
 
   constructor(board: Board, opts: { presence?: Presence; storageKey?: string } = {}) {
+    // (Links meet an instance by its contents.)
+    setInstanceBox((it) => instanceBounds(it, this.board.list()));
     this.board = board;
     this.presence = opts.presence;
     this.camKey = opts.storageKey ?? 'planx-cam';
@@ -556,8 +558,8 @@ export class Editor {
     const g = this.gesture;
     let linkPreview = null;
     if (g?.type === 'link') {
-      const from = this.board.get(g.from);
-      if (from) linkPreview = { from, fromSide: g.fromSide, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null, style: this.linkStyle };
+      const from = this.board.get(g.from), target = g.target ? this.board.get(g.target) : undefined;
+      if (from) linkPreview = { from: linkBox(from), fromSide: g.fromSide, to: g.to, target: target ? linkBox(target) : null, style: this.linkStyle };
     }
     // An arrow being led to another item is drawn from its start to the pointer (or the item under it).
     const relinked = g?.type === 'relink' ? this.board.getLink(g.id) : undefined;

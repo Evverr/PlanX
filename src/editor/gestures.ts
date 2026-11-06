@@ -1,7 +1,7 @@
 import type { Item, Link, Side } from '../model/types';
 import { DEFAULTS, ROTATABLE, textPad, textPadY, uid } from '../model/types';
 import type { PathNode, Point, Rect } from '../canvas/geometry';
-import { anchorAt, angleOf, boxOf, center, hitItem, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedFrom, toLocal, turn } from '../canvas/geometry';
+import { anchorAt, angleOf, boxOf, center, hitItem, linkBox, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedFrom, toLocal, turn } from '../canvas/geometry';
 import { fitHeight, itemTextHeight, mindSize } from '../canvas/text';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, freshTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
@@ -222,7 +222,8 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       return;
     }
     case 'link': {
-      const t = hitItem(ed.shown(), w, ed.cam.z);
+      // (What's in an instance: the instance.)
+      const hit = hitItem(ed.shown(), w, ed.cam.z), t = hit?.host ? board.get(hit.host) : hit;
       g.to = w;
       g.target = t && t.id !== g.from ? t.id : null;
       ed.requestRender();
@@ -405,7 +406,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
     }
     case 'link':
       if (g.target && !board.hasLink(g.from, g.target)) {
-        const target = board.get(g.target)!;
+        const target = linkBox(board.get(g.target)!);
         // Running the way the last one was made to; into the side it's let go by, as far along it (its
         // middle when near that), pinned by its sides then even if drawn without.
         const { side, at } = anchorAt(target, g.to, 10 / ed.cam.z), src = board.get(g.from);

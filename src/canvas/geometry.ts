@@ -291,9 +291,15 @@ export interface LinkShape { pts: Point[]; curve?: Bezier }
 /** How far short of a thing put into a line ("Узел на линии", src/labs) the line stops. */
 const JOINT_GAP = 3;
 
+/** How an instance (src/model/components.ts) is met by links and shows its link dots: by its contents,
+ *  not its own box (as big as its component's, padding and all). Set by the editor. */
+let instanceBox: ((it: Item) => Rect) | null = null;
+export const setInstanceBox = (fn: (it: Item) => Rect) => { instanceBox = fn; };
+export const linkBox = (it: Item): Item => (it.inst && instanceBox ? { ...it, ...instanceBox(it) } : it);
+
 export function linkShape(link: Link, getItem: (id: string) => Item | undefined): LinkShape | null {
   // A thing put into a line is met that much further out all round.
-  const get = (id: string) => { const it = getItem(id); return it?.joint ? { ...it, x: it.x - JOINT_GAP, y: it.y - JOINT_GAP, w: it.w + JOINT_GAP * 2, h: it.h + JOINT_GAP * 2 } : it; };
+  const get = (id: string) => { const found = getItem(id), it = found && linkBox(found); return it?.joint ? { ...it, x: it.x - JOINT_GAP, y: it.y - JOINT_GAP, w: it.w + JOINT_GAP * 2, h: it.h + JOINT_GAP * 2 } : it; };
   const a = get(link.from), b = get(link.to);
   if (!a || !b) return null;
   // Through its nodes: from its item's edge (or side) toward the first, on through each, into the other's

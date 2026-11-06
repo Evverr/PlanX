@@ -360,7 +360,7 @@ export const checks = {
     // C: the dots out, the cursor still the tool; the button lit (light blue, its icon solid blue).
     await p.key('c', 'KeyC', 67);
     await sleep(100);
-    expect(await p.ev(`(() => { const b = document.querySelector('button[aria-label="Связи"]'); return [planx.editor.tool, !b || b.classList.contains('on') && !b.classList.contains('solid-on')].join(); })()`), 'dots out, the cursor kept').toBe('select,true');
+    expect(await p.ev(`(() => { const b = document.querySelector('button[aria-label="Связи"]'); return [planx.editor.tool, !b || b.classList.contains('solid-on')].join(); })()`), 'dots out, the cursor kept, the switch on blue').toBe('select,true');
     // From the first's right dot (the pointer never on the item itself) to the second.
     const from = await dot(a), to = await mid(c);
     await p.mouse('mouseMoved', from[0] + 2, from[1]);
@@ -389,6 +389,30 @@ export const checks = {
     await p.mouse('mouseMoved', 561, 625);
     await sleep(100);
     expect(await p.ev(`planx.editor.plusNode()?.id ?? 'no buttons'`), 'the dots away: its buttons again').toBe('m');
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('linkTool', false))()`);
+  },
+
+  async '"Связи инструментом": an instance of a component has its dots, by what\'s in it, and takes links from them'(p) {
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('linkTool', true))()`);
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 300, 300, { id: 's', w: 100, h: 100 })); e.setSelection(['s']); e.makeComponent(); e.stopEditing();
+      const c = b.list().find((i) => i.comp); e.addInstance(c.id); const i = b.list().find((i) => i.inst); b.update(i.id, { x: 300, y: 500 });
+      b.add(e.newItem('sticky', 800, 500, { id: 'far', w: 100, h: 100 })); e.stopEditing(); e.setSelection([]); })()`);
+    await sleep(200);
+    // (Its name, typed in as it's made, done with.)
+    await p.ev(`planx.editor.stopEditing()`);
+    await sleep(100);
+    const inst = await p.ev(`planx.board.list().find((i) => i.inst).id`);
+    // Its right dot, off what's in it (not its own box).
+    const d = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'), r = await import('/src/canvas/renderer.ts'), e = planx.editor, it = g.linkBox(planx.board.get('${inst}'));
+      const s = e.toScreen(g.sidePoint(it, 'right', r.dotGap(it, 'right') / e.cam.z)), b = e.canvas.getBoundingClientRect(); return [s.x + b.left, s.y + b.top]; })()`);
+    await p.key('c', 'KeyC', 67);
+    await p.mouse('mouseMoved', d[0] + 1, d[1]);
+    await sleep(100);
+    expect(await p.ev(`[planx.editor.linkDots, planx.editor.hotDot].join()`), 'its dot').toBe(`${inst},right`);
+    await p.drag([d[0] + 1, d[1]], [850, 550]);
+    expect(await p.ev(`planx.board.linkList().map((l) => l.from + '>' + l.to).join()`), 'linked from it').toBe(`${inst}>far`);
+    await p.key('c', 'KeyC', 67);
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('linkTool', false))()`);
   },
 
