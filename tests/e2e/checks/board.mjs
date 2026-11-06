@@ -838,6 +838,13 @@ export const checks = {
     expect(await order(), 'one down').toBe('bac');
   },
 
+  async 'a layer up stops under a task kept open'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board;
+      b.add(e.newItem('task', 100, 100, { id: 'k', w: 494, h: 300, tv: 'full', keep: true, z: 600 }));
+      b.add(e.newItem('sticky', 200, 200, { id: 's', z: 5 })); e.setSelection(['s']); e.shiftZ(1); })()`);
+    expect(await p.ev(`planx.board.list().map((i) => i.id).join()`), 'still under it').toBe('s,k');
+  },
+
   async 'a layer up or down goes past what it lies over, not something elsewhere; an instance takes what it holds along, a new task comes on top'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('rect', 300, 200, { id: 'r', w: 400, h: 300, z: 1 }));
