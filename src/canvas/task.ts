@@ -254,7 +254,9 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   ctx.fillText(tag, x + l.w - 16 - pw / 2 + 0.25, y + 1.5);
   ctx.letterSpacing = '0px';
   const st = statusOf(it);
-  drawStatus(ctx, x + 15 + STATUS / 2, y + MID, st, look, progressOf(it) ?? 0.75);
+  // With subtasks, as far round as they're done, from 5% (set, it's begun).
+  const pr = progressOf(it);
+  drawStatus(ctx, x + 15 + STATUS / 2, y + MID, pr !== null && pr < 1 ? 'doing' : st, look, pr === null ? 0.75 : 0.05 + 0.95 * pr);
   // The arrows darker under the pointer.
   const arrowInk = (part: string) => (hot === `task:${it.id}:${part}` ? (look.dark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.75)') : look.dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)');
   drawIcon(ctx, it.tv ? 'chevron-up-m' : 'chevron-down-m', x + l.w - 35, y + MID - ARROW / 2, ARROW, arrowInk('arrow'));

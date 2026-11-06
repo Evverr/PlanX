@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Item, Person } from '../model/types';
-import type { TaskPick } from '../editor/tasks';
+import type { TaskPick, TaskTip } from '../editor/tasks';
 import { PEER_COLORS, type Me } from '../collab/connection';
 import { fitTask } from '../model/task';
 
@@ -12,6 +12,28 @@ const colorFor = (name: string) => PEER_COLORS[[...name].reduce((h, c) => (h * 3
  * A task's popup for who set it and who does it (whoever's on the board, has been named on its tasks,
  * or is typed in), or by when (a date and a time); opened by a press on that row (see editor/tasks.ts).
  */
+/** A word on a task over its ring, as the panels' hints look (.tip.above): gone after a few seconds, or
+ *  with the next press, key or wheel. */
+export function TaskTipBubble() {
+  const [tip, setTip] = useState<(TaskTip & { at: number }) | null>(null);
+  useEffect(() => {
+    const on = (e: Event) => setTip({ ...(e as CustomEvent<TaskTip>).detail, at: performance.now() });
+    window.addEventListener('planx:task-tip', on);
+    return () => window.removeEventListener('planx:task-tip', on);
+  }, []);
+  useEffect(() => {
+    if (!tip) return;
+    const off = () => setTip(null), t = setTimeout(off, 3000);
+    window.addEventListener('pointerdown', off, true);
+    window.addEventListener('keydown', off, true);
+    window.addEventListener('wheel', off, true);
+    return () => { clearTimeout(t); window.removeEventListener('pointerdown', off, true); window.removeEventListener('keydown', off, true); window.removeEventListener('wheel', off, true); };
+  }, [tip]);
+  if (!tip) return null;
+  // Its pointer's tip 4 over the point (the pointer 6 tall under the 37 tall bubble).
+  return <div key={tip.at} className="tip above task-tip" role="tooltip" style={{ left: tip.x, top: tip.y - 37 - 10 }}>{tip.text}</div>;
+}
+
 export function TaskPop({ editor, me, peers }: { editor: Editor; me: Me; peers: Array<{ name: string; color: string }> }) {
   const [pick, setPick] = useState<TaskPick | null>(null);
   const [name, setName] = useState('');

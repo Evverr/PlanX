@@ -15,3 +15,5 @@
 .tip.left::before { top: 50%; right: -5.89px; transform: translateY(-50%) scaleX(-1); }
 .tip.above::before { left: calc(var(--px) - 2.945px); top: calc(100% - 4.555px); transform: rotate(-90deg); }
 .tip.below::before { left: calc(var(--px) - 2.945px); top: -10.445px; transform: rotate(90deg); }
+/* A word on a task over its ring (ui/TaskPop.tsx): centred on it, pointing down at it. */
+.tip.task-tip { transform: translateX(-50%); --px: 50%; }
