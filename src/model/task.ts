@@ -21,12 +21,14 @@ export function setView(board: Board, it: Item, tv: Item['tv']): void {
   board.update(it.id, { tv, w, h: taskSize(next).h, cw: tv && !it.tv ? it.w : tv ? it.cw : undefined, ...(tv && !it.tv && it.z < top && { z: top + 1 }) });
 }
 
-/** A double click on its header: closed, to its description, all of it, closed again. */
-export const nextView = (board: Board, it: Item): void => setView(board, it, !it.tv ? 'desc' : it.tv === 'desc' ? 'full' : undefined);
+/** A double click on its header: closed, opened (`open`: to its description, or all of it), all of it,
+ *  closed again. */
+export const nextView = (board: Board, it: Item, open: Item['tv'] = 'desc'): void =>
+  setView(board, it, !it.tv ? open : it.tv === 'desc' ? 'full' : undefined);
 
-/** A new task, its middle at `c`: opened to its description (closed, as wide as usual). */
-export function freshTask(it: Item, c: { x: number; y: number }): Item {
-  const t = { ...it, tv: 'desc' as const, w: TASK_OPEN_W, cw: TASK_W }, h = taskSize(t).h;
+/** A new task, its middle at `c`: opened (`open`: to its description, or all of it; closed, as wide as usual). */
+export function freshTask(it: Item, c: { x: number; y: number }, open: Item['tv'] = 'desc'): Item {
+  const t = { ...it, tv: open, w: TASK_OPEN_W, cw: TASK_W }, h = taskSize(t).h;
   return { ...t, h, x: Math.round(c.x - TASK_OPEN_W / 2), y: Math.round(c.y - h / 2) };
 }
 

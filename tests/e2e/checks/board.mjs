@@ -8,6 +8,10 @@ const screen = (p, x, y) => p.ev(`(() => { const s = planx.editor.toScreen({ x: 
 const origin = (p) => p.ev(`planx.editor.toWorld(300, 200)`);
 
 /** A double click as the browser has it: the second press counted as such. */
+// A trial feature switched as the page has it (its module by the address the page took it from, a
+// changed one's coming with a time to it).
+const setLab = (p, id, on) => p.ev(`(async () => { const u = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/labs/labs.ts')) ?? '/src/labs/labs.ts';
+  (await import(u)).setLab('${id}', ${on}); })()`);
 const dblClick = async (p, [x, y]) => {
   await p.mouse('mouseMoved', x, y);
   for (let i = 1; i <= 2; i++) {
@@ -17,14 +21,15 @@ const dblClick = async (p, [x, y]) => {
 };
 
 export const checks = {
-  async 'a task: put opened to its description, title then description typed in, closed on Enter; its ring goes round its statuses; opened by its arrows and a double click on its header; subtasks; «Завершить»'(p) {
+  async 'a task: put opened in full, title then description typed in, closed on Enter; its ring goes round its statuses; opened by its arrow and a double click on its header (to its description first, «Задача сразу целиком» off); subtasks; «Завершить»'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('task'); })()`);
-    await p.click([400, 150]);
+    // (Low enough to be all on screen closed: it's put opened in full, by its middle.)
+    await p.click([400, 400]);
     await sleep(200);
     const id = await p.ev(`planx.board.list().find((i) => i.type === 'task').id`);
     const t = () => p.ev(`planx.board.get('${id}')`);
     let it = await t();
-    expect([it.tv, it.w, await p.ev(`planx.editor.editingId`) === id].join(), 'opened to its description, its title typed in').toBe('desc,494,true');
+    expect([it.tv, it.w, await p.ev(`planx.editor.editingId`) === id].join(), 'opened in full, its title typed in').toBe('full,494,true');
     await p.cdp('Input.insertText', { text: 'Купить молоко' });
     await p.key('Enter', 'Enter', 13);
     await sleep(100);
@@ -57,10 +62,19 @@ export const checks = {
     await p.ev(`planx.board.add(planx.editor.newItem('sticky', 1200, 1200, { id: 'over', z: 50 }))`);
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
     it = await t();
-    expect([it.tv, it.w, it.z > 50].join(), 'its arrow: its description, wider, on top').toBe('desc,494,true');
+    expect([it.tv, it.w, it.z > 50].join(), 'its arrow: all of it, wider, on top').toBe('full,494,true');
+    // «Задача сразу целиком» off: its description first, then all of it by the arrow under it.
+    await sleep(450);
+    await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
+    expect((await t()).tv ?? 'closed', 'closed by its arrow').toBe('closed');
+    await setLab(p, 'taskFull', false);
+    await sleep(450);
+    await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
+    expect((await t()).tv, 'its description').toBe('desc');
     await sleep(450);
     await p.click(await at('(t, l) => ({ x: t.x + l.more.x + 12, y: t.y + l.more.y + 12 })'));
     expect((await t()).tv, 'all of it').toBe('full');
+    await setLab(p, 'taskFull', true);
     // Subtasks: added by the last row, Enter going on to the next; an empty one goes.
     await sleep(450);
     await p.click(await at('(t, l) => ({ x: t.x + 120, y: t.y + l.subs[l.subs.length - 1] + 11 })'));
@@ -81,8 +95,8 @@ export const checks = {
     await p.click(await at('(t, l) => ({ x: t.x + l.finish.x + 20, y: t.y + l.finish.y + 16 })'));
     it = await t();
     expect([it.st, it.tv ?? 'closed', it.w, it.h].join(), '«Завершить»: done and closed').toBe('done,closed,293,52');
-    // A double click on its header (off its title): its description, all of it, closed again; on its title, that typed in.
-    for (const want of ['desc', 'full', 'closed']) {
+    // A double click on its header (off its title): all of it, closed again; on its title, that typed in.
+    for (const want of ['full', 'closed']) {
       await sleep(450);
       await dblClick(p, await at('(t) => ({ x: t.x + 210, y: t.y + 12 })'));
       await sleep(100);

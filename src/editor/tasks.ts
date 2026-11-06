@@ -4,6 +4,7 @@ import type { Point } from '../canvas/geometry';
 import { nextStatus, statusOf, taskPartAt, type TaskPart } from '../canvas/task';
 import { addSub, setStatus, setView, toggleSub } from '../model/task';
 import { isLocked } from '../labs/labs';
+import { taskOpen } from '../labs/taskFull';
 
 /** Who set it, who does it, by when: picked in a popup at a screen point (see ui/TaskPop.tsx). */
 export interface TaskPick { id: string; field: 'boss' | 'doer' | 'due'; x: number; y: number }
@@ -23,7 +24,7 @@ export function pressTask(ed: Editor, it: Item, w: Point, sp: Point): boolean {
   if (!part) return false;
   const board = ed.board;
   if (part === 'status') setStatus(board, it.id, nextStatus(statusOf(it)));
-  else if (part === 'arrow') setView(board, it, it.tv ? undefined : 'desc');
+  else if (part === 'arrow') setView(board, it, it.tv ? undefined : taskOpen());
   else if (part === 'more') setView(board, it, 'full');
   else if (part === 'cancel') setView(board, it, undefined);
   else if (part === 'finish') board.transact(() => { setStatus(board, it.id, 'done'); setView(board, { ...it, st: 'done' }, undefined); });
