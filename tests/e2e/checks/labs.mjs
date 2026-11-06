@@ -658,6 +658,21 @@ export const checks = {
     expect(await p.ev(`planx.board.linkList().map((l) => l.from + '>' + l.to + ':' + (l.heads ?? 'end') + ':' + l.color + ':' + l.style).join()`), 'one again').toBe('a>c:both:red:straight');
   },
 
+  async '"Узел на линии": dragged with Cmd, what\'s in a line comes out of it, the line one again'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 200, 300, { id: 'a', w: 100, h: 100 })); b.add(e.newItem('sticky', 800, 300, { id: 'c', w: 100, h: 100 }));
+      b.add(e.newItem('rect', 500, 320, { id: 'r', w: 100, h: 60, text: 'Узел', joint: true }));
+      b.addLink({ id: 'l1', from: 'a', to: 'r', style: 'straight', color: 'red', heads: 'start' }); b.addLink({ id: 'l2', from: 'r', to: 'c', style: 'straight', color: 'red' }); e.setSelection([]); })()`);
+    await sleep(200);
+    // Without Cmd: it moves, the line with it.
+    await p.drag([550, 350], [550, 300]);
+    expect(await p.ev(`planx.board.linkList().length + ' ' + !!planx.board.get('r').joint`), 'still in it').toBe('2 true');
+    // With it: out, the line one again as it was; where it's let go.
+    await p.drag([550, 300], [550, 550], { modifiers: 4 });
+    const out = await p.ev(`(() => { const b = planx.board, r = b.get('r'); return [!!r.joint, r.y, b.linkList().map((l) => l.from + '>' + l.to + ':' + (l.heads ?? 'end') + ':' + l.color).join()].join(' '); })()`);
+    expect(out, 'out, one line again').toBe('false 520 a>c:both:red');
+  },
+
   async '"Узел на линии": a sticker dragged off the rail onto a picked line\'s middle goes into it'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('rect', 200, 300, { id: 'a', w: 100, h: 100 })); b.add(e.newItem('rect', 900, 300, { id: 'c', w: 100, h: 100 }));
