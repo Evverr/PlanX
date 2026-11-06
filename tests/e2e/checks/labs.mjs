@@ -742,6 +742,18 @@ export const checks = {
     expect(await p.ev(`planx.board.linkList().map((l) => l.from + '>' + l.to + ':' + (l.heads ?? 'end') + ':' + l.color + ':' + l.style).join()`), 'one again').toBe('a>c:both:red:straight');
   },
 
+  async '"Узел на линии": a task dragged by its header onto a picked line\'s middle goes into it'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 100, 300, { id: 'a', w: 100, h: 100 })); b.add(e.newItem('sticky', 1000, 300, { id: 'c', w: 100, h: 100 }));
+      b.add(e.newItem('task', 350, 600, { id: 'r', w: 293, h: 52, text: 'Узел' }));
+      b.addLink({ id: 'l', from: 'a', to: 'c', style: 'straight' }); e.setSelection(['l']); })()`);
+    await sleep(300);
+    const m = await p.ev(`(async () => { const g = await import('/src/canvas/geometry.ts'), l = planx.board.getLink('l'); const s = g.linkShape(l, (id) => planx.board.get(id)); const q = g.linkHandles(l, s).middles[0].p; return planx.editor.toScreen(q); })()`);
+    await p.drag([350 + 220, 626], [m.x, m.y], { steps: 16 });
+    await sleep(200);
+    const out = await p.ev(`(() => { const b = planx.board, r = b.get('r'); return [!!r.joint, b.linkList().map((l) => l.from + '>' + l.to).sort().join(' ')].join(); })()`);
+    expect(out, 'in the line').toBe('true,a>r r>c');
+  },
   async '"Узел на линии": dragged with Cmd, what\'s in a line comes out of it, the line one again'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('sticky', 200, 300, { id: 'a', w: 100, h: 100 })); b.add(e.newItem('sticky', 800, 300, { id: 'c', w: 100, h: 100 }));

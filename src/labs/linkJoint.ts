@@ -4,14 +4,14 @@ import { center, linkHandles, linkShape, nearestSide, type Point } from '../canv
 import { linkWidth } from '../canvas/renderer';
 
 /**
- * "Узел на линии": with a line picked, a text, sticker, shape or emoji dragged onto one of its middle
+ * "Узел на линии": with a line picked, a text, sticker, shape, emoji or task dragged onto one of its middle
  * circles stands in the line's middle there and becomes a part of it: the line is two then, from its
  * start to it and from it to its end (each with its middle circle), stopping 3 short of it either side
  * (see linkShape), and moving it moves the line. Dragged with Cmd (Ctrl) held, it comes out again.
  */
 
 /** What can be put into a line: those, and the game stickers (pictures). */
-const JOINABLE = new Set(['text', 'sticky', 'rect', 'ellipse', 'polygon', 'emoji', 'icon']);
+const JOINABLE = new Set(['text', 'sticky', 'rect', 'ellipse', 'polygon', 'emoji', 'icon', 'task']);
 const joinable = (it: Item) => JOINABLE.has(it.type) || (it.type === 'image' && !!it.doodle);
 /** A middle circle's radius on the screen, and that of the one taken: what's dragged takes it as soon
  *  as any of it is over that. */
