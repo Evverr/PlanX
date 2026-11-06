@@ -2,7 +2,7 @@ import type { Editor } from './editor';
 import type { Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { nextStatus, progressOf, statusOf, taskLayout, taskPartAt, type TaskPart } from '../canvas/task';
-import { addSub, setStatus, setView, toggleSub } from '../model/task';
+import { addSub, fitTask, setStatus, setView, toggleSub } from '../model/task';
 import { isLocked } from '../labs/labs';
 import { taskOpen } from '../labs/taskFull';
 
@@ -39,6 +39,7 @@ export function pressTask(ed: Editor, it: Item, w: Point, sp: Point): boolean {
   if (part === 'status') { if (pr === null) setStatus(board, it.id, nextStatus(statusOf(it))); else toggleSub(board, it, it.subs!.length - 1); }
   else if (part === 'arrow') setView(board, it, it.tv ? undefined : taskOpen());
   else if (part === 'more') setView(board, it, 'full');
+  else if (part === 'people') { const people = it.people ? undefined : true; board.update(it.id, { people, h: fitTask(it, { people }) }); }
   else if (part === 'cancel') setView(board, it, undefined);
   else if (part === 'keep') {
     // Unticked at once; ticked once said yes to, in a popup by it saying why not to.
