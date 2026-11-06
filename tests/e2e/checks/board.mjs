@@ -21,7 +21,7 @@ const dblClick = async (p, [x, y]) => {
 };
 
 export const checks = {
-  async 'a task: put opened to its description, title then description typed in, closed on Ctrl+Enter; its ring goes round its statuses; opened by its arrow and a double click on its header (to its description first, «Задача сразу целиком» off); subtasks; closed by Esc or a click elsewhere, unless «Не сворачивать»; «Завершить»'(p) {
+  async 'a task: put opened to its description, title then description typed in, closed on Ctrl+Enter; its ring goes round its statuses; opened by its arrow and a double click on its header (to its description first, «Задача сразу целиком» off); subtasks; closed by Esc or a click elsewhere, unless «Не сворачивать»; with subtasks, done by them; «Завершить»'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('task'); })()`);
     // (Low enough to be all on screen closed: it's put opened, by its middle.)
     await p.click([400, 400]);
@@ -115,6 +115,17 @@ export const checks = {
     expect((await t()).subs.map((s) => !!s.done).join(), 'the first ticked off').toBe('true,false');
     it = await t();
     expect(it.h, 'as tall as all of it').toBe(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).h)()`));
+    // Subtasks left to do: its ring and «Завершить» only say it's done by them.
+    await sleep(450);
+    await p.click(await at('(t, l) => ({ x: t.x + l.finish.x + 20, y: t.y + l.finish.y + 16 })'));
+    await sleep(100);
+    it = await t();
+    expect([it.st ?? 'todo', it.tv, await p.ev(`document.querySelector('.toast.bottom span')?.textContent`)].join('|'), 'not done, said why')
+      .toBe('todo|full|Задачу можно выполнить, только выполнив все подзадачи');
+    await sleep(450);
+    await p.click(await at('(t, l) => ({ x: t.x + 59, y: t.y + l.subs[1] + 11 })'));
+    expect(await p.ev(`(async () => (await import('/src/canvas/task.ts')).statusOf(planx.board.get('${id}')))()`), 'done with them all').toBe('done');
+    await sleep(450);
     await p.click(await at('(t, l) => ({ x: t.x + l.finish.x + 20, y: t.y + l.finish.y + 16 })'));
     it = await t();
     expect([it.st, it.tv ?? 'closed', it.w, it.h].join(), '«Завершить»: done and closed').toBe('done,closed,293,52');

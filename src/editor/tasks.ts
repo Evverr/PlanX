@@ -1,7 +1,7 @@
 import type { Editor } from './editor';
 import type { Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
-import { nextStatus, statusOf, taskPartAt, type TaskPart } from '../canvas/task';
+import { nextStatus, progressOf, statusOf, taskPartAt, type TaskPart } from '../canvas/task';
 import { addSub, setStatus, setView, toggleSub } from '../model/task';
 import { isLocked } from '../labs/labs';
 import { taskOpen } from '../labs/taskFull';
@@ -23,7 +23,13 @@ export function pressTask(ed: Editor, it: Item, w: Point, sp: Point): boolean {
   const part = taskButtonAt(it, w);
   if (!part) return false;
   const board = ed.board;
-  if (part === 'status') setStatus(board, it.id, nextStatus(statusOf(it)));
+  // With subtasks, it's done by doing them: its ring and «Завершить» only say so.
+  const pr = progressOf(it);
+  if ((part === 'status' || part === 'finish') && pr !== null && pr < 1) {
+    window.dispatchEvent(new CustomEvent('planx:toast', { detail: { text: 'Задачу можно выполнить, только выполнив все подзадачи', bottom: true } }));
+    return true;
+  }
+  if (part === 'status') { if (pr === null) setStatus(board, it.id, nextStatus(statusOf(it))); }
   else if (part === 'arrow') setView(board, it, it.tv ? undefined : taskOpen());
   else if (part === 'more') setView(board, it, 'full');
   else if (part === 'cancel') setView(board, it, undefined);
