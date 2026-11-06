@@ -375,8 +375,12 @@ export const checks = {
     // A mind map node: its dots under the pointer.
     await p.mouse('mouseMoved', 560, 625);
     await sleep(100);
-    expect(await p.ev(`planx.editor.linkDots`), 'the node\'s').toBe('m');
+    expect(await p.ev(`[planx.editor.linkDots, planx.editor.plusNode()?.id ?? 'no buttons'].join()`), 'the node\'s dots, not its buttons').toBe('m,no buttons');
     await p.key('c', 'KeyC', 67);
+    await sleep(50);
+    await p.mouse('mouseMoved', 561, 625);
+    await sleep(100);
+    expect(await p.ev(`planx.editor.plusNode()?.id ?? 'no buttons'`), 'the dots away: its buttons again').toBe('m');
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('linkTool', false))()`);
   },
 

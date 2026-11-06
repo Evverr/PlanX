@@ -643,10 +643,11 @@ export class Editor {
     if (again || dotsMoving()) this.requestRender();
   }
 
-  /** The mind map node the pointer rests on, when it isn't the one picked alone. */
+  /** The mind map node the pointer rests on, when it isn't the one picked alone. (Not with the link dots
+   *  out, "Связи инструментом" in src/labs: it shows its dots instead.) */
   private plusOn(): string | null {
     const it = this.mindHover ? this.board.get(this.mindHover) : undefined;
-    if (!it || it.type !== 'mind' || it.host || isLocked(it) || this.gesture) return null;
+    if (!it || it.type !== 'mind' || it.host || isLocked(it) || this.gesture || (labOn('linkTool') && dotsOn())) return null;
     return this.selection.size === 1 && this.selection.has(it.id) ? null : it.id;
   }
 
