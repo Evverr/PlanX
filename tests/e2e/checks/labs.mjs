@@ -795,6 +795,15 @@ export const checks = {
     // Pluses on the lines either side of them, just inside: one pressed puts one in there.
     const plusesAt = (pts) => p.ev(`(async () => { const m = await import('/src/labs/tableMove.ts'); return ${JSON.stringify(pts)}.map(([x, y]) => m.tablePlusAt(planx.editor, { x, y }) ?? '-').join(); })()`);
     expect(await plusesAt([[420, 314], [540, 314], [660, 314], [314, 340], [314, 380], [314, 420]]), 'after the column and under the row under the pointer').toBe('-,col@2,-,-,row@2,-');
+    // Gone on a little past its line into the next column, it stays, to be pressed.
+    await p.mouse('mouseMoved', 540, 330);
+    await p.mouse('mouseMoved', 551, 316);
+    await sleep(50);
+    expect(await plusesAt([[551, 316]]), 'kept, near it').toBe('col@2');
+    // None on the top or left edge, wherever the pointer is.
+    await p.mouse('mouseMoved', 291, 360);
+    await sleep(50);
+    expect(await plusesAt([[300, 314], [314, 300]]), 'none at the top left').toBe('-,-');
     await p.click([540, 314]);
     const t = await p.ev(`planx.board.get('t')`);
     expect(`${t.cols.length} ${t.w}`, 'a column put in').toBe('4 480');
