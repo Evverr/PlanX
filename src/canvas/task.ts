@@ -60,9 +60,10 @@ export interface TaskLayout {
   more?: Point;
   /** Opened in full: the lines across, the rows shown and their middles (who does it; with the arrow at
    *  the right of the first, `peopleAt`, who set it and by when too), the
-   *  subtasks' heading, each subtask's top (the last: the row adding one), the buttons, and «Не
+   *  subtasks' heading, each subtask's top (the last: the row adding one) and its text's height (its lines
+   *  wrapped to its width), the buttons, and «Не
    *  сворачивать» left of them. */
-  lines?: number[]; rows?: Array<{ key: 'boss' | 'doer' | 'due'; y: number }>; peopleAt?: Point; subsAt?: number; subs?: number[]; cancel?: Rect; finish?: Rect; keep?: Rect;
+  lines?: number[]; rows?: Array<{ key: 'boss' | 'doer' | 'due'; y: number }>; peopleAt?: Point; subsAt?: number; subs?: number[]; subH?: number[]; cancel?: Rect; finish?: Rect; keep?: Rect;
 }
 
 const lineH = (fs: number) => fs * LINE_HEIGHT;
@@ -118,9 +119,13 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   out.peopleAt = { x: w - PAD - 2 - 17, y: d + 58 - ARROW / 2 };
   // «Подзадачи:» as a row's label, the first of them level with it.
   out.subsAt = r + 66;
-  const n = it.subs?.length ?? 0;
-  out.subs = Array.from({ length: n + 1 }, (_, i) => r + 66 - STATUS / 2 + i * SUB);
-  const last = r + 66 - STATUS / 2 + n * SUB + STATUS;
+  // Each subtask as tall as its lines (the row adding one, one), the next 38 on from its first line.
+  const lh = lineH(TEXT_FS), subW = Math.max(40, w - SUB_TEXT_X - PAD);
+  out.subH = [...(it.subs ?? []).map((sub) => textBlockHeight(sub.t || 'Подзадача', subW, TEXT_FS, { weight: 400, family: FAMILY })), lh];
+  out.subs = [];
+  let sy = r + 66 - STATUS / 2;
+  for (const h of out.subH) { out.subs.push(sy); sy += SUB + h - lh; }
+  const last = out.subs[out.subs.length - 1] + STATUS;
   out.lines = [d + 25, r + 33, last + 27];
   const by = last + 27 + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - PAD - fw;
   out.finish = { x: fx, y: by, w: fw, h: BUTTON_H };
@@ -157,7 +162,7 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
   if (l.rows) for (const r of l.rows) if (Math.abs(q.y - r.y) <= 14 && q.x >= AVATAR_X - 14 && q.x <= l.w - PAD - 24) return r.key;
   if (l.subs) {
     for (let i = 0; i < l.subs.length; i++) {
-      if (q.y < l.subs[i] - 6 || q.y > l.subs[i] + STATUS + 6) continue;
+      if (q.y < l.subs[i] - 6 || q.y > l.subs[i] + STATUS + (l.subH?.[i] ?? 0) - lineH(TEXT_FS) + 6) continue;
       if (i === l.subs.length - 1) return q.x >= SUB_X - 4 && q.x <= l.w - PAD ? 'add' : null;
       if (near(q, SUB_X + STATUS / 2, l.subs[i] + STATUS / 2, STATUS / 2 + 4)) return { sub: i, tick: true };
       if (q.x >= SUB_TEXT_X && q.x <= l.w - PAD) return { sub: i, tick: false };
@@ -175,7 +180,7 @@ export function taskFieldBox(it: Item, field: number | null): Rect & { fs: numbe
   if (field === 0 && l.desc) return { x: it.x + l.desc.x, y: it.y + l.desc.y, w: l.desc.w, h: l.desc.h, fs: descLook(it).fs, weight: descLook(it).weight };
   if (field !== null && field > 0 && l.subs) {
     const y = l.subs[field - 1] + STATUS / 2 - lineH(TEXT_FS) / 2;
-    return { x: it.x + SUB_TEXT_X, y: it.y + y, w: l.w - SUB_TEXT_X - PAD, h: lineH(TEXT_FS), fs: TEXT_FS, weight: 400 };
+    return { x: it.x + SUB_TEXT_X, y: it.y + y, w: Math.max(40, l.w - SUB_TEXT_X - PAD), h: l.subH?.[field - 1] ?? lineH(TEXT_FS), fs: TEXT_FS, weight: 400 };
   }
   return { x: it.x + l.title.x, y: it.y + l.title.y, w: l.title.w, h: l.title.h, fs: TITLE_FS, weight: 500 };
 }
@@ -400,7 +405,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   label('Подзадачи:', l.subsAt);
   const subs = it.subs ?? [];
   l.subs.forEach((sy, i) => {
-    const mid = sy + STATUS / 2, box = { x: SUB_TEXT_X, y: mid - lineH(TEXT_FS) / 2, w: l.w - SUB_TEXT_X - PAD, h: lineH(TEXT_FS) };
+    const mid = sy + STATUS / 2, box = { x: SUB_TEXT_X, y: mid - lineH(TEXT_FS) / 2, w: Math.max(40, l.w - SUB_TEXT_X - PAD), h: l.subH?.[i] ?? lineH(TEXT_FS) };
     if (i === subs.length) {
       drawIcon(ctx, 'plus-s', x + SUB_X - 1, y + sy - 1, 24, look.muted);
       lines(SUB_HINT, box, TEXT_FS, 400, look.muted);
@@ -408,14 +413,8 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
     }
     const sub = subs[i];
     drawStatus(ctx, x + SUB_X + STATUS / 2, y + mid, sub.done ? 'done' : 'todo', look);
-    if (typing !== i + 1) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(x + box.x, y + box.y - 2, box.w, box.h + 4);
-      ctx.clip();
-      lines(sub.t || 'Подзадача', { ...box, w: Infinity }, TEXT_FS, 400, sub.t && !sub.done ? look.ink : look.muted, 1, !!sub.done);
-      ctx.restore();
-    }
+    // Its lines wrapped to its width; done, grey (not struck through).
+    if (typing !== i + 1) lines(sub.t || 'Подзадача', box, TEXT_FS, 400, sub.t && !sub.done ? look.ink : look.muted);
   });
   // As the panels' buttons (.btn, .btn.primary): «Отмена» outlined faintly, «Завершить» in the blue gradient.
   const button = (r: Rect, text: string, solid: boolean) => {
