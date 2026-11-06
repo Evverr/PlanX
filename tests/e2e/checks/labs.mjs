@@ -889,10 +889,10 @@ export const checks = {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('table', 300, 300, { id: 't', w: 360, h: 120, cols: [100, 120, 140], rows: [40, 40, 40], cells: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] })); e.setSelection(['t']); })()`);
     await sleep(300);
-    // No pills till the gear on the panel puts them out.
+    // No pills till they're put out.
     expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'no pills at first').toBe(false);
-    await p.click(await p.at('.bar.panel button[aria-label="Переставить строки и столбцы"]'));
-    expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'the gear puts them out').toBe(true);
+    await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).toggleGrips(planx.editor))()`);
+    expect(await p.ev(`(async () => (await import('/src/labs/tableMove.ts')).gripsOn('t'))()`), 'put out').toBe(true);
     // The first column's pill, on the top edge over its middle, to the last column.
     await p.mouse('mouseMoved', 350, 300);
     await p.drag([350, 297], [640, 307]);
