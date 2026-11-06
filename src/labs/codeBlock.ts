@@ -172,15 +172,14 @@ const scrollOf = (it: Item): Point => {
   return { x: Math.min(o.x, s?.x ?? 0), y: Math.min(o.y, s?.y ?? 0) };
 };
 
-/** The wheel over a block whose code doesn't fit it scrolls the code (Shift: across); whether it did. */
+/** The wheel over a block whose code doesn't fit it scrolls the code (Shift: across); whether it took
+ *  the wheel: at its end too, the board doesn't scroll on. */
 export function scrollCode(it: Item, e: WheelEvent, z: number): boolean {
   if (e.ctrlKey || e.metaKey) return false;
   const o = overflow(it);
   if (!o.x && !o.y) return false;
   const s = scrollOf(it), dx = (e.shiftKey ? e.deltaY : e.deltaX) / z, dy = (e.shiftKey ? 0 : e.deltaY) / z;
   const next = { x: Math.max(0, Math.min(o.x, s.x + dx)), y: Math.max(0, Math.min(o.y, s.y + dy)) };
-  // At its end, the board scrolls on.
-  if (next.x === s.x && next.y === s.y) return false;
   scrolls.set(it.id, next);
   return true;
 }
@@ -261,10 +260,10 @@ export function drawCode(ctx: CanvasRenderingContext2D, it: Item, z: number, edi
       });
     }
     ctx.restore();
-    // Where it's scrolled to, when it doesn't fit: a white pill at 20% along each way it overflows.
+    // Where it's scrolled to, when it doesn't fit: a white pill at 30% along each way it overflows.
     const o = overflow(it, text);
-    ctx.fillStyle = 'rgba(255,255,255,0.2)';
-    const T = 4, gap = 4;
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    const T = 5, gap = 4;
     if (!editing && o.y) {
       const track = it.h - CODE_BAND - gap * 2, len = Math.max(20, (track * o.view.h) / o.content.h);
       ctx.beginPath();
