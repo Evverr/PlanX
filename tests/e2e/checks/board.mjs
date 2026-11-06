@@ -141,6 +141,10 @@ export const checks = {
     await p.click(await at('(t, l) => ({ x: t.x + l.finish.x + 20, y: t.y + l.finish.y + 16 })'));
     it = await t();
     expect([it.st, it.tv ?? 'closed', it.w, it.h].join(), '«Завершить»: done and closed').toBe('done,closed,293,52');
+    // Done, its ring makes it to do again: the last subtask to do again.
+    await sleep(450);
+    await p.click(await at('(t) => ({ x: t.x + 26, y: t.y + 26 })'));
+    expect(await p.ev(`(async () => { const t = planx.board.get('${id}'); return (await import('/src/canvas/task.ts')).statusOf(t) + ',' + t.subs.map((s) => !!s.done).join(); })()`), 'to do again').toBe('doing,true,false');
     // A double click on its header (off its title): all of it, closed again; on its title, that typed in.
     for (const want of ['full', 'closed']) {
       await sleep(450);

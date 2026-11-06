@@ -2,6 +2,7 @@ import type { Item, Person, TaskStatus } from '../model/types';
 import { FILLS } from '../model/types';
 import { drawIcon } from '../icons/icons';
 import { font, LINE_HEIGHT, textBlockHeight, wrapText } from './text';
+import { DAY, TL_STEPS } from './timeline';
 import type { Point, Rect } from './geometry';
 
 /**
@@ -14,6 +15,8 @@ import type { Point, Rect } from './geometry';
 
 /** Closed and opened, how wide it starts. */
 export const TASK_W = 293, TASK_OPEN_W = 494;
+/** As narrow as it goes, closed: a day of a timeline at its widest (6 times), to fit in one. */
+export const TASK_MIN_W = DAY * Math.max(...TL_STEPS);
 /** Its corners' radius, at its outer edge. */
 export const TASK_RAD = 12;
 const TITLE_FS = 16, TEXT_FS = 14, FAMILY = 'inter';
@@ -79,7 +82,8 @@ export function titleLine(text: string, w: number): string {
 
 export function taskLayout(it: Item, w = it.w): TaskLayout {
   // The title on one line (see titleLine), the header as tall as ever.
-  const titleW = Math.max(40, w - TITLE_X * 2), th = lineH(TITLE_FS);
+  // (Its "…" 5 short of the arrow.)
+  const titleW = Math.max(20, w - TITLE_X - 40), th = lineH(TITLE_FS);
   const top = MID - th / 2, head = 52;
   const out: TaskLayout = { w, h: head, head, title: { x: TITLE_X, y: top, w: titleW, h: th } };
   if (!it.tv) return out;
