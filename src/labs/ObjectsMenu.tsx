@@ -8,7 +8,7 @@ export const OBJECTS: Array<[Tool, string, string]> = [['timeline', 'timeline', 
 
 /**
  * "Объекты": the menu its rail button opens, beside it, as the board menu looks. Picking one takes
- * its tool, to put it on the board with a click. Under a line, two further levels open on hover:
+ * its tool, to put it on the board with a click, or it's dragged off onto the board. Under a line, two further levels open on hover:
  * "Мои объекты", the components made objects in this browser (kept here, for any board, see
  * myObjects.ts), and "Объекты документа", the board's own ones that aren't among them (made objects
  * here, by anyone), each with a button to keep it in "Мои объекты" too. One is put on the board as
@@ -90,7 +90,8 @@ export function ObjectsMenu({ editor, tool, onPick, onClose }: { editor: Editor;
     <div ref={ref} className="board-menu objects-menu" role="menu" aria-label="Объекты">
       {OBJECTS.map(([t, icon, label]) => (
         <div key={t} className="menu-item" onPointerEnter={() => setOpen(null)}>
-          <button className={`menu-row ${tool === t ? 'on' : ''}`} role="menuitem" onClick={() => onPick(t)}>
+          <button className={`menu-row ${tool === t ? 'on' : ''}`} role="menuitem" title="Клик — выбрать, или перетащите на доску"
+            onPointerDown={(e) => press((at) => (at ? editor.dropItem(t, at) : onPick(t)), e)}>
             <Glyph id={icon} className="menu-icon" />
             <span>{label}</span>
           </button>
