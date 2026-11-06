@@ -82,8 +82,8 @@ export function titleLine(text: string, w: number): string {
 
 export function taskLayout(it: Item, w = it.w): TaskLayout {
   // The title on one line (see titleLine), the header as tall as ever.
-  // (Its "…" 5 short of the arrow.)
-  const titleW = Math.max(20, w - TITLE_X - 40), th = lineH(TITLE_FS);
+  // (Its "…" up to the arrow's box, a letter more than that 10 short of it, narrowest.)
+  const titleW = Math.max(20, w - TITLE_X - 30), th = lineH(TITLE_FS);
   const top = MID - th / 2, head = 52;
   const out: TaskLayout = { w, h: head, head, title: { x: TITLE_X, y: top, w: titleW, h: th } };
   if (!it.tv) return out;
