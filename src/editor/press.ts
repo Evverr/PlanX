@@ -2,6 +2,7 @@ import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
 import { center, hitItem, hitLink, instanceBounds, linkBox, linkShape, onAudioButton } from '../canvas/geometry';
 import { pressTask } from './tasks';
+import { copyCode, onCodeCopy } from '../labs/codeBlock';
 import { toggleAudio } from '../canvas/audio';
 import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, tickAt, objectArrowAt, pickedUnder } from './hover';
 import { grabbableLine } from './tables';
@@ -282,6 +283,8 @@ export function press(ed: Editor, e: PointerEvent): void {
     window.dispatchEvent(new CustomEvent('planx:peek', { detail: fb.id }));
     return;
   }
+  // A block of code's copy button ("Код", src/labs).
+  if (hit?.code && e.button === 0 && !e.shiftKey && ed.editingId !== hit.id && onCodeCopy(hit, w)) { copyCode(hit, () => ed.requestRender()); return; }
   // A task's buttons (its ring, arrows, a subtask's ring, the people…) do their thing instead of picking it up.
   if (hit?.type === 'task' && !entering && !e.shiftKey && e.button === 0 && ed.editingId !== hit.id && pressTask(ed, hit, w, sp)) return;
   // An audio note's button plays it (or stops it) instead of picking it up.

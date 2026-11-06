@@ -5,6 +5,7 @@ import { hitItem, hitLink, instanceBounds, linkBox, linkHandles, linkShape, onAu
 import { DOT_GAP, dotGap, HANDLE } from '../canvas/renderer';
 import { instanceGlyph, instancePlus, objectArrow } from '../model/components';
 import { taskButtonAt } from './tasks';
+import { onCodeCopy } from '../labs/codeBlock';
 import { branchWays, buttonKey, foldBadge, mindButtons, type MindButtonAt, type Way } from '../model/mind';
 import { frameButtonAt } from './frames';
 import { rotateCursor } from './cursors';
@@ -250,7 +251,8 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   const tick = tickAt(ed, w), arrow = tick ? null : objectArrowAt(ed, w), plus = node ? plusAt(ed, node, w) : null;
   // A task's arrow under the pointer, darker (see canvas/task.ts).
   const tp = over?.type === 'task' && ed.editingId !== over.id ? taskButtonAt(over, w) : null;
-  const hot = plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : arrow ? `obj:${arrow.id}` : glyph ?? (tp === 'arrow' || tp === 'more' ? `task:${over!.id}:${tp}` : null);
+  const hot = plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : arrow ? `obj:${arrow.id}` : glyph ?? (tp === 'arrow' || tp === 'more' ? `task:${over!.id}:${tp}` : null)
+    ?? (over?.code && ed.editingId !== over.id && onCodeCopy(over, w) ? `code:${over.id}` : null);
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (linkHandleAt(ed, w)) cursor = 'move';
