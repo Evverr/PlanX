@@ -13,14 +13,13 @@ import { AlignButton, LockButton, ReactButton, TidyButton } from '../labs/Select
 import { ItemMenuButton, LinkParams } from '../labs/ContextMenu';
 import { boxOf, instanceBounds } from '../canvas/geometry';
 import { placeOver } from './FormatPanel';
-import { gripsOn, subscribeGrips, toggleGrips } from '../labs/tableMove';
 import { canCrop, croppingId, subscribeCrop, toggleCrop } from '../labs/imageCrop';
 
 
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['colors', 'text', 'align', 'tidy', 'rows', 'cols', 'grips', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+const ORDER = ['colors', 'text', 'align', 'tidy', 'rows', 'cols', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -321,7 +320,6 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   // (Once it's there: with nothing picked it isn't.)
   const body = sort.ref.current;
   useEffect(() => { const el = sort.ref.current; return el ? fitPopovers(el, '.op-pop') : undefined; }, [body]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => subscribeGrips(redraw), []);
   useEffect(() => subscribeCrop(redraw), []);
   if (over && items.length && !had.current) wait.current = !!after;
   had.current = items.length > 0;
@@ -437,11 +435,6 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
             {btn('minus-s', 'Убрать столбец', () => { hold.current = !!over; editor.changeTable('col', -1); })}
             {btn('plus-s', 'Добавить столбец', () => { hold.current = !!over; editor.changeTable('col', 1); })}
           </div>
-        ) : undefined,
-        // "Перестановка в таблице" (src/labs): the gear puts the table's pills out.
-        grips: labs.tableMove && tables.length === 1 && items.length === 1 ? (
-          <button className={`ib ${gripsOn(tables[0].id) ? 'on' : ''}`} title="Переставить строки и столбцы" aria-label="Переставить строки и столбцы"
-            aria-pressed={gripsOn(tables[0].id)} onClick={() => toggleGrips(editor)}><PanelIcon name="settings" /></button>
         ) : undefined,
         // "Кроп картинки" (src/labs).
         crop: labs.imageCrop && items.length === 1 && canCrop(items[0]) ? (
