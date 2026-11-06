@@ -5,6 +5,7 @@ import { anchorAt, angleOf, boxOf, center, hitItem, linkBox, linkShape, movedStr
 import { itemTextHeight, mindSize } from '../canvas/text';
 import { taskPartAt, taskSize } from '../canvas/task';
 import { freshTask, nextView } from '../model/task';
+import { taskOpen } from '../labs/taskFull';
 import { pressTask, taskFieldAt } from './tasks';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, freshTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
@@ -366,7 +367,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         if (it?.tl) { /* nothing */ }
         else if (it?.type === 'frame' && !it.inst && (it.fold || toLocal(it, g.start).y >= it.y)) ed.setFolded(it.id, !it.fold);
         // A task's header (but its title, ring and arrow) goes on to the next of its views.
-        else if (it?.type === 'task' && taskPartAt(it, g.start) === 'head') nextView(board, it);
+        else if (it?.type === 'task' && taskPartAt(it, g.start) === 'head') nextView(board, it, taskOpen());
         else if (!it?.inst) ed.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : it?.type === 'task' ? taskFieldAt(it, g.start) : null);
       } else if (g.again && !g.cell && under(ed, g.id, g.start)) {
         // "Клик сквозь": what's under it there is picked instead.
@@ -393,7 +394,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         : ed.newItem(g.tool, g.at.x - d.w / 2, g.at.y - d.h / 2, g.tool === 'table' ? freshTable() : g.tool === 'mind' ? { text: MIND_TOPIC } : {});
       if (it.type === 'text') it.h = itemTextHeight(it);
       if (it.type === 'mind') Object.assign(it, mindSize(it), { x: Math.round(g.at.x - mindSize(it).w / 2) });
-      if (it.type === 'task') Object.assign(it, freshTask(it, g.at));
+      if (it.type === 'task') Object.assign(it, freshTask(it, g.at, taskOpen()));
       ed.addItem(it);
       ed.setTool('select');
       ed.setSelection([it.id]);

@@ -7,7 +7,7 @@ import { readJSON, readText, writeJSON, writeText } from '../storage';
  * browser. Everything they need lives in this folder; the app only asks labOn() where a feature
  * changes what it does, so one that isn't kept comes out by deleting its file and those few lines.
  */
-export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib' | 'softEraser' | 'layers' | 'solidTool' | 'history' | 'panelOver' | 'zoomFade' | 'zoomKeys' | 'tableMove' | 'textButton' | 'tableCut' | 'linkJoint' | 'tableLook' | 'imageCrop' | 'boardGrid' | 'linkTool' | 'customize' | 'codeBlock';
+export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib' | 'softEraser' | 'layers' | 'solidTool' | 'history' | 'panelOver' | 'zoomFade' | 'zoomKeys' | 'tableMove' | 'textButton' | 'tableCut' | 'linkJoint' | 'tableLook' | 'imageCrop' | 'boardGrid' | 'linkTool' | 'customize' | 'codeBlock' | 'taskFull';
 
 export interface Lab { id: LabId; label: string; icon: string; hint: string }
 
@@ -25,6 +25,7 @@ export const LABS: Lab[] = [
   { id: 'tableCut', label: 'Удаление строк и столбцов', icon: 'table', hint: 'Выделены целые строки или столбцы таблицы: Delete сначала стирает текст, второй раз — их самих' },
   { id: 'customize', label: 'Режим настройки меню', icon: 'change-order', hint: 'В меню доски: включённый режим даёт переставлять кнопки на панелях, выключенный — нет. Перетащить кнопку с левой панели на доску можно всегда' },
   { id: 'boardGrid', label: 'Фон доски', icon: 'apps', hint: 'В меню доски: три точки, линии на фоне, точки или ничего' },
+  { id: 'taskFull', label: 'Задача сразу целиком', icon: 'maximize', hint: 'Задача раскрывается сразу полностью. Выключено: сначала только описание, затем всё' },
   { id: 'codeBlock', label: 'Код', icon: 'code', hint: 'Кнопка на правой панели: блок кода с подсветкой, язык выбирается на панели блока' },
   { id: 'imageCrop', label: 'Кроп картинки', icon: 'image', hint: 'На панели картинки: кнопка кропа. Края двигаются, шарик в левом нижнем углу скругляет. Отрезанное не вернуть, скругление можно менять' },
   { id: 'tableMove', label: 'Перестановка в таблице', icon: 'table', hint: 'Двойной клик по таблице: над столбцом и слева от строки под курсором ползунок, потяните, чтобы переставить' },

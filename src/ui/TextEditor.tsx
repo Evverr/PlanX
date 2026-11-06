@@ -11,6 +11,7 @@ import { colsOf, rowsOf } from '../model/table';
 import { openSwap, swapKind } from '../labs/swap';
 import { linkedTexts } from '../labs/textPush';
 import { addSub, setView } from '../model/task';
+import { taskOpen } from '../labs/taskFull';
 import { CODE_BOTTOM, CODE_FS, CODE_LEFT, CODE_LINE, CODE_PAD, CODE_TOP, setLiveCode } from '../labs/codeBlock';
 
 /**
@@ -149,7 +150,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           commit();
           const it = editor.board.get(id);
           if (!it) return;
-          if (!it.tv) setView(editor.board, it, 'desc');
+          if (!it.tv) setView(editor.board, it, taskOpen());
           editor.startEditing(id, 0, 'end');
         } else if (field && editor.editingCell === 0 && ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Escape')) {
           // Its description done with on Enter (Shift+Enter, a new line) or Esc: the task closed.
