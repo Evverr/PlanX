@@ -1,7 +1,7 @@
 import type { Item, Link, Side } from '../model/types';
 import { ROTATABLE } from '../model/types';
 import type { Point } from '../canvas/geometry';
-import { hitItem, hitLink, instanceBounds, linkHandles, linkShape, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
+import { hitItem, hitLink, instanceBounds, linkBox, linkHandles, linkShape, onAudioButton, onTaskBox, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, dotGap, HANDLE } from '../canvas/renderer';
 import { instanceGlyph, instancePlus, objectArrow } from '../model/components';
 import { isBuiltin } from '../model/builtins';
@@ -191,8 +191,8 @@ function lineToolHover(ed: Editor, w: Point): void {
  *  Whether there's one. */
 function dotsModeHover(ed: Editor, w: Point): boolean {
   const was = ed.linkDots ? ed.board.get(ed.linkDots) : undefined;
-  let it = was && dotsUnder(was, ed.selection) && anyDotAt(ed, was, w) ? was : ed.shown().filter((i) => dotsAlways(i, ed.selection)).reverse().find((i) => anyDotAt(ed, i, w));
-  const dot = it ? anyDotAt(ed, it, w) : null;
+  let it = was && dotsUnder(was, ed.selection) && anyDotAt(ed, linkBox(was), w) ? was : ed.shown().filter((i) => dotsAlways(i, ed.selection)).reverse().find((i) => anyDotAt(ed, linkBox(i), w));
+  const dot = it ? anyDotAt(ed, linkBox(it), w) : null;
   if (!it) { const hit = hitItem(ed.shown(), w, ed.cam.z); it = hit?.type === 'mind' && dotsUnder(hit, ed.selection) ? hit : undefined; }
   const id = it?.id ?? null;
   if (id !== ed.linkDots || dot !== ed.hotDot) { ed.linkDots = id; ed.hotDot = dot; ed.requestRender(); }

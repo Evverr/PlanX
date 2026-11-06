@@ -1,6 +1,6 @@
 import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
-import { center, hitItem, hitLink, instanceBounds, linkShape, onAudioButton, onTaskBox, pointInRect } from '../canvas/geometry';
+import { center, hitItem, hitLink, instanceBounds, linkBox, linkShape, onAudioButton, onTaskBox, pointInRect } from '../canvas/geometry';
 import { copyId } from '../model/components';
 import { TASK_STATES } from '../model/builtins';
 import { toggleAudio } from '../canvas/audio';
@@ -229,7 +229,7 @@ export function press(ed: Editor, e: PointerEvent): void {
   }
   // "Связи инструментом" (src/labs) with its dots out: a dot under the pointer, of anything, starts a link.
   const modeIt = labOn('linkTool') && dotsOn() && ed.linkDots ? board.get(ed.linkDots) : undefined;
-  const modeSide = modeIt && !isLocked(modeIt) && dotsUnder(modeIt, ed.selection) ? anyDotAt(ed, modeIt, w) : null;
+  const modeSide = modeIt && !isLocked(modeIt) && dotsUnder(modeIt, ed.selection) ? anyDotAt(ed, linkBox(modeIt), w) : null;
   if (modeIt && modeSide) {
     ed.gesture = { type: 'link', from: modeIt.id, fromSide: modeSide, to: w, target: null };
     return;

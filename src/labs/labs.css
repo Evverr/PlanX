@@ -217,6 +217,9 @@
 /* "Сплошная выбранная иконка": what's on on the tool rail, white on blue. */
 .fb.fb.solid-on::before, .fb.solid-on:hover:not(:disabled)::before { background: var(--fmt-on-ink); }
 .fb.solid-on .pi { background: #fff; }
+/* (The link dots' switch on the zoom bar, "Связи инструментом", on as a tool picked is.) */
+.ib.solid-on, .ib.solid-on:hover { background: var(--fmt-on-ink); }
+.ib.solid-on .pi { background: #fff; }
 
 /* "История": how points are made, then the points, the latest first. */
 .history-add { width: 100%; margin-top: var(--s12); }

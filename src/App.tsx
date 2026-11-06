@@ -426,7 +426,7 @@ export function App({ boardId }: { boardId: string }) {
         zoom: <button className="zpct" title="Масштаб 100%" onClick={() => editor.zoomCenter(1 / editor.cam.z)}>{Math.round(ui.cam.z * 100)}%</button>,
         'zoom-in': <button className="ib" title="Приблизить (+)" aria-label="Приблизить" onClick={() => editor.zoomCenter(1.25)}><PanelIcon name="zoom-in" /></button>,
         // "Связи инструментом" (src/labs): the link dots out on everything, or away.
-        links: labs.linkTool ? <button className={`ib ${dots ? 'on' : ''}`} title="Связи (C)" aria-label="Связи" aria-pressed={dots}
+        links: labs.linkTool ? <button className={`ib ${dots ? 'on solid-on' : ''}`} title="Связи (C)" aria-label="Связи" aria-pressed={dots}
           onClick={() => toggleDots(editor)}><PanelIcon name={dots ? 'path-solid' : 'path'} /></button> : undefined,
         fit: <button className="ib fit" title="Показать всё (Shift+1)" aria-label="Показать всё" onClick={() => editor.fit()}><PanelIcon name="screen" /></button>,
         help: <button className={`ib ${pop === 'help' ? 'on' : ''}`} title="Подсказки" aria-label="Подсказки" onClick={() => { toggle('help'); setMinimap(false); }}><PanelIcon name="question" /></button>,
