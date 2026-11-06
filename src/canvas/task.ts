@@ -194,6 +194,8 @@ const STRONG: Record<string, string> = {
   blue: '#003CFF', green: '#12A53A', orange: '#F28C00', yellow: '#E0B000', pink: '#E8457F', purple: '#7B4DFF', gray: '#7C8590', graphite: '#4E5560',
 };
 const BLUE = '#2A5BFF';
+/** A subtask's box ticked: a softer blue. */
+const SOFT_BLUE = '#5C86FF';
 /** A task done: its edge's and tint's colour. */
 const DONE_GREY = '#5A616C';
 
@@ -209,7 +211,33 @@ export interface TaskLook { surface: string; ink: string; muted: string; dark: b
   /** Links in its description: their blue, and where each piece of one was drawn, to be clicked. */
   linkInk?: string; onLink?: (r: Rect & { url: string }) => void }
 
-/** The ring of a status (or a subtask's: to do or done), its middle at x, y; being done, `part` of it
+/** A square box, 18 across from x, y: ticked, filled with `color` and a white tick; else outlined in grey. */
+function drawBox(ctx: CanvasRenderingContext2D, bx: number, by: number, on: boolean, color: string, look: TaskLook): void {
+  ctx.save();
+  ctx.beginPath();
+  if (on) {
+    ctx.roundRect(bx, by, KEEP_BOX, KEEP_BOX, 5);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(bx + 4.6, by + 9.2);
+    ctx.lineTo(bx + 7.6, by + 12.2);
+    ctx.lineTo(bx + 13.4, by + 6);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  } else {
+    ctx.roundRect(bx + 0.75, by + 0.75, KEEP_BOX - 1.5, KEEP_BOX - 1.5, 4.5);
+    ctx.strokeStyle = look.dark ? 'rgba(255,255,255,0.25)' : '#D3D8DE';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** The ring of a status, its middle at x, y; being done, `part` of it
  *  round in blue (three quarters; with subtasks, as much as of them is done). */
 export function drawStatus(ctx: CanvasRenderingContext2D, x: number, y: number, s: TaskStatus, look: TaskLook, part = 0.75): void {
   const r = STATUS / 2;
@@ -415,7 +443,8 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
       return;
     }
     const sub = subs[i];
-    drawStatus(ctx, x + SUB_X + STATUS / 2, y + mid, sub.done ? 'done' : 'todo', look);
+    // A box as the usual ones (as «Не сворачивать»'s), ticked in a softer blue.
+    drawBox(ctx, x + SUB_X + STATUS / 2 - KEEP_BOX / 2, y + mid - KEEP_BOX / 2, !!sub.done, SOFT_BLUE, look);
     // Its lines wrapped to its width; done, grey (not struck through).
     if (typing !== i + 1) lines(sub.t || 'Подзадача', box, TEXT_FS, 400, sub.t && !sub.done ? look.ink : look.muted);
   });
@@ -447,26 +476,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   // «Не сворачивать»: a box, ticked in blue when it's to stay open.
   if (l.keep) {
     const bx = x + l.keep.x, by = y + l.keep.y + (BUTTON_H - KEEP_BOX) / 2;
-    ctx.beginPath();
-    if (it.keep) {
-      ctx.roundRect(bx, by, KEEP_BOX, KEEP_BOX, 5);
-      ctx.fillStyle = BLUE;
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(bx + 4.6, by + 9.2);
-      ctx.lineTo(bx + 7.6, by + 12.2);
-      ctx.lineTo(bx + 13.4, by + 6);
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.stroke();
-    } else {
-      ctx.roundRect(bx + 0.75, by + 0.75, KEEP_BOX - 1.5, KEEP_BOX - 1.5, 4.5);
-      ctx.strokeStyle = look.dark ? 'rgba(255,255,255,0.25)' : '#D3D8DE';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    }
+    drawBox(ctx, bx, by, !!it.keep, BLUE, look);
     ctx.font = font(TEXT_FS, 400, FAMILY);
     ctx.fillStyle = look.ink;
     ctx.globalAlpha = 0.6;
