@@ -96,6 +96,8 @@ export interface Item {
   doer?: Person;
   due?: string;
   cw?: number;
+  /** A task kept open («Не сворачивать»): not closed by Esc, Cmd+Enter or a click elsewhere. */
+  keep?: boolean;
   /** Tables: column widths, row heights and the cells' text row by row (see model/table.ts). */
   cols?: number[];
   rows?: number[];

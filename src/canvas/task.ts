@@ -27,7 +27,9 @@ const AROUND = 5;
 const LABEL_X = 47, NAME_X = 200, AVATAR_X = 182, ROW = 33, SUB = 38, SUB_X = 48, SUB_TEXT_X = 79;
 /** The buttons as the panels' (.btn in popups.css): 32 tall, their text 12 bold Inter with 14 each side. */
 const BUTTON_H = 32, BUTTON_PAD = 14, BUTTON_FONT = { size: 12, weight: 600 };
-export const DESC_HINT = 'Добавить описание', SUB_HINT = 'Добавить подзадачу';
+export const DESC_HINT = 'Добавить описание', SUB_HINT = 'Добавить подзадачу', KEEP_LABEL = 'Не сворачивать';
+/** The box of «Не сворачивать», and its label after it. */
+const KEEP_BOX = 18, KEEP_GAP = 8;
 
 export const statusOf = (it: Item): TaskStatus => it.st ?? (it.done ? 'done' : 'todo');
 /** What a click on its ring makes it: to do, being done, done, round again. */
@@ -43,8 +45,9 @@ export interface TaskLayout {
   /** Opened to its description: the arrow under it. */
   more?: Point;
   /** Opened in full: the lines across, the rows' middles (who set it, who does it, by when), the
-   *  subtasks' heading, each subtask's top (the last: the row adding one), the buttons. */
-  lines?: number[]; rows?: number[]; subsAt?: number; subs?: number[]; cancel?: Rect; finish?: Rect;
+   *  subtasks' heading, each subtask's top (the last: the row adding one), the buttons, and «Не
+   *  сворачивать» left of them. */
+  lines?: number[]; rows?: number[]; subsAt?: number; subs?: number[]; cancel?: Rect; finish?: Rect; keep?: Rect;
 }
 
 const lineH = (fs: number) => fs * LINE_HEIGHT;
@@ -83,6 +86,7 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   const by = last + 27 + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - 43 - fw;
   out.finish = { x: fx, y: by, w: fw, h: BUTTON_H };
   out.cancel = { x: fx - 10 - cw, y: by, w: cw, h: BUTTON_H };
+  out.keep = { x: LABEL_X, y: by, w: Math.ceil(KEEP_BOX + KEEP_GAP + widthOf(KEEP_LABEL, TEXT_FS, 400)), h: BUTTON_H };
   out.h = Math.ceil(by + BUTTON_H + 31);
   return out;
 }
@@ -91,7 +95,7 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
 export const taskSize = (it: Item, w = it.w): { w: number; h: number } => ({ w, h: taskLayout(it, w).h });
 
 /** What a point on it (from its top left corner) is on. */
-export type TaskPart = 'status' | 'arrow' | 'more' | 'head' | 'title' | 'desc' | 'boss' | 'doer' | 'due' | 'add' | 'cancel' | 'finish'
+export type TaskPart = 'status' | 'arrow' | 'more' | 'head' | 'title' | 'desc' | 'boss' | 'doer' | 'due' | 'add' | 'cancel' | 'finish' | 'keep'
   | { sub: number; tick: boolean };
 
 const inRect = (p: Point, r: Rect, pad = 0) => p.x >= r.x - pad && p.x <= r.x + r.w + pad && p.y >= r.y - pad && p.y <= r.y + r.h + pad;
@@ -124,6 +128,7 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
   }
   if (l.cancel && inRect(q, l.cancel)) return 'cancel';
   if (l.finish && inRect(q, l.finish)) return 'finish';
+  if (l.keep && inRect(q, l.keep, 4)) return 'keep';
   return null;
 }
 
@@ -351,4 +356,33 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   };
   button(l.cancel, 'Отмена', false);
   button(l.finish, 'Завершить', true);
+  // «Не сворачивать»: a box, ticked in blue when it's to stay open.
+  if (l.keep) {
+    const bx = x + l.keep.x, by = y + l.keep.y + (BUTTON_H - KEEP_BOX) / 2;
+    ctx.beginPath();
+    if (it.keep) {
+      ctx.roundRect(bx, by, KEEP_BOX, KEEP_BOX, 5);
+      ctx.fillStyle = BLUE;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(bx + 4.6, by + 9.2);
+      ctx.lineTo(bx + 7.6, by + 12.2);
+      ctx.lineTo(bx + 13.4, by + 6);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    } else {
+      ctx.roundRect(bx + 0.75, by + 0.75, KEEP_BOX - 1.5, KEEP_BOX - 1.5, 4.5);
+      ctx.strokeStyle = look.dark ? 'rgba(255,255,255,0.25)' : '#D3D8DE';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    ctx.font = font(TEXT_FS, 400, FAMILY);
+    ctx.fillStyle = look.ink;
+    ctx.globalAlpha = 0.6;
+    ctx.fillText(KEEP_LABEL, bx + KEEP_BOX + KEEP_GAP, y + l.keep.y + BUTTON_H / 2);
+    ctx.globalAlpha = 1;
+  }
 }

@@ -42,7 +42,7 @@ import { nodeEditing, shapedBy } from '../labs/paths';
 import { hiddenByLayers, layersVersion, newItemLayer } from '../labs/layers';
 import { zoomsWithKey } from '../labs/wheelZoom';
 import { codeFit, scrollCode } from '../labs/codeBlock';
-import { fitTask, freshTask, renewTasks, taskTextPatch } from '../model/task';
+import { closeTask, fitTask, freshTask, renewTasks, taskTextPatch } from '../model/task';
 import { taskOpen } from '../labs/taskFull';
 
 export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
@@ -797,6 +797,8 @@ export class Editor {
     else if (this.compHere && this.board.get(this.compHere)?.stowed !== undefined) this.compHere = null;
     if (this.cells.length && (this.selection.size !== 1 || !this.selection.has(was[0]))) { this.cells = []; this.cellAnchor = null; }
     this.presence?.setSelection([...this.selection]);
+    // An open task picked no more (a click elsewhere, Esc) closes, unless it's to stay open.
+    for (const id of was) if (!this.selection.has(id)) closeTask(this.board, id);
     this.emit();
     this.requestRender();
   }
