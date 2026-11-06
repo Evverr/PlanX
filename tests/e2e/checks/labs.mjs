@@ -37,6 +37,14 @@ export const checks = {
     expect(await p.ev(`window.clip?.split('\\n').length`), 'all of it copied').toBe(14);
   },
 
+  async '"Код": dragged off the right rail, a block put where it\'s let go'(p) {
+    const at = await p.at('.labs-rail button[aria-label="Код"]');
+    await p.drag(at, [500, 400], { steps: 16 });
+    await sleep(300);
+    const c = await p.ev(`(() => { const it = planx.board.list().find((i) => i.code); if (!it) return null; const s = planx.editor.toScreen({ x: it.x + it.w / 2, y: it.y + it.h / 2 }); return [Math.round(s.x), Math.round(s.y)]; })()`);
+    expect(c && Math.abs(c[0] - 500) <= 2 && Math.abs(c[1] - 400) <= 2, `its middle where let go (${c})`).toBe(true);
+  },
+
   async '"Код": a block from the right rail, typed in at once, coloured, growing with its lines; its language picked on its panel'(p) {
     await p.click(await p.at('.labs-rail button[aria-label="Код"]'));
     await sleep(200);

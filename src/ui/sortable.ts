@@ -14,6 +14,8 @@ const OUT_MARGIN = 16;
 /** For panels whose buttons can be dragged out onto the board: what follows the pointer once a
  *  button is out (a preview of what it makes, or just its icon), and what letting it go does. */
 export interface DropOut {
+  /** Which buttons go onto the board (without it, all of them). */
+  can?: (key: string) => boolean;
   preview: (key: string) => ReactNode;
   drop: (key: string, at: { x: number; y: number }) => void;
   /** A button held still: true if that does something of its own (opens its variants), so it
@@ -153,6 +155,8 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     for (const id of offsets.current.keys()) if (!seen.has(id)) offsets.current.delete(id);
   });
 
+  /** Whether a button goes onto the board, dragged off the panel. */
+  const outs = (key: string) => !!dropOut && (dropOut.can?.(key) ?? true);
   // Lifts the pressed button: `x0`, `y0` is where the press began, `x`, `y` where the pointer is now.
   const lift = (p: { el: HTMLElement; key: string; zone: Zone; x0: number; y0: number; x: number; y: number }) => {
     const r = p.el.getBoundingClientRect();
@@ -182,7 +186,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
       }
       press.current = null;
       // ("Режим настройки меню", src/labs: with it off, lifted only to go onto the board.)
-      if (canRearrange() || dropOut) lift(p);
+      if (canRearrange() || outs(p.key)) lift(p);
     }, HOLD_MS);
     press.current = p;
   };
@@ -198,7 +202,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     press.current = null;
     // ("Режим настройки меню": with it on, taken and moved at once anywhere; off, only onto the board,
     // not among the others, see dragMove.)
-    if (dropOut || customizeOn()) lift(p);
+    if (outs(p.key) || customizeOn()) lift(p);
   };
   const pressUp = () => {
     const held = press.current?.held;
@@ -262,7 +266,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     // Over the other place (the open popover from the panel, the panel from the popover), it goes there.
     if (sorts && moved && d.zone === 'bar' && over('more', e)) { intoMore(d, e); return; }
     if (sorts && moved && (d.zone === 'more' || !els.current.has(d.key)) && over('bar', e)) { ontoBar(d, e); return; }
-    const out = !!dropOut && moved && !inside(zones[d.zone].box()?.getBoundingClientRect(), e, OUT_MARGIN);
+    const out = outs(d.key) && moved && !inside(zones[d.zone].box()?.getBoundingClientRect(), e, OUT_MARGIN);
     const next = { ...d, x: e.clientX, y: e.clientY, moved, out };
     if (out) {
       if (!d.out) setOrder(d.before);

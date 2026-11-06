@@ -103,7 +103,7 @@
 /* What scrolls, when the window's too small: inside, not the popup, whose glass (labs.css) would scroll away. */
 .help-body { min-height: 0; overflow-y: auto; margin: 0 calc(var(--s24) * -1); padding: 0 var(--s24) var(--s20); border-radius: 0 0 var(--s12) var(--s12); }
 .keys-grid { columns: 3 260px; column-gap: var(--s32); }
-.keys-grid section { break-inside: avoid; margin-bottom: var(--s16); }
+.keys-grid section { break-inside: avoid; margin-bottom: var(--s26); }
 .keys-grid h4 { margin: 0 0 var(--s6); font: 700 var(--s11) "Inter", var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .keys-grid dl { margin: 0; }
 .keys-row { display: flex; justify-content: space-between; gap: var(--s12); padding: var(--s6) 0; border-bottom: 1px solid var(--fmt-line); }

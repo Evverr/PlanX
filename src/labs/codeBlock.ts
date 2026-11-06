@@ -296,9 +296,9 @@ export function drawCode(ctx: CanvasRenderingContext2D, it: Item, z: number, edi
   ctx.stroke();
 }
 
-/** The rail's button: a block in the middle of the screen, typed in at once. */
-export function addCode(ed: Editor): void {
-  const c = ed.toWorld(innerWidth / 2, innerHeight / 2), w = 480, h = Math.ceil(CODE_TOP + CODE_FS * CODE_LINE + CODE_BOTTOM);
+/** The rail's button: a block in the middle of the screen (or where it's dragged off the rail to), typed in at once. */
+export function addCode(ed: Editor, at = { x: innerWidth / 2, y: innerHeight / 2 }): void {
+  const c = ed.toWorld(at.x, at.y), w = 480, h = Math.ceil(CODE_TOP + CODE_FS * CODE_LINE + CODE_BOTTOM);
   const it = ed.newItem('rect', Math.round(c.x - w / 2), Math.round(c.y - h / 2), { w, h, code: CODE_LANG, text: '', fs: CODE_FS, ff: 'mono', ta: 'left', va: 'top', rad: CODE_RAD });
   ed.addItem(it);
   ed.setTool('select');
