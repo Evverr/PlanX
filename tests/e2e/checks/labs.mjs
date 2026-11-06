@@ -376,6 +376,14 @@ export const checks = {
     await p.mouse('mouseMoved', 560, 625);
     await sleep(100);
     expect(await p.ev(`[planx.editor.linkDots, planx.editor.plusNode()?.id ?? 'no buttons'].join()`), 'the node\'s dots, not its buttons').toBe('m,no buttons');
+    // Picked: its buttons, not its dots.
+    await p.click([560, 625]);
+    await p.mouse('mouseMoved', 562, 626);
+    await sleep(100);
+    expect(await p.ev(`[planx.editor.linkDots ?? 'no dots', planx.editor.plusNode()?.id].join()`), 'picked: buttons, no dots').toBe('no dots,m');
+    // A central topic's dots out with the pointer anywhere; a branch's not.
+    expect(await p.ev(`(async () => { const m = await import('/src/labs/linkTool.ts'), none = new Set(); return [m.dotsAlways(planx.board.get('m'), none), m.dotsAlways({ ...planx.board.get('m'), parent: 'x' }, none)].join(); })()`), 'the central topic\'s always').toBe('true,false');
+    await p.ev(`(() => { planx.editor.stopEditing(); planx.editor.setSelection([]); })()`);
     await p.key('c', 'KeyC', 67);
     await sleep(50);
     await p.mouse('mouseMoved', 561, 625);

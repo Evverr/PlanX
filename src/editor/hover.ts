@@ -11,7 +11,7 @@ import { rotateCursor } from './cursors';
 import { restOn, sameLine, tableLineAt, warmTable } from './tables';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
-import { dotsOn } from '../labs/linkTool';
+import { dotsAlways, dotsOn, dotsUnder } from '../labs/linkTool';
 import { zoomShows, zoomSize } from '../labs/zoomFade';
 
 /** How far outside a corner (in screen pixels) the pointer turns the item. */
@@ -187,12 +187,13 @@ function lineToolHover(ed: Editor, w: Point): void {
 }
 
 /** "Связи инструментом" (src/labs) with its dots out: the dot under the pointer, of any item (the topmost
- *  first; a mind map node's while the pointer's on it), taken to be pulled from. Whether there's one. */
+ *  first; a mind map node's while the pointer's on it, if it isn't picked), taken to be pulled from.
+ *  Whether there's one. */
 function dotsModeHover(ed: Editor, w: Point): boolean {
   const was = ed.linkDots ? ed.board.get(ed.linkDots) : undefined;
-  let it = was && anyDotAt(ed, was, w) ? was : ed.shown().filter((i) => i.type !== 'mind' && !i.inst && !i.host).reverse().find((i) => anyDotAt(ed, i, w));
+  let it = was && dotsUnder(was, ed.selection) && anyDotAt(ed, was, w) ? was : ed.shown().filter((i) => dotsAlways(i, ed.selection)).reverse().find((i) => anyDotAt(ed, i, w));
   const dot = it ? anyDotAt(ed, it, w) : null;
-  if (!it) { const hit = hitItem(ed.shown(), w, ed.cam.z); it = hit?.type === 'mind' ? hit : undefined; }
+  if (!it) { const hit = hitItem(ed.shown(), w, ed.cam.z); it = hit?.type === 'mind' && dotsUnder(hit, ed.selection) ? hit : undefined; }
   const id = it?.id ?? null;
   if (id !== ed.linkDots || dot !== ed.hotDot) { ed.linkDots = id; ed.hotDot = dot; ed.requestRender(); }
   if (dot) ed.canvas!.style.cursor = 'crosshair';
