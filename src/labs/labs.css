@@ -294,18 +294,34 @@
 .bar.panel .code-lang .tf-menu { top: auto; bottom: calc(100% + var(--s18)); --in-y: var(--slide); }
 .bar.panel.opens-down .code-lang .tf-menu { top: calc(100% + var(--s18)); bottom: auto; --in-y: calc(-1 * var(--slide)); }
 
-/* "Боковая панель": dark, 200 wide down the left edge, over everything but the dialogs; coming in from the
-   left as the popups come in from where they open. */
-.side-nav { position: fixed; z-index: 45; left: 0; top: 0; bottom: 0; width: 200px; box-sizing: border-box; padding: 14px 10px;
+/* "Боковая панель" (SideNav.tsx): dark, 200 wide down the left edge, kept open whatever's beside it,
+   over the board (its panels keep to the window), pushing a page over (the shelf, the settings…). */
+.side-nav { position: fixed; z-index: 45; left: 0; top: 0; bottom: 0; width: 200px; box-sizing: border-box; padding: 12px 10px 14px;
   display: flex; flex-direction: column; gap: 2px; background: #1C1F26; color: #E6E7EC; box-shadow: 4px 0 16px rgba(0, 0, 0, .2);
   --in-x: calc(-1 * var(--slide)); --in-y: 0px; animation: fade-in .16s ease-out, come-in .16s ease-out; animation-composition: replace, add; }
-.side-nav-logo { font: 700 18px "Inter", var(--ui); letter-spacing: -0.01em; padding: 6px 10px 14px; }
+.side-nav .side-nav-logo { align-self: flex-start; height: 36px; margin: 0 0 12px; padding: 0 10px; border: 0; background: none; color: inherit;
+  font: 700 18px "Inter", var(--ui); letter-spacing: -0.01em; cursor: pointer; }
 .side-nav-row { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none;
   color: inherit; font: 500 14px "Inter", var(--ui); text-align: left; cursor: pointer; }
 .side-nav-row:hover { background: rgba(255, 255, 255, .08); }
+.side-nav-row.on { background: rgba(255, 255, 255, .14); }
 .side-nav-icon { width: 20px; height: 20px; flex: none; opacity: .85; }
-/* The logo shows it opens the side: a chevron pointing left before it, under the pointer. */
+.side-nav-gap { flex: 1; }
+.side-nav-help { width: 32px; height: 32px; margin-left: 4px; border: 1.5px solid rgba(255, 255, 255, .35); border-radius: 50%; background: none;
+  color: inherit; font: 600 15px "Inter", var(--ui); cursor: pointer; }
+.side-nav-help:hover, .side-nav-help.on { background: rgba(255, 255, 255, .12); }
+.app-shell.side-open:not(.on-board) > .app-content { margin-left: 200px; }
+/* A page of the side's: its title, then what's in it, as in its window. */
+.page-view { max-width: 640px; margin: 0 auto; padding: 48px 32px; color: var(--ink); }
+.page-view h1 { margin: 0 0 24px; font: 700 28px "Inter", var(--ui); }
+.help-page p { color: var(--muted); font: 400 15px/1.5 "Inter", var(--ui); }
+/* The logo, under the pointer, turns into a chevron in its place: pointing left, or right once the side's open. */
 .logo.side-nav-logo-btn { position: relative; }
-.logo.side-nav-logo-btn::before { content: ""; position: absolute; left: 2px; top: 50%; width: 6px; height: 6px; margin-top: -3px;
-  border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); opacity: 0; transition: opacity .15s; }
-.logo.side-nav-logo-btn:hover::before { opacity: .6; }
+.logo.side-nav-logo-btn:hover { color: transparent !important; }
+.logo.side-nav-logo-btn::before { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -2px;
+  border-left: 2px solid var(--ink); border-bottom: 2px solid var(--ink); transform: rotate(45deg); opacity: 0; transition: opacity .15s; }
+.side-nav .logo.side-nav-logo-btn::before { border-color: #E6E7EC; }
+.logo.side-nav-logo-btn.open::before { margin-left: -6px; transform: rotate(-135deg); }
+.logo.side-nav-logo-btn:hover::before { opacity: .8; }
+/* (The shelf fills the window by itself: beside the side, from its edge.) */
+.app-shell.side-open:not(.on-board) .shelf-page { left: 200px; }
