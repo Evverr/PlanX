@@ -95,6 +95,21 @@ export interface UIState {
 /** How far a copy made by Ctrl+D stands off what it's a copy of. */
 const DUPLICATE_GAP = 24;
 
+/** The column (axis y: one under another, left edges level) or row (x: side by side, tops level) of
+ *  items like `it` (of its kind and size) it stands in, in order, with two or more in it; none else. */
+function lineOf(it: Item, all: Item[], axis: 'x' | 'y'): (Item[] & { axis: 'x' | 'y' }) | null {
+  const like = all.filter((o) => o.type === it.type && !o.host && Math.abs(o.w - it.w) <= 2 && Math.abs(o.h - it.h) <= 2
+    && (axis === 'y' ? Math.abs(o.x - it.x) <= 2 : Math.abs(o.y - it.y) <= 2));
+  const start = (o: Item) => (axis === 'y' ? o.y : o.x), size = (o: Item) => (axis === 'y' ? o.h : o.w);
+  // Next to one another: the gap between two no bigger than one of them.
+  const next = (o: Item, d: 1 | -1) => like.filter((k) => k !== o && (d > 0 ? start(k) >= start(o) + size(o) && start(k) - start(o) - size(o) <= size(o)
+    : start(o) >= start(k) + size(k) && start(o) - start(k) - size(k) <= size(o))).sort((p, q) => d * (start(p) - start(q)))[0];
+  const line = [it];
+  for (let o = next(it, -1); o && !line.includes(o); o = next(o, -1)) line.unshift(o);
+  for (let o = next(it, 1); o && !line.includes(o); o = next(o, 1)) line.push(o);
+  return line.length > 1 ? Object.assign(line, { axis }) : null;
+}
+
 export class Editor {
   board: Board;
   presence?: Presence;
@@ -1354,18 +1369,25 @@ export class Editor {
     return new Map(copies.map((c) => [c.id, { x: c.x, y: c.y }]));
   }
 
-  /** The copy beside what's picked, 24 off, level with it: right of it, or under it if it's a row (two or
-   *  more side by side, their tops and bottoms overlapping); copied again, beside the copy. */
+  /** The copy of what's picked beside it, level with it: one in a column of its like (two or more one
+   *  under another), under the column's last as far as the last two are apart; one in a row of them, past
+   *  the row's last alike; else right of it, 24 off. */
   duplicate(): void {
     // Not copied: what was copied before stays to be pasted.
     const keep = this.clipboard, data = this.copyData();
     if (!data) return;
     const items = (JSON.parse(data) as { items: Item[] }).items, b = boundsOf(items);
     if (!b) return;
-    const picked = this.selectedItems().filter((i) => !i.host);
-    const row = picked.length > 1 && Math.max(...picked.map((i) => i.y)) < Math.min(...picked.map((i) => i.y + i.h));
+    const picked = this.selectedItems().filter((i) => !i.host), one = picked.length === 1 ? picked[0] : null;
+    const line = one && (lineOf(one, this.board.list(), 'y') ?? lineOf(one, this.board.list(), 'x'));
+    let at = { x: b.x + b.w * 1.5 + DUPLICATE_GAP, y: b.y + b.h / 2 };
+    if (one && line) {
+      const [prev, last] = line.slice(-2), down = line.axis === 'y';
+      const gap = down ? last.y - prev.y - prev.h : last.x - prev.x - prev.w;
+      at = down ? { x: last.x + b.w / 2, y: last.y + last.h + gap + b.h / 2 } : { x: last.x + last.w + gap + b.w / 2, y: last.y + b.h / 2 };
+    }
     this.clipboard = data;
-    this.paste(0, row ? { x: b.x + b.w / 2, y: b.y + b.h * 1.5 + DUPLICATE_GAP } : { x: b.x + b.w * 1.5 + DUPLICATE_GAP, y: b.y + b.h / 2 });
+    this.paste(0, at);
     this.clipboard = keep;
   }
 
