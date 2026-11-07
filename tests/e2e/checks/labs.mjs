@@ -1407,7 +1407,7 @@ export const checks = {
     expect(await held(), 'handles').toBe(true);
     expect(await p.ev('planx.editor.plusFade()'), 'no "+" buttons').toBe(0);
     // Stretched by the first level's handle.
-    await p.ev(`(async () => { const m = await import('/src/labs/tidyMind.ts'); m.dragMindGap(planx.editor, { axis: 'row', gap: 16, level: 0, out: false, sign: 1 }, 1, 16); })()`);
+    await p.ev(`(async () => { const m = await import('/src/labs/tidyMind.ts'); m.dragMindGap(planx.editor, { axis: 'row', gap: 16, level: 0, out: false, sign: 1, way: 'right' }, 1, 16); })()`);
     const ay = await p.ev(`planx.board.get('a').y`);
     await p.ev(`planx.editor.setSelection([])`);
     await sleep(100);
@@ -1441,16 +1441,16 @@ export const checks = {
       return { k: b('b').y - b('a').y - b('a').h, g: b('a1').y - b('a0').y - b('a0').h, ok: b('a').x - b('r').x - b('r').w, og: b('a0').x - b('a').x - b('a').w }; })()`);
     const drag = (h, d) => p.ev(`(async () => { const m = await import('/src/labs/tidyMind.ts'); const h = ${JSON.stringify(h)}; m.dragMindGap(planx.editor, h, m.mindStretch(h), ${d}); })()`);
     const g0 = await g();
-    await drag({ axis: 'row', gap: g0.g, level: 1, out: false, sign: 1 }, g0.g);
+    await drag({ axis: 'row', gap: g0.g, level: 1, out: false, sign: 1, way: 'right' }, g0.g);
     let g1 = await g();
     expect([g1.k, g1.g].join(), 'the grandchildren\'s own: theirs alone').toBe([g0.k, 2 * g0.g].join());
-    await drag({ axis: 'row', gap: g0.k, level: 0, out: false, sign: 1 }, g0.k);
+    await drag({ axis: 'row', gap: g0.k, level: 0, out: false, sign: 1, way: 'right' }, g0.k);
     g1 = await g();
     expect([g1.k, g1.g].join(), 'the children\'s: every level').toBe([2 * g0.k, 4 * g0.g].join());
-    await drag({ axis: 'col', gap: g0.og, level: 1, out: true, sign: 1 }, g0.og);
+    await drag({ axis: 'col', gap: g0.og, level: 1, out: true, sign: 1, way: 'right' }, g0.og);
     g1 = await g();
     expect([g1.ok, g1.og].join(), 'out to the grandchildren: that gap alone').toBe([g0.ok, 2 * g0.og].join());
-    await drag({ axis: 'col', gap: g0.ok, level: 0, out: true, sign: 1 }, g0.ok);
+    await drag({ axis: 'col', gap: g0.ok, level: 0, out: true, sign: 1, way: 'right' }, g0.ok);
     g1 = await g();
     expect([g1.ok, g1.og].join(), 'out from the node: every gap out').toBe([2 * g0.ok, 4 * g0.og].join());
   },
