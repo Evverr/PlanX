@@ -216,6 +216,17 @@ export const checks = {
     expect(await p.ev(`planx.board.get('x').parent`), 'hangs from it now').toBe('a');
     await p.ev('planx.editor.undo()');
     expect(await p.ev(`planx.board.get('x').parent`), 'one step undone').toBe('b');
+    // Dragged over to the left of the central topic: a family left of it, the parent right of the branch.
+    await p.ev(`(async () => { const { mindSize } = await import('/src/canvas/text.ts'); const e = planx.editor, b = planx.board;
+      const it = e.newItem('mind', 20, 300, { id: 'l', text: 'Слева', parent: 'r' }); Object.assign(it, mindSize(it)); b.add(it); e.setSelection(['x']); })()`);
+    await sleep(200);
+    const x0 = await p.ev(`(() => { const i = planx.board.get('x'), s = planx.editor.toScreen({ x: i.x + 20, y: i.y + i.h / 2 }); return [s.x, s.y]; })()`);
+    const to = await p.ev(`(() => { const l = planx.board.get('l'), s = planx.editor.toScreen({ x: l.x - 140, y: l.y + l.h / 2 }); return [s.x, s.y]; })()`);
+    await p.mouse('mousePressed', ...x0);
+    for (let i = 1; i <= 20; i++) await p.mouse('mouseMoved', x0[0] + (to[0] - x0[0]) * i / 20, x0[1] + (to[1] - x0[1]) * i / 20);
+    await sleep(100);
+    expect(await p.ev(`planx.editor.gesture?.mindTo`), 'over on the left: the left family').toBe('l');
+    await p.mouse('mouseReleased', ...to);
   },
 
   async 'a box over mind map branches picks the nodes they lead to; a central topic folds each way on its own'(p) {
