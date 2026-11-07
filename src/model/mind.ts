@@ -9,6 +9,13 @@ import type { Point } from '../canvas/geometry';
  */
 export const MIND_COLOR = '#3E7BFA';
 
+/** A central topic's text on the colour it's filled with (see drawMind): white on a dark one; none: the usual. */
+export function rootTextColor(it: Item): string | null {
+  if (it.parent || !it.color?.startsWith('#')) return null;
+  const n = parseInt(it.color.slice(1), 16);
+  return ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114 < 160 ? '#FFFFFF' : '#1C1F26';
+}
+
 /** Colours a node can be given; only that node takes it (and the branch to it), not what grows from it. */
 export const MIND_PALETTE = ['#3E7BFA', '#0C8599', '#30A46C', '#E8892B', '#E5484D', '#D6409F', '#8E4EC6', '#5B6170'];
 
