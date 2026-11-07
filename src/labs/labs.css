@@ -341,3 +341,11 @@
 /* The shelf's logo in place of «Мои доски», opening the side (ShelfPage.tsx). */
 .shelf-page .shelf-logo { align-self: center; height: 34px; margin-left: -8px; padding: 0 8px; border: 0; border-radius: 8px; background: none;
   color: inherit; font: 700 20px "Inter", var(--ui); letter-spacing: -0.01em; cursor: pointer; }
+/* A page of the side's fills the rest of the window, scrolled when it's longer; the settings in four
+   columns (fewer as the window narrows). */
+.app-shell:not(.on-board) > .app-content:has(> .page-view) { position: fixed; inset: 0; overflow-y: auto; }
+.app-shell.side-open:not(.on-board) > .app-content:has(> .page-view) { left: 200px; margin-left: 0; }
+.page-view.settings { max-width: 1200px; }
+.page-view.settings .settings-list { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 1280px) { .page-view.settings .settings-list { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 1000px) { .page-view.settings .settings-list { grid-template-columns: repeat(2, 1fr); } }
