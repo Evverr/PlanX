@@ -11,6 +11,10 @@ export const checks = {
     const { identifier } = await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: `window.WebSocket = class { constructor() { this.readyState = 0; } send() {} close() {} };` });
     await p.cdp('Page.navigate', { url: 'http://localhost:5199/' });
     await sleep(1200);
+    // (None kept in this browser from before: only the test's own.)
+    await p.ev(`new Promise((ok) => { const r = indexedDB.deleteDatabase('wishlist-planx'); r.onsuccess = r.onerror = r.onblocked = () => ok(); })`);
+    await p.cdp('Page.reload');
+    await sleep(1200);
     await p.click(await at(p, '.shelf-tab'));
     expect(await p.ev('location.search'), 'its own address').toBe('?wishlist');
     expect(await p.ev(`!!document.querySelector('.wish-form textarea')`), 'the form').toBe(true);

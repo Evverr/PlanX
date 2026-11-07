@@ -80,6 +80,13 @@ export function layoutText(
 
 let measureCtx: CanvasRenderingContext2D | null = null;
 
+/** The size a text comes out at in a fixed box (a sticker's, a shape's): its own, smaller as it fills it (see layoutText). */
+export function fittedSize(text: string, width: number, height: number, size: number, style: FontStyle = {}): number {
+  if (typeof document === 'undefined') return size;
+  measureCtx ??= document.createElement('canvas').getContext('2d');
+  return measureCtx ? layoutText(measureCtx, text || ' ', width, height, size, style).size : size;
+}
+
 /** Height a text item needs at its width, used to keep its box in step with its content. */
 export function measureTextHeight(text: string, width: number, size: number, style: FontStyle = {}): number {
   return Math.ceil(textBlockHeight(text, width, size, style));

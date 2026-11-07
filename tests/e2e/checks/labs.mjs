@@ -101,7 +101,8 @@ export const checks = {
   },
 
   async '"Обсуждение": the left rail\'s chat button opens it on the right, between the others\' pictures and the zoom bar, over the right rail; the comments on the zoom bar'(p) {
-    // (Tall enough for the whole left rail.)
+    // (Tall enough for the whole left rail; kept to this browser, the wishlist in it never on the sync server.)
+    await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: `window.WebSocket = class { constructor() { this.readyState = 0; } send() {} close() {} };` });
     await p.open(1200, 1300);
     await p.click(await p.at('.tools [data-key="comments"]'));
     await sleep(250);
@@ -1544,7 +1545,7 @@ export const checks = {
     // The corner: just past the lower right of the two (at 300 + 250, 250 + 100 on the screen).
     await p.drag([553, 353], [803, 453]);
     const r = await p.ev(`['s1', 's2'].map((id) => { const i = planx.board.get(id); return [i.w, i.fs]; }).join(' ')`);
-    expect(r, 'both twice as big, text too').toBe('200,32 200,32');
+    expect(r, 'both twice as big, text too').toBe('200,64 200,64');
     expect(await p.ev(`planx.board.get('s2').x - planx.board.get('s1').x`), 'twice as far apart').toBe(300);
     await p.key('z', 'KeyZ', 90, 4);
     await sleep(200);
