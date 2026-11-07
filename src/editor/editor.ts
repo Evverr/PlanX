@@ -4,7 +4,7 @@ import { DEFAULTS, EDITABLE, fillable, HAS_FONT, strokable, uid } from '../model
 import type { PathNode, Point, Rect } from '../canvas/geometry';
 import { boundsOf, boxOf, center, instanceBounds, linkBox, pointInRect, resizedAt, setInstanceBox } from '../canvas/geometry';
 import { clearTextCache, dotsMoving, drawScene, readTheme, type Camera, type Peer, type Scene, type Theme } from '../canvas/renderer';
-import { fitHeight, foldedSize, font, itemTextHeight, mindSize } from '../canvas/text';
+import { fitHeight, foldedSize, font, itemTextHeight, mindHeight, mindSize } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { freshTable, withCellFormat, withCount, withTableFormat, type TableLine } from '../model/table';
@@ -218,9 +218,16 @@ export class Editor {
     // Tasks of before made the tasks of now, and every task as tall as its contents (see model/task.ts),
     // once the board's come in or changed, and once the fonts have.
     let renew = 0;
-    const later = () => { clearTimeout(renew); renew = setTimeout(() => renewTasks(board, this.editingId), 300) as unknown as number; };
+    const later = () => { clearTimeout(renew); renew = setTimeout(() => { renewTasks(board, this.editingId); this.renewMinds(); }, 300) as unknown as number; };
     board.subscribe(later);
     if (typeof document !== 'undefined') void document.fonts?.ready.then(later);
+  }
+
+  /** Mind map nodes as tall as before (15 above and below their text) made as tall as now (8): for good,
+   *  the same on every screen that does it. */
+  private renewMinds(): void {
+    const old = this.board.list().filter((it) => it.type === 'mind' && it.id !== this.editingId && it.text && Math.abs(it.h - mindHeight(it, 15)) <= 1);
+    if (old.length) this.board.forGood(() => old.forEach((it) => this.board.update(it.id, { h: mindHeight(it) })));
   }
 
   /* ---------- React bridge ---------- */

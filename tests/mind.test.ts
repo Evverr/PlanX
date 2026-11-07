@@ -196,9 +196,9 @@ describe('mind map: folding a node\'s branches away', () => {
     expect(at(a)).toEqual([[271, 20]]);
     expect(at(l)).toEqual([[-171, 20]]);
     expect(at(d)).toEqual([[50, 139]]);
-    // Halfway along the straight start of its branches, 24 long.
-    expect([branchBase(a, 'right'), branchBase(d, 'down')]).toEqual([{ x: 272, y: 20 }, { x: 50, y: 140 }]);
-    expect(branchCurve(a, node('aa', 360, 0, { parent: 'a' }))[0]).toEqual({ x: 284, y: 20 });
+    // 2 past halfway along the straight start of its branches, 21 long.
+    expect([branchBase(a, 'right'), branchBase(d, 'down')]).toEqual([{ x: 272.5, y: 20 }, { x: 50, y: 140.5 }]);
+    expect(branchCurve(a, node('aa', 360, 0, { parent: 'a' }))[0]).toEqual({ x: 281, y: 20 });
   });
 
   it('the central topic grows the ways it\'s set to (right and left unless set), each folding on its own', () => {

@@ -573,7 +573,9 @@ export function folding(it: Item, way: Way, on: boolean): Partial<Item> {
 export const mindWays = (it: Item): Way[] => it.mw ?? ['right', 'left'];
 
 /** How far a node's branches go on straight out of it before they curve: room for the ring folding them. */
-export const BRANCH_STUB = 24;
+export const BRANCH_STUB = 21;
+/** Its branches' lines' width (the ring's too). */
+export const BRANCH_W = 1.125 * 1.7;
 
 /** Where a node's branches growing `way` leave it: the middle of that side (a central topic's, its middle). */
 export function branchFrom(it: Item, way: Way): Point {
@@ -585,13 +587,14 @@ export function branchFrom(it: Item, way: Way): Point {
 /** The ring folding a node's branches growing `way`: halfway along their straight start (a central
  *  topic's branches aren't folded: they are the map). */
 export function branchBase(it: Item, way: Way): Point {
-  const p = branchFrom(it, way), d = BRANCH_STUB / 2;
+  // (2 further out than halfway along it.)
+  const p = branchFrom(it, way), d = BRANCH_STUB / 2 + 2;
   return way === 'right' ? { ...p, x: p.x + d } : way === 'left' ? { ...p, x: p.x - d } : { ...p, y: way === 'down' ? p.y + d : p.y - d };
 }
 
 /** The ring folding a node's branches growing one way: where they leave it, its radius as a button's,
  *  in screen pixels whatever the zoom. */
-export const ringRadius = (zoom: number): number => Math.min(9 / zoom, BRANCH_STUB / 2 - 2);
+export const ringRadius = (zoom: number): number => Math.min(7 / zoom, BRANCH_STUB / 2 - 3);
 
 /** A point `off` screen pixels out from a node's side facing `way`, halfway along it. */
 function spot(it: Item, way: Way, off: number, zoom: number): Point {

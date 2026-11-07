@@ -1274,7 +1274,7 @@ export const checks = {
     await sleep(100);
     const at = () => p.ev(`['a', 'b'].map((k) => { const i = planx.board.get(k); return i.x + ',' + i.y; }).join(' ')`);
     expect(await p.ev(`(() => { const [r, a, b] = ['r', 'a', 'b'].map((k) => planx.board.get(k));
-      return [a.x === b.x && a.x === r.x + r.w + 60, a.y - b.y - b.h === 16, b.y + a.y + a.h === 2 * r.y + r.h].join(); })()`), 'b above a, 60 off, 16 apart, centred').toBe('true,true,true');
+      return [a.x === b.x && a.x === r.x + r.w + 60, a.y - b.y - b.h === 16, Math.abs(b.y + a.y + a.h - (2 * r.y + r.h)) <= 1].join(); })()`), 'b above a, 60 off, 16 apart, centred (to a pixel, rounded)').toBe('true,true,true');
     await p.ev('planx.editor.undo()');
     expect(await at(), 'back').toBe('430,390 370,170');
   },

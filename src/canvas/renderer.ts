@@ -6,7 +6,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchBase, branchColor, branchFrom, branchCurve, branchEdges, buttonKey, foldBadge, fillOpacity, ringRadius, levelColor, mindButtons, mindDepth, mindWay, nodeColors, siblingTints, type Way } from '../model/mind';
+import { branchBase, branchColor, branchFrom, BRANCH_W, branchCurve, branchEdges, buttonKey, foldBadge, fillOpacity, ringRadius, levelColor, mindButtons, mindDepth, mindWay, nodeColors, siblingTints, type Way } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
@@ -689,13 +689,17 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 0;
   if (own.fill) { ctx.fillStyle = shade(own.fill, theme.dim); ctx.fill(); }
-  // A strip 3 wide down its left edge in the colour it's given (the central topic's too), else its level's,
-  // inside its round corners.
-  ctx.save();
-  ctx.clip();
-  ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : levelColor(mindDepth(it, s.get)), theme.dim);
-  ctx.fillRect(it.x, it.y, 3, it.h);
-  ctx.restore();
+  // The central topic all in the colour it's given, no strip; another node with a strip 3 wide down its
+  // left edge in its colour, else its level's, inside its round corners.
+  const rootInk = !it.parent && it.color?.startsWith('#') ? it.color : null;
+  if (rootInk) { ctx.fillStyle = shade(rootInk, theme.dim); ctx.fill(); }
+  else if (it.parent) {
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : levelColor(mindDepth(it, s.get)), theme.dim);
+    ctx.fillRect(it.x, it.y, 3, it.h);
+    ctx.restore();
+  }
   ctx.globalAlpha = 1;
   // A node a branch is being dragged onto shows it by an edge dashed in its colour, the same dashes
   // as the dragged arrow's, 6px on and off on screen.
@@ -706,9 +710,12 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
     ctx.stroke();
     ctx.setLineDash([]);
   }
-  if (!editing) drawText(ctx, it, textPad(it), theme.ink, true, s, textPadY(it));
+  if (!editing) drawText(ctx, it, textPad(it), rootInk ? (dark(rootInk) ? '#FFFFFF' : '#1C1F26') : theme.ink, true, s, textPadY(it));
   for (const [way, n] of s.folded?.get(it.id) ?? []) drawFoldBadge(ctx, it, s, way, n);
 }
+
+/** Whether a '#rrggbb' colour is dark enough for white on it. */
+const dark = (hex: string): boolean => { const n = parseInt(hex.slice(1), 16); return ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114 < 160; };
 
 /** A folded mind map node's count of what it hides that way: a pill in the next level's colour on a
  *  stub of branch, the number in it. */
@@ -768,7 +775,7 @@ function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
     // In the colour of the node it leads to.
     ctx.strokeStyle = shade(branchColor(it, s.get), s.theme.dim);
     // (Out of a central topic as thick as further on.)
-    ctx.lineWidth = 1.125 * 1.7;
+    ctx.lineWidth = BRANCH_W;
     ctx.beginPath();
     // Straight out of its parent to where it curves (past its row's edge, see branchEdges; a central
     // topic's from its middle), and from its row's edge to its own.
@@ -789,7 +796,7 @@ let ringDrawn: (Point & { r: number; ink: string }) | null = null;
 function drawRing(ctx: CanvasRenderingContext2D) {
   if (!ringDrawn) return;
   ctx.strokeStyle = ringDrawn.ink;
-  ctx.lineWidth = 1.125 * 1.7;
+  ctx.lineWidth = BRANCH_W;
   ctx.beginPath();
   ctx.arc(ringDrawn.x, ringDrawn.y, ringDrawn.r, 0, Math.PI * 2);
   ctx.stroke();

@@ -103,10 +103,19 @@ export const itemTextHeight = (it: Item, text = it.text ?? '', width = it.w): nu
 const MIND_MIN_W = 48;
 
 /** A mind map node's size: as wide as its longest line, as tall as its lines, plus padding. */
+/** A mind map node's height for its text at its width now, with `pad` above and below it. */
+export function mindHeight(it: Item, pad = MIND_PAD_Y): number {
+  const root = !it.parent, fs = it.fs ?? 16, padX = root ? 32 : 16, tall = root ? 4 / 3 : 1;
+  return Math.round((measureTextHeight(it.text || ' ', Math.max(1, it.w - padX * 2), fs, fontOf(it)) + pad * 2) * tall);
+}
+
+/** Above and below a mind map node's text (it was 15 before, see mindHeight). */
+export const MIND_PAD_Y = 8;
+
 export function mindSize(it: Item, text = it.text ?? ''): { w: number; h: number } {
-  // 15 above and below the text, 16 to each side; the central topic a third taller and with twice the
+  // 8 above and below the text, 16 to each side; the central topic a third taller and with twice the
   // room to each side.
-  const root = !it.parent, fs = it.fs ?? 16, st = fontOf(it), pad = 15, padX = root ? 32 : 16, tall = root ? 4 / 3 : 1;
+  const root = !it.parent, fs = it.fs ?? 16, st = fontOf(it), pad = MIND_PAD_Y, padX = root ? 32 : 16, tall = root ? 4 / 3 : 1;
   if (typeof document === 'undefined') return { w: 160, h: (Math.ceil(fs * LINE_HEIGHT) + pad * 2) * tall };
   measureCtx ??= document.createElement('canvas').getContext('2d');
   if (!measureCtx) return { w: 160, h: (Math.ceil(fs * LINE_HEIGHT) + pad * 2) * tall };
