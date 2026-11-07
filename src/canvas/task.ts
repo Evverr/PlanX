@@ -145,7 +145,7 @@ export const taskSize = (it: Item, w = it.w): { w: number; h: number } => ({ w, 
 
 /** What a point on it (from its top left corner) is on. */
 export type TaskPart = 'status' | 'arrow' | 'more' | 'people' | 'head' | 'title' | 'desc' | 'boss' | 'doer' | 'due' | 'add' | 'cancel' | 'finish' | 'keep'
-  | { sub: number; tick: boolean };
+  | { sub: number; tick: boolean; del?: boolean };
 
 const inRect = (p: Point, r: Rect, pad = 0) => p.x >= r.x - pad && p.x <= r.x + r.w + pad && p.y >= r.y - pad && p.y <= r.y + r.h + pad;
 const near = (p: Point, x: number, y: number, r: number) => Math.hypot(p.x - x, p.y - y) <= r;
@@ -169,6 +169,8 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
     for (let i = 0; i < l.subs.length; i++) {
       if (q.y < l.subs[i] - 6 || q.y > l.subs[i] + STATUS + (l.subH?.[i] ?? 0) - lineH(TEXT_FS) + 6) continue;
       if (i === l.subs.length - 1) return q.x >= SUB_X - 4 && q.x <= l.w - PAD ? 'add' : null;
+      // Left of its box, the cross taking it away (shown as the pointer comes over it).
+      if (q.x >= SUB_X - 22 && q.x < SUB_X - 1) return { sub: i, tick: false, del: true };
       if (near(q, SUB_X + STATUS / 2, l.subs[i] + STATUS / 2, STATUS / 2 + 4)) return { sub: i, tick: true };
       if (q.x >= SUB_TEXT_X && q.x <= l.w - PAD) return { sub: i, tick: false };
     }
@@ -449,6 +451,17 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
     drawBox(ctx, x + SUB_X + STATUS / 2 - KEEP_BOX / 2, y + mid - KEEP_BOX / 2, !!sub.done, SOFT_BLUE, look);
     // Its lines wrapped to its width; done, grey (not struck through).
     if (typing !== i + 1) lines(sub.t || 'Подзадача', box, TEXT_FS, 400, sub.t && !sub.done ? look.ink : look.muted);
+    // The pointer on it: left of its box a cross taking it away, darker on it.
+    if (hot === `task:${it.id}:sub:${i}` || hot === `task:${it.id}:del:${i}`) {
+      const cx = x + SUB_X - 12, cy = y + mid, d = 4;
+      ctx.strokeStyle = hot.includes(':del:') ? (look.dark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)') : look.dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)';
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx - d, cy - d); ctx.lineTo(cx + d, cy + d);
+      ctx.moveTo(cx + d, cy - d); ctx.lineTo(cx - d, cy + d);
+      ctx.stroke();
+    }
   });
   // As the panels' buttons (.btn, .btn.primary): «Отмена» outlined faintly, «Завершить» in the blue gradient.
   const button = (r: Rect, text: string, solid: boolean) => {

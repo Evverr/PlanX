@@ -248,7 +248,7 @@ export function clickTypes(it: Item | null | undefined, w: Point): boolean {
   if (!it || !EDITABLE.includes(it.type) || it.type === 'table' || it.type === 'frame' || it.type === 'mind' || it.inst || it.host || isLocked(it)) return false;
   if (it.type === 'task') {
     const part = taskPartAt(it, w);
-    return part === 'title' || part === 'desc' || (typeof part === 'object' && !!part && !part.tick);
+    return part === 'title' || part === 'desc';
   }
   if (it.type === 'text' || (it.code && it.text)) return true;
   if (!it.text?.trim() || it.rot) return false;
@@ -314,7 +314,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   const tp = over?.type === 'task' && ed.editingId !== over.id ? taskButtonAt(over, w) : null;
   // The ring where a node's branches leave it, nearer than its "+" that way: lit, to fold them.
   const ring = ringAt(ed, w), ringFirst = ring && (!plus || ring.d < Math.hypot(w.x - plus.x, w.y - plus.y));
-  const hot = ringFirst ? `ring:${ring.id}:${ring.way}` : plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : arrow ? `obj:${arrow.id}` : glyph ?? (tp === 'arrow' || tp === 'more' || tp === 'people' ? `task:${over!.id}:${tp}` : null)
+  const hot = ringFirst ? `ring:${ring.id}:${ring.way}` : plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : arrow ? `obj:${arrow.id}` : glyph ?? (tp === 'arrow' || tp === 'more' || tp === 'people' ? `task:${over!.id}:${tp}` : typeof tp === 'object' && tp ? `task:${over!.id}:${tp.del ? 'del' : 'sub'}:${tp.sub}` : null)
     ?? (over?.code && ed.editingId !== over.id && onCodeCopy(over, w) ? `code:${over.id}` : null);
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';

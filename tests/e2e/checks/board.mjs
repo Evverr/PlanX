@@ -854,6 +854,28 @@ export const checks = {
     expect(await p.ev(`[planx.board.get('lo').x, planx.board.get('ink').x].join()`), 'the picked one taken from under the drawing').toBe('140,120');
   },
 
+  async 'a task\'s subtask ticked by a click on its text too, typed in on a double click, taken away by the cross left of it'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('task', 100, 60, { id: 't', text: 'Задача', w: 494, h: 52, tv: 'full', keep: true, subs: [{ t: 'Первая' }, { t: 'Вторая' }] })); e.setSelection([]); })()`);
+    await sleep(300);
+    const at = (dx, i) => p.ev(`(async () => { const t = planx.board.get('t'), l = (await import('/src/canvas/task.ts')).taskLayout(t), s = planx.editor.toScreen({ x: t.x + ${dx}, y: t.y + l.subs[${i}] + 11 }); return [s.x, s.y]; })()`);
+    const subs = () => p.ev(`planx.board.get('t').subs.map((s) => s.t + (s.done ? '+' : '')).join()`);
+    await p.click(await at(110, 0));
+    expect(await subs(), 'its text clicked: ticked').toBe('Первая+,Вторая');
+    await sleep(450);
+    await dblClick(p, await at(110, 1));
+    await sleep(150);
+    expect([await subs(), await p.ev('planx.editor.editingCell')].join('|'), 'a double click: typed in, its tick as it was').toBe('Первая+,Вторая|2');
+    await p.key('Escape', 'Escape', 27);
+    await sleep(450);
+    const cross = await at(33, 0);
+    await p.mouse('mouseMoved', ...cross);
+    await sleep(100);
+    expect(await p.ev('planx.editor.hotPlus'), 'the cross lit').toBe('task:t:del:0');
+    await p.click(cross);
+    expect(await subs(), 'taken away').toBe('Вторая');
+  },
+
   async 'the usual arrow over items, text and all; a second click on a picked item\'s text types in it'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('task', 100, 100, { id: 't', text: 'Задача', w: 293, h: 52 }));

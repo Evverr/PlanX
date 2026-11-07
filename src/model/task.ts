@@ -57,6 +57,12 @@ export function toggleSub(board: Board, it: Item, i: number): void {
   board.update(it.id, { subs });
 }
 
+/** A subtask taken away (its cross), the task as tall as what's left. */
+export function removeSub(board: Board, it: Item, i: number): void {
+  const subs = (it.subs ?? []).filter((_, k) => k !== i);
+  board.update(it.id, { subs: subs.length ? subs : undefined, h: fitTask(it, { subs: subs.length ? subs : undefined }) });
+}
+
 /** A new subtask after the `after`th (at the end, without one): its number among them. */
 export function addSub(board: Board, it: Item, after = (it.subs?.length ?? 0) - 1): number {
   const subs = [...(it.subs ?? [])];
