@@ -17,3 +17,5 @@
 .cp-code { display: flex; align-items: center; gap: var(--s8); font: 500 var(--s12)/1 "Inter", var(--ui); color: var(--muted); }
 .cp-code input { flex: 1; min-width: 0; height: var(--e28); box-sizing: border-box; padding: 0 var(--s8); border: 1px solid var(--line); border-radius: var(--s6);
   background: var(--bg); color: var(--ink); font: 500 var(--s12)/1 "Inter", var(--ui); text-transform: uppercase; }
+/* No room over what it opens from: under it, falling (see ColorPicker). */
+.color-picker.under { bottom: auto; top: calc(100% + var(--s22)); --in-y: calc(-1 * var(--slide)); }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 /** Hue (0…360), saturation and brightness (0…1). */
 interface Hsv { h: number; s: number; v: number }
@@ -30,6 +30,12 @@ export function ColorPicker({ value, onChange, onStart, onEnd, at, box }: {
   const [code, setCode] = useState(toHex(hsv));
   useEffect(() => setCode(toHex(hsv)), [hsv]);
   const pick = (next: Hsv) => { setHsv(next); onChange(toHex(next)); };
+  // Over what it opens from, unless that takes it past the top of the window: under it then.
+  const own = useRef<HTMLDivElement | null>(null), [under, setUnder] = useState(false);
+  useLayoutEffect(() => {
+    if (at !== undefined || !own.current || under) return;
+    if (own.current.getBoundingClientRect().top < 8) setUnder(true);
+  });
 
   // Dragging in the square or along the strip, from the press on.
   const drag = (el: HTMLElement, e: React.PointerEvent, at: (fx: number, fy: number) => Hsv) => {
@@ -45,7 +51,8 @@ export function ColorPicker({ value, onChange, onStart, onEnd, at, box }: {
   const square = useRef<HTMLDivElement>(null), strip = useRef<HTMLDivElement>(null);
   const hue = `hsl(${hsv.h}, 100%, 50%)`;
   return (
-    <div ref={box} className={`color-picker ${at !== undefined ? 'floating' : ''} ${at?.above ? 'above' : ''}`} data-nosort onPointerDown={(e) => e.stopPropagation()}
+    <div ref={(el) => { own.current = el; if (typeof box === 'function') box(el); else if (box) (box as React.MutableRefObject<HTMLDivElement | null>).current = el; }}
+      className={`color-picker ${at !== undefined ? 'floating' : ''} ${at?.above ? 'above' : ''} ${under ? 'under' : ''}`} data-nosort onPointerDown={(e) => e.stopPropagation()}
       style={at !== undefined ? { left: at?.x ?? 0, top: at?.y ?? 0, visibility: at ? undefined : 'hidden' } : undefined}>
       <div ref={square} className="cp-square" style={{ background: hue }}
         onPointerDown={(e) => drag(square.current!, e, (fx, fy) => ({ h: hsv.h, s: fx, v: 1 - fy }))}>

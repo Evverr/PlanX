@@ -3,7 +3,7 @@
  * level, "Нововведения", a panel's drop-down) is moved back in, 8 px off the edge; one taller
  * than the screen gets as tall as it and scrolls.
  */
-const MENUS = '.board-menu, .op-pop, [role="menu"]';
+const MENUS = '.board-menu, .op-pop, [role="menu"], .color-picker:not(.floating), .tf-menu';
 const EDGE = 8;
 
 function fit(el: HTMLElement): void {

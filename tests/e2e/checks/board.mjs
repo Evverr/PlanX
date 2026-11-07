@@ -894,6 +894,20 @@ export const checks = {
     expect(await p.ev('planx.editor.editingId'), 'set back: typed in').toBe('r');
   },
 
+  async 'any colour for a shape opens on the screen: under its palette when there\'s no room over it'(p) {
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', true))()`);
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('rect', 500, 240, { id: 'r', w: 200, h: 120 })); e.setSelection(['r']); })()`);
+    await sleep(500);
+    await p.click(await p.at('.panel-over button[aria-label="Цвет"]'));
+    await sleep(200);
+    await p.click(await p.at('.palette-pop .sw.custom'));
+    await sleep(400);
+    const r = await p.rect('.color-picker');
+    expect(r.t >= 8 && r.b <= 792, `on the screen (${r.t}…${r.b})`).toBe(true);
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
+  },
+
   async 'the usual arrow over items, text and all; a second click on a picked item\'s text types in it'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('task', 100, 100, { id: 't', text: 'Задача', w: 293, h: 52 }));
