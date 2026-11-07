@@ -10,7 +10,7 @@ import { pressTask, taskFieldAt } from './tasks';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, freshTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
 import { shapeStyle } from './shapeStyle';
-import { branchCrosses, canMoveTo, foldedWays, folding, mindWay, mindWays, moveBranch, nearestFamily } from '../model/mind';
+import { branchCrosses, canMoveTo, foldedWays, folding, mindWay, mindWays, moveBranch, nearestFamily, type Way } from '../model/mind';
 import { clamp, MAX_Z } from './camera';
 import { zoomToBox } from '../labs/zoomBox';
 import { showGrips } from '../labs/tableMove';
@@ -33,7 +33,7 @@ import { under } from '../labs/clickThrough';
 export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string; tap?: Point; mindTo?: string | null }
+  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string; tap?: Point; mindTo?: string | null; mindWay?: Way }
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' | 'tl' | 'bl' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point; last?: Point }
@@ -131,7 +131,13 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         for (const [id, via] of g.vias!) board.updateLink(id, { via: via.map((p) => ({ x: Math.round(p.x + dx + sx), y: Math.round(p.y + dy + sy) })) });
       });
       // A mind map branch dragged alone: the family it's nearest to, its line from there as it goes.
-      if (lead?.type === 'mind' && lead.parent && ed.selection.size === 1) { g.mindTo = nearestFamily(g.id, board.list()); ed.requestRender(); }
+      // (Only on the side it grew from: as it stood when taken.)
+      if (lead?.type === 'mind' && lead.parent && ed.selection.size === 1) {
+        const up = board.get(lead.parent), o = g.orig.get(g.id);
+        if (up && o) g.mindWay ??= mindWay({ ...lead, ...o }, up);
+        g.mindTo = nearestFamily(g.id, board.list(), g.mindWay);
+        ed.requestRender();
+      }
       if (g.guides) ed.requestRender();
       return;
     }
