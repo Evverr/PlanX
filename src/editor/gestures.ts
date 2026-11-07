@@ -18,7 +18,7 @@ import { pullOut } from '../labs/linkJoint';
 import { noteMindMoved } from '../labs/tidyMind';
 import { rotateCursor } from './cursors';
 import { MIND_TOPIC, type PenTool } from './tools';
-import { onMindText } from './hover';
+import { clickTypes, onMindText } from './hover';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
 import { eraseArea, eraserStyle } from '../labs/eraseArea';
@@ -386,6 +386,10 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // A task's header (but its title, ring and arrow) goes on to the next of its views.
         else if (it?.type === 'task' && taskPartAt(it, g.start) === 'head') nextView(board, it, taskOpen());
         else if (!it?.inst) ed.startEditing(g.id, it?.type === 'table' ? cellAt(it, g.start) : it?.type === 'task' ? taskFieldAt(it, g.start) : null);
+      } else if (g.again && !g.cell && clickTypes(board.get(g.id), g.start)) {
+        // Picked already, clicked again on its text: typed in, as on a double click.
+        const it = board.get(g.id)!;
+        ed.startEditing(g.id, it.type === 'task' ? taskFieldAt(it, g.start) : null);
       } else if (g.again && !g.cell && under(ed, g.id, g.start)) {
         // "Клик сквозь": what's under it there is picked instead.
         ed.setSelection([under(ed, g.id, g.start)!.id]);
