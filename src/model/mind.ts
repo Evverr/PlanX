@@ -573,7 +573,7 @@ export function folding(it: Item, way: Way, on: boolean): Partial<Item> {
 export const mindWays = (it: Item): Way[] => it.mw ?? ['right', 'left'];
 
 /** How far a node's branches go on straight out of it before they curve: room for the ring folding them. */
-export const BRANCH_STUB = 21;
+export const BRANCH_STUB = 16;
 /** Its branches' lines' width (the ring's too). */
 export const BRANCH_W = 1.125 * 1.7;
 
@@ -594,7 +594,7 @@ export function branchBase(it: Item, way: Way): Point {
 
 /** The ring folding a node's branches growing one way: where they leave it, its radius as a button's,
  *  in screen pixels whatever the zoom. */
-export const ringRadius = (zoom: number): number => Math.min(7 / zoom, BRANCH_STUB / 2 - 3);
+export const ringRadius = (zoom: number): number => Math.min(7 / zoom, 10);
 
 /** A point `off` screen pixels out from a node's side facing `way`, halfway along it. */
 function spot(it: Item, way: Way, off: number, zoom: number): Point {
