@@ -187,6 +187,25 @@ export const checks = {
     expect(after.y + after.h, 'its lower edge holds still').toBe(u.bottom);
   },
 
+  async 'a mind map branch dragged nearer another family hangs from that one, its line from there as it goes'(p) {
+    await p.ev(`(async () => { const { mindSize } = await import('/src/canvas/text.ts'); const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      const mk = (id, x, y, text, extra = {}) => { const it = e.newItem('mind', x, y, { id, text, ...extra }); Object.assign(it, mindSize(it)); b.add(it); };
+      mk('r', 200, 300, 'Тема'); mk('a', 420, 200, 'Первая', { parent: 'r' }); mk('b', 420, 420, 'Вторая', { parent: 'r' });
+      mk('a1', 620, 200, 'Внук', { parent: 'a' }); mk('x', 620, 440, 'Перенести', { parent: 'b' }); e.setSelection(['x']); })()`);
+    await sleep(300);
+    const from = await p.ev(`(() => { const i = planx.board.get('x'), s = planx.editor.toScreen({ x: i.x + 20, y: i.y + i.h / 2 }); return [s.x, s.y]; })()`);
+    // Up by the other family: the line's from its parent as it goes.
+    await p.mouse('mousePressed', ...from);
+    for (let i = 1; i <= 10; i++) await p.mouse('mouseMoved', from[0], from[1] - 22 * i);
+    await sleep(100);
+    expect(await p.ev(`planx.editor.gesture?.mindTo`), 'nearer the other family').toBe('a');
+    await p.mouse('mouseReleased', from[0], from[1] - 220);
+    await sleep(200);
+    expect(await p.ev(`planx.board.get('x').parent`), 'hangs from it now').toBe('a');
+    await p.ev('planx.editor.undo()');
+    expect(await p.ev(`planx.board.get('x').parent`), 'one step undone').toBe('b');
+  },
+
   async 'a box over mind map branches picks the nodes they lead to; a central topic folds each way on its own'(p) {
     await p.make('mind', [600, 400]);
     await p.escape();

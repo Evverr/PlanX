@@ -113,6 +113,8 @@ export interface Scene {
   chevronless?: string | null;
   /** A mind map branch being dragged by its arrow button to hang from another node. */
   mindMove: { from: Point; to: Point; target: Item | null } | null;
+  /** A mind map branch being dragged: the node it would hang from if let go now, its line from there. */
+  mindDrop?: { id: string; parent: string } | null;
   /** Table lines drawn blue: the one under the pointer and those picked to drag together. */
   tableLines: TableLine[];
   /** The pen or highlighter line being drawn, in board units. */
@@ -621,6 +623,9 @@ function outlineCurved(ctx: CanvasPath, it: Item, rad: number) {
 
 /** A mind map node's buttons: "+" for a branch of its own and the others, chevrons to fold, the
  *  arrow to move it; for the one picked, or the one the pointer has rested on. */
+/** The blue of a table's "+" (the panels' lit ink), for a mind map node's too. */
+const plusInk = () => (typeof document !== 'undefined' && getComputedStyle(document.documentElement).getPropertyValue('--fmt-on-ink').trim()) || '#0080FF';
+
 function drawMindButtons(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
   const { cam } = s;
   if (s.plusFade > 0) {
@@ -628,10 +633,10 @@ function drawMindButtons(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     const ringAt = s.hotPlus?.startsWith(`ring:${it.id}:`) ? branchBase(it, s.hotPlus.split(':')[2] as Way) : null;
     for (const b of mindButtons(it, s.get, cam.z)) {
       if (ringAt && Math.hypot(b.x - ringAt.x, b.y - ringAt.y) < ringRadius(cam.z) * 2.5) continue;
-      // Smaller and faint until the pointer comes over it.
+      // As a table's "+": smaller and faint until the pointer comes over it.
       const hot = s.hotPlus === buttonKey(b), r = hot ? b.r : b.r * 0.9;
       ctx.globalAlpha = (hot ? 1 : 0.5) * s.plusFade;
-      ctx.fillStyle = SELECT_COLOR;
+      ctx.fillStyle = plusInk();
       ctx.beginPath();
       ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
       ctx.fill();
@@ -661,8 +666,8 @@ function drawMindButtons(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
         ctx.lineTo(tip.x, tip.y);
         ctx.lineTo(tip.x - dx * back + dy * back, tip.y - dy * back + dx * back);
       } else {
-        ctx.moveTo(b.x - r * 0.5, b.y); ctx.lineTo(b.x + r * 0.5, b.y);
-        ctx.moveTo(b.x, b.y - r * 0.5); ctx.lineTo(b.x, b.y + r * 0.5);
+        ctx.moveTo(b.x - r * 0.45, b.y); ctx.lineTo(b.x + r * 0.45, b.y);
+        ctx.moveTo(b.x, b.y - r * 0.45); ctx.lineTo(b.x, b.y + r * 0.45);
       }
       ctx.stroke();
     }
@@ -759,7 +764,7 @@ function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
   let ringInk: string | null = null;
   for (const it of s.items) {
     if (it.type !== 'mind' || !it.parent) continue;
-    const up = s.get(it.parent);
+    const up = s.get(s.mindDrop?.id === it.id ? s.mindDrop.parent : it.parent);
     if (!up) continue;
     const [a, c1, c2, b] = branchCurve(up, it, edges);
     const cut = ring && up.id === ringId && mindWay(it, up) === ringWay;

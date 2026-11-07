@@ -134,11 +134,10 @@ describe('mind map: branches led down from the central topic', () => {
   it('the central topic has a "+" each way it grows (all four set: right, left, below and above)', () => {
     expect(mindButtons({ ...r, mw: ['right', 'left', 'down', 'up'] }, get, 1).map((b) => [b.kind, b.x, b.y])).toEqual([['child', 111, 20], ['left', -11, 20], ['down', 50, 51], ['up', 50, -11]]);
     const kinds = Object.fromEntries(mindButtons(d1, get, 1).map((b) => [b.kind, [b.x, b.y]]));
-    // Under its parent: its own branch below, the parallel ones left and right, the arrow on top.
+    // Under its parent: its own branch below, the next one right of it (as a table's "+"), no more.
     expect(kinds.child).toEqual([-12, 139]);
-    expect(kinds.above).toEqual([-73, 108]);
     expect(kinds.below).toEqual([49, 108]);
-    expect(kinds.move).toEqual([-12, 77]);
+    expect(Object.keys(kinds).join()).toBe('child,below');
   });
 
   it('a first branch led down goes under the topic, centred', () => {
@@ -191,7 +190,7 @@ describe('mind map: folding a node\'s branches away', () => {
   const get = (id: string) => all.find((i) => i.id === id);
 
   it('a node\'s "+" for a branch 11 out from its side; its branches folded by the ring where they leave it', () => {
-    expect(mindButtons(a, get, 1).map((b) => b.kind)).toEqual(['child', 'above', 'below', 'move']);
+    expect(mindButtons(a, get, 1).map((b) => b.kind)).toEqual(['child', 'below']);
     const at = (it: Item) => mindButtons(it, get, 1).filter((b) => b.kind === 'child').map((b) => [b.x, b.y]);
     expect(at(a)).toEqual([[271, 20]]);
     expect(at(l)).toEqual([[-171, 20]]);
@@ -244,12 +243,11 @@ describe('mind map: branches led up from the central topic', () => {
     expect(moves.get('u3')).toEqual({ x: 124, y: -88 });
   });
 
-  it('its buttons: its own branch above, the parallel ones left and right, the arrow under it', () => {
+  it('its buttons: its own branch above, the next one right of it', () => {
     const kinds = Object.fromEntries(mindButtons(u1, get, 1).map((b) => [b.kind, [b.x, b.y]]));
     expect(kinds.child).toEqual([-12, -99]);
-    expect(kinds.above).toEqual([-73, -68]);
     expect(kinds.below).toEqual([49, -68]);
-    expect(kinds.move).toEqual([-12, -37]);
+    expect(Object.keys(kinds).join()).toBe('child,below');
   });
 
   it('a parallel branch over a node lines up with its lower edge', () => {

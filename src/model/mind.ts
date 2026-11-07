@@ -614,22 +614,10 @@ export function mindButtons(it: Item, get: Get, zoom: number): MindButtonAt[] {
     const on = mindWays(it), kinds: Record<Way, MindButton> = { right: 'child', left: 'left', down: 'down', up: 'up' };
     return (['right', 'left', 'down', 'up'] as const).filter((w) => on.includes(w)).flatMap((w) => own(kinds[w], w));
   }
+  // Another's, as a table's: a branch the way it grows, and the one after it beside (under it, or right
+  // of it in a column led down or up); it's moved to another family by being dragged (see nearestFamily).
   const way = mindWay(it, up);
-  if (upright(way)) {
-    return [
-      ...own('child', way),
-      { kind: 'above', x: it.x - off, y: cy, r },
-      { kind: 'below', x: it.x + it.w + off, y: cy, r },
-      { kind: 'move', x: cx, y: way === 'down' ? it.y - off : it.y + it.h + off, r },
-    ];
-  }
-  const right = way === 'right';
-  return [
-    ...own('child', way),
-    { kind: 'above', x: cx, y: it.y - off, r },
-    { kind: 'below', x: cx, y: it.y + it.h + off, r },
-    { kind: 'move', x: right ? it.x - off : it.x + it.w + off, y: cy, r },
-  ];
+  return [...own('child', way), upright(way) ? { kind: 'below', x: it.x + it.w + off, y: cy, r } : { kind: 'below', x: cx, y: it.y + it.h + off, r }];
 }
 
 /** The count of what a node's folding hides that way, always in sight: a pill as tall as a button and as
@@ -676,6 +664,25 @@ export function branchEdges(items: Item[], get: Get): Map<string, number> {
   const out = new Map<string, number>();
   for (const row of rows.values()) { const r = Math.max(...row.map((k) => k.x + k.w)); for (const k of row) out.set(k.id, r); }
   return out;
+}
+
+/** The node a branch dragged about would hang from now: the one whose family (where a branch of it would
+ *  go, or those it has) its node is nearest to, but in the branch itself. */
+export function nearestFamily(id: string, items: Item[]): string | null {
+  const it = items.find((i) => i.id === id);
+  if (!it?.parent) return null;
+  const away = new Set([id, ...descendants([id], items)]), c = { x: it.x + it.w / 2, y: it.y + it.h / 2 };
+  const kids = new Map<string, Item[]>();
+  for (const k of items) if (k.type === 'mind' && k.parent && !away.has(k.id)) kids.set(k.parent, [...(kids.get(k.parent) ?? []), k]);
+  let best: string | null = null, near = Infinity;
+  for (const p of items) {
+    if (p.type !== 'mind' || away.has(p.id) || p.host) continue;
+    const side = c.x >= p.x + p.w / 2 ? 1 : -1;
+    let d = Math.hypot(c.x - (side > 0 ? p.x + p.w + MIND_GAP_X + it.w / 2 : p.x - MIND_GAP_X - it.w / 2), c.y - (p.y + p.h / 2));
+    for (const k of kids.get(p.id) ?? []) d = Math.min(d, Math.hypot(c.x - k.x - k.w / 2, c.y - k.y - k.h / 2));
+    if (d < near) { near = d; best = p.id; }
+  }
+  return best;
 }
 
 /** Whether the branch from `parent` to `child` runs through the rectangle anywhere (tried at 24 points along it). */
