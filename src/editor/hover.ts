@@ -1,11 +1,10 @@
 import type { Item, Link, Side } from '../model/types';
-import { ROTATABLE } from '../model/types';
+import { ROTATABLE, textPad, textPadY } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { hitItem, hitLink, instanceBounds, linkBox, linkHandles, linkShape, onAudioButton, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, dotGap, HANDLE } from '../canvas/renderer';
 import { instanceGlyph, instancePlus, objectArrow } from '../model/components';
 import { taskButtonAt } from './tasks';
-import { taskPartAt } from '../canvas/task';
 import { onCodeCopy } from '../labs/codeBlock';
 import { branchWays, buttonKey, foldBadge, mindButtons, type MindButtonAt, type Way } from '../model/mind';
 import { frameButtonAt } from './frames';
@@ -209,6 +208,12 @@ export const frameButtonUnder = (ed: Editor, w: Point) => frameButtonAt(ed.shown
 
 /** What's picked, under the point (anywhere in its box), before what lies over it: a drawing covers
  *  little of its box, and whatever's on it would be taken in its place. Not frames, which hold others. */
+/** Whether a point on a mind map node is on its text (inside its padding): a click there types in it. */
+export const onMindText = (it: Item, w: Point): boolean => {
+  const px = Math.min(textPad(it), 10), py = Math.min(textPadY(it), 10);
+  return w.x > it.x + px && w.x < it.x + it.w - px && w.y > it.y + py && w.y < it.y + it.h - py;
+};
+
 /** What hides what's under it: a task, a sticker, a picture, a table, a shape filled in. */
 const solid = (it: Item) => ['task', 'sticky', 'image', 'table'].includes(it.type) || ((it.type === 'rect' || it.type === 'ellipse' || it.type === 'polygon') && it.color !== 'none');
 
@@ -280,10 +285,9 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
     // A task's ring (a component that comes with PlanX) is clicked through its states.
     if ((hit?.type === 'task' && ed.editingId !== hit.id && taskButtonAt(hit, w)) || (hit?.type === 'audio' && onAudioButton(hit, w))
       || (hit && ed.editingId !== hit.id && linkPartAt(hit, w))) cursor = 'pointer';
-    // A task's title: the text cursor, as it's typed in there (on a double click), not the card's.
-    else if (hit?.type === 'task' && ed.editingId !== hit.id && taskPartAt(hit, w) === 'title') cursor = 'text';
-    // (A block of code with nothing in it: a click types in it.)
-    else if (hit?.code && !hit.text && ed.editingId !== hit.id) cursor = 'text';
+    // The cursor says what a click does: the text cursor only where one types in at once (a block of
+    // code with nothing in it, a mind map node's text), else it takes hold of it (typed in on a double click).
+    else if (hit && ed.editingId !== hit.id && ((hit.code && !hit.text) || (hit.type === 'mind' && onMindText(hit, w)))) cursor = 'text';
     else if (hit && !isLocked(hit)) cursor = alt ? 'copy' : 'move';
   }
   ed.canvas.style.cursor = cursor;
