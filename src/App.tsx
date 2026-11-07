@@ -10,6 +10,7 @@ import { TextEditor } from './ui/TextEditor';
 import { TextPanel } from './ui/FormatPanel';
 import { TaskKeepPop, TaskPop, TaskTipBubble } from './ui/TaskPop';
 import { SideNav } from './labs/SideNav';
+import { navigate } from './route';
 import { PanelIcon } from './ui/PanelIcon';
 import { asOne } from './labs/multi';
 import { DockButton, useDock } from './ui/panels/dock';
@@ -61,7 +62,7 @@ export function App({ boardId }: { boardId: string }) {
   useShelfTracking(boardId, board);
   const toShelf = () => {
     window.dispatchEvent(new Event('planx:leave'));
-    location.href = shelfUrlFor(boardId);
+    navigate(shelfUrlFor(boardId));
   };
 
   const ui = useSyncExternalStore(editor.subscribeUI, editor.getUI);

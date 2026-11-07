@@ -2,6 +2,24 @@
 import { expect, sleep } from '../lib.mjs';
 
 export const checks = {
+  async 'one page for all: the shelf from a board by the side panel, a board from the shelf, back by the browser, never loaded again'(p) {
+    await p.ev(`planx.board.add(planx.editor.newItem('sticky', 0, 0, { id: 's', text: 'Здесь' }))`);
+    const first = await p.ev('planx.conn.boardId ?? new URLSearchParams(location.search).get("board")');
+    await sleep(1300);
+    await p.ev('window.stillHere = 1');
+    await p.click(await p.at('.topbar .logo'));
+    await sleep(250);
+    await p.click(await p.ev(`(() => { const b = [...document.querySelectorAll('.side-nav-row')].find((b) => b.textContent === 'Доски').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; })()`));
+    await sleep(800);
+    expect([await p.ev('location.search'), !!(await p.rect('.shelf-page')), await p.ev('window.stillHere')].join(), 'the shelf, the page the same').toBe(',true,1');
+    await p.click(await p.at(`.card-cover[href*="${first}"]`));
+    await sleep(800);
+    expect([await p.ev('location.search'), await p.ev(`!!planx.board.get('s')`), await p.ev('window.stillHere')].join(), 'the board again').toBe(`?board=${first},true,1`);
+    await p.ev('history.back()');
+    await sleep(800);
+    expect([await p.ev('location.search'), !!(await p.rect('.shelf-page')), await p.ev('window.stillHere')].join(), 'back to the shelf').toBe(',true,1');
+  },
+
   async 'the new board dialog opens a board by its address, and a board file dropped from the Finder opens'(p) {
     // Kept to this browser: no sync server for the boards opened here.
     await p.cdp('Page.enable');

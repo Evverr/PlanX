@@ -32,6 +32,9 @@ export function useShelfTracking(boardId: string, board: Board): void {
     window.addEventListener('pagehide', picture);
     window.addEventListener('planx:leave', picture);
     return () => {
+      // Left for another board or the shelf on this page: noted and pictured, as when the tab's left.
+      if (timer) note();
+      picture();
       off();
       clearTimeout(timer);
       clearTimeout(first);

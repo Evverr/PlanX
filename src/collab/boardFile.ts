@@ -5,6 +5,7 @@ import { Board } from '../model/board';
 import { newBoardId } from './connection';
 import { boardUrl, updateEntry } from '../shelf/boards';
 import { fileName, saveFile } from '../files';
+import { navigate } from '../route';
 
 /**
  * The board saved in a file of its own (.plnt) and such a file opened as a new board: "Сохранить доску"
@@ -63,6 +64,6 @@ export async function openBoardFile(file: File): Promise<string | null> {
     await local.destroy();
     doc.destroy();
   }
-  location.href = boardUrl(id);
+  navigate(boardUrl(id));
   return null;
 }
