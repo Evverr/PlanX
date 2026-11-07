@@ -623,6 +623,7 @@ export class Editor {
       folded: this.folded(),
       slide: this.slideOut(plusFade),
       chevronless: this.chevronless,
+      mindDrop: g?.type === 'drag' && g.moved && g.mindTo ? { id: g.id, parent: g.mindTo } : null,
       mindMove: g?.type === 'mindMove' ? { from: g.from, to: g.to, target: g.target ? this.board.get(g.target) ?? null : null } : null,
       tableLines: this.hotLine ? [...this.pickedLines, this.hotLine] : this.pickedLines,
       editingCell: this.editingCell,

@@ -10,7 +10,7 @@ import { pressTask, taskFieldAt } from './tasks';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, freshTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
 import { shapeStyle } from './shapeStyle';
-import { branchCrosses, canMoveTo, foldedWays, folding, mindWay, moveBranch } from '../model/mind';
+import { branchCrosses, canMoveTo, foldedWays, folding, mindWay, mindWays, moveBranch, nearestFamily } from '../model/mind';
 import { clamp, MAX_Z } from './camera';
 import { zoomToBox } from '../labs/zoomBox';
 import { showGrips } from '../labs/tableMove';
@@ -33,7 +33,7 @@ import { under } from '../labs/clickThrough';
 export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string; tap?: Point }
+  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string; tap?: Point; mindTo?: string | null }
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' | 'tl' | 'bl' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point; last?: Point }
@@ -130,6 +130,8 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         for (const [id, o] of g.orig) board.update(id, { x: round(o.x + dx + sx), y: Math.round(o.y + dy + sy) });
         for (const [id, via] of g.vias!) board.updateLink(id, { via: via.map((p) => ({ x: Math.round(p.x + dx + sx), y: Math.round(p.y + dy + sy) })) });
       });
+      // A mind map branch dragged alone: the family it's nearest to, its line from there as it goes.
+      if (lead?.type === 'mind' && lead.parent && ed.selection.size === 1) { g.mindTo = nearestFamily(g.id, board.list()); ed.requestRender(); }
       if (g.guides) ed.requestRender();
       return;
     }
@@ -333,6 +335,24 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
 
 /** Whether a point is on a mind map node's text: inside its padding (but no more than 10 in). */
 
+/** A mind map branch hung from another node, laid out there: on a central topic the way of the side
+ *  `at` is nearest to (up or down only if it grows that way), on another the side it's on. A folded node
+ *  unfolds to show it. */
+function hangBranch(ed: Editor, id: string, to: string, at: Point): void {
+  const board = ed.board, target = board.get(to);
+  if (!target) return;
+  const dx = (at.x - target.x) / target.w - 0.5, dy = (at.y - target.y) / target.h - 0.5;
+  const upright = !target.parent && Math.abs(dy) > Math.abs(dx) && mindWays(target).includes(dy > 0 ? 'down' : 'up');
+  const toward = upright ? (dy > 0 ? 'down' : 'up') : dx >= 0 ? 1 : -1;
+  const moves = moveBranch(id, to, board.list(), toward);
+  board.transact(() => {
+    board.update(id, { parent: to });
+    moves.forEach((p, k) => board.update(k, p));
+    const way = mindWay(board.get(id)!, target);
+    if (foldedWays(target, target.parent ? board.get(target.parent) : undefined).includes(way)) board.update(target.id, folding(target, way, false));
+  });
+}
+
 /** The gesture let go of. */
 export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
   const board = ed.board;
@@ -355,6 +375,9 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       if (g.moved) {
         // What was dragged into a frame is in it now, and what was dragged out of one is out.
         ed.settle([...ed.selection].map((id) => board.get(id)?.host ?? id));
+        // A mind map branch let go nearer another family: it hangs from that one now.
+        const lead = board.get(g.id);
+        if (g.mindTo && lead?.parent && g.mindTo !== lead.parent) hangBranch(ed, g.id, g.mindTo, { x: lead.x + lead.w / 2, y: lead.y + lead.h / 2 });
         board.endGesture();
         noteMindMoved(ed, [...ed.selection]);
       } else if (g.url) {
@@ -475,18 +498,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
     case 'mindMove':
       // The branch hangs from the node it's dropped on now, on a central topic the way of the side it's
       // let go nearest to: right, left, down or up. A folded node unfolds to show it.
-      if (g.target) {
-        const target = board.get(g.target)!;
-        const dx = (g.to.x - target.x) / target.w - 0.5, dy = (g.to.y - target.y) / target.h - 0.5;
-        const toward = !target.parent && Math.abs(dy) > Math.abs(dx) ? (dy > 0 ? 'down' : 'up') : dx >= 0 ? 1 : -1;
-        const moves = moveBranch(g.id, g.target, board.list(), toward);
-        board.transact(() => {
-          board.update(g.id, { parent: g.target! });
-          moves.forEach((p, id) => board.update(id, p));
-          const way = mindWay(board.get(g.id)!, target);
-          if (foldedWays(target, target.parent ? board.get(target.parent) : undefined).includes(way)) board.update(target.id, folding(target, way, false));
-        });
-      }
+      if (g.target) hangBranch(ed, g.id, g.target, g.to);
       ed.requestRender();
       return;
     case 'marquee':
