@@ -8,12 +8,20 @@ import avatar from '../../assets/doodles/people/03-red-hair.png';
 
 /** A big popup over a dimmed board: its title, a cross, and what it holds; Esc or a click on the dim
  *  closes it. */
-function Modal({ title, onClose, children, className = '' }: { title: string; onClose: () => void; children: ReactNode; className?: string }) {
+function Modal({ title, onClose, children, className = '', page }: { title: string; onClose: () => void; children: ReactNode; className?: string; page?: boolean }) {
   useEffect(() => {
+    if (page) return;
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); onClose(); } };
     window.addEventListener('keydown', key, true);
     return () => window.removeEventListener('keydown', key, true);
-  }, [onClose]);
+  }, [onClose, page]);
+  // ("Боковая панель", src/labs: a page of its own beside it, not over the board.)
+  if (page) return (
+    <section className={`page-view ${className}`} aria-label={title}>
+      <h1>{title}</h1>
+      <div className="modal-body">{children}</div>
+    </section>
+  );
   return (
     <div className="modal-dim" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className={`modal ${className}`} role="dialog" aria-modal="true" aria-label={title}>
@@ -34,13 +42,13 @@ const ZONES = ['Москва (UTC+3)', 'Калининград (UTC+2)', 'Ека
 
 /** "Профиль" (the board menu): a character for a picture, the name others see and a few things about you,
  *  kept in this browser. */
-export function ProfileDialog({ name, onRename, onClose }: { name: string; onRename: (n: string) => void; onClose: () => void }) {
+export function ProfileDialog({ name, onRename, onClose, page }: { name: string; onRename: (n: string) => void; onClose: () => void; page?: boolean }) {
   const [me, setMe] = useState(name);
   const [p, setP] = useState<Profile>(() => ({ role: '', team: '', email: '', phone: '', zone: ZONES[0], about: '', ...readJSON<Partial<Profile>>(PROFILE_KEY) }));
   const field = (k: keyof Profile) => ({ value: p[k], onChange: (e: { target: { value: string } }) => setP({ ...p, [k]: e.target.value }) });
   const save = () => { writeJSON(PROFILE_KEY, p); if (me.trim() && me.trim() !== name) onRename(me.trim()); onClose(); };
   return (
-    <Modal title="Профиль" onClose={onClose} className="profile">
+    <Modal title="Профиль" onClose={onClose} className="profile" page={page}>
       <div className="profile-top">
         <img className="profile-avatar" src={avatar} alt="" />
         <div>
@@ -66,10 +74,10 @@ export function ProfileDialog({ name, onRename, onClose }: { name: string; onRen
 }
 
 /** "Настройки" (the board menu): the theme and such, then every feature on trial ("Нововведения", src/labs) with its switch. */
-export function SettingsDialog({ onClose, dark, onDark }: { onClose: () => void; dark: boolean; onDark: () => void }) {
+export function SettingsDialog({ onClose, dark, onDark, page }: { onClose: () => void; dark: boolean; onDark: () => void; page?: boolean }) {
   const labs = useLabs(), byKey = useZoomsWithKey(), glass = useGlass();
   return (
-    <Modal title="Настройки" onClose={onClose} className="settings">
+    <Modal title="Настройки" onClose={onClose} className="settings" page={page}>
       <div className="settings-list">
         <button className="settings-row" role="menuitemcheckbox" aria-checked={dark} onClick={onDark}>
           <span><b>Тёмная тема</b><i>Тёмная доска и панели</i></span>

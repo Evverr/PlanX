@@ -66,22 +66,27 @@ export const checks = {
     expect([await p.ev(`!!planx.board.get('c')`), await p.ev('planx.editor.editingId')].join(), 'pressed: gone, nothing typed in').toBe('false,');
   },
 
-  async '"Боковая панель": the logo opens a dark side on the left, 200 wide, its profile and settings there; Esc puts it away'(p) {
+  async '"Боковая панель": the logo opens a dark side on the left, kept open; its rows go to pages beside it, the help at its foot; its logo closes it'(p) {
+    const go = async (label) => p.click(await p.ev(`(() => { const b = [...document.querySelectorAll('.side-nav-row, .side-nav-help')].find((b) => (b.getAttribute('aria-label') ?? b.textContent) === '${label}').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; })()`));
     await p.click(await p.at('.topbar .logo'));
     await sleep(250);
     const r = await p.rect('.side-nav');
     expect([r.l, r.t, r.w, r.h].join(), 'down the left edge').toBe('0,0,200,800');
     expect(await p.ev(`[...document.querySelectorAll('.side-nav-row span')].map((s) => s.textContent).join()`), 'what\'s in it').toBe('Доски,Профиль,Настройки');
-    await p.click(await p.ev(`(() => { const b = [...document.querySelectorAll('.side-nav-row')].find((b) => b.textContent === 'Настройки').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; })()`));
-    await sleep(250);
-    expect([!!(await p.rect('.side-nav')), await p.ev(`!!document.querySelector('.modal')`)].join(), 'the settings, the side gone').toBe('false,true');
-    await p.key('Escape', 'Escape', 27);
+    await go('Настройки');
+    await sleep(400);
+    const page = await p.rect('.page-view');
+    expect([await p.ev('location.search'), !!(await p.rect('.side-nav')), await p.ev(`!!document.querySelector(".modal")`), page.l >= 200].join(), 'the settings a page beside it, the side kept')
+      .toBe('?page=settings,true,false,true');
+    await go('Помощь');
+    await sleep(300);
+    expect(await p.ev(`document.querySelector('.page-view h1')?.textContent`), 'the help').toBe('Помощь');
+    await go('Доски');
+    await sleep(500);
+    expect([await p.ev('location.search'), !!(await p.rect('.shelf-page')), !!(await p.rect('.side-nav'))].join(), 'the boards').toBe(',true,true');
+    await p.click(await p.at('.side-nav .side-nav-logo'));
     await sleep(200);
-    await p.click(await p.at('.topbar .logo'));
-    await sleep(250);
-    await p.key('Escape', 'Escape', 27);
-    await sleep(200);
-    expect(!!(await p.rect('.side-nav')), 'Esc: away').toBe(false);
+    expect(!!(await p.rect('.side-nav')), 'closed by its logo').toBe(false);
   },
 
   async '"Код": dragged off the right rail, a block put where it\'s let go'(p) {

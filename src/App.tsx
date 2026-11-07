@@ -9,7 +9,7 @@ import { usePanelPlace } from './labs/panelPlace';
 import { TextEditor } from './ui/TextEditor';
 import { TextPanel } from './ui/FormatPanel';
 import { TaskKeepPop, TaskPop, TaskTipBubble } from './ui/TaskPop';
-import { SideNav } from './labs/SideNav';
+import { setSideOpen, useSideOpen } from './labs/SideNav';
 import { navigate } from './route';
 import { PanelIcon } from './ui/PanelIcon';
 import { asOne } from './labs/multi';
@@ -73,8 +73,8 @@ export function App({ boardId }: { boardId: string }) {
   const [toast, setToast] = useState<string | null>(null);
   // "Профиль" or "Настройки", open over the board.
   const [dialog, setDialog] = useState<'profile' | 'settings' | null>(null);
-  // "Боковая панель" (src/labs), opened by the logo.
-  const [sideOpen, setSideOpen] = useState(false);
+  // "Боковая панель" (src/labs, kept on the page: see main.tsx), opened and closed by the logo.
+  const sideOpen = useSideOpen();
   // A note at the bottom with a button (see src/labs/tidyMind.ts), sent as "planx:toast".
   const [note, setNote] = useState<{ text: string; action: string; run: () => void; at: number } | null>(null);
   useEffect(() => {
@@ -352,7 +352,7 @@ export function App({ boardId }: { boardId: string }) {
           // The logo leads back to the shelf, to the folder this board is in.
           // ("Боковая панель", src/labs: it opens the side instead, a chevron before it under the pointer.)
           logo: labs.sideNav
-            ? <button className="logo to-shelf side-nav-logo-btn" title="Боковая панель" aria-label="Боковая панель" aria-expanded={sideOpen} onClick={() => setSideOpen(!sideOpen)}>Plan</button>
+            ? <button className={`logo to-shelf side-nav-logo-btn ${sideOpen ? "open" : ""}`} title="Боковая панель" aria-label="Боковая панель" aria-expanded={sideOpen} onClick={() => setSideOpen(!sideOpen)}>Plan</button>
             : <button className="logo to-shelf" title="К папке с досками" aria-label="К папке с досками" onClick={toShelf}>Plan</button>,
           sep: <div className="sep" />,
           // The field is as wide as its text (the copy in data-text sizes it), up to 30 characters.
@@ -509,7 +509,6 @@ export function App({ boardId }: { boardId: string }) {
         </div>
       )}
 
-      {labs.sideNav && sideOpen && <SideNav onBoards={toShelf} onProfile={() => setDialog('profile')} onSettings={() => setDialog('settings')} onClose={() => setSideOpen(false)} />}
       {dialog === 'profile' && <ProfileDialog name={conn.me.name} onRename={(n) => conn.rename(n)} onClose={() => setDialog(null)} />}
       {dialog === 'settings' && <SettingsDialog onClose={() => setDialog(null)} dark={theme === 'dark'} onDark={toggleTheme} />}
 
