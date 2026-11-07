@@ -14,15 +14,19 @@ import { descendants, mindWay, upright, type Way } from '../model/mind';
  * again with nothing moved by hand, it's all back as it was, stretches and handles.
  */
 interface MindTidy {
-  id: string; base: Map<string, Point>; kx: number[]; ky: number[]; at: Map<string, Point>; on: boolean; warned?: boolean;
-  /** Which two neighbours each level's handle along it stands between, kept so it doesn't hop while dragged. */
-  pairs?: Map<number, [string, string]>;
+  /** The handles' stretches, out (kx) and along (ky), each way the node's branches grow (a central
+   *  topic's: right, left, down, up, each on its own). */
+  id: string; base: Map<string, Point>; k: Partial<Record<Way, { kx: number[]; ky: number[] }>>; at: Map<string, Point>; on: boolean; warned?: boolean;
+  /** Which two neighbours each level's handle along it stands between ("way:level"), kept so it doesn't hop while dragged. */
+  pairs?: Map<string, [string, string]>;
 }
+const stretches = (way: Way) => (mt!.k[way] ??= { kx: [], ky: [] });
 let mt: MindTidy | null = null;
 
-/** A handle: across the gaps out to level `level` (out) or along it; `sign` -1 where dragging left (up) widens it. */
-export type MindGap = { axis: 'col' | 'row'; gap: number; level: number; out: boolean; sign: number };
-const key = (h: { level: number; out: boolean }) => `${h.out ? 'o' : 'a'}${h.level}`;
+/** A handle: across the gaps out to level `level` (out) or along it, of the branches growing `way`; `sign`
+ *  -1 where dragging left (up) widens it. */
+export type MindGap = { axis: 'col' | 'row'; gap: number; level: number; out: boolean; sign: number; way: Way };
+const key = (h: { level: number; out: boolean; way: Way }) => `${h.way}:${h.out ? 'o' : 'a'}${h.level}`;
 let hot: string | null = null;
 export const setHotMindGap = (h: MindGap | null) => { hot = h ? key(h) : null; };
 
@@ -31,7 +35,7 @@ const subtree = (ed: Editor, id: string): Item[] => descendants([id], ed.board.l
 /** Taken up after the node's branches are laid out afresh. */
 export function startMindTidy(ed: Editor, id: string): void {
   const base = relative(ed, id);
-  mt = base.size ? { id, base, kx: [], ky: [], at: new Map(base), on: true } : null;
+  mt = base.size ? { id, base, k: {}, at: new Map(base), on: true } : null;
 }
 
 /** Laid out afresh after something in it was moved by hand: the handles' stretches of the last time
@@ -40,8 +44,7 @@ export function restartMindTidy(ed: Editor, id: string): void {
   const was = mt?.id === id ? mt : null;
   startMindTidy(ed, id);
   if (!was || !mt) return;
-  mt.kx = was.kx;
-  mt.ky = was.ky;
+  mt.k = was.k;
   apply(ed);
 }
 
@@ -86,13 +89,19 @@ export function holds(ed: Editor): boolean {
   return false;
 }
 
-/** The node's way out (that of its branches), and its branches' levels below it, each in order along it. */
-function levels(ed: Editor): { way: Way; rows: Item[][] } | null {
+/** The ways the node's branches grow: a central topic's each it has some, another's its one. */
+function ways(ed: Editor): Way[] {
+  const n = mt && ed.board.get(mt.id);
+  if (!n) return [];
+  const kids = ed.board.list().filter((k) => k.type === 'mind' && k.parent === n.id);
+  return [...new Set(kids.map((k) => mindWay(k, n)))].slice(0, n.parent ? 1 : 4);
+}
+
+/** The node's branches growing `way`, their levels below it, each in order along it. */
+function levels(ed: Editor, way: Way): { way: Way; rows: Item[][] } | null {
   const n = mt && ed.board.get(mt.id);
   if (!n) return null;
-  const all = ed.board.list(), first = all.find((k) => k.type === 'mind' && k.parent === n.id);
-  if (!first) return null;
-  const way = mindWay(first, n), along = upright(way) ? 'x' : 'y';
+  const all = ed.board.list(), along = upright(way) ? 'x' : 'y';
   const rows: Item[][] = [];
   for (let level = [n]; ;) {
     const ids = new Set(level.map((k) => k.id));
@@ -106,18 +115,26 @@ function levels(ed: Editor): { way: Way; rows: Item[][] } | null {
 /** How far the gaps of a level are stretched: the first handle's for all, times the level's own. */
 const stretch = (k: number[], level: number) => (k[0] ?? 1) * (level ? k[level] ?? 1 : 1);
 
-/** The places for the gaps stretched, from where they were laid out. */
+/** The places for the gaps stretched, from where they were laid out, each way. */
 function apply(ed: Editor): void {
   if (!mt) return;
-  const n = ed.board.get(mt.id), lv = levels(ed);
-  if (!n || !lv) return;
+  const n = ed.board.get(mt.id);
+  if (!n) return;
+  const next = new Map<string, Point>();
+  for (const w of ways(ed)) applyWay(ed, n, w, next);
+  ed.board.transact(() => next.forEach((pt, id) => ed.board.update(id, pt)));
+  mt.at = relative(ed, mt.id);
+}
+
+function applyWay(ed: Editor, n: Item, w: Way, next: Map<string, Point>): void {
+  const lv = levels(ed, w), st = stretches(w);
+  if (!lv) return;
   const { way, rows } = lv, up = upright(way), along = up ? 'x' : 'y', size = up ? 'w' : 'h', out = up ? 'y' : 'x', deep = up ? 'h' : 'w';
   const forth = way === 'right' || way === 'down';
   const base = (i: Item) => { const b = mt!.base.get(i.id); return b ? { ...i, x: n.x + b.x, y: n.y + b.y } : i; };
-  const next = new Map<string, Point>();
   const placed = (i: Item) => ({ ...base(i), ...next.get(i.id) });
   rows.forEach((row, level) => {
-    const ky = stretch(mt!.ky, level), kx = stretch(mt!.kx, level);
+    const ky = stretch(st.ky, level), kx = stretch(st.kx, level);
     const b = row.map(base).sort((p, q) => p[along] - q[along]);
     // Along: each gap to the one before times ky, the level centred where it was.
     const lo = b[0][along], hi = b[b.length - 1][along] + b[b.length - 1][size];
@@ -134,11 +151,9 @@ function apply(ed: Editor): void {
       next.set(k.id, { [along]: Math.round(pos[i] + shift), [out]: Math.round(o) } as unknown as Point);
     });
   });
-  ed.board.transact(() => next.forEach((pt, id) => ed.board.update(id, pt)));
-  mt.at = relative(ed, mt.id);
 }
 
-type Line = { axis: 'col' | 'row'; at: number; from: number; to: number; gap: number; level: number; out: boolean };
+type Line = { axis: 'col' | 'row'; at: number; from: number; to: number; gap: number; level: number; out: boolean; way: Way };
 
 /** How far short a line along a level stops of the line across the gap beside it. */
 const CLEAR = 8;
@@ -149,7 +164,11 @@ const CLEAR = 8;
  *  widest gap along each level with one, from the nodes' near edge (the left, or the top), stopping short
  *  of the line across the gap on that side, so they don't cross. */
 function lines(ed: Editor): Line[] {
-  const n = mt && ed.board.get(mt.id), lv = n && levels(ed);
+  return ways(ed).flatMap((w) => linesOf(ed, w));
+}
+
+function linesOf(ed: Editor, w: Way): Line[] {
+  const n = mt && ed.board.get(mt.id), lv = n && levels(ed, w);
   if (!n || !lv) return [];
   const { way, rows } = lv, up = upright(way), along = up ? 'x' : 'y', size = up ? 'w' : 'h', out = up ? 'y' : 'x', deep = up ? 'h' : 'w';
   const forth = way === 'right' || way === 'down', res: Line[] = [];
@@ -166,21 +185,21 @@ function lines(ed: Editor): Line[] {
     const edge = forth ? Math.max(...before.map((k) => k[out] + k[deep])) : Math.min(...before.map((k) => k[out]));
     const near = forth ? Math.min(...row.map((k) => k[out])) : Math.max(...row.map((k) => k[out] + k[deep]));
     const lo = Math.min(...row.map((k) => k[along]));
-    res.push({ axis: up ? 'row' : 'col', at: gapLine(level), from: lo, to: lo + LINE, gap: Math.abs(near - edge), level, out: true });
+    res.push({ axis: up ? 'row' : 'col', at: gapLine(level), from: lo, to: lo + LINE, gap: Math.abs(near - edge), level, out: true, way });
     // Along it: its widest gap (where it first was, while those two still stand side by side).
     if (row.length < 2) return;
     const gapAt = (i: number) => row[i][along] - row[i - 1][along] - row[i - 1][size];
-    const pairs = (mt!.pairs ??= new Map()), kept = pairs.get(level);
+    const pairs = (mt!.pairs ??= new Map()), kept = pairs.get(`${way}:${level}`);
     let best = kept ? row.findIndex((k, i) => i > 0 && row[i - 1].id === kept[0] && k.id === kept[1]) : -1;
     if (best < 1) {
       best = 1;
       for (let i = 2; i < row.length; i++) if (gapAt(i) > gapAt(best)) best = i;
-      pairs.set(level, [row[best - 1].id, row[best].id]);
+      pairs.set(`${way}:${level}`, [row[best - 1].id, row[best].id]);
     }
     const a = row[best - 1], b = row[best], g = gapAt(best), start = Math.min(a[out], b[out]);
     // Running on from the near edge, the next line across is that out to the next level, or back towards the root this one's own.
     const beside = forth ? (rows[level + 1] ? gapLine(level + 1) : Infinity) : gapLine(level);
-    res.push({ axis: up ? 'col' : 'row', at: a[along] + a[size] + g / 2, from: start, to: Math.min(start + LINE, beside - CLEAR), gap: g, level, out: false });
+    res.push({ axis: up ? 'col' : 'row', at: a[along] + a[size] + g / 2, from: start, to: Math.min(start + LINE, beside - CLEAR), gap: g, level, out: false, way });
   });
   return res;
 }
@@ -188,25 +207,26 @@ function lines(ed: Editor): Line[] {
 /** Which handle's line is under the screen point. */
 export function mindGapAt(ed: Editor, sp: Point): MindGap | null {
   if (!holds(ed)) return null;
-  const w = ed.toWorld(sp.x, sp.y), near = gapReach(ed, w), lv = levels(ed)!;
+  const w = ed.toWorld(sp.x, sp.y), near = gapReach(ed, w);
   for (const g of lines(ed)) {
     const across = g.axis === 'col' ? w.x : w.y, alongP = g.axis === 'col' ? w.y : w.x;
     if (Math.abs(across - g.at) <= near && alongP >= g.from && alongP <= g.to) {
       // Out to the left (or up), the gap grows dragged that way.
-      return { axis: g.axis, gap: g.gap, level: g.level, out: g.out, sign: g.out && (lv.way === 'left' || lv.way === 'up') ? -1 : 1 };
+      return { axis: g.axis, gap: g.gap, level: g.level, out: g.out, sign: g.out && (g.way === 'left' || g.way === 'up') ? -1 : 1, way: g.way };
     }
   }
   return null;
 }
 
 /** How far the handle's own stretch goes now (the first level's, for all; another's, for its own). */
-export const mindStretch = (h: MindGap) => (!mt ? 1 : (h.out ? mt.kx : mt.ky)[h.level] ?? 1);
+export const mindStretch = (h: MindGap) => (!mt ? 1 : (h.out ? stretches(h.way).kx : stretches(h.way).ky)[h.level] ?? 1);
 
 /** A handle dragged `d` (board units) from where its gap was `gap`, its own stretch `k0` then: the
  *  gaps it sets stretched so. */
 export function dragMindGap(ed: Editor, h: MindGap, k0: number, d: number): void {
   if (!mt) return;
-  (h.out ? mt.kx : mt.ky)[h.level] = k0 * Math.max(0.1, (h.gap + d * h.sign) / Math.max(1, h.gap));
+  const st = stretches(h.way);
+  (h.out ? st.kx : st.ky)[h.level] = k0 * Math.max(0.1, (h.gap + d * h.sign) / Math.max(1, h.gap));
   apply(ed);
 }
 
