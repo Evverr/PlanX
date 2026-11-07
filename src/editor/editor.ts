@@ -92,6 +92,9 @@ export interface UIState {
  * The work is spread over the modules next to this one (press, gestures, hover, frames, tables,
  * mindOps, keys, camera, copies); the fields and methods marked "shared" are for them, not the UI.
  */
+/** How far a copy made by Ctrl+D stands off what it's a copy of. */
+const DUPLICATE_GAP = 24;
+
 export class Editor {
   board: Board;
   presence?: Presence;
@@ -1351,12 +1354,18 @@ export class Editor {
     return new Map(copies.map((c) => [c.id, { x: c.x, y: c.y }]));
   }
 
+  /** The copy beside what's picked, 24 off, level with it: right of it, or under it if it's a row (two or
+   *  more side by side, their tops and bottoms overlapping); copied again, beside the copy. */
   duplicate(): void {
     // Not copied: what was copied before stays to be pasted.
     const keep = this.clipboard, data = this.copyData();
     if (!data) return;
+    const items = (JSON.parse(data) as { items: Item[] }).items, b = boundsOf(items);
+    if (!b) return;
+    const picked = this.selectedItems().filter((i) => !i.host);
+    const row = picked.length > 1 && Math.max(...picked.map((i) => i.y)) < Math.min(...picked.map((i) => i.y + i.h));
     this.clipboard = data;
-    this.paste(24);
+    this.paste(0, row ? { x: b.x + b.w / 2, y: b.y + b.h * 1.5 + DUPLICATE_GAP } : { x: b.x + b.w * 1.5 + DUPLICATE_GAP, y: b.y + b.h / 2 });
     this.clipboard = keep;
   }
 
