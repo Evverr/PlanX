@@ -1,5 +1,5 @@
 import type { Item, Link, Side } from '../model/types';
-import { DEFAULTS, ROTATABLE, textPad, textPadY, uid } from '../model/types';
+import { DEFAULTS, ROTATABLE, uid } from '../model/types';
 import type { PathNode, Point, Rect } from '../canvas/geometry';
 import { anchorAt, angleOf, boxOf, center, hitItem, linkBox, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedFrom, toLocal, turn } from '../canvas/geometry';
 import { itemTextHeight, mindSize } from '../canvas/text';
@@ -18,6 +18,7 @@ import { pullOut } from '../labs/linkJoint';
 import { noteMindMoved } from '../labs/tidyMind';
 import { rotateCursor } from './cursors';
 import { MIND_TOPIC, type PenTool } from './tools';
+import { onMindText } from './hover';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
 import { eraseArea, eraserStyle } from '../labs/eraseArea';
@@ -331,10 +332,6 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
 }
 
 /** Whether a point is on a mind map node's text: inside its padding (but no more than 10 in). */
-const onMindText = (it: Item, w: Point): boolean => {
-  const px = Math.min(textPad(it), 10), py = Math.min(textPadY(it), 10);
-  return w.x > it.x + px && w.x < it.x + it.w - px && w.y > it.y + py && w.y < it.y + it.h - py;
-};
 
 /** The gesture let go of. */
 export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {

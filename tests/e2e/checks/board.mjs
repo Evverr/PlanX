@@ -854,6 +854,17 @@ export const checks = {
     expect(await p.ev(`[planx.board.get('lo').x, planx.board.get('ink').x].join()`), 'the picked one taken from under the drawing').toBe('140,120');
   },
 
+  async 'the cursor says what a click does: the text cursor only where one types in at once'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('task', 100, 100, { id: 't', text: 'Задача', w: 293, h: 52 }));
+      b.add(e.newItem('rect', 100, 250, { id: 'c', code: 'js', text: '', w: 480, h: 120, fs: 14, ff: 'mono', rad: 16 }));
+      b.add(e.newItem('sticky', 700, 100, { id: 's', w: 160, h: 160, text: 'Стикер' }));
+      b.add(e.newItem('mind', 700, 400, { id: 'm', w: 160, h: 48, text: 'Тема' })); e.setSelection([]); })()`);
+    await sleep(200);
+    const at = async (x, y) => { await p.mouse('mouseMoved', x, y); await sleep(50); return p.ev(`planx.editor.canvas.style.cursor`); };
+    expect([await at(170, 126), await at(340, 330), await at(780, 180), await at(780, 424)].join(), 'task title, empty code, sticker, mind map text').toBe('move,text,move,text');
+  },
+
   async 'a layer up stops under a task kept open'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board;
       b.add(e.newItem('task', 100, 100, { id: 'k', w: 494, h: 300, tv: 'full', keep: true, z: 600 }));
