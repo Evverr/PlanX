@@ -100,6 +100,21 @@ export const checks = {
     expect([!!(await p.rect('.side-nav')), (await p.rect('.shelf-page')).l].join(), 'its cross: the boards fill the window').toBe('false,0');
   },
 
+  async '"Обсуждение": the left rail\'s chat button opens it on the right, between the others\' pictures and the zoom bar, over the right rail; the comments on the zoom bar'(p) {
+    // (Tall enough for the whole left rail.)
+    await p.open(1200, 1300);
+    await p.click(await p.at('.tools [data-key="comments"]'));
+    await sleep(250);
+    const d = await p.rect('.discussion'), zoom = await p.rect('.bar.zoom'), rail = await p.rect('.labs-rail');
+    expect([d.b <= zoom.t - 12, d.t <= 60, d.l <= rail.l && d.r >= rail.r].join(), 'over the zoom bar, under the pictures, over the right rail').toBe('true,true,true');
+    expect(await p.ev(`!!document.querySelector('.discussion .wish-form')`), 'the wishlist in it').toBe(true);
+    await p.click(await p.at('.discussion-close'));
+    await sleep(200);
+    expect(!!(await p.rect('.discussion')), 'closed').toBe(false);
+    await p.click(await p.at('.bar.zoom button[aria-label="Комментарий"]'));
+    expect(await p.ev('planx.editor.tool'), 'the comments by the zoom bar').toBe('comment');
+  },
+
   async '"Код": dragged off the right rail, a block put where it\'s let go'(p) {
     const at = await p.at('.labs-rail button[aria-label="Код"]');
     await p.drag(at, [500, 400], { steps: 16 });

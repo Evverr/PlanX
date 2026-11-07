@@ -15,6 +15,7 @@ import { labOn, useLabs } from '../labs/labs';
 import { joinDropped, railOver } from '../labs/linkJoint';
 import { ObjectsMenu, OBJECTS } from '../labs/ObjectsMenu';
 import { LinePanel } from '../labs/LinePanel';
+import { setDiscussionOpen, useDiscussionOpen } from '../labs/Discussion';
 
 /** Tool panel from the Figma mockup (Mol / Bar vertical). */
 const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
@@ -87,7 +88,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
   }
   const shapeIcon = SHAPES.find(([t]) => t === lastShape.current)?.[1] ?? 'landscape';
   // "Объекты" (src/labs): its button opens the menu of them; dragged off the rail, it makes the one used last.
-  const labs = useLabs();
+  const labs = useLabs(), talking = useDiscussionOpen();
   const lastObject = useRef<Tool>('timeline');
   const objecting = OBJECTS.some(([t]) => t === tool);
   if (objecting) lastObject.current = tool;
@@ -226,6 +227,8 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     if (key === 'oval') return button(key, shaping, 'Фигуры', shapeIcon, () => editor.setTool(shaping ? 'select' : lastShape.current), { 'aria-pressed': shaping });
     if (key === 'draw') return button(key, drawing, 'Рисование (P)', drawIcon, () => editor.setTool(drawing ? 'select' : lastDraw.current), { 'aria-pressed': drawing });
     // "Комментарии" (src/labs): a click on the board puts a comment there.
+    // ("Обсуждение", src/labs: it opens the discussion instead, the comments on the zoom bar.)
+    if (key === 'comments' && labs.discussion) return button(key, talking, 'Обсуждение', 'comment', () => setDiscussionOpen(!talking), { 'aria-pressed': talking });
     if (key === 'comments') return labs.comments ? button(key, tool === 'comment', 'Комментарий', 'comment', () => editor.setTool(tool === 'comment' ? 'select' : 'comment'), { 'aria-pressed': tool === 'comment' }) : null;
     // "Линии" (src/labs): the line tool, from any item to any other; held, the ways a line runs.
     // ("Связи инструментом", src/labs: its switch is on the zoom bar instead.)

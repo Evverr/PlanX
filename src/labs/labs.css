@@ -349,3 +349,17 @@
 .page-view.settings .settings-list { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 1280px) { .page-view.settings .settings-list { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 1000px) { .page-view.settings .settings-list { grid-template-columns: repeat(2, 1fr); } }
+
+/* "Обсуждение" (Discussion.tsx): white as the panels, on the right from under the others' pictures down to
+   over the zoom bar, over the right rail. */
+.discussion { position: fixed; z-index: 30; right: calc(12px + env(safe-area-inset-right, 0px)); width: 360px; max-width: calc(100% - 24px);
+  top: calc(12px + var(--e30) + 12px + env(safe-area-inset-top, 0px)); bottom: calc(12px + var(--bar) + 12px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; box-sizing: border-box; background: var(--surface); border-radius: var(--panel-radius); box-shadow: var(--shadow);
+  --in-x: var(--slide); --in-y: 0px; animation: fade-in .16s ease-out, come-in .16s ease-out; animation-composition: replace, add; }
+.discussion-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 6px 18px; }
+.discussion-head h2 { margin: 0; font: 600 16px "Inter", var(--ui); color: var(--ink); }
+.discussion-close { width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; color: var(--muted); font: 400 22px/1 "Inter", var(--ui); cursor: pointer; }
+.discussion-close:hover { background: var(--fmt-hover); color: var(--ink); }
+.discussion-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 18px 18px; }
+.discussion .wishlist { max-width: none; margin: 0; }
+.discussion .wish-head h2 { font-size: 14px; }

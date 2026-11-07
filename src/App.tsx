@@ -11,6 +11,7 @@ import { TextPanel } from './ui/FormatPanel';
 import { TaskKeepPop, TaskPop, TaskTipBubble } from './ui/TaskPop';
 import { noteBoard, setSideOpen, useSideOpen } from './labs/SideNav';
 import { navigate } from './route';
+import { Discussion } from './labs/Discussion';
 import { PanelIcon } from './ui/PanelIcon';
 import { asOne } from './labs/multi';
 import { DockButton, useDock } from './ui/panels/dock';
@@ -159,7 +160,7 @@ export function App({ boardId }: { boardId: string }) {
   // Buttons in the top bar and the zoom panel can be rearranged by holding them.
   const topSort = useSortable('planx-order-top2', ['logo', 'sep', 'title', 'menu', 'new', 'clear', 'sep3', 'undo', 'redo'], 'x');
   // (The theme's button is in "Настройки" now; the link dots' switch has its place.)
-  const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'share', 'help', 'links', 'fit', 'dock', 'people'], 'x', { theme: 'links' });
+  const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'share', 'help', 'links', 'comment', 'fit', 'dock', 'people'], 'x', { theme: 'links' });
   const dots = useDotsOn();
 
   // The top bar and the zoom bar can be moved and made shorter by hand (see panels/bar.ts).
@@ -449,6 +450,9 @@ export function App({ boardId }: { boardId: string }) {
         // "Связи инструментом" (src/labs): the link dots out on everything, or away.
         links: labs.linkTool ? <button className={`ib ${dots ? 'on solid-on' : ''}`} title="Связи (C)" aria-label="Связи" aria-pressed={dots}
           onClick={() => toggleDots(editor)}><PanelIcon name={dots ? 'path-solid' : 'path'} /></button> : undefined,
+        // The comments on the board ("Комментарии"), here with "Обсуждение" on the left rail's chat button (src/labs).
+        comment: labs.comments && labs.discussion ? <button className={`ib ${ui.tool === 'comment' ? 'on' : ''}`} title="Комментарий на доске" aria-label="Комментарий" aria-pressed={ui.tool === 'comment'}
+          onClick={() => editor.setTool(ui.tool === 'comment' ? 'select' : 'comment')}><PanelIcon name="message" /></button> : undefined,
         fit: <button className="ib fit" title="Показать всё (Shift+1)" aria-label="Показать всё" onClick={() => editor.fit()}><PanelIcon name="screen" /></button>,
         help: <button className={`ib ${pop === 'help' ? 'on' : ''}`} title="Подсказки" aria-label="Подсказки" onClick={() => { toggle('help'); setMinimap(false); }}><PanelIcon name="question" /></button>,
         // A component can't take the ref, so the dock button sits in a wrapper.
@@ -461,6 +465,7 @@ export function App({ boardId }: { boardId: string }) {
       {cleared && <ClearFx key={cleared} onDone={endCleared} />}
       <Tooltips />
       <Labs editor={editor} conn={conn} docked={docked} />
+      {labs.discussion && <Discussion />}
 
       {/* Typing in a table cell, the panel shows and sets that cell's own formatting. */}
       {/* A basic sticker's panel once its text is being typed, not on just picking it. */}
