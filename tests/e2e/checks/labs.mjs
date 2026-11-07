@@ -66,6 +66,24 @@ export const checks = {
     expect([await p.ev(`!!planx.board.get('c')`), await p.ev('planx.editor.editingId')].join(), 'pressed: gone, nothing typed in').toBe('false,');
   },
 
+  async '"Боковая панель": the logo opens a dark side on the left, 200 wide, its profile and settings there; Esc puts it away'(p) {
+    await p.click(await p.at('.topbar .logo'));
+    await sleep(250);
+    const r = await p.rect('.side-nav');
+    expect([r.l, r.t, r.w, r.h].join(), 'down the left edge').toBe('0,0,200,800');
+    expect(await p.ev(`[...document.querySelectorAll('.side-nav-row span')].map((s) => s.textContent).join()`), 'what\'s in it').toBe('Доски,Профиль,Настройки');
+    await p.click(await p.ev(`(() => { const b = [...document.querySelectorAll('.side-nav-row')].find((b) => b.textContent === 'Настройки').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; })()`));
+    await sleep(250);
+    expect([!!(await p.rect('.side-nav')), await p.ev(`!!document.querySelector('.modal')`)].join(), 'the settings, the side gone').toBe('false,true');
+    await p.key('Escape', 'Escape', 27);
+    await sleep(200);
+    await p.click(await p.at('.topbar .logo'));
+    await sleep(250);
+    await p.key('Escape', 'Escape', 27);
+    await sleep(200);
+    expect(!!(await p.rect('.side-nav')), 'Esc: away').toBe(false);
+  },
+
   async '"Код": dragged off the right rail, a block put where it\'s let go'(p) {
     const at = await p.at('.labs-rail button[aria-label="Код"]');
     await p.drag(at, [500, 400], { steps: 16 });
