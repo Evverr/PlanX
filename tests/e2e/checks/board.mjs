@@ -876,6 +876,24 @@ export const checks = {
     expect(await subs(), 'taken away').toBe('Вторая');
   },
 
+  async 'a shape set to «Без текста» on its panel isn\'t typed in, by a double click or otherwise; set back, it is'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('rect', 400, 300, { id: 'r', w: 200, h: 120, text: 'Фигура' })); e.setSelection(['r']); })()`);
+    await sleep(400);
+    await p.click(await p.at('.bar.panel button[aria-label="Без текста"]'));
+    expect(await p.ev(`planx.board.get('r').nt`), 'set').toBe(true);
+    await dblClick(p, [500, 360]);
+    await sleep(150);
+    expect([await p.ev('planx.editor.editingId'), await p.ev(`planx.board.get('r').text`)].join(), 'not typed in, its text as it was').toBe(',Фигура');
+    await p.ev(`planx.editor.setSelection(['r'])`);
+    await sleep(400);
+    await p.click(await p.at('.bar.panel button[aria-label="Без текста"]'));
+    await sleep(450);
+    await dblClick(p, [500, 360]);
+    await sleep(150);
+    expect(await p.ev('planx.editor.editingId'), 'set back: typed in').toBe('r');
+  },
+
   async 'the usual arrow over items, text and all; a second click on a picked item\'s text types in it'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('task', 100, 100, { id: 't', text: 'Задача', w: 293, h: 52 }));
