@@ -4,7 +4,7 @@ import type { PathNode, Point, Rect } from '../canvas/geometry';
 import { anchorAt, angleOf, boxOf, center, hitItem, linkBox, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedFrom, toLocal, turn } from '../canvas/geometry';
 import { itemTextHeight, mindSize } from '../canvas/text';
 import { TASK_MIN_W, taskPartAt, taskSize } from '../canvas/task';
-import { freshTask, nextView } from '../model/task';
+import { freshTask, nextView, toggleSub } from '../model/task';
 import { taskOpen } from '../labs/taskFull';
 import { pressTask, taskFieldAt } from './tasks';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, freshTable, withScale, type TableLine } from '../model/table';
@@ -404,8 +404,10 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         window.open(g.url, '_blank', 'noopener');
       } else if (g.tap) {
         // A task's button, clicked (`tap`: where on screen, for a popup): what it does.
-        const it = board.get(g.id);
-        if (it) pressTask(ed, it, g.start, g.tap);
+        // (A subtask's text clicked twice: its tick as it was, it typed in.)
+        const it = board.get(g.id), part = it && taskPartAt(it, g.start);
+        if (it && g.dbl && typeof part === 'object' && part && !part.tick && !part.del) { toggleSub(board, it, part.sub); ed.startEditing(g.id, part.sub + 1, 'end'); }
+        else if (it) pressTask(ed, it, g.start, g.tap);
       } else if (board.get(g.id)?.code && !board.get(g.id)?.text && !g.dbl && ed.editingId !== g.id) {
         // A block of code with nothing in it ("Код", src/labs), clicked: typed in at once, to paste into.
         ed.startEditing(g.id, null, 'end');

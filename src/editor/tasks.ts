@@ -2,7 +2,7 @@ import type { Editor } from './editor';
 import type { Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { nextStatus, progressOf, statusOf, taskLayout, taskPartAt, type TaskPart } from '../canvas/task';
-import { addSub, fitTask, setStatus, setView, toggleSub } from '../model/task';
+import { addSub, fitTask, removeSub, setStatus, setView, toggleSub } from '../model/task';
 import { isLocked } from '../labs/labs';
 import { taskOpen } from '../labs/taskFull';
 
@@ -19,7 +19,8 @@ export interface TaskTip { text: string; x: number; y: number }
 export function taskButtonAt(it: Item | null | undefined, w: Point): TaskPart | null {
   if (it?.type !== 'task' || isLocked(it)) return null;
   const part = taskPartAt(it, w);
-  return part === 'title' || part === 'desc' || part === 'head' || (typeof part === 'object' && part && !part.tick) ? null : part;
+  // (A subtask's text too: a click there ticks it, as its box; typed in on a double click, see endGesture.)
+  return part === 'title' || part === 'desc' || part === 'head' ? null : part;
 }
 
 /** Does what a click on a task's button does (on letting go, not dragged); whether it was on one. */
@@ -59,7 +60,8 @@ export function pressTask(ed: Editor, it: Item, w: Point, sp: Point): boolean {
   } else if (part === 'boss' || part === 'doer' || part === 'due') {
     ed.setSelection([it.id]);
     window.dispatchEvent(new CustomEvent<TaskPick>('planx:task-pick', { detail: { id: it.id, field: part, x: sp.x, y: sp.y } }));
-  } else if (typeof part === 'object') toggleSub(board, it, part.sub);
+  } else if (typeof part === 'object' && part.del) removeSub(board, it, part.sub);
+  else if (typeof part === 'object') toggleSub(board, it, part.sub);
   return true;
 }
 
