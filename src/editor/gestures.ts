@@ -47,7 +47,7 @@ export type Gesture =
   | { type: 'linkStretch'; id: string; k: number; pts: Point[]; start: Point; moved?: boolean }
   | { type: 'mindMove'; id: string; from: Point; to: Point; target: string | null }
   | { type: 'marquee'; start: Point; base: Set<string>; rect: Rect | null; zoom?: boolean }
-  | { type: 'draw'; tool: PenTool; pts: Point[] }
+  | { type: 'draw'; tool: PenTool; pts: Point[]; end?: Point }
   | { type: 'erase'; last: Point }
   // "Перо" (src/labs): a corner being pressed (its handles dragged out); a node of a path being changed.
   | { type: 'nib' }
@@ -301,9 +301,13 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       return;
     }
     case 'draw': {
-      // Coalesced events keep fast strokes smooth; skip points closer than a pixel and a half.
+      // Coalesced events keep fast strokes smooth; skip points closer than a pixel and a half. Each taken
+      // halfway from the last towards the pointer (a steadied hand: its tremor smoothed out; the pointer's
+      // own last place added once let go, see addInk).
       for (const ev of e.getCoalescedEvents?.() ?? [e]) {
-        const l = ed.local(ev), p = ed.toWorld(l.x, l.y), last = g.pts[g.pts.length - 1];
+        const l = ed.local(ev), raw = ed.toWorld(l.x, l.y), last = g.pts[g.pts.length - 1];
+        const p = { x: last.x + (raw.x - last.x) * (1 - STEADY), y: last.y + (raw.y - last.y) * (1 - STEADY) };
+        g.end = raw;
         if (Math.hypot(p.x - last.x, p.y - last.y) * ed.cam.z >= 1.5) g.pts.push(p);
       }
       ed.requestRender();
@@ -514,7 +518,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       ed.requestRender();
       return;
     case 'draw':
-      addInk(ed, g.tool, g.pts);
+      addInk(ed, g.tool, g.end ? [...g.pts, g.end] : g.pts);
       return;
     case 'erase':
       board.endGesture();
@@ -536,8 +540,10 @@ export function cancelGesture(ed: Editor): void {
 }
 
 /** Turns a drawn line into an ink item boxed around it, its points kept relative to the box. */
-function addInk(ed: Editor, tool: PenTool, pts: Point[]): void {
+function addInk(ed: Editor, tool: PenTool, drawn: Point[]): void {
   const style = ed.penStyle(tool), sw = style.size / ed.cam.z;
+  // What hardly changes its shape left out (within 0.6 of a pixel on screen): fewer points, a smoother curve through them.
+  const pts = simplified(drawn, 0.6 / ed.cam.z);
   // Fully see-through, nothing would show: no line left lying about unseen.
   if (style.op === 0) return;
   let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
@@ -549,6 +555,28 @@ function addInk(ed: Editor, tool: PenTool, pts: Point[]): void {
     w, h, iw: w, sw: r(sw), color: style.color, hl: tool === 'marker' || undefined, fo: style.op,
     pts: pts.flatMap((p) => [r(p.x - x), r(p.y - y)]),
   }));
+}
+
+/** How far each point of a line drawn stays where it was rather than going to the pointer (0: none). */
+const STEADY = 0.5;
+
+/** A line's points with those it hardly turns at left out (Ramer–Douglas–Peucker): none further than `eps`
+ *  off the line through the ones kept either side. */
+function simplified(pts: Point[], eps: number): Point[] {
+  if (pts.length < 3) return pts;
+  const keep = new Uint8Array(pts.length);
+  keep[0] = keep[pts.length - 1] = 1;
+  const stack: Array<[number, number]> = [[0, pts.length - 1]];
+  while (stack.length) {
+    const [i, j] = stack.pop()!, a = pts[i], b = pts[j], dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+    let far = -1, most = eps;
+    for (let k = i + 1; k < j; k++) {
+      const d = Math.abs(dy * (pts[k].x - a.x) - dx * (pts[k].y - a.y)) / len;
+      if (d > most) { most = d; far = k; }
+    }
+    if (far >= 0) { keep[far] = 1; stack.push([i, far], [far, j]); }
+  }
+  return pts.filter((_, k) => keep[k]);
 }
 
 /** Removes every stroke the eraser touches between two points, checked at steps narrower than the eraser. */
