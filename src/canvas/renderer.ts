@@ -6,7 +6,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchColor, branchCurve, branchEdges, branchWays, buttonKey, foldBadge, foldedWays, fillOpacity, levelColor, mindButtons, mindDepth, nodeColors, siblingTints, type Way } from '../model/mind';
+import { branchBase, branchColor, branchCurve, branchEdges, buttonKey, foldBadge, fillOpacity, ringRadius, levelColor, mindButtons, mindDepth, mindWay, nodeColors, siblingTints, type Way } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
@@ -624,11 +624,10 @@ function outlineCurved(ctx: CanvasPath, it: Item, rad: number) {
 function drawMindButtons(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
   const { cam } = s;
   if (s.plusFade > 0) {
-    // The ways it has branches: those in sight, and those folded away.
-    const up = it.parent ? s.get(it.parent) : undefined;
-    const ways = [...new Set([...branchWays(it, s.items), ...foldedWays(it, up)])];
-    const fresh = s.chevronless?.startsWith(`${it.id}:`) ? s.chevronless.slice(it.id.length + 1) as Way : undefined;
-    for (const b of mindButtons(it, s.get, cam.z, ways, fresh)) {
+    // (Not those the lit ring where its branches leave it would be under: see drawBranches.)
+    const ringAt = s.hotPlus?.startsWith(`ring:${it.id}:`) ? branchBase(it, s.hotPlus.split(':')[2] as Way) : null;
+    for (const b of mindButtons(it, s.get, cam.z)) {
+      if (ringAt && Math.hypot(b.x - ringAt.x, b.y - ringAt.y) < ringRadius(cam.z) * 2.5) continue;
       // Smaller and faint until the pointer comes over it.
       const hot = s.hotPlus === buttonKey(b), r = hot ? b.r : b.r * 0.9;
       ctx.globalAlpha = (hot ? 1 : 0.5) * s.plusFade;
@@ -690,10 +689,11 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 0;
   if (own.fill) { ctx.fillStyle = shade(own.fill, theme.dim); ctx.fill(); }
-  // A strip 3 wide down its left edge in its level's colour, inside its round corners.
+  // A strip 3 wide down its left edge in the colour it's given (the central topic's too), else its level's,
+  // inside its round corners.
   ctx.save();
   ctx.clip();
-  ctx.fillStyle = shade(levelColor(mindDepth(it, s.get)), theme.dim);
+  ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : levelColor(mindDepth(it, s.get)), theme.dim);
   ctx.fillRect(it.x, it.y, 3, it.h);
   ctx.restore();
   ctx.globalAlpha = 1;
@@ -744,11 +744,27 @@ function drawFoldBadge(ctx: CanvasRenderingContext2D, it: Item, s: Scene, way: W
 function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
   ctx.lineCap = 'round';
   const edges = branchEdges(s.items, s.get);
+  // The ring where a node's branches leave it one way, under the pointer (see ringAt in editor/hover.ts):
+  // in their colour, the branches not seen inside it, nothing filling it.
+  ringDrawn = null;
+  const [, ringId, ringWay] = s.hotPlus?.startsWith('ring:') ? s.hotPlus.split(':') : [];
+  const ringOf = ringId ? s.get(ringId) : undefined, ring = ringOf && branchBase(ringOf, ringWay as Way), rr = ringRadius(s.cam.z);
+  let ringInk: string | null = null;
   for (const it of s.items) {
     if (it.type !== 'mind' || !it.parent) continue;
     const up = s.get(it.parent);
     if (!up) continue;
     const [a, c1, c2, b] = branchCurve(up, it, edges);
+    const cut = ring && up.id === ringId && mindWay(it, up) === ringWay;
+    if (cut) {
+      ringInk ??= shade(branchColor(it, s.get), s.theme.dim);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(ring.x - 1e5, ring.y - 1e5, 2e5, 2e5);
+      ctx.moveTo(ring.x + rr, ring.y);
+      ctx.arc(ring.x, ring.y, rr, 0, Math.PI * 2);
+      ctx.clip('evenodd');
+    }
     // In the colour of the node it leads to.
     ctx.strokeStyle = shade(branchColor(it, s.get), s.theme.dim);
     // (Out of a central topic as thick as further on.)
@@ -759,8 +775,21 @@ function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
     ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, b.x, b.y);
     if (b.x > it.x + it.w) ctx.lineTo(it.x + it.w, b.y);
     ctx.stroke();
+    if (cut) ctx.restore();
   }
+  ringDrawn = ring && ringInk ? { ...ring, r: rr, ink: ringInk } : null;
   ctx.globalAlpha = 1;
+}
+
+/** The ring lit where a node's branches leave it (see drawBranches): drawn over the nodes, as its buttons are. */
+let ringDrawn: (Point & { r: number; ink: string }) | null = null;
+function drawRing(ctx: CanvasRenderingContext2D) {
+  if (!ringDrawn) return;
+  ctx.strokeStyle = ringDrawn.ink;
+  ctx.lineWidth = 1.125 * 1.7;
+  ctx.beginPath();
+  ctx.arc(ringDrawn.x, ringDrawn.y, ringDrawn.r, 0, Math.PI * 2);
+  ctx.stroke();
 }
 
 /** Blue of the audio note's play button and of the played part of its waveform. */
@@ -1332,6 +1361,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     }
   }
 
+  drawRing(ctx);
   // The buttons of a mind map node the pointer has rested on, in place of the picked one's.
   const resting = s.plusOn ? s.get(s.plusOn) : undefined;
   if (resting) drawMindButtons(ctx, resting, s);

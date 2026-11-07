@@ -4,7 +4,7 @@ import { center, hitItem, hitLink, instanceBounds, linkBox, linkShape, onAudioBu
 import { taskButtonAt } from './tasks';
 import { copyCode, onCodeCopy } from '../labs/codeBlock';
 import { toggleAudio } from '../canvas/audio';
-import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, tickAt, objectArrowAt, pickedUnder } from './hover';
+import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, ringAt, tickAt, objectArrowAt, pickedUnder } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -192,6 +192,10 @@ export function press(ed: Editor, e: PointerEvent): void {
   const single = ed.selection.size === 1 ? board.get([...ed.selection][0]) : undefined;
   // A mind map node's buttons: the picked one's, or those of the one the pointer rests on.
   const node = ed.editingId && ed.editingId !== single?.id ? undefined : ed.plusNode(), plus = node && plusAt(ed, node, w);
+  // The ring where a node's branches leave it one way (nearer than its "+" that way): folds them, nothing
+  // left picked, the map to look at.
+  const ring = e.button === 0 && !ed.editingId ? ringAt(ed, w) : null;
+  if (ring && (!plus || ring.d < Math.hypot(w.x - plus.x, w.y - plus.y))) { ed.setCollapsed(ring.id, ring.way, true); ed.setSelection([]); return; }
   if (node && plus) {
     if (plus.kind === 'move') ed.gesture = { type: 'mindMove', id: node.id, from: w, to: w, target: null };
     // Folded by its chevron, nothing's left picked: the map to look at.

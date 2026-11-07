@@ -144,6 +144,8 @@
 .params-group > .color-picker.floating { position: fixed; bottom: auto; transform: none; z-index: 41; --in-y: calc(-1 * var(--slide)); }
 .params-group > .color-picker.floating.above { --in-y: var(--slide); }
 .params-group { padding: var(--s4) var(--s4) var(--s8); }
+/* A mind map central topic's tabs («Цвет», «Конфигурация») over its parameters. */
+.params-tabs { margin: var(--s4) var(--s4) var(--s8); }
 /* Between one item's parameters and the next one's title, more room under the line. */
 /* (as wide as the parameters, the same way in from either side) */
 .params-pop .params-list .params-item > .menu-line { margin: var(--s7) 0 calc(var(--s7) + var(--s16)); }

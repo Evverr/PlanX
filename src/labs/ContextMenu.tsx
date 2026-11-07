@@ -6,7 +6,7 @@ import { linkInTextAt } from '../canvas/renderer';
 import { alignOf, baseWeight, DEFAULTS, FILLS, fillable, HAS_FONT, ICON_COLORS, INK_COLORS, strokable, STROKE_COLORS, TEXT_COLORS, type Item, type LinkStyle } from '../model/types';
 import { fitHeight, FONTS } from '../canvas/text';
 import { PanelIcon, type PanelIconName } from '../ui/PanelIcon';
-import { fillOpacity, MIND_PALETTE } from '../model/mind';
+import { fillOpacity, MIND_PALETTE, mindWays } from '../model/mind';
 import { Glyph } from '../ui/glyphs';
 import { ColorPicker } from '../ui/ColorPicker';
 import { Switch } from '../ui/BoardMenu';
@@ -392,10 +392,40 @@ export function ColorRow({ editor, label, colors, current, none, opacity, onColo
 
 const SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72, 96];
 
+/** A central topic's parameters' tabs: «Цвет» and «Конфигурация». */
+function MindTabs({ tab, setTab }: { tab: 'color' | 'ways'; setTab: (t: 'color' | 'ways') => void }) {
+  return (
+    <div className="labs-seg params-tabs" role="tablist" aria-label="Параметры узла">
+      <button role="tab" aria-selected={tab === 'color'} className={tab === 'color' ? 'on' : ''} onClick={() => setTab('color')}>Цвет</button>
+      <button role="tab" aria-selected={tab === 'ways'} className={tab === 'ways' ? 'on' : ''} onClick={() => setTab('ways')}>Конфигурация</button>
+    </div>
+  );
+}
+
+/** «Конфигурация»: which ways a central topic grows branches by its "+" (right and up unless set). */
+function MindWays({ it, set }: { it: Item; set: (patch: Partial<Item>) => void }) {
+  const on = mindWays(it), all = [['right', 'Вправо'], ['left', 'Влево'], ['up', 'Вверх'], ['down', 'Вниз']] as const;
+  return (
+    <div className="params-group">
+      {all.map(([way, label]) => {
+        const has = on.includes(way), next = has ? on.filter((w) => w !== way) : [...on, way];
+        return (
+          <div key={way} className="menu-item">
+            <button className="menu-row" role="menuitemcheckbox" aria-checked={has} onClick={() => set({ mw: next })}>
+              <span>{label}</span><Switch on={has} />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /** An item's parameters: its fill and outline (or colour), each with its opacity, its text as the
  *  text panel sets it (font, size, style, alignment, list, colour), and a rectangle's or figure's
  *  rounding. */
 function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch: Partial<Item>) => void }) {
+  const [tab, setTab] = useState<'color' | 'ways'>('color');
   // Its text's parameters once it has some (not a new rectangle's).
   const canFill = fillable(it), canStroke = strokable(it), texted = HAS_FONT.includes(it.type) && it.type !== 'table' && !!it.text?.trim();
   const fills = it.type === 'mind' ? Object.fromEntries(MIND_PALETTE.map((c) => [c, c])) : FILLS;
@@ -416,8 +446,12 @@ function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch
   const toggle = (icon: PanelIconName, label: string, on: boolean, patch: Partial<Item>) => (
     <button className={`params-btn ${on ? 'on' : ''}`} title={label} aria-label={label} aria-pressed={on} onClick={() => text(patch)}><PanelIcon name={icon} /></button>
   );
+  // A mind map's central topic: its colour, or which ways it grows ("Конфигурация").
+  const root = it.type === 'mind' && !it.parent;
+  if (root && tab === 'ways') return <><MindTabs tab={tab} setTab={setTab} /><MindWays it={it} set={set} /></>;
   return (
     <>
+      {root && <MindTabs tab={tab} setTab={setTab} />}
       {canFill && <ColorRow editor={editor} label={it.type === 'mind' ? 'Цвет' : 'Заливка'} colors={fills} current={it.color} opacity={fillOpacity(it)}
         onColor={(c) => set({ color: c })} onOpacity={(v) => set({ fo: v ?? (it.type === 'mind' || it.type === 'frame' ? 1 : undefined) })} />}
       {canStroke && <ColorRow editor={editor} label="Обводка" colors={Object.fromEntries(Object.entries(STROKE_COLORS).filter(([k]) => k !== 'none').map(([k, v]) => [k, v || (k === 'ink' ? 'var(--ink)' : 'var(--shape-stroke)')]))} none
