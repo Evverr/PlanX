@@ -683,18 +683,22 @@ export function branchEdges(items: Item[], get: Get): Map<string, number> {
 }
 
 /** The node a branch dragged about would hang from now: the one whose family (where a branch of it would
- *  go, or those it has) its node is nearest to, but in the branch itself. */
-export function nearestFamily(id: string, items: Item[]): string | null {
+ *  go, or those it has) its node is nearest to, but in the branch itself; and only one on the side it grows
+ *  from (`way`, as it grew before: right of its parent, one left of it), its line not through it. */
+export function nearestFamily(id: string, items: Item[], way: Way = 'right'): string | null {
   const it = items.find((i) => i.id === id);
   if (!it?.parent) return null;
   const away = new Set([id, ...descendants([id], items)]), c = { x: it.x + it.w / 2, y: it.y + it.h / 2 };
   const kids = new Map<string, Item[]>();
   for (const k of items) if (k.type === 'mind' && k.parent && !away.has(k.id)) kids.set(k.parent, [...(kids.get(k.parent) ?? []), k]);
   let best: string | null = null, near = Infinity;
+  const beyond = (p: Item) => (way === 'right' ? p.x + p.w <= it.x : way === 'left' ? p.x >= it.x + it.w : way === 'down' ? p.y + p.h <= it.y : p.y >= it.y + it.h);
   for (const p of items) {
-    if (p.type !== 'mind' || away.has(p.id) || p.host) continue;
-    const side = c.x >= p.x + p.w / 2 ? 1 : -1;
-    let d = Math.hypot(c.x - (side > 0 ? p.x + p.w + MIND_GAP_X + it.w / 2 : p.x - MIND_GAP_X - it.w / 2), c.y - (p.y + p.h / 2));
+    if (p.type !== 'mind' || away.has(p.id) || p.host || !beyond(p)) continue;
+    // Where a branch of it would go that way.
+    const spot = way === 'right' ? { x: p.x + p.w + MIND_GAP_X + it.w / 2, y: p.y + p.h / 2 } : way === 'left' ? { x: p.x - MIND_GAP_X - it.w / 2, y: p.y + p.h / 2 }
+      : { x: p.x + p.w / 2, y: way === 'down' ? p.y + p.h + MIND_GAP_DOWN + it.h / 2 : p.y - MIND_GAP_DOWN - it.h / 2 };
+    let d = Math.hypot(c.x - spot.x, c.y - spot.y);
     for (const k of kids.get(p.id) ?? []) d = Math.min(d, Math.hypot(c.x - k.x - k.w / 2, c.y - k.y - k.h / 2));
     if (d < near) { near = d; best = p.id; }
   }

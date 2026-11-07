@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addChild, balance, branchCurve, branchBase, buttonKey, canMoveTo, childPlace, descendants, foldBadge, foldedAway, folding, insertBeside, makeRoom, tidyBranches, mindButtons, mindDepth, moveBranch, siblingOf } from '../src/model/mind';
+import { addChild, balance, branchCurve, branchBase, buttonKey, canMoveTo, childPlace, descendants, foldBadge, foldedAway, folding, insertBeside, makeRoom, nearestFamily, tidyBranches, mindButtons, mindDepth, moveBranch, siblingOf } from '../src/model/mind';
 import type { Item } from '../src/model/types';
 
 const node = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item =>
@@ -181,6 +181,15 @@ describe('mind map: branches led down from the central topic', () => {
     const moves = moveBranch('a', 'r', [r, a, a1], 'down');
     expect(moves.get('a')).toEqual({ x: 0, y: 88, down: true });
     expect(moves.get('a1')).toEqual({ x: 0, y: 176, down: true });
+  });
+});
+
+describe('mind map: a branch dragged to another family', () => {
+  it('hangs only from one on the side it grew from, its line not through it', () => {
+    // x grew right of a; dragged by q (right of it, nearer) it still takes a family left of it.
+    const r = node('r', 0, 0), a = node('a', 160, 0, { parent: 'r' }), x = node('x', 330, 0, { parent: 'a' }), q = node('q', 480, 0, { parent: 'r' });
+    expect(nearestFamily('x', [r, a, x, q], 'right')).toBe('a');
+    expect(nearestFamily('x', [r, a, x, q], 'left')).toBe('q');
   });
 });
 
