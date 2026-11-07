@@ -180,7 +180,7 @@ export const textPad = (it: Item): number =>
     : it.type === 'ellipse' ? Math.min(it.w, it.h) * 0.15 + 6 : it.type === 'polygon' ? Math.min(it.w, it.h) * 0.22 + 6 : 0;
 /** Room above and below the text: the same as to the sides, but for a central topic (15, not 32) and a
  *  table's cells (8, not 16: a row's 40 high). */
-export const textPadY = (it: Item): number => (it.type === 'mind' ? 15 : it.type === 'table' ? 8 : textPad(it));
+export const textPadY = (it: Item): number => (it.type === 'mind' ? 8 : it.type === 'table' ? 8 : textPad(it));
 export const alignOf = (it: Item): TextAlign => it.ta ?? (it.type === 'text' || it.type === 'table' || it.type === 'mind' ? 'left' : 'center');
 
 /** Text colours; "ink" is the item's usual text colour. */
