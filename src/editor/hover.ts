@@ -93,7 +93,8 @@ export function ringAt(ed: Editor, w: Point): { id: string; way: Way; d: number 
   let best: { id: string; way: Way; d: number } | null = null;
   for (const [id, set] of ways) {
     const it = ed.board.get(id);
-    if (!it || hidden.has(id) || it.host) continue;
+    // (A central topic's branches aren't folded: they are the map.)
+    if (!it?.parent || hidden.has(id) || it.host) continue;
     const folded = foldedWays(it, it.parent ? ed.board.get(it.parent) : undefined);
     for (const way of set) {
       if (folded.includes(way)) continue;

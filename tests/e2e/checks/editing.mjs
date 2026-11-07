@@ -167,7 +167,7 @@ export const checks = {
     await p.make('mind', [600, 400]);
     await p.escape();
     const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
-    await p.ev(`planx.editor.setSelection(['${root}'])`);
+    await p.ev(`planx.board.update('${root}', { mw: ['right', 'left', 'up'] }); planx.editor.setSelection(['${root}'])`);
     const plus = await p.ev(`(async () => { const m = await import('/src/model/mind.ts'), ed = planx.editor;
       const b = m.mindButtons(planx.board.get('${root}'), (k) => planx.board.get(k), ed.cam.z).find((b) => b.kind === 'up');
       const s = ed.toScreen(b), c = ed.canvas.getBoundingClientRect(); return [s.x + c.left, s.y + c.top]; })()`);
@@ -204,14 +204,18 @@ export const checks = {
     await p.ev(`planx.editor.setCollapsed('${root}', 'right', true)`);
     expect(await p.ev(`planx.editor.shown().filter((i) => i.type === 'mind').length`), 'the right side folded away, the left still there').toBe(2);
     expect(JSON.stringify(await p.ev(`[...planx.editor.folded().get('${root}')]`)), 'its count').toBe('[["right",2]]');
-    // The left side folded by the ring where its branches leave the topic, lit as the pointer comes over it.
-    const ring = await p.ev(`(() => { const r = planx.board.get('${root}'), e = planx.editor, c = e.canvas.getBoundingClientRect(), s = e.toScreen({ x: r.x, y: r.y + r.h / 2 }); return [s.x + c.left, s.y + c.top]; })()`);
+    // A branch's own branches folded by the ring halfway along their straight start out of it, lit as the
+    // pointer comes over it (the topic's own have none: they are the map).
+    const left = await p.ev(`planx.board.list().find((i) => i.parent === '${root}' && i.x < planx.board.get('${root}').x).id`);
+    await p.ev(`planx.editor.addMindNode('${left}', 'child', true); planx.editor.stopEditing(); planx.editor.setSelection([])`);
+    await sleep(200);
+    const ring = await p.ev(`(async () => { const m = await import('/src/model/mind.ts'), e = planx.editor, c = e.canvas.getBoundingClientRect(), s = e.toScreen(m.branchBase(planx.board.get('${left}'), 'left')); return [s.x + c.left, s.y + c.top]; })()`);
     await p.mouse('mouseMoved', ...ring);
     await sleep(100);
-    expect(await p.ev(`planx.editor.hotPlus`), 'the ring lit').toBe(`ring:${root}:left`);
+    expect(await p.ev(`planx.editor.hotPlus`), 'the ring lit').toBe(`ring:${left}:left`);
     await p.click(ring);
     await sleep(100);
-    expect(JSON.stringify(await p.ev(`[...planx.editor.folded().get('${root}')]`)), 'both folded').toBe('[["right",2],["left",1]]');
+    expect(await p.ev(`planx.board.get('${left}').collapsed`), 'its branch folded').toBe(true);
   },
 
   async 'Tab while typing in a mind map node goes on to the next branch of the same parent, Shift+Tab back'(p) {

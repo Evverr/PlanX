@@ -569,18 +569,29 @@ export function folding(it: Item, way: Way, on: boolean): Partial<Item> {
   return { foldedWays: ways.length ? ways : undefined };
 }
 
-/** The ways a central topic offers to grow branches (its "Конфигурация"): right and up unless set. */
-export const mindWays = (it: Item): Way[] => it.mw ?? ['right', 'up'];
+/** The ways a central topic offers to grow branches (its "Конфигурация"): right and left unless set. */
+export const mindWays = (it: Item): Way[] => it.mw ?? ['right', 'left'];
 
-/** Where a node's branches growing `way` leave it: the middle of that side. */
-export function branchBase(it: Item, way: Way): Point {
+/** How far a node's branches go on straight out of it before they curve: room for the ring folding them. */
+export const BRANCH_STUB = 24;
+
+/** Where a node's branches growing `way` leave it: the middle of that side (a central topic's, its middle). */
+export function branchFrom(it: Item, way: Way): Point {
+  if (!it.parent) return { x: it.x + it.w / 2, y: it.y + it.h / 2 };
   if (upright(way)) return { x: it.x + it.w / 2, y: way === 'down' ? it.y + it.h : it.y };
   return { x: way === 'right' ? it.x + it.w : it.x, y: it.y + it.h / 2 };
 }
 
+/** The ring folding a node's branches growing `way`: halfway along their straight start (a central
+ *  topic's branches aren't folded: they are the map). */
+export function branchBase(it: Item, way: Way): Point {
+  const p = branchFrom(it, way), d = BRANCH_STUB / 2;
+  return way === 'right' ? { ...p, x: p.x + d } : way === 'left' ? { ...p, x: p.x - d } : { ...p, y: way === 'down' ? p.y + d : p.y - d };
+}
+
 /** The ring folding a node's branches growing one way: where they leave it, its radius as a button's,
  *  in screen pixels whatever the zoom. */
-export const ringRadius = (zoom: number): number => 9 / zoom;
+export const ringRadius = (zoom: number): number => Math.min(9 / zoom, BRANCH_STUB / 2 - 2);
 
 /** A point `off` screen pixels out from a node's side facing `way`, halfway along it. */
 function spot(it: Item, way: Way, off: number, zoom: number): Point {
@@ -631,15 +642,17 @@ export function foldBadge(it: Item, way: Way, zoom: number, count: number, out =
 /** The connecting branch from a parent to a child: from the parent's facing side to the child's,
  *  leaving and arriving level (or, under or over it, upright). */
 export function branchCurve(parent: Item, child: Item, edges?: Map<string, number>): [Point, Point, Point, Point] {
+  // (A central topic's out of its middle, under it; another's on straight out of it a little first.)
+  const root = !parent.parent, stub = root ? 0 : BRANCH_STUB;
   if (child.down || child.up) {
-    const a = { x: parent.x + parent.w / 2, y: child.up ? parent.y : parent.y + parent.h };
+    const a = { x: parent.x + parent.w / 2, y: root ? parent.y + parent.h / 2 : child.up ? parent.y - stub : parent.y + parent.h + stub };
     const b = { x: child.x + child.w / 2, y: child.up ? child.y + child.h : child.y };
     const dy = (b.y - a.y) / 2;
     return [a, { x: a.x, y: a.y + dy }, { x: b.x, y: b.y - dy }, b];
   }
   const side = mindSide(child, parent);
   // (By the right edges of their rows, if given: see branchEdges.)
-  const a = { x: side > 0 ? edges?.get(parent.id) ?? parent.x + parent.w : parent.x, y: parent.y + parent.h / 2 };
+  const a = { x: root ? parent.x + parent.w / 2 : side > 0 ? (edges?.get(parent.id) ?? parent.x + parent.w) + stub : parent.x - stub, y: parent.y + parent.h / 2 };
   const b = { x: side > 0 ? child.x : edges?.get(child.id) ?? child.x + child.w, y: child.y + child.h / 2 };
   const dx = (b.x - a.x) / 2;
   return [a, { x: a.x + dx, y: a.y }, { x: b.x - dx, y: b.y }, b];

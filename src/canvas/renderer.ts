@@ -6,7 +6,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchBase, branchColor, branchCurve, branchEdges, buttonKey, foldBadge, fillOpacity, ringRadius, levelColor, mindButtons, mindDepth, mindWay, nodeColors, siblingTints, type Way } from '../model/mind';
+import { branchBase, branchColor, branchFrom, branchCurve, branchEdges, buttonKey, foldBadge, fillOpacity, ringRadius, levelColor, mindButtons, mindDepth, mindWay, nodeColors, siblingTints, type Way } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
@@ -770,8 +770,11 @@ function drawBranches(ctx: CanvasRenderingContext2D, s: Scene) {
     // (Out of a central topic as thick as further on.)
     ctx.lineWidth = 1.125 * 1.7;
     ctx.beginPath();
-    // Straight from its parent's own edge to its row's, and from its row's to its own (see branchEdges).
-    if (a.x > up.x + up.w) { ctx.moveTo(up.x + up.w, a.y); ctx.lineTo(a.x, a.y); } else ctx.moveTo(a.x, a.y);
+    // Straight out of its parent to where it curves (past its row's edge, see branchEdges; a central
+    // topic's from its middle), and from its row's edge to its own.
+    const from = branchFrom(up, mindWay(it, up));
+    ctx.moveTo(from.x, from.y);
+    if (from.x !== a.x || from.y !== a.y) ctx.lineTo(a.x, a.y);
     ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, b.x, b.y);
     if (b.x > it.x + it.w) ctx.lineTo(it.x + it.w, b.y);
     ctx.stroke();

@@ -171,9 +171,9 @@ describe('mind map: branches led down from the central topic', () => {
     expect(moves.get('d11')).toEqual({ x: -52, y: 186 });
   });
 
-  it('the line to a branch under its parent runs down from the parent\'s bottom to its top', () => {
+  it('the line to a branch under the central topic runs down from its middle (under it) to the branch\'s top', () => {
     const [a, , , b] = branchCurve(r, d1);
-    expect(a).toEqual({ x: 50, y: 40 });
+    expect(a).toEqual({ x: 50, y: 20 });
     expect(b).toEqual({ x: -12, y: 88 });
   });
 
@@ -196,12 +196,14 @@ describe('mind map: folding a node\'s branches away', () => {
     expect(at(a)).toEqual([[271, 20]]);
     expect(at(l)).toEqual([[-171, 20]]);
     expect(at(d)).toEqual([[50, 139]]);
-    expect([branchBase(a, 'right'), branchBase(d, 'down')]).toEqual([{ x: 260, y: 20 }, { x: 50, y: 128 }]);
+    // Halfway along the straight start of its branches, 24 long.
+    expect([branchBase(a, 'right'), branchBase(d, 'down')]).toEqual([{ x: 272, y: 20 }, { x: 50, y: 140 }]);
+    expect(branchCurve(a, node('aa', 360, 0, { parent: 'a' }))[0]).toEqual({ x: 284, y: 20 });
   });
 
-  it('the central topic grows the ways it\'s set to (right and up unless set), each folding on its own', () => {
+  it('the central topic grows the ways it\'s set to (right and left unless set), each folding on its own', () => {
     const folded = { ...r, foldedWays: ['left' as const] };
-    expect(mindButtons(folded, get, 1).map(buttonKey)).toEqual(['child', 'up']);
+    expect(mindButtons(folded, get, 1).map(buttonKey)).toEqual(['child', 'left']);
     expect(mindButtons({ ...r, mw: ['right', 'left', 'down', 'up'] }, get, 1).map(buttonKey)).toEqual(['child', 'left', 'down', 'up']);
     expect([...foldedAway(folded, all, get)]).toEqual([['left', ['l']]]);
     expect(folding(folded, 'down', true)).toEqual({ foldedWays: ['left', 'down'] });
@@ -262,9 +264,9 @@ describe('mind map: branches led up from the central topic', () => {
     expect(moves.get('u11')).toEqual({ x: -62, y: -186 });
   });
 
-  it('the line to a branch over its parent runs up from the parent\'s top to its bottom', () => {
+  it('the line to a branch over the central topic runs up from its middle (under it) to the branch\'s bottom', () => {
     const [a, , , b] = branchCurve(r, u1);
-    expect(a).toEqual({ x: 50, y: 0 });
+    expect(a).toEqual({ x: 50, y: 20 });
     expect(b).toEqual({ x: -12, y: -48 });
   });
 
