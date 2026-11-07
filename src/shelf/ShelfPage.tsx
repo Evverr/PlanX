@@ -13,6 +13,7 @@ import { openBoardFile } from '../collab/boardFile';
 import { boardIdIn, bringsFiles } from '../labs/boardImport';
 import { labOn } from '../labs/labs';
 import { WishlistPage } from '../labs/WishlistPage';
+import { navigate } from '../route';
 import './shelf.css';
 
 type Thing = { kind: 'board'; id: string } | { kind: 'folder'; id: string };
@@ -171,7 +172,7 @@ export function ShelfPage() {
   const createBoard = (title: string) => {
     const id = newBoardId();
     updateEntry(id, { title, folder: current?.id ?? null });
-    location.href = `${boardUrl(id)}${title ? `&title=${encodeURIComponent(title)}` : ''}`;
+    navigate(`${boardUrl(id)}${title ? `&title=${encodeURIComponent(title)}` : ''}`);
   };
 
   /** Puts a board or folder into a folder (or at the top); a folder can't go into itself. */
@@ -505,7 +506,7 @@ function FromElsewhere({ onFile }: { onFile: (f: File) => void }) {
           <button type="button" className="btn" onClick={() => setPasting(true)}>Вставить адрес доски</button>
         </div>
       ) : (
-        <form className="from-address" onSubmit={(e) => { e.preventDefault(); if (id) location.href = boardUrl(id); }}>
+        <form className="from-address" onSubmit={(e) => { e.preventDefault(); if (id) navigate(boardUrl(id)); }}>
           <input className="shelf-input" autoFocus placeholder="Адрес доски, которой поделились" aria-label="Адрес доски"
             value={address} onChange={(e) => setAddress(e.target.value)} />
           {address.trim() && !id && <p className="from-hint">Не похоже на адрес доски PlanX</p>}
