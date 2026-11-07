@@ -29,9 +29,11 @@ const AROUND = 5;
 /** Where the people's names start and their circles' middle; a row's height; a subtask's. */
 /** What's under the header keeps this far from its sides (9 more than the header's ring from its left). */
 const PAD = 24;
-const LABEL_X = PAD, NAME_X = PAD + 153, AVATAR_X = PAD + 135, ROW = 33, SUB = 38;
+/** What's under the header starts where its title does, all of it on that line. */
+const LEFT = TITLE_X;
+const LABEL_X = LEFT, NAME_X = LEFT + 153, AVATAR_X = LEFT + 135, ROW = 33, SUB = 38;
 /** The subtasks under who does it: their rings on its picture's middle, their text where names start. */
-const SUB_X = AVATAR_X - 11, SUB_TEXT_X = NAME_X;
+const SUB_X = LEFT - 2, SUB_TEXT_X = LEFT + 26;
 /** The buttons as the panels' (.btn in popups.css): 32 tall, their text 12 bold Inter with 14 each side. */
 const BUTTON_H = 32, BUTTON_PAD = 14, BUTTON_FONT = { size: 12, weight: 600 };
 export const DESC_HINT = 'Добавить описание', SUB_HINT = 'Добавить подзадачу', KEEP_LABEL = 'Не сворачивать';
@@ -103,10 +105,10 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   const top = MID - th / 2, head = 52;
   const out: TaskLayout = { w, h: head, head, title: { x: TITLE_X, y: top, w: titleW, h: th } };
   if (!it.tv) return out;
-  const descW = Math.max(80, w - PAD * 2), dy = head + 22;
+  const descW = Math.max(80, w - LEFT - PAD), dy = head + 22;
   // (Its description in a list, as drawn: each paragraph after its bullet or number.)
   const dl = descLook(it), dh = textBlockHeight(it.desc ? withList(it.desc, it.ls) : DESC_HINT, descW, dl.fs, { weight: dl.weight, family: dl.family, italic: dl.italic });
-  out.desc = { x: PAD, y: dy, w: descW, h: dh };
+  out.desc = { x: LEFT, y: dy, w: descW, h: dh };
   const d = dy + dh;
   if (it.tv === 'desc') {
     out.more = { x: w - 35, y: d };
@@ -115,13 +117,13 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   }
   // Under the description its subtasks, then who does it (and who set it, by when): each block between
   // lines across, a block's first row 33 under the line over it, its last 33 over the line under it.
-  // «Подзадачи:» as a row's label, the first of them level with it.
+  // «Подзадачи:», the subtasks under it, their boxes on the title's line.
   out.subsAt = d + 25 + 33;
   // Each subtask as tall as its lines (the row adding one, one), the next 38 on from its first line.
   const lh = lineH(TEXT_FS), subW = Math.max(40, w - SUB_TEXT_X - PAD);
   out.subH = [...(it.subs ?? []).map((sub) => textBlockHeight(sub.t || 'Подзадача', subW, TEXT_FS, { weight: 400, family: FAMILY })), lh];
   out.subs = [];
-  let sy = out.subsAt - STATUS / 2;
+  let sy = out.subsAt + 34 - STATUS / 2;
   for (const h of out.subH) { out.subs.push(sy); sy += SUB + h - lh; }
   const subsEnd = out.subs[out.subs.length - 1] + STATUS + 27, first = subsEnd + 33;
   const keys = it.people ? (['boss', 'doer', 'due'] as const) : (['doer'] as const), r = first + ROW * (keys.length - 1);
@@ -391,7 +393,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   if (!l.rows || !l.subs || !l.lines || !l.cancel || !l.finish || l.subsAt === undefined) return;
   // (The lines across half as strong as the panels' line grey.)
   ctx.fillStyle = look.dark ? 'rgba(255,255,255,0.05)' : 'rgba(223,227,230,0.5)';
-  for (const ly of l.lines) ctx.fillRect(x + PAD, y + ly, l.w - PAD * 2, 1);
+  for (const ly of l.lines) ctx.fillRect(x + LEFT, y + ly, l.w - LEFT - PAD, 1);
   const label = (text: string, row: number) => {
     ctx.font = font(TEXT_FS, 400, FAMILY);
     ctx.fillStyle = look.ink;
