@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { Editor } from '../editor/editor';
 import { alignOf, TEXT_COLORS, textPad, textPadY, type Item } from '../model/types';
-import { fontOf, FONTS, LINE_HEIGHT, textBlockHeight } from '../canvas/text';
+import { fittedSize, fontOf, FONTS, LINE_HEIGHT, textBlockHeight, withList } from '../canvas/text';
 import { FOLD_FS, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP } from '../model/frame';
 import { center } from '../canvas/geometry';
 import { descLook, TASK_FONT, taskFieldBox } from '../canvas/task';
@@ -79,6 +79,8 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   const field = item.type === 'task' ? taskFieldBox(item, editor.editingCell) : null, desc = field && editor.editingCell === 0 ? descLook(item) : null;
   // A task's title: on one line, scrolled across as it's typed past its end (its subtasks wrap, as drawn).
   const sub = item.type === 'task' && editor.editingCell === null;
+  // A sticker or a shape: its text shrinks to fit it as it's typed, as the canvas draws it.
+  const boxed = ['sticky', 'rect', 'ellipse', 'polygon'].includes(item.type) && !code;
   const fs = field ? field.fs : folded ? FOLD_FS : isFrame ? 15 : item.fs ?? (code ? CODE_FS : 16);
   const pad = code ? CODE_LEFT : textPad(item), padY = code ? CODE_TOP : textPadY(item);
   const width = field ? field.w : folded ? Math.max(160, item.w - FOLD_PAD - FOLD_TITLE_GAP - FOLD_ICON - FOLD_RIGHT)
@@ -95,8 +97,11 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
     if (code) el.style.height = `${Math.max(0, item.h - CODE_TOP - CODE_BOTTOM)}px`;
     else if (field) el.style.height = `${sub ? field.h : textBlockHeight(el.value, width, fs, { weight: field.weight, family: desc?.family ?? TASK_FONT, italic: desc?.italic })}px`;
     else if (item.type !== 'text' && !isFrame) {
-      // As tall as the canvas lays the lines out (exactly, not rounded), so they land where it drew them.
-      const content = Math.min(textBlockHeight(el.value, width, fs, fontOf(item)), item.h - padY * 2);
+      // As tall as the canvas lays the lines out (exactly, not rounded), so they land where it drew them;
+      // in a sticker or a shape, at the size it comes out at there (smaller as it fills it).
+      const size = boxed ? fittedSize(withList(el.value, item.ls), width, item.h - padY * 2, fs, fontOf(item)) : fs;
+      el.style.fontSize = `${size}px`;
+      const content = Math.min(textBlockHeight(el.value, width, size, fontOf(item)), item.h - padY * 2);
       el.style.height = `${content}px`;
       top = item.va === 'top' ? 0 : ((item.h - padY * 2 - content) / 2) * z;
       el.style.marginTop = `${top}px`;
@@ -155,7 +160,9 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         if (field) {
           if (!sub) e.currentTarget.style.height = `${textBlockHeight(e.currentTarget.value, width, fs, { weight: field.weight, family: desc?.family ?? TASK_FONT, italic: desc?.italic })}px`;
         } else if (item.type !== 'text' && !isFrame) {
-          const el = e.currentTarget, content = Math.min(textBlockHeight(el.value, width, fs, fontOf(item)), item.h - padY * 2);
+          const el = e.currentTarget, size = boxed ? fittedSize(withList(el.value, item.ls), width, item.h - padY * 2, fs, fontOf(item)) : fs;
+          el.style.fontSize = `${size}px`;
+          const content = Math.min(textBlockHeight(el.value, width, size, fontOf(item)), item.h - padY * 2);
           el.style.height = `${content}px`;
           if (item.va !== 'top') el.style.marginTop = `${((item.h - padY * 2 - content) / 2) * z}px`;
         }
