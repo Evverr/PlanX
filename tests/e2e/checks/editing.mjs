@@ -77,10 +77,15 @@ export const checks = {
     await p.key('Delete', 'Delete', 46);
     expect(await count(p, 'sticky'), 'the copy deleted').toBe(1);
     // In a column of its like: under the column's last, as far as the last two are apart.
-    await p.ev(`(() => { const b = planx.board, e = planx.editor, s = b.get('${id}'); b.add(e.newItem('sticky', s.x, s.y + s.h + 40, { id: 'below', w: s.w, h: s.h })); e.setSelection(['${id}']); })()`);
+    await p.ev(`(() => { const b = planx.board, e = planx.editor, s = b.get('${id}'); b.add(e.newItem('sticky', s.x, s.y + s.h + 40, { id: 'below', w: s.w, h: s.h })); e.setSelection(['below']); })()`);
     await p.key('d', 'KeyD', 68, 2);
     const down = await p.ev(`(() => { const c = planx.board.get([...planx.editor.selection][0]), l = planx.board.get('below'); return [c.x - l.x, c.y - l.y - l.h].join(); })()`);
     expect(down, 'under the column, 40 off as they are').toBe('0,40');
+    // Its like under it (the column's top picked): right of it instead.
+    await p.ev(`planx.editor.setSelection(['${id}'])`);
+    await p.key('d', 'KeyD', 68, 2);
+    const right = await p.ev(`(() => { const c = planx.board.get([...planx.editor.selection][0]), s = planx.board.get('${id}'); return [c.x - s.x - s.w, c.y - s.y].join(); })()`);
+    expect(right, 'its like under it: right of it').toBe('24,0');
   },
 
   async 'a mind map node: a click on its edge picks it, on its text opens it; Delete held deletes once'(p) {

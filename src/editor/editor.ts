@@ -1370,8 +1370,8 @@ export class Editor {
   }
 
   /** The copy of what's picked beside it, level with it: one in a column of its like (two or more one
-   *  under another), under the column's last as far as the last two are apart; one in a row of them, past
-   *  the row's last alike; else right of it, 24 off. */
+   *  under another), the last of it, under it as far as the last two are apart; one in a row of them, past
+   *  the row's last alike; else (one with its like under it too), right of it, 24 off. */
   duplicate(): void {
     // Not copied: what was copied before stays to be pasted.
     const keep = this.clipboard, data = this.copyData();
@@ -1381,7 +1381,8 @@ export class Editor {
     const picked = this.selectedItems().filter((i) => !i.host), one = picked.length === 1 ? picked[0] : null;
     const line = one && (lineOf(one, this.board.list(), 'y') ?? lineOf(one, this.board.list(), 'x'));
     let at = { x: b.x + b.w * 1.5 + DUPLICATE_GAP, y: b.y + b.h / 2 };
-    if (one && line) {
+    // (Down a column only from its last: one with its like under it goes right of it, as one on its own.)
+    if (one && line && (line.axis === 'x' || line[line.length - 1] === one)) {
       const [prev, last] = line.slice(-2), down = line.axis === 'y';
       const gap = down ? last.y - prev.y - prev.h : last.x - prev.x - prev.w;
       at = down ? { x: last.x + b.w / 2, y: last.y + last.h + gap + b.h / 2 } : { x: last.x + last.w + gap + b.w / 2, y: last.y + b.h / 2 };
