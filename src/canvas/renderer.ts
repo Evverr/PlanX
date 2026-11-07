@@ -6,7 +6,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchBase, branchColor, branchFrom, BRANCH_W, branchCurve, branchEdges, buttonKey, foldBadge, fillOpacity, ringRadius, levelColor, mindButtons, mindDepth, mindWay, nodeColors, rootTextColor, siblingTints, type Way } from '../model/mind';
+import { branchBase, branchColor, branchFrom, BRANCH_W, branchCurve, branchEdges, buttonKey, foldBadge, fillOpacity, ringRadius, levelColor, mindButtons, mindDepth, mindRoot, mindWay, nodeColors, rootTextColor, siblingTints, type Way } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
@@ -680,25 +680,29 @@ function drawMindButtons(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
 function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: boolean) {
   // Dimmed in the dark theme like the other fills.
   const { theme } = s, own = nodeColors(it, tints);
+  // Its map's "Конфигурация" (on its central topic): cards (else the text alone), strips.
+  const root = mindRoot(it, s.get), card = !root.mnb, strip = !root.mns;
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, corner(it));
   ctx.globalAlpha = fillOpacity(it);
-  // The shadow: black at 7%, 2 blurred, 1 down, growing with the zoom like the node.
-  const k = s.cam.z * s.dpr;
-  ctx.shadowColor = 'rgba(0, 0, 0, .07)';
-  ctx.shadowBlur = 2 * k;
-  ctx.shadowOffsetY = 1 * k;
-  ctx.fillStyle = theme.surface;
-  ctx.fill();
-  ctx.shadowColor = 'transparent';
-  ctx.shadowBlur = 0;
-  ctx.shadowOffsetY = 0;
-  if (own.fill) { ctx.fillStyle = shade(own.fill, theme.dim); ctx.fill(); }
+  if (card) {
+    // The shadow: black at 7%, 2 blurred, 1 down, growing with the zoom like the node.
+    const k = s.cam.z * s.dpr;
+    ctx.shadowColor = 'rgba(0, 0, 0, .07)';
+    ctx.shadowBlur = 2 * k;
+    ctx.shadowOffsetY = 1 * k;
+    ctx.fillStyle = theme.surface;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    if (own.fill) { ctx.fillStyle = shade(own.fill, theme.dim); ctx.fill(); }
+  }
   // The central topic all in the colour it's given, no strip; another node with a strip 3 wide down its
   // left edge in its colour, else its level's, inside its round corners.
-  const rootInk = !it.parent && it.color?.startsWith('#') ? it.color : null;
+  const rootInk = card && !it.parent && it.color?.startsWith('#') ? it.color : null;
   if (rootInk) { ctx.fillStyle = shade(rootInk, theme.dim); ctx.fill(); }
-  else if (it.parent) {
+  else if (it.parent && strip) {
     ctx.save();
     ctx.clip();
     ctx.fillStyle = shade(it.color?.startsWith('#') ? it.color : levelColor(mindDepth(it, s.get)), theme.dim);

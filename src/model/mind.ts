@@ -11,7 +11,7 @@ export const MIND_COLOR = '#3E7BFA';
 
 /** A central topic's text on the colour it's filled with (see drawMind): white on a dark one; none: the usual. */
 export function rootTextColor(it: Item): string | null {
-  if (it.parent || !it.color?.startsWith('#')) return null;
+  if (it.parent || it.mnb || !it.color?.startsWith('#')) return null;
   const n = parseInt(it.color.slice(1), 16);
   return ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114 < 160 ? '#FFFFFF' : '#1C1F26';
 }
@@ -65,6 +65,13 @@ export function mindDepth(it: Item, get: Get): number {
   let d = 0, cur: Item | undefined = it;
   while (cur?.parent && d < 50) { cur = get(cur.parent); d++; }
   return d;
+}
+
+/** The central topic a node grows from (itself, for one). */
+export function mindRoot(it: Item, get: Get): Item {
+  let cur = it, d = 0;
+  for (let up = cur.parent ? get(cur.parent) : undefined; up && d < 50; up = cur.parent ? get(cur.parent) : undefined, d++) cur = up;
+  return cur;
 }
 
 /** Every node branching from these, however far out (not the nodes themselves). */
@@ -584,9 +591,10 @@ export const BRANCH_STUB = 16;
 /** Its branches' lines' width (the ring's too). */
 export const BRANCH_W = 1.125 * 1.7;
 
-/** Where a node's branches growing `way` leave it: the middle of that side (a central topic's, its middle). */
+/** Where a node's branches growing `way` leave it: the middle of that side (a central topic's, its middle,
+ *  under its card; with no card, that side's, its text not crossed). */
 export function branchFrom(it: Item, way: Way): Point {
-  if (!it.parent) return { x: it.x + it.w / 2, y: it.y + it.h / 2 };
+  if (!it.parent && !it.mnb) return { x: it.x + it.w / 2, y: it.y + it.h / 2 };
   if (upright(way)) return { x: it.x + it.w / 2, y: way === 'down' ? it.y + it.h : it.y };
   return { x: way === 'right' ? it.x + it.w : it.x, y: it.y + it.h / 2 };
 }
@@ -640,8 +648,9 @@ export function foldBadge(it: Item, way: Way, zoom: number, count: number, out =
 /** The connecting branch from a parent to a child: from the parent's facing side to the child's,
  *  leaving and arriving level (or, under or over it, upright). */
 export function branchCurve(parent: Item, child: Item, edges?: Map<string, number>): [Point, Point, Point, Point] {
-  // (A central topic's out of its middle, under it; another's on straight out of it a little first.)
-  const root = !parent.parent, stub = root ? 0 : BRANCH_STUB;
+  // (A central topic's out of its middle, under it, its side with no card; another's on straight out of it
+  // a little first.)
+  const root = !parent.parent && !parent.mnb, stub = parent.parent ? BRANCH_STUB : 0;
   if (child.down || child.up) {
     const a = { x: parent.x + parent.w / 2, y: root ? parent.y + parent.h / 2 : child.up ? parent.y - stub : parent.y + parent.h + stub };
     const b = { x: child.x + child.w / 2, y: child.up ? child.y + child.h : child.y };

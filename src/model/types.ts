@@ -121,6 +121,10 @@ export interface Item {
   foldedWays?: Array<'right' | 'left' | 'down' | 'up'>;
   /** The ways a mind map's central topic offers to grow branches by its "+" (none set: right and up). */
   mw?: Array<'right' | 'left' | 'down' | 'up'>;
+  /** A mind map's central topic: its nodes without the strip down their left edge (mns), without their
+   *  card (mnb, the text alone), "Конфигурация". */
+  mns?: boolean;
+  mnb?: boolean;
   /** A frame that's a timeline (src/labs, "Объекты"): the month it starts with, "YYYY-MM" (see canvas/timeline.ts). */
   tl?: string;
   /** A timeline's step: how many times the usual width a day takes (1, 2, 4 or 6; 1 left out). */

@@ -417,6 +417,15 @@ function MindWays({ it, set }: { it: Item; set: (patch: Partial<Item>) => void }
           </div>
         );
       })}
+      {/* How its nodes look, all of them: their strip, their card (without, the text alone). */}
+      <div className="menu-line" />
+      {([['mns', 'Боковая полоса'], ['mnb', 'Бэкграунд']] as const).map(([key, label]) => (
+        <div key={key} className="menu-item">
+          <button className="menu-row" role="menuitemcheckbox" aria-checked={!it[key]} onClick={() => set({ [key]: it[key] ? undefined : true })}>
+            <span>{label}</span><Switch on={!it[key]} />
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
