@@ -320,6 +320,31 @@ export const checks = {
     expect(await p.ev('planx.editor.selection.size'), 'nothing picked').toBe(0);
   },
 
+  async 'a family folded away, its cousins close up where it was, out again make room; not once the map\'s moved by hand'(p) {
+    await p.ev(`(async () => { const { mindSize } = await import('/src/canvas/text.ts'); const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 0.8 }; e.camChanged();
+      const mk = (id, x, y, text, extra = {}) => { const it = e.newItem('mind', x, y, { id, text, ...extra }); Object.assign(it, mindSize(it)); b.add(it); };
+      mk('r', 0, 300, 'Тема');
+      ['a', 'b', 'c'].forEach((k, i) => { mk(k, 220, 100 + i * 200, k.toUpperCase(), { parent: 'r' }); [0, 1, 2].forEach((j) => mk(k + j, 440, 40 + i * 200 + j * 50, k + j, { parent: k })); });
+      e.setSelection([]); })()`);
+    await sleep(300);
+    await p.ev(`planx.editor.tidyMind('r')`);
+    const y = (k) => p.ev(`planx.board.get('${k}').y`);
+    const c0 = await y('c0');
+    await p.ev(`planx.editor.setCollapsed('b', 'right', true)`);
+    await sleep(100);
+    const c1 = await y('c0');
+    expect(c1 < c0, `c's family closed up (${c0} → ${c1})`).toBe(true);
+    await p.ev(`planx.editor.setCollapsed('b', 'right', false)`);
+    await sleep(100);
+    expect(await y('c0') > c1, 'out again: room made').toBe(true);
+    // Moved by hand: folding leaves the rest where it is.
+    await p.ev(`planx.board.update('r', { mhand: true })`);
+    const c2 = await y('c0');
+    await p.ev(`planx.editor.setCollapsed('b', 'right', true)`);
+    await sleep(100);
+    expect(await y('c0'), 'moved by hand: left where it was').toBe(c2);
+  },
+
   async 'a click on a folded mind map node\'s count unfolds it and leaves nothing picked'(p) {
     await p.make('mind', [400, 400]);
     await p.escape();

@@ -125,6 +125,9 @@ export interface Item {
    *  card (mnb, the text alone), "Конфигурация". */
   mns?: boolean;
   mnb?: boolean;
+  /** A mind map's central topic: some of its nodes moved by hand, so folding no longer lays out the
+   *  families round what's folded (see regroup); laid out again by «Авторасположение», it does again. */
+  mhand?: boolean;
   /** A frame that's a timeline (src/labs, "Объекты"): the month it starts with, "YYYY-MM" (see canvas/timeline.ts). */
   tl?: string;
   /** A timeline's step: how many times the usual width a day takes (1, 2, 4 or 6; 1 left out). */

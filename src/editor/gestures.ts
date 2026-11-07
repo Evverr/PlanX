@@ -390,6 +390,8 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // A mind map branch let go nearer another family: it hangs from that one now.
         const lead = board.get(g.id);
         if (g.mindTo && lead?.parent && g.mindTo !== lead.parent) hangBranch(ed, g.id, g.mindTo, { x: lead.x + lead.w / 2, y: lead.y + lead.h / 2 });
+        // A mind map node moved by hand where it was: its map no longer laid out round what's folded.
+        else if (lead?.type === 'mind') { const root = mindRoot(lead, (k) => board.get(k)); if (!root.mhand) board.update(root.id, { mhand: true }); }
         board.endGesture();
         noteMindMoved(ed, [...ed.selection]);
       } else if (g.url) {
