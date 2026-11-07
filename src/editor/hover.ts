@@ -1,5 +1,7 @@
 import type { Item, Link, Side } from '../model/types';
-import { ROTATABLE, textPad, textPadY } from '../model/types';
+import { DEFAULTS, EDITABLE, ROTATABLE, textPad, textPadY } from '../model/types';
+import { fontOf, textBlockHeight, withList } from '../canvas/text';
+import { taskPartAt } from '../canvas/task';
 import type { Point } from '../canvas/geometry';
 import { hitItem, hitLink, instanceBounds, linkBox, linkHandles, linkShape, onAudioButton, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, dotGap, HANDLE } from '../canvas/renderer';
@@ -238,6 +240,25 @@ export const onMindText = (it: Item, w: Point): boolean => {
   return w.x > it.x + px && w.x < it.x + it.w - px && w.y > it.y + py && w.y < it.y + it.h - py;
 };
 
+/** Whether a click on an item already picked alone types in it there (a second single click, as a
+ *  double click): on its text itself, a task's title, description or subtask (not elsewhere on it, where
+ *  "Клик сквозь" goes down through it); not a table (a click picks its cell), a frame, an instance, a
+ *  mind map node (one click does). */
+export function clickTypes(it: Item | null | undefined, w: Point): boolean {
+  if (!it || !EDITABLE.includes(it.type) || it.type === 'table' || it.type === 'frame' || it.type === 'mind' || it.inst || it.host || isLocked(it)) return false;
+  if (it.type === 'task') {
+    const part = taskPartAt(it, w);
+    return part === 'title' || part === 'desc' || (typeof part === 'object' && !!part && !part.tick);
+  }
+  if (it.type === 'text' || (it.code && it.text)) return true;
+  if (!it.text?.trim() || it.rot) return false;
+  // Its lines as laid out across it: down from its top, or in its middle.
+  const pad = textPad(it), padY = textPadY(it), width = it.w - pad * 2;
+  const th = Math.min(it.h - padY * 2, textBlockHeight(withList(it.text, it.ls), width, it.fs ?? DEFAULTS[it.type].fs ?? 16, fontOf(it)));
+  const top = it.va === 'top' ? it.y + padY : it.y + (it.h - th) / 2;
+  return w.x >= it.x + pad && w.x <= it.x + it.w - pad && w.y >= top && w.y <= top + th;
+}
+
 /** What hides what's under it: a task, a sticker, a picture, a table, a shape filled in. */
 const solid = (it: Item) => ['task', 'sticky', 'image', 'table'].includes(it.type) || ((it.type === 'rect' || it.type === 'ellipse' || it.type === 'polygon') && it.color !== 'none');
 
@@ -311,10 +332,9 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
     // A task's ring (a component that comes with PlanX) is clicked through its states.
     if ((hit?.type === 'task' && ed.editingId !== hit.id && taskButtonAt(hit, w)) || (hit?.type === 'audio' && onAudioButton(hit, w))
       || (hit && ed.editingId !== hit.id && linkPartAt(hit, w))) cursor = 'pointer';
-    // The cursor says what a click does: the text cursor only where one types in at once (a block of
-    // code with nothing in it, a mind map node's text), else it takes hold of it (typed in on a double click).
-    else if (hit && ed.editingId !== hit.id && ((hit.code && !hit.text) || (hit.type === 'mind' && onMindText(hit, w)))) cursor = 'text';
-    else if (hit && !isLocked(hit)) cursor = alt ? 'copy' : 'move';
+    // (Over items, text and all, the usual arrow: a click picks it, a drag takes it along; typed in on
+    // a double click, or a second single one on its text.)
+    else if (hit && !isLocked(hit) && alt) cursor = 'copy';
   }
   ed.canvas.style.cursor = cursor;
 }

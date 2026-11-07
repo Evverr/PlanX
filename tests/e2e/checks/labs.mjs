@@ -48,7 +48,8 @@ export const checks = {
     await p.key('Escape', 'Escape', 27);
     await sleep(200);
     expect(await p.ev(`planx.board.get('c').text`), 'pasted').toBe('let a = 1;');
-    // With code in it, a click picks it, as anything else.
+    // With code in it, a click picks it, as anything else (not picked before: a second click would type in it).
+    await p.ev(`planx.editor.setSelection([])`);
     await p.click([540, 380]);
     await sleep(200);
     expect(await p.ev('planx.editor.editingId'), 'not typed in').toBe(null);
@@ -748,7 +749,8 @@ export const checks = {
     expect(await p.ev(`window.shown`), 'the text panel unseen while the body narrows').toBe(0);
     await p.click(await p.at('.panel-over button[aria-label="Текст и шрифт"]'));
     await sleep(700);
-    const s = await p.ev(`planx.editor.toScreen({ x: 600, y: 400 })`);
+    // (Off its text, near its corner: on its text, a second click types in it.)
+    const s = await p.ev(`planx.editor.toScreen({ x: 510, y: 310 })`);
     await p.click([s.x, s.y]);
     await sleep(700);
     expect([!!(await p.rect('.tfmt:not(.leaving)')), !!(await p.rect('.panel-over:not(.gone)'))].join(), 'back to the selection panel').toBe('false,true');

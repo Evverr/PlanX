@@ -584,7 +584,8 @@ export const checks = {
 
   async 'the selection panel goes up above a bar beneath it, and back down'(p) {
     await p.make('sticky', [600, 350]);
-    await p.click([600, 350]);
+    await p.escape();
+    await p.ev(`planx.editor.setSelection([planx.board.list().find((i) => i.type === 'sticky').id])`);
     await sleep(400);
     const panel = await p.rect('.bar.panel'), zoom = await p.rect('.bar.zoom');
     expect(panel.b, 'above the zoom bar').toBe(zoom.t - 12);
@@ -596,7 +597,6 @@ export const checks = {
   async 'the text panel keeps its bottom over the item whatever the panels\' size'(p) {
     // It's there by the T on the selection panel ("Кнопка T", src/labs), not on just picking it.
     await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(500, 370); planx.board.add(e.newItem('text', x, y, { id: 'tx', w: 200, h: 26, text: 'Текст' })); e.setSelection(['tx']); })()`);
-    await p.click([540, 383]);
     expect(await p.rect('.tfmt'), 'not on just picking it').toBeFalsy();
     await sleep(300);
     await p.click(await p.at('.bar.panel button[aria-label="Текст и шрифт"]'));
@@ -854,7 +854,7 @@ export const checks = {
     expect(await p.ev(`[planx.board.get('lo').x, planx.board.get('ink').x].join()`), 'the picked one taken from under the drawing').toBe('140,120');
   },
 
-  async 'the cursor says what a click does: the text cursor only where one types in at once'(p) {
+  async 'the usual arrow over items, text and all; a second click on a picked item\'s text types in it'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('task', 100, 100, { id: 't', text: 'Задача', w: 293, h: 52 }));
       b.add(e.newItem('rect', 100, 250, { id: 'c', code: 'js', text: '', w: 480, h: 120, fs: 14, ff: 'mono', rad: 16 }));
@@ -862,7 +862,20 @@ export const checks = {
       b.add(e.newItem('mind', 700, 400, { id: 'm', w: 160, h: 48, text: 'Тема' })); e.setSelection([]); })()`);
     await sleep(200);
     const at = async (x, y) => { await p.mouse('mouseMoved', x, y); await sleep(50); return p.ev(`planx.editor.canvas.style.cursor`); };
-    expect([await at(170, 126), await at(340, 330), await at(780, 180), await at(780, 424)].join(), 'task title, empty code, sticker, mind map text').toBe('move,text,move,text');
+    expect([await at(170, 126), await at(340, 330), await at(780, 180), await at(780, 424)].join(), 'task title, empty code, sticker, mind map text').toBe(',,,');
+    // Picked, a second click on its text types in it (the arrow over it all the same).
+    await p.click([780, 180]);
+    await sleep(450);
+    expect(await at(780, 180), 'the sticker picked').toBe('');
+    await p.click([780, 180]);
+    await sleep(200);
+    expect(await p.ev('planx.editor.editingId'), 'typed in on a second click').toBe('s');
+    await p.key('Escape', 'Escape', 27);
+    await p.ev(`planx.editor.setSelection(['t'])`);
+    await sleep(450);
+    await p.click([170, 126]);
+    await sleep(200);
+    expect([await p.ev('planx.editor.editingId'), await p.ev('planx.editor.editingCell')].join(), 'a task\'s title, the same').toBe('t,');
   },
 
   async 'a layer up stops under a task kept open'(p) {
