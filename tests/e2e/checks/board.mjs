@@ -882,6 +882,7 @@ export const checks = {
     await sleep(400);
     await p.click(await p.at('.bar.panel button[aria-label="Без текста"]'));
     expect(await p.ev(`planx.board.get('r').nt`), 'set').toBe(true);
+    expect(await p.ev(`document.querySelector('.bar.panel button[aria-label="Текст и шрифт"]')?.disabled !== false`), 'its «Текст и шрифт» off (or not there)').toBe(true);
     await dblClick(p, [500, 360]);
     await sleep(150);
     expect([await p.ev('planx.editor.editingId'), await p.ev(`planx.board.get('r').text`)].join(), 'not typed in, its text as it was').toBe(',Фигура');
@@ -906,6 +907,18 @@ export const checks = {
     const r = await p.rect('.color-picker');
     expect(r.t >= 8 && r.b <= 792, `on the screen (${r.t}…${r.b})`).toBe(true);
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
+  },
+
+  async 'a group folded and unfolded by the arrow on its panel'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 450, 350, { id: 's' })); b.add(e.newItem('frame', 400, 300, { id: 'f', w: 300, h: 260, members: ['s'], text: 'Группа' })); e.setSelection(['f']); })()`);
+    await sleep(400);
+    await p.click(await p.at('.bar.panel button[aria-label="Свернуть группу"]'));
+    await sleep(300);
+    expect(!!(await p.ev(`planx.board.get('f').fold`)), 'folded').toBe(true);
+    await p.click(await p.at('.bar.panel button[aria-label="Развернуть группу"]'));
+    await sleep(300);
+    expect(!!(await p.ev(`planx.board.get('f').fold`)), 'unfolded').toBe(false);
   },
 
   async 'the usual arrow over items, text and all; a second click on a picked item\'s text types in it'(p) {
