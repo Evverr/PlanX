@@ -6,6 +6,7 @@ import { drawScene } from '../canvas/renderer';
 import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad } from '../canvas/pictures';
 import { PanelIcon } from './PanelIcon';
+import { layerRoot } from '../labs/sideViewport';
 
 /** How much of the screen the look may take, and the height of its title row. */
 const MAX_W = 0.86, MAX_H = 0.8, HEAD = 56;
@@ -67,6 +68,6 @@ export function FramePeek({ editor, board }: { editor: Editor; board: Board }) {
         <canvas ref={canvas} style={{ width: w, height: h }} />
       </div>
     </div>,
-    document.body,
+    layerRoot(),
   );
 }

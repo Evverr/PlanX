@@ -8,6 +8,7 @@ import { Glyph } from './glyphs';
 import { DOODLE_SIZE, DOODLES, doodle } from '../canvas/doodles';
 import { readOrder } from './sortable';
 import { writeJSON } from '../storage';
+import { layerRoot } from '../labs/sideViewport';
 
 type Tab = 'emoji' | 'stickers' | 'icons';
 export type PickKind = 'emoji' | 'sticky' | 'icon' | 'doodle';
@@ -199,7 +200,7 @@ export function IconPicker({ zoom, onPick }: { zoom: number; onPick: (kind: Pick
         <div className={`pick-ghost ${KIND[drag.tab]} ${drag.outside ? 'preview' : ''}`} style={{ left: drag.x, top: drag.y }}>
           <Tile kind={KIND[drag.tab]} id={drag.id} px={drag.outside ? boardPx : undefined} />
         </div>,
-        document.body,
+        layerRoot(),
       )}
     </div>
   );

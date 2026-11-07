@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { PanelIcon } from './PanelIcon';
 import { readJSON, writeJSON } from '../storage';
 import { canRearrange, customizeOn } from '../labs/customize';
+import { layerRoot } from '../labs/sideViewport';
 
 /** How long to hold a button before it lifts, and how far the pointer may wander meanwhile; a lifted
  *  button let go without moving more than HOLD_SLOP still counts as a click. */
@@ -388,7 +389,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     }),
     /** The preview under the pointer while a button is dragged out of the panel. */
     ghost: drag?.out && dropOut
-      ? createPortal(createElement('div', { className: 'pick-ghost preview', style: { left: drag.x, top: drag.y } }, dropOut.preview(drag.key)), document.body)
+      ? createPortal(createElement('div', { className: 'pick-ghost preview', style: { left: drag.x, top: drag.y } }, dropOut.preview(drag.key)), layerRoot())
       : null,
     /** One element of the panel with its key, ref and 'lifted' class. A component can't take the ref,
      *  so it goes in a wrapper that does: everything on a panel can be moved, components too. */
