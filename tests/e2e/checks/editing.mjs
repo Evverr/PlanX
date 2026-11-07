@@ -72,8 +72,15 @@ export const checks = {
     expect(s1.y - s0.y, 'down by 10 with Shift').toBe(10);
     await p.key('d', 'KeyD', 68, 2);
     expect(await count(p, 'sticky'), 'duplicated').toBe(2);
+    const copy = await p.ev(`planx.board.get([...planx.editor.selection][0])`);
+    expect([copy.x - s1.x - s1.w, copy.y - s1.y].join(), 'right of it, 24 off, level').toBe('24,0');
     await p.key('Delete', 'Delete', 46);
     expect(await count(p, 'sticky'), 'the copy deleted').toBe(1);
+    // Two side by side: the copies under them.
+    await p.ev(`(() => { const b = planx.board, e = planx.editor, s = b.get('${id}'); const o = e.newItem('sticky', s.x + s.w + 30, s.y + 10, { w: s.w, h: s.h }); b.add(o); e.setSelection(['${id}', o.id]); return o.id; })()`);
+    await p.key('d', 'KeyD', 68, 2);
+    const ys = await p.ev(`[...planx.editor.selection].map((k) => planx.board.get(k)).map((i) => i.y).sort((a, b) => a - b)`);
+    expect(ys[0] - (s1.y + 10 + s1.h), 'under the row, 24 off').toBe(24);
   },
 
   async 'a mind map node: a click on its edge picks it, on its text opens it; Delete held deletes once'(p) {
