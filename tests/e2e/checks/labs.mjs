@@ -72,7 +72,9 @@ export const checks = {
     await sleep(250);
     const r = await p.rect('.side-nav');
     expect([r.l, r.t, r.w, r.h].join(), 'down the left edge').toBe('0,0,200,800');
-    expect(await p.ev(`[...document.querySelectorAll('.side-nav-row span')].map((s) => s.textContent).join()`), 'what\'s in it').toBe('Доски,Профиль,Настройки');
+    expect(await p.ev(`[...document.querySelectorAll('.side-nav-row span')].map((s) => s.textContent).join()`), 'what\'s in it').toBe('Работа,Доски,Профиль,Настройки');
+    // The board pushed over by it: its area right of the side, as wide as what's left of the window.
+    expect([await p.ev(`document.querySelector('.app-content').offsetLeft`), await p.ev('innerWidth'), await p.ev(`document.querySelector('.board-canvas').clientWidth`)].join(), 'the board beside it').toBe('200,1000,1000');
     await go('Настройки');
     await sleep(400);
     const page = await p.rect('.page-view');
@@ -84,6 +86,9 @@ export const checks = {
     await go('Доски');
     await sleep(500);
     expect([await p.ev('location.search'), !!(await p.rect('.shelf-page')), !!(await p.rect('.side-nav'))].join(), 'the boards').toBe(',true,true');
+    await go('Работа');
+    await sleep(800);
+    expect([await p.ev('location.search').then((q) => q.startsWith('?board=')), await p.ev(`!!document.querySelector('.board-canvas')`)].join(), '«Работа»: the board again').toBe('true,true');
     await p.click(await p.at('.side-nav .side-nav-logo'));
     await sleep(200);
     expect(!!(await p.rect('.side-nav')), 'closed by its logo').toBe(false);

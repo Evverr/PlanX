@@ -325,3 +325,5 @@
 .logo.side-nav-logo-btn:hover::before { opacity: .8; }
 /* (The shelf fills the window by itself: beside the side, from its edge.) */
 .app-shell.side-open:not(.on-board) .shelf-page { left: 200px; }
+/* A board beside the side: its own area right of it, the frame for all that's fixed in it (see sideViewport.ts). */
+.app-shell.side-open.on-board > .app-content { position: fixed; top: 0; bottom: 0; left: 200px; right: 0; transform: translateZ(0); overflow: hidden; }

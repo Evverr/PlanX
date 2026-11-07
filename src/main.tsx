@@ -11,6 +11,7 @@ import { keepLinksHere } from './route';
 import { useLabs } from './labs/labs';
 import { SideNav, SidePageView, sidePageFromUrl, useSideOpen } from './labs/SideNav';
 import { readText } from './storage';
+import { setSideOffset } from './labs/sideViewport';
 
 /** One page for all (see route.ts): the board in the address, a page of the side's ("Боковая панель",
  *  src/labs), or with neither the shelf of boards, the start page; another board, its own App (the one
@@ -24,6 +25,8 @@ function Root() {
     return () => window.removeEventListener('popstate', on);
   }, []);
   const labs = useLabs(), sideOn = useSideOpen(), side = labs.sideNav && sideOn;
+  // A board beside the side: pushed over by it (see labs/sideViewport.ts).
+  useEffect(() => setSideOffset(side && boardId ? 200 : 0), [side, boardId]);
   // (A page of the side's, without a board: the theme the board keeps.)
   useEffect(() => { if (page && !boardId) document.documentElement.dataset.theme = readText('planx-theme') === 'dark' ? 'dark' : 'light'; }, [page, boardId]);
   const content = boardId ? <App key={boardId} boardId={boardId} /> : page ? <SidePageView page={page} /> : <ShelfPage />;

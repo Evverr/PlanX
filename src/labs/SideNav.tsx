@@ -6,7 +6,7 @@ import { navigate } from '../route';
 
 /**
  * "Боковая панель": a dark side down the left edge, 200 wide, opened and closed by the logo, kept open
- * whatever's beside it: the boards (the shelf, its folders), the profile, the settings and, at its
+ * whatever's beside it: the board worked on («Работа»), the boards (the shelf, its folders), the profile, the settings and, at its
  * foot, the help, each a page beside it on this one page (see main.tsx), the board put away.
  */
 
@@ -41,6 +41,9 @@ export function SideNav({ page, board }: { page: SidePage | null; board: boolean
   return (
     <nav className="side-nav" aria-label="Боковая панель">
       <button className="side-nav-logo logo side-nav-logo-btn open" title="Свернуть панель" aria-label="Свернуть панель" onClick={() => setSideOpen(false)}>Plan</button>
+      <button className={`side-nav-row ${board ? 'on' : ''}`} aria-current={board ? 'page' : undefined} onClick={toWork}>
+        <Glyph id="board" className="side-nav-icon" /><span>Работа</span>
+      </button>
       {row('folders', 'Доски', null, !page && !board)}
       {row('user-profile', 'Профиль', 'profile', page === 'profile')}
       {row('settings-l', 'Настройки', 'settings', page === 'settings')}
@@ -48,6 +51,14 @@ export function SideNav({ page, board }: { page: SidePage | null; board: boolean
       <button className={`side-nav-help ${page === 'help' ? 'on' : ''}`} title="Помощь" aria-label="Помощь" onClick={() => navigate(pageUrl('help'))}>?</button>
     </nav>
   );
+}
+
+/** «Работа»: the board worked on last (see App), or the boards with none yet. */
+const LAST = 'planx-last-board';
+export const noteBoard = (id: string): void => writeText(LAST, id);
+function toWork() {
+  const id = readText(LAST);
+  navigate(id && /^[A-Za-z0-9_-]{1,64}$/.test(id) ? `${location.pathname}?board=${id}` : location.pathname);
 }
 
 /** A page the side leads to, beside it. */

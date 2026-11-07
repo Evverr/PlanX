@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import type { Editor, Tool } from '../editor/editor';
 import { Glyph } from '../ui/glyphs';
 import { dropMyObject, myObjects } from './myObjects';
+import { layerRoot } from './sideViewport';
 
 /** The objects there are ("Объекты"): their tool, icon and name. */
 export const OBJECTS: Array<[Tool, string, string]> = [['timeline', 'timeline', 'Таймлайн']];
@@ -41,7 +42,7 @@ export function ObjectsMenu({ editor, tool, onPick, onClose }: { editor: Editor;
         ghost = document.createElement('div');
         ghost.className = 'tp-icon obj-ghost';
         ghost.innerHTML = icon;
-        document.body.appendChild(ghost);
+        layerRoot().appendChild(ghost);
       }
       if (ghost) ghost.style.translate = `${ev.clientX - 22}px ${ev.clientY - 22}px`;
     };

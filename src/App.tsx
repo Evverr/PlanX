@@ -9,7 +9,7 @@ import { usePanelPlace } from './labs/panelPlace';
 import { TextEditor } from './ui/TextEditor';
 import { TextPanel } from './ui/FormatPanel';
 import { TaskKeepPop, TaskPop, TaskTipBubble } from './ui/TaskPop';
-import { setSideOpen, useSideOpen } from './labs/SideNav';
+import { noteBoard, setSideOpen, useSideOpen } from './labs/SideNav';
 import { navigate } from './route';
 import { PanelIcon } from './ui/PanelIcon';
 import { asOne } from './labs/multi';
@@ -58,8 +58,10 @@ export function App({ boardId }: { boardId: string }) {
 
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => editor.mount(canvas.current!), [editor]);
-  // The board keeps its place on the start page's shelf (src/shelf) up to date.
+  // The board keeps its place on the start page's shelf (src/shelf) up to date, and is the one «Работа»
+  // goes back to ("Боковая панель", src/labs).
   useShelfTracking(boardId, board);
+  useEffect(() => noteBoard(boardId), [boardId]);
   const toShelf = () => {
     window.dispatchEvent(new Event('planx:leave'));
     navigate(shelfUrlFor(boardId));

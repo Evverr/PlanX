@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import picture from './clear/plan.webp';
+import { layerRoot } from '../labs/sideViewport';
 
 /** How long the picture comes in, stays and flies off, in ms (matched by the keyframes in the styles). */
 const COME = 600, STAY = 300, GO = 1000;
@@ -19,6 +20,6 @@ export function ClearFx({ onDone }: { onDone: () => void }) {
     <div className="clear-fx" aria-hidden="true" style={{ '--come': `${COME}ms`, '--stay': `${STAY}ms`, '--go': `${GO}ms` } as React.CSSProperties}>
       <img className="clear-fx-pic" src={picture} alt="" draggable={false} />
     </div>,
-    document.body,
+    layerRoot(),
   );
 }
