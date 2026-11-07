@@ -20,7 +20,7 @@ import { canCrop, croppingId, subscribeCrop, toggleCrop } from '../labs/imageCro
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['lang', 'sepLang', 'colors', 'text', 'align', 'tidy', 'rows', 'cols', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+const ORDER = ['lang', 'sepLang', 'colors', 'text', 'notext', 'align', 'tidy', 'rows', 'cols', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -397,6 +397,8 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   });
   if (!items.length && (over || !linkCount)) return null;
   const tables = items.filter((i) => i.type === 'table'), links = editor.selectedLinks();
+  // (Shapes, not blocks of code: «Без текста».)
+  const shapes = items.filter((i) => (i.type === 'rect' || i.type === 'ellipse' || i.type === 'polygon') && !i.code), noText = shapes.length > 0 && shapes.every((s) => s.nt);
   // An instance picked alone, or something in one (not of a built-in component: those aren't changed).
   const inOne = items.length === 1 ? (items[0].host ? editor.board.get(items[0].host) : items[0]) : undefined;
   const editInst = inOne?.inst && !inOne.inst.startsWith('@') ? inOne.id : null;
@@ -469,6 +471,11 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
         duplicate: items.length > 0 ? btn('duplicate', 'Дублировать (Ctrl+D)', () => editor.duplicate()) : undefined,
         // Features on trial (src/labs), while they're switched on.
         text: onText ? btn('text', 'Текст и шрифт', onText) : undefined,
+        // Shapes with no typing in them: what's written stays, a double click doesn't open them for typing.
+        notext: shapes.length && shapes.length === items.length ? (
+          <button className={`ib ${noText ? 'on' : ''}`} title={noText ? 'Разрешить текст' : 'Без текста'} aria-label="Без текста" aria-pressed={noText}
+            onClick={() => editor.board.transact(() => shapes.forEach((s) => editor.board.update(s.id, { nt: noText ? undefined : true })))}><PanelIcon name="text-off" /></button>
+        ) : undefined,
         tidy: labs.tidy && items.length > 1 ? <TidyButton editor={editor} />
           : labs.tidy && items[0]?.type === 'mind' && editor.board.list().some((i) => i.parent === items[0].id) ? <TidyButton editor={editor} mind={items[0].id} /> : undefined,
         align: labs.align && items.length > 1 ? <AlignButton editor={editor} /> : undefined,

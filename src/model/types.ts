@@ -96,6 +96,8 @@ export interface Item {
   doer?: Person;
   due?: string;
   cw?: number;
+  /** A shape with no typing in it (the panel's «Без текста»): what's written in it stays, nothing's typed. */
+  nt?: boolean;
   /** A task's description's size, set by the text panel (its `fs` the card's own, as it's always been). */
   dfs?: number;
   /** A task's people and date all shown (who set it, who does it, by when), not only who does it. */

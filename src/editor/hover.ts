@@ -245,7 +245,7 @@ export const onMindText = (it: Item, w: Point): boolean => {
  *  "Клик сквозь" goes down through it); not a table (a click picks its cell), a frame, an instance, a
  *  mind map node (one click does). */
 export function clickTypes(it: Item | null | undefined, w: Point): boolean {
-  if (!it || !EDITABLE.includes(it.type) || it.type === 'table' || it.type === 'frame' || it.type === 'mind' || it.inst || it.host || isLocked(it)) return false;
+  if (!it || !EDITABLE.includes(it.type) || it.type === 'table' || it.type === 'frame' || it.type === 'mind' || it.inst || it.host || isLocked(it) || it.nt) return false;
   if (it.type === 'task') {
     const part = taskPartAt(it, w);
     return part === 'title' || part === 'desc';

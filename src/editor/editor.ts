@@ -1451,7 +1451,8 @@ export class Editor {
   /** Opens an item's text for typing; for a table, one cell's (the first unless given). */
   startEditing(id: string, cell?: number | null, caret: 'all' | 'end' = 'all'): void {
     const it = this.board.get(id);
-    if (!it || !EDITABLE.includes(it.type) || isLocked(it)) return;
+    // (Nor a shape with no typing in it, «Без текста».)
+    if (!it || !EDITABLE.includes(it.type) || isLocked(it) || it.nt) return;
     // Another part of a task typed in: what was typed in the one before kept first.
     if (it.type === 'task' && this.editingId === id && this.editingCell !== (cell ?? null)) window.dispatchEvent(new Event('planx:commit-edit'));
     this.editCaret = caret;
