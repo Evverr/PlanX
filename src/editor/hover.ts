@@ -6,7 +6,7 @@ import { DOT_GAP, dotGap, HANDLE } from '../canvas/renderer';
 import { instanceGlyph, instancePlus, objectArrow } from '../model/components';
 import { taskButtonAt } from './tasks';
 import { onCodeCopy } from '../labs/codeBlock';
-import { branchWays, buttonKey, foldBadge, mindButtons, type MindButtonAt, type Way } from '../model/mind';
+import { branchBase, buttonKey, foldBadge, foldedWays, mindButtons, mindWay, ringRadius, type MindButtonAt, type Way } from '../model/mind';
 import { frameButtonAt } from './frames';
 import { rotateCursor } from './cursors';
 import { restOn, sameLine, tableLineAt, warmTable } from './tables';
@@ -73,10 +73,33 @@ export function plusAt(ed: Editor, it: Item, w: Point): MindButtonAt | null {
   if (it.type !== 'mind' || it.host || ed.plusFade() === 0) return null;
   // The nearest within reach: the "+" for a branch and the chevron past it are close.
   let best: MindButtonAt | null = null, near = Infinity;
-  const fresh = ed.chevronless?.startsWith(`${it.id}:`) ? ed.chevronless.slice(it.id.length + 1) as Way : undefined;
-  for (const b of mindButtons(it, (id) => ed.board.get(id), ed.cam.z, branchWays(it, ed.board.list()), fresh)) {
+  for (const b of mindButtons(it, (id) => ed.board.get(id), ed.cam.z)) {
     const d = Math.hypot(w.x - b.x, w.y - b.y);
     if (d <= Math.max(b.r * 1.5, ed.reach(0)) && d < near) { best = b; near = d; }
+  }
+  return best;
+}
+
+/** The ring folding a mind map node's branches growing one way, under the point: where they leave it
+ *  (see branchBase), the nearest one, and how far off. */
+export function ringAt(ed: Editor, w: Point): { id: string; way: Way; d: number } | null {
+  const items = ed.board.list(), hidden = ed.hidden(), reach = Math.max(ringRadius(ed.cam.z), ed.reach(0));
+  // (Each node's ways with branches, from one look at them all.)
+  const ways = new Map<string, Set<Way>>();
+  for (const k of items) {
+    const up = k.type === 'mind' && k.parent ? ed.board.get(k.parent) : undefined;
+    if (up && !hidden.has(k.id)) ways.set(up.id, (ways.get(up.id) ?? new Set()).add(mindWay(k, up)));
+  }
+  let best: { id: string; way: Way; d: number } | null = null;
+  for (const [id, set] of ways) {
+    const it = ed.board.get(id);
+    if (!it || hidden.has(id) || it.host) continue;
+    const folded = foldedWays(it, it.parent ? ed.board.get(it.parent) : undefined);
+    for (const way of set) {
+      if (folded.includes(way)) continue;
+      const b = branchBase(it, way), d = Math.hypot(w.x - b.x, w.y - b.y);
+      if (d <= reach && (!best || d < best.d)) best = { id, way, d };
+    }
   }
   return best;
 }
@@ -267,7 +290,9 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   const tick = tickAt(ed, w), arrow = tick ? null : objectArrowAt(ed, w), plus = node ? plusAt(ed, node, w) : null;
   // A task's arrow under the pointer, darker (see canvas/task.ts).
   const tp = over?.type === 'task' && ed.editingId !== over.id ? taskButtonAt(over, w) : null;
-  const hot = plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : arrow ? `obj:${arrow.id}` : glyph ?? (tp === 'arrow' || tp === 'more' || tp === 'people' ? `task:${over!.id}:${tp}` : null)
+  // The ring where a node's branches leave it, nearer than its "+" that way: lit, to fold them.
+  const ring = ringAt(ed, w), ringFirst = ring && (!plus || ring.d < Math.hypot(w.x - plus.x, w.y - plus.y));
+  const hot = ringFirst ? `ring:${ring.id}:${ring.way}` : plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : arrow ? `obj:${arrow.id}` : glyph ?? (tp === 'arrow' || tp === 'more' || tp === 'people' ? `task:${over!.id}:${tp}` : null)
     ?? (over?.code && ed.editingId !== over.id && onCodeCopy(over, w) ? `code:${over.id}` : null);
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';

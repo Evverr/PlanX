@@ -1809,6 +1809,27 @@ export const checks = {
     expect(await p.ev(`planx.board.getLink('${l.id}') ?? null`), 'let go on nothing: gone').toBe(null);
   },
 
+  async '"Меню по правому клику": a central topic\'s parameters have «Цвет» (its strip) and «Конфигурация» (the ways it grows)'(p) {
+    await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(400, 300); planx.board.add(e.newItem('mind', x, y, { id: 'm', w: 160, h: 48, text: 'Тема' })); e.setSelection(['m']); })()`);
+    await sleep(200);
+    const at = await p.ev(`(() => { const i = planx.board.get('m'), s = planx.editor.toScreen({ x: i.x + 80, y: i.y + 24 }); return [s.x, s.y]; })()`);
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x: at[0], y: at[1] });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: at[0], y: at[1], button: 'right', buttons: 2, clickCount: 1 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: at[0], y: at[1], button: 'right', buttons: 0, clickCount: 1 });
+    await sleep(200);
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent.includes('Параметры')).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(200);
+    expect(await p.ev(`[...document.querySelectorAll('.params-tabs button')].map((b) => b.textContent).join()`), 'its tabs').toBe('Цвет,Конфигурация');
+    await p.click(await p.at('.params-pop button[aria-label="Цвет: #30A46C"]'));
+    expect(await p.ev(`planx.board.get('m').color`), 'its colour').toBe('#30A46C');
+    await p.click(await p.at('.params-tabs button:nth-child(2)'));
+    await sleep(100);
+    expect(await p.ev(`[...document.querySelectorAll('.params-pop .menu-row')].map((b) => b.textContent + ':' + b.getAttribute('aria-checked')).join()`), 'right and up at first')
+      .toBe('Вправо:true,Влево:false,Вверх:true,Вниз:false');
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.params-pop .menu-row')].find((b) => b.textContent === 'Влево').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    expect(await p.ev(`JSON.stringify(planx.board.get('m').mw)`), 'left too').toBe('["right","up","left"]');
+  },
+
   async '"Меню по правому клику" on the board: zoom to 100%, paste there; on a rectangle, its parameters'(p) {
     const right = async ([x, y]) => {
       await p.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });

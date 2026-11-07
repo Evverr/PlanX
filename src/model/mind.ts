@@ -569,6 +569,19 @@ export function folding(it: Item, way: Way, on: boolean): Partial<Item> {
   return { foldedWays: ways.length ? ways : undefined };
 }
 
+/** The ways a central topic offers to grow branches (its "Конфигурация"): right and up unless set. */
+export const mindWays = (it: Item): Way[] => it.mw ?? ['right', 'up'];
+
+/** Where a node's branches growing `way` leave it: the middle of that side. */
+export function branchBase(it: Item, way: Way): Point {
+  if (upright(way)) return { x: it.x + it.w / 2, y: way === 'down' ? it.y + it.h : it.y };
+  return { x: way === 'right' ? it.x + it.w : it.x, y: it.y + it.h / 2 };
+}
+
+/** The ring folding a node's branches growing one way: where they leave it, its radius as a button's,
+ *  in screen pixels whatever the zoom. */
+export const ringRadius = (zoom: number): number => 9 / zoom;
+
 /** A point `off` screen pixels out from a node's side facing `way`, halfway along it. */
 function spot(it: Item, way: Way, off: number, zoom: number): Point {
   const d = off / zoom;
@@ -576,18 +589,17 @@ function spot(it: Item, way: Way, off: number, zoom: number): Point {
   return { x: way === 'right' ? it.x + it.w + d : it.x - d, y: it.y + it.h / 2 };
 }
 
-/** Where each of a node's buttons is and its radius, sized in screen pixels whatever the zoom; `ways`:
- *  those it has branches growing (folded ones too), `fresh`: a way that's only just got them, with no
- *  chevron yet. A chevron says the way it's on. */
-export function mindButtons(it: Item, get: Get, zoom: number, ways: Way[] = [], fresh?: Way): MindButtonAt[] {
-  const up = it.parent ? get(it.parent) : undefined, folded = foldedWays(it, up);
+/** Where each of a node's buttons is and its radius, sized in screen pixels whatever the zoom. */
+export function mindButtons(it: Item, get: Get, zoom: number): MindButtonAt[] {
+  const up = it.parent ? get(it.parent) : undefined;
   const off = BUTTON_OFF / zoom, r = 9 / zoom, cx = it.x + it.w / 2, cy = it.y + it.h / 2;
-  // The "+" for a branch growing that way, and past it the chevron once there are some.
-  const own = (kind: MindButton, way: Way): MindButtonAt[] => [
-    { kind, ...spot(it, way, BUTTON_OFF, zoom), r },
-    ...((up ? ways.length : ways.includes(way)) && !folded.includes(way) && way !== fresh ? [{ kind: 'fold' as const, ...spot(it, way, BUTTON_OFF + FOLD_OFF, zoom), r, way }] : []),
-  ];
-  if (!up) return [...own('child', 'right'), ...own('left', 'left'), ...own('down', 'down'), ...own('up', 'up')];
+  // The "+" for a branch growing that way (folded by the ring where the branches leave it, see foldRing).
+  const own = (kind: MindButton, way: Way): MindButtonAt[] => [{ kind, ...spot(it, way, BUTTON_OFF, zoom), r }];
+  // A central topic's: only the ways it's set to grow (see mindWays).
+  if (!up) {
+    const on = mindWays(it), kinds: Record<Way, MindButton> = { right: 'child', left: 'left', down: 'down', up: 'up' };
+    return (['right', 'left', 'down', 'up'] as const).filter((w) => on.includes(w)).flatMap((w) => own(kinds[w], w));
+  }
   const way = mindWay(it, up);
   if (upright(way)) {
     return [

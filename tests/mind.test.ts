@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addChild, balance, branchCurve, buttonKey, canMoveTo, childPlace, descendants, foldBadge, foldedAway, folding, insertBeside, makeRoom, tidyBranches, mindButtons, mindDepth, moveBranch, siblingOf, type Way } from '../src/model/mind';
+import { addChild, balance, branchCurve, branchBase, buttonKey, canMoveTo, childPlace, descendants, foldBadge, foldedAway, folding, insertBeside, makeRoom, tidyBranches, mindButtons, mindDepth, moveBranch, siblingOf } from '../src/model/mind';
 import type { Item } from '../src/model/types';
 
 const node = (id: string, x: number, y: number, extra: Partial<Item> = {}): Item =>
@@ -131,8 +131,8 @@ describe('mind map: branches led down from the central topic', () => {
   const all = [r, d1, d2, d11];
   const get = (id: string) => all.find((i) => i.id === id);
 
-  it('the central topic has a "+" on each side: right, left, below and above', () => {
-    expect(mindButtons(r, get, 1).map((b) => [b.kind, b.x, b.y])).toEqual([['child', 111, 20], ['left', -11, 20], ['down', 50, 51], ['up', 50, -11]]);
+  it('the central topic has a "+" each way it grows (all four set: right, left, below and above)', () => {
+    expect(mindButtons({ ...r, mw: ['right', 'left', 'down', 'up'] }, get, 1).map((b) => [b.kind, b.x, b.y])).toEqual([['child', 111, 20], ['left', -11, 20], ['down', 50, 51], ['up', 50, -11]]);
     const kinds = Object.fromEntries(mindButtons(d1, get, 1).map((b) => [b.kind, [b.x, b.y]]));
     // Under its parent: its own branch below, the parallel ones left and right, the arrow on top.
     expect(kinds.child).toEqual([-12, 139]);
@@ -190,22 +190,19 @@ describe('mind map: folding a node\'s branches away', () => {
   const all = [r, a, l, d];
   const get = (id: string) => all.find((i) => i.id === id);
 
-  it('a node with branches has a chevron past its "+" for a branch, folding them; folded, or with them only just got, none', () => {
-    const kinds = (it: Item, ways: Way[]) => mindButtons(it, get, 1, ways).map((b) => b.kind);
-    expect(kinds(a, [])).toEqual(['child', 'above', 'below', 'move']);
-    expect(kinds(a, ['right'])).toEqual(['child', 'fold', 'above', 'below', 'move']);
-    expect(kinds({ ...a, collapsed: true }, ['right'])).toEqual(['child', 'above', 'below', 'move']);
-    expect(mindButtons(a, get, 1, ['right'], 'right').map((b) => b.kind)).toEqual(['child', 'above', 'below', 'move']);
-    // The chevron 22 past the "+".
-    const at = (it: Item) => mindButtons(it, get, 1, ['right']).filter((b) => b.kind === 'child' || b.kind === 'fold').map((b) => [b.x, b.y]);
-    expect(at(a)).toEqual([[271, 20], [293, 20]]);
-    expect(at(l)).toEqual([[-171, 20], [-193, 20]]);
-    expect(at(d)).toEqual([[50, 139], [50, 161]]);
+  it('a node\'s "+" for a branch 11 out from its side; its branches folded by the ring where they leave it', () => {
+    expect(mindButtons(a, get, 1).map((b) => b.kind)).toEqual(['child', 'above', 'below', 'move']);
+    const at = (it: Item) => mindButtons(it, get, 1).filter((b) => b.kind === 'child').map((b) => [b.x, b.y]);
+    expect(at(a)).toEqual([[271, 20]]);
+    expect(at(l)).toEqual([[-171, 20]]);
+    expect(at(d)).toEqual([[50, 139]]);
+    expect([branchBase(a, 'right'), branchBase(d, 'down')]).toEqual([{ x: 260, y: 20 }, { x: 50, y: 128 }]);
   });
 
-  it('the central topic has a chevron each way it has branches, folding that way on its own', () => {
+  it('the central topic grows the ways it\'s set to (right and up unless set), each folding on its own', () => {
     const folded = { ...r, foldedWays: ['left' as const] };
-    expect(mindButtons(folded, get, 1, ['right', 'left']).map(buttonKey)).toEqual(['child', 'fold:right', 'left', 'down', 'up']);
+    expect(mindButtons(folded, get, 1).map(buttonKey)).toEqual(['child', 'up']);
+    expect(mindButtons({ ...r, mw: ['right', 'left', 'down', 'up'] }, get, 1).map(buttonKey)).toEqual(['child', 'left', 'down', 'up']);
     expect([...foldedAway(folded, all, get)]).toEqual([['left', ['l']]]);
     expect(folding(folded, 'down', true)).toEqual({ foldedWays: ['left', 'down'] });
     expect(folding(folded, 'left', false)).toEqual({ foldedWays: undefined });
