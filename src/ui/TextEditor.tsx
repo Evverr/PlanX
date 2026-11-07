@@ -5,7 +5,7 @@ import { fontOf, FONTS, LINE_HEIGHT, textBlockHeight } from '../canvas/text';
 import { FOLD_FS, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP } from '../model/frame';
 import { center } from '../canvas/geometry';
 import { descLook, TASK_FONT, taskFieldBox } from '../canvas/task';
-import { addChild, siblingOf, siblingTints } from '../model/mind';
+import { addChild, rootTextColor, siblingOf, siblingTints } from '../model/mind';
 import { autoInk } from '../model/color';
 import { colsOf, rowsOf } from '../model/table';
 import { openSwap, swapKind } from '../labs/swap';
@@ -126,7 +126,8 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           fontStyle: item.fi ? 'italic' : undefined,
           textAlign: alignOf(item),
           textDecoration: [item.fu && 'underline', item.fx && 'line-through'].filter(Boolean).join(' ') || undefined,
-          color: item.tc && (item.tc.startsWith('#') ? item.tc : TEXT_COLORS[item.tc]) || autoInk(item, siblingTints(editor.board.list())) || undefined,
+          // (A central topic filled with its colour: as drawn on it, see rootTextColor.)
+          color: item.tc && (item.tc.startsWith('#') ? item.tc : TEXT_COLORS[item.tc]) || rootTextColor(item) || autoInk(item, siblingTints(editor.board.list())) || undefined,
         }),
         padding: isFrame ? '0 4px' : 0,
         ...(code && { color: 'transparent', caretColor: '#E6E7EC', whiteSpace: 'pre', overflowWrap: 'normal', tabSize: 2 }),

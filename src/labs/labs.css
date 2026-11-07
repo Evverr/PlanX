@@ -338,3 +338,6 @@
 .app-shell.side-open:not(.on-board) .shelf-page { left: 200px; }
 /* A board beside the side: its own area right of it, the frame for all that's fixed in it (see sideViewport.ts). */
 .app-shell.side-open.on-board > .app-content { position: fixed; top: 0; bottom: 0; left: 200px; right: 0; transform: translateZ(0); overflow: hidden; }
+/* The shelf's logo in place of «Мои доски», opening the side (ShelfPage.tsx). */
+.shelf-page .shelf-logo { align-self: center; height: 34px; margin-left: -8px; padding: 0 8px; border: 0; border-radius: 8px; background: none;
+  color: inherit; font: 700 20px "Inter", var(--ui); letter-spacing: -0.01em; cursor: pointer; }

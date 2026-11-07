@@ -11,9 +11,10 @@ import {
 import { loadShelf, refreshPreviews, renameBoard } from './docs';
 import { openBoardFile } from '../collab/boardFile';
 import { boardIdIn, bringsFiles } from '../labs/boardImport';
-import { labOn } from '../labs/labs';
+import { labOn, useLabs } from '../labs/labs';
 import { WishlistPage } from '../labs/WishlistPage';
 import { navigate } from '../route';
+import { setSideOpen, useSideOpen } from '../labs/SideNav';
 import './shelf.css';
 
 type Thing = { kind: 'board'; id: string } | { kind: 'folder'; id: string };
@@ -42,6 +43,7 @@ const wishFromUrl = () => labOn('wishlist') && new URLSearchParams(location.sear
  * renamed, moved (by the menu or by dragging onto a folder), starred and taken off the shelf.
  */
 export function ShelfPage() {
+  const side = useLabs().sideNav, sideOn = useSideOpen();
   const [boards, setBoards] = useState<BoardEntry[] | null>(null);
   const [folders, setFolders] = useState<FolderEntry[]>(readFolders);
   const [here, setHere] = useState<string | null>(folderFromUrl);
@@ -325,8 +327,11 @@ export function ShelfPage() {
       {dropping && <div className="shelf-drop" aria-hidden="true"><span>Отпустите, чтобы открыть доску</span></div>}
       <header className="shelf-head">
         <div className={`shelf-brand ${wish ? 'wish-on' : ''}`}>
+          {/* ("Боковая панель", src/labs: the logo in its place, opening the side, a chevron under the pointer.) */}
+          {side && <button className={`logo side-nav-logo-btn shelf-logo ${sideOn ? 'open' : ''}`} title="Боковая панель" aria-label="Боковая панель" aria-expanded={sideOn}
+            onClick={() => setSideOpen(!sideOn)}>Plan</button>}
           {/* From the wishlist, "Мои доски" leads back to the top of the shelf. */}
-          <h1><a href={folderUrl(null)} onClick={(e) => { e.preventDefault(); go(null); }}>Мои доски</a></h1>
+          {(!side || wish) && <h1><a href={folderUrl(null)} onClick={(e) => { e.preventDefault(); go(null); }}>Мои доски</a></h1>}
           {labOn('wishlist') && (
             <a className="shelf-tab" href="?wishlist" aria-current={wish ? 'page' : undefined} onClick={(e) => { e.preventDefault(); openWish(); }}>Wishlist</a>
           )}

@@ -6,7 +6,7 @@ import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
 import { cellItem, cellRect, cellText, colsOf, rowsOf, type TableLine } from '../model/table';
 import { audioProgress, clock } from './audio';
-import { branchBase, branchColor, branchFrom, BRANCH_W, branchCurve, branchEdges, buttonKey, foldBadge, fillOpacity, ringRadius, levelColor, mindButtons, mindDepth, mindWay, nodeColors, siblingTints, type Way } from '../model/mind';
+import { branchBase, branchColor, branchFrom, BRANCH_W, branchCurve, branchEdges, buttonKey, foldBadge, fillOpacity, ringRadius, levelColor, mindButtons, mindDepth, mindWay, nodeColors, rootTextColor, siblingTints, type Way } from '../model/mind';
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
@@ -715,12 +715,9 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
     ctx.stroke();
     ctx.setLineDash([]);
   }
-  if (!editing) drawText(ctx, it, textPad(it), rootInk ? (dark(rootInk) ? '#FFFFFF' : '#1C1F26') : theme.ink, true, s, textPadY(it));
+  if (!editing) drawText(ctx, it, textPad(it), rootTextColor(it) ?? theme.ink, true, s, textPadY(it));
   for (const [way, n] of s.folded?.get(it.id) ?? []) drawFoldBadge(ctx, it, s, way, n);
 }
-
-/** Whether a '#rrggbb' colour is dark enough for white on it. */
-const dark = (hex: string): boolean => { const n = parseInt(hex.slice(1), 16); return ((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114 < 160; };
 
 /** A folded mind map node's count of what it hides that way: a pill in the next level's colour on a
  *  stub of branch, the number in it. */
