@@ -356,7 +356,7 @@ function hangBranch(ed: Editor, id: string, to: string, at: Point): void {
   const dx = (at.x - target.x) / target.w - 0.5, dy = (at.y - target.y) / target.h - 0.5;
   const upright = !target.parent && Math.abs(dy) > Math.abs(dx) && mindWays(target).includes(dy > 0 ? 'down' : 'up');
   const toward = upright ? (dy > 0 ? 'down' : 'up') : dx >= 0 ? 1 : -1;
-  const moves = moveBranch(id, to, board.list(), toward);
+  const moves = moveBranch(id, to, board.list(), toward, at);
   board.transact(() => {
     board.update(id, { parent: to });
     moves.forEach((p, k) => board.update(k, p));

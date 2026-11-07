@@ -495,7 +495,7 @@ export function canMoveTo(id: string, to: string, items: Item[]): boolean {
  * a central topic), the whole branch mirrored if it changes sides, laid out afresh if it turns between
  * beside, under and over, and the branches round both its old and new place re-centred.
  */
-export function moveBranch(id: string, to: string, items: Item[], toward: Toward): Map<string, Point & { down?: boolean; up?: boolean }> {
+export function moveBranch(id: string, to: string, items: Item[], toward: Toward, drop?: Point): Map<string, Point & { down?: boolean; up?: boolean }> {
   const { all, byId, block } = working(items);
   const node = byId.get(id)!, target = byId.get(to)!, old = byId.get(node.parent!)!, get = (k: string) => byId.get(k);
   const sub = descendants([id], all).map((k) => byId.get(k)!);
@@ -519,11 +519,19 @@ export function moveBranch(id: string, to: string, items: Item[], toward: Toward
     // Over to the other side, its rows stand by the edges they stand by there.
     if (flip) alignAcross(node, way, all);
   }
+  // Among its new family where it was let go (in order along it), not after the last of them.
+  const a = axis(way);
+  if (drop) { const d = drop[a.at] - middle(node, a); for (const n of [node, ...sub]) n[a.at] += d; }
+  // Only round it: its new family lined up on their parent, the parent and those further up staying put,
+  // the next families of that level moved along only as far as they must (as for a branch added, see
+  // addChild); its old family closed up on theirs. Nothing else in the map moves.
+  lineUpNodes(branchesOf(target, way, all).sort((m, n) => middle(m, a) - middle(n, a)), a, middle(target, a), block);
   if (way === 'left') alignLeft(target, all, block, leftBut(branchesOf(target, way, all), node));
-  // Re-centre round the new place, then round the old one if anything is left there.
-  for (const k of [id, all.find((i) => i.parent === old.id && i.type === 'mind' && mindWay(i, old) === oldWay && !moving.has(i.id))?.id]) {
-    if (k) balance(k, all).forEach((pt, n) => Object.assign(byId.get(n)!, pt));
-  }
+  const rest = branchesOf(old, oldWay, all).filter((k) => !moving.has(k.id)), ao = axis(oldWay);
+  if (rest.length && old.id !== target.id) lineUpNodes(rest.sort((m, n) => middle(m, ao) - middle(n, ao)), ao, middle(old, ao), block);
+  const ways = new Map(all.filter((k) => k.type === 'mind' && k.parent && byId.has(k.parent)).map((k) => [k.id, mindWay(k, byId.get(k.parent!)!)]));
+  spreadGroups(target, all, block, ways);
+  clearCousins(target, way, all, byId);
   const out = new Map<string, Point & { down?: boolean; up?: boolean }>();
   for (const i of items) {
     const n = byId.get(i.id)!, x = Math.round(n.x), y = Math.round(n.y);

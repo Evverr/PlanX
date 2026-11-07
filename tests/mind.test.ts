@@ -185,6 +185,16 @@ describe('mind map: branches led down from the central topic', () => {
 });
 
 describe('mind map: a branch dragged to another family', () => {
+  it('moves only what\'s round it: the rest of the map stays put', () => {
+    const r = node('r', 0, 0), a = node('a', 160, -100, { parent: 'r' }), b = node('b', 160, 100, { parent: 'r' });
+    const a1 = node('a1', 320, -130, { parent: 'a' }), a2 = node('a2', 320, -70, { parent: 'a' }), b1 = node('b1', 320, 100, { parent: 'b' });
+    const l = node('l', -160, 0, { parent: 'r' }), l1 = node('l1', -320, 0, { parent: 'l' });
+    const moves = moveBranch('a2', 'b', [r, a, b, a1, a2, b1, l, l1], 1, { x: 370, y: 140 });
+    expect(['r', 'a', 'b', 'l', 'l1'].filter((k) => moves.has(k))).toEqual([]);
+    // Under b1, where it was let go.
+    expect(moves.get('a2')!.y > moves.get('b1')?.y! || moves.get('a2')!.y > b1.y).toBe(true);
+  });
+
   it('hangs only from one on the side it grew from, its line not through it', () => {
     // x grew right of a; dragged by q (right of it, nearer) it still takes a family left of it.
     const r = node('r', 0, 0), a = node('a', 160, 0, { parent: 'r' }), x = node('x', 330, 0, { parent: 'a' }), q = node('q', 480, 0, { parent: 'r' });
