@@ -9,7 +9,7 @@ import { onEmojiLoad } from '../emoji/emoji';
 import { onPictureLoad, type Picture } from '../canvas/pictures';
 import { freshTable, withCellFormat, withCount, withTableFormat, type TableLine } from '../model/table';
 import type { AudioNote } from '../canvas/audio';
-import { addChild, descendants, foldedAway, folding, makeRoom, mindDepth, tidyBranches, type Way } from '../model/mind';
+import { addChild, descendants, foldedAway, folding, makeRoom, mindDepth, mindRoot, regroup, tidyBranches, type Way } from '../model/mind';
 import { readJSON, writeJSON } from '../storage';
 import { cameraFor, clamp, fittedTo, flyTo, freeArea, minZoomFor, wheelMove, zoomedAt } from './camera';
 import { copiesOf } from './copies';
@@ -1398,9 +1398,13 @@ export class Editor {
   tidyMind(id: string): void {
     // Laid out here already and nothing moved by hand since: it stays as it is (its stretch kept).
     if (mindTidyKept(this, id)) { resumeMindTidy(); this.requestRender(); return; }
-    const moves = tidyBranches(id, this.board.list());
+    const moves = tidyBranches(id, this.board.list()), root = this.board.get(id);
     this.board.beginGesture();
-    this.board.transact(() => moves.forEach((pt, k) => this.board.update(k, pt)));
+    this.board.transact(() => {
+      moves.forEach((pt, k) => this.board.update(k, pt));
+      // (Laid out afresh from its central topic: folding lays out round what's folded again.)
+      if (root?.type === 'mind' && !root.parent && root.mhand) this.board.update(id, { mhand: undefined });
+    });
     restartMindTidy(this, id);
     this.board.endGesture();
   }
@@ -1730,7 +1734,14 @@ export class Editor {
   setCollapsed(id: string, way: Way, on: boolean): void {
     const it = this.board.get(id);
     if (it?.type !== 'mind') return;
-    this.board.update(id, folding(it, way, on));
+    // Its cousins laid out afresh round it, but on a map moved by hand (see regroup).
+    const patch = folding(it, way, on), root = mindRoot(it, (k) => this.board.get(k));
+    // (Laid out by the map as it'll be, folded so.)
+    const moves = root.mhand ? new Map() : regroup(id, this.board.list().map((k) => (k.id === id ? { ...k, ...patch } : k)));
+    this.board.transact(() => {
+      this.board.update(id, patch);
+      moves.forEach((pt, k) => this.board.update(k, pt));
+    });
     if (on) {
       const hidden = this.hidden();
       this.setSelection([...this.selection].filter((s) => !hidden.has(s)));

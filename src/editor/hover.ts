@@ -85,7 +85,7 @@ export function plusAt(ed: Editor, it: Item, w: Point): MindButtonAt | null {
 /** The ring folding a mind map node's branches growing one way, under the point: where they leave it
  *  (see branchBase), the nearest one, and how far off. */
 export function ringAt(ed: Editor, w: Point): { id: string; way: Way; d: number } | null {
-  const items = ed.board.list(), hidden = ed.hidden(), reach = Math.max(ringRadius(ed.cam.z), ed.reach(0));
+  const items = ed.board.list(), hidden = ed.hidden(), reach = Math.max(ringRadius(ed.cam.z) + 6 / ed.cam.z, ed.reach(0));
   // (Each node's ways with branches, from one look at them all.)
   const ways = new Map<string, Set<Way>>();
   for (const k of items) {

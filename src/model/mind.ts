@@ -462,6 +462,28 @@ function lineUpNodes(kids: Item[], a: Axis, on: number, block: (k: Item) => Item
   for (const k of kids) { shift(block(k), a, at - k[a.at]); at += k[a.size] + a.gap; }
 }
 /** The rounded place of every item the working copies moved. */
+/**
+ * After node `id`'s branches are folded away or out again: its map laid out afresh as «Авторасположение»
+ * lays it out (see tidyBranches), by the nodes in sight alone, what's folded going along with the node
+ * folding it: one family folded, its cousins close up where it was; out again, they make room.
+ */
+export function regroup(id: string, items: Item[]): Map<string, Point> {
+  const get = (k: string) => items.find((i) => i.id === k), n = get(id);
+  if (!n) return new Map();
+  const root = mindRoot(n, get), hidden = new Set<string>();
+  for (const it of items) if (it.type === 'mind') for (const ids of foldedAway(it, items, get).values()) ids.forEach((k) => hidden.add(k));
+  const moves = tidyBranches(root.id, items.filter((k) => !hidden.has(k.id)));
+  // What's folded: as far as the node it's folded under.
+  for (const k of items) {
+    if (!hidden.has(k.id)) continue;
+    let up = k.parent ? get(k.parent) : undefined;
+    while (up && hidden.has(up.id)) up = up.parent ? get(up.parent) : undefined;
+    const to = up && moves.get(up.id);
+    if (up && to) moves.set(k.id, { x: k.x + to.x - up.x, y: k.y + to.y - up.y });
+  }
+  return moves;
+}
+
 function moved(items: Item[], byId: Map<string, Item>): Map<string, Point> {
   const out = new Map<string, Point>();
   for (const i of items) {
