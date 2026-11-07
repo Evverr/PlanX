@@ -293,3 +293,19 @@
    (falling under it when the panel's opened down from over the block). */
 .bar.panel .code-lang .tf-menu { top: auto; bottom: calc(100% + var(--s18)); --in-y: var(--slide); }
 .bar.panel.opens-down .code-lang .tf-menu { top: calc(100% + var(--s18)); bottom: auto; --in-y: calc(-1 * var(--slide)); }
+
+/* "Боковая панель": dark, 200 wide down the left edge, over everything but the dialogs; coming in from the
+   left as the popups come in from where they open. */
+.side-nav { position: fixed; z-index: 45; left: 0; top: 0; bottom: 0; width: 200px; box-sizing: border-box; padding: 14px 10px;
+  display: flex; flex-direction: column; gap: 2px; background: #1C1F26; color: #E6E7EC; box-shadow: 4px 0 16px rgba(0, 0, 0, .2);
+  --in-x: calc(-1 * var(--slide)); --in-y: 0px; animation: fade-in .16s ease-out, come-in .16s ease-out; animation-composition: replace, add; }
+.side-nav-logo { font: 700 18px "Inter", var(--ui); letter-spacing: -0.01em; padding: 6px 10px 14px; }
+.side-nav-row { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none;
+  color: inherit; font: 500 14px "Inter", var(--ui); text-align: left; cursor: pointer; }
+.side-nav-row:hover { background: rgba(255, 255, 255, .08); }
+.side-nav-icon { width: 20px; height: 20px; flex: none; opacity: .85; }
+/* The logo shows it opens the side: a chevron pointing left before it, under the pointer. */
+.logo.side-nav-logo-btn { position: relative; }
+.logo.side-nav-logo-btn::before { content: ""; position: absolute; left: 2px; top: 50%; width: 6px; height: 6px; margin-top: -3px;
+  border-left: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); opacity: 0; transition: opacity .15s; }
+.logo.side-nav-logo-btn:hover::before { opacity: .6; }
