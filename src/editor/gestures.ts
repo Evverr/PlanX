@@ -10,7 +10,7 @@ import { pressTask, taskFieldAt } from './tasks';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, freshTable, withScale, type TableLine } from '../model/table';
 import { snapToGuides, type Guide } from '../canvas/guides';
 import { shapeStyle } from './shapeStyle';
-import { branchCrosses, canMoveTo, foldedWays, folding, mindWay, mindWays, moveBranch, nearestFamily, type Way } from '../model/mind';
+import { branchCrosses, canMoveTo, foldedWays, folding, mindWay, mindRoot, mindWays, moveBranch, nearestFamily, type Way } from '../model/mind';
 import { clamp, MAX_Z } from './camera';
 import { zoomToBox } from '../labs/zoomBox';
 import { showGrips } from '../labs/tableMove';
@@ -131,11 +131,13 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         for (const [id, via] of g.vias!) board.updateLink(id, { via: via.map((p) => ({ x: Math.round(p.x + dx + sx), y: Math.round(p.y + dy + sy) })) });
       });
       // A mind map branch dragged alone: the family it's nearest to, its line from there as it goes.
-      // (Only on the side it grew from: as it stood when taken.)
+      // (Only on the side it grows from: as it stood when taken, up or down; right or left by the side of its
+      // map's central topic it's on now, its middle the mark.)
       if (lead?.type === 'mind' && lead.parent && ed.selection.size === 1) {
-        const up = board.get(lead.parent), o = g.orig.get(g.id);
+        const up = board.get(lead.parent), o = g.orig.get(g.id), root = mindRoot(lead, (k) => board.get(k));
         if (up && o) g.mindWay ??= mindWay({ ...lead, ...o }, up);
-        g.mindTo = nearestFamily(g.id, board.list(), g.mindWay);
+        const way = g.mindWay === 'up' || g.mindWay === 'down' ? g.mindWay : lead.x + lead.w / 2 < root.x + root.w / 2 ? 'left' : 'right';
+        g.mindTo = nearestFamily(g.id, board.list(), way);
         ed.requestRender();
       }
       if (g.guides) ed.requestRender();
