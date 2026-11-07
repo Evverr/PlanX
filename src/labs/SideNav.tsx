@@ -5,7 +5,8 @@ import { readJSON, readText, writeJSON, writeText } from '../storage';
 import { navigate } from '../route';
 
 /**
- * "Боковая панель": a dark side down the left edge, 200 wide, opened and closed by the logo, kept open
+ * "Боковая панель": a dark side down the left edge, 200 wide, opened by the board's logo (its own leading
+ * to the start, a hero; its cross, by the board or the boards, putting it away for them to fill the window), kept open
  * whatever's beside it: the board worked on («Работа»), the boards (the shelf, its folders), the profile, the settings and, at its
  * foot, the help, each a page beside it on this one page (see main.tsx), the board put away.
  */
@@ -25,10 +26,10 @@ export const useSideOpen = (): boolean =>
   useSyncExternalStore((fn) => { listeners.add(fn); return () => { listeners.delete(fn); }; }, () => open);
 
 /** The pages the side leads to besides the boards: in the address as ?page=… */
-export type SidePage = 'settings' | 'profile' | 'help';
+export type SidePage = 'settings' | 'profile' | 'help' | 'home';
 export const sidePageFromUrl = (): SidePage | null => {
   const p = new URLSearchParams(location.search).get('page');
-  return p === 'settings' || p === 'profile' || p === 'help' ? p : null;
+  return p === 'settings' || p === 'profile' || p === 'help' || p === 'home' ? p : null;
 };
 const pageUrl = (p: SidePage | null) => (p ? `${location.pathname}?page=${p}` : location.pathname);
 
@@ -40,7 +41,11 @@ export function SideNav({ page, board }: { page: SidePage | null; board: boolean
   );
   return (
     <nav className="side-nav" aria-label="Боковая панель">
-      <button className="side-nav-logo logo side-nav-logo-btn open" title="Свернуть панель" aria-label="Свернуть панель" onClick={() => setSideOpen(false)}>Plan</button>
+      <div className="side-nav-top">
+        <button className={`side-nav-logo ${page === 'home' ? 'on' : ''}`} title="Начало" aria-label="Начало" onClick={() => navigate(pageUrl('home'))}>Plan</button>
+        {/* With the board or the boards beside it: put away, they fill the window. */}
+        {(board || !page) && <button className="side-nav-close" title="Свернуть панель" aria-label="Свернуть панель" onClick={() => setSideOpen(false)}>×</button>}
+      </div>
       <button className={`side-nav-row ${board ? 'on' : ''}`} aria-current={board ? 'page' : undefined} onClick={toWork}>
         <Glyph id="board" className="side-nav-icon" /><span>Работа</span>
       </button>
@@ -65,6 +70,18 @@ function toWork() {
 export function SidePageView({ page }: { page: SidePage }) {
   if (page === 'settings') return <SettingsPage />;
   if (page === 'profile') return <ProfilePage />;
+  if (page === 'home') return (
+    <section className="page-view home-page" aria-label="Начало">
+      <div className="hero">
+        <h1>Планируйте вместе</h1>
+        <p>Доска для идей, задач и схем: стикеры, майнд-карты, таймлайны и задачи на одном холсте, а рядом вся команда.</p>
+        <div className="hero-actions">
+          <button className="btn primary" onClick={toWork}>Продолжить работу</button>
+          <button className="btn" onClick={() => navigate(location.pathname)}>Мои доски</button>
+        </div>
+      </div>
+    </section>
+  );
   return (
     <section className="page-view help-page" aria-label="Помощь">
       <h1>Помощь</h1>
