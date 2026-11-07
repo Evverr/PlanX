@@ -299,8 +299,20 @@
 .side-nav { position: fixed; z-index: 45; left: 0; top: 0; bottom: 0; width: 200px; box-sizing: border-box; padding: 12px 10px 14px;
   display: flex; flex-direction: column; gap: 2px; background: #1C1F26; color: #E6E7EC; box-shadow: 4px 0 16px rgba(0, 0, 0, .2);
   --in-x: calc(-1 * var(--slide)); --in-y: 0px; animation: fade-in .16s ease-out, come-in .16s ease-out; animation-composition: replace, add; }
-.side-nav .side-nav-logo { align-self: flex-start; height: 36px; margin: 0 0 12px; padding: 0 10px; border: 0; background: none; color: inherit;
+/* Its top: the logo, leading to the start; the cross putting it away by the board or the boards. */
+.side-nav-top { display: flex; align-items: center; justify-content: space-between; margin: 0 0 12px; }
+.side-nav-logo { height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none; color: inherit;
   font: 700 18px "Inter", var(--ui); letter-spacing: -0.01em; cursor: pointer; }
+.side-nav-logo:hover, .side-nav-logo.on { background: rgba(255, 255, 255, .08); }
+.side-nav-close { width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; color: inherit; opacity: .7;
+  font: 400 22px/1 "Inter", var(--ui); cursor: pointer; }
+.side-nav-close:hover { opacity: 1; background: rgba(255, 255, 255, .08); }
+/* The start: a hero over the rest of the window. */
+.page-view.home-page { max-width: 760px; padding-top: 14vh; }
+.home-page .hero h1 { margin: 0 0 16px; font: 800 48px/1.1 "Inter", var(--ui); letter-spacing: -0.02em; }
+.hero p { margin: 0 0 28px; max-width: 560px; color: var(--muted); font: 400 18px/1.5 "Inter", var(--ui); }
+.hero-actions { display: flex; gap: 12px; }
+.hero-actions .btn { height: 40px; padding: 0 18px; font-size: 14px; }
 .side-nav-row { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: none;
   color: inherit; font: 500 14px "Inter", var(--ui); text-align: left; cursor: pointer; }
 .side-nav-row:hover { background: rgba(255, 255, 255, .08); }
@@ -320,7 +332,6 @@
 .logo.side-nav-logo-btn:hover { color: transparent !important; }
 .logo.side-nav-logo-btn::before { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -2px;
   border-left: 2px solid var(--ink); border-bottom: 2px solid var(--ink); transform: rotate(45deg); opacity: 0; transition: opacity .15s; }
-.side-nav .logo.side-nav-logo-btn::before { border-color: #E6E7EC; }
 .logo.side-nav-logo-btn.open::before { margin-left: -6px; transform: rotate(-135deg); }
 .logo.side-nav-logo-btn:hover::before { opacity: .8; }
 /* (The shelf fills the window by itself: beside the side, from its edge.) */

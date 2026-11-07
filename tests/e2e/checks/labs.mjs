@@ -66,7 +66,7 @@ export const checks = {
     expect([await p.ev(`!!planx.board.get('c')`), await p.ev('planx.editor.editingId')].join(), 'pressed: gone, nothing typed in').toBe('false,');
   },
 
-  async '"Боковая панель": the logo opens a dark side on the left, kept open; its rows go to pages beside it, the help at its foot; its logo closes it'(p) {
+  async '"Боковая панель": the logo opens a dark side on the left, kept open; its rows go to pages beside it, the help at its foot; its logo the start, its cross by the boards puts it away'(p) {
     const go = async (label) => p.click(await p.ev(`(() => { const b = [...document.querySelectorAll('.side-nav-row, .side-nav-help')].find((b) => (b.getAttribute('aria-label') ?? b.textContent) === '${label}').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; })()`));
     await p.click(await p.at('.topbar .logo'));
     await sleep(250);
@@ -89,9 +89,15 @@ export const checks = {
     await go('Работа');
     await sleep(800);
     expect([await p.ev('location.search').then((q) => q.startsWith('?board=')), await p.ev(`!!document.querySelector('.board-canvas')`)].join(), '«Работа»: the board again').toBe('true,true');
+    // Its logo: the start, a hero; no cross there, by the boards one.
     await p.click(await p.at('.side-nav .side-nav-logo'));
+    await sleep(300);
+    expect([await p.ev('location.search'), await p.ev(`!!document.querySelector('.hero h1')`), !!(await p.rect('.side-nav-close'))].join(), 'the start').toBe('?page=home,true,false');
+    await go('Доски');
+    await sleep(500);
+    await p.click(await p.at('.side-nav-close'));
     await sleep(200);
-    expect(!!(await p.rect('.side-nav')), 'closed by its logo').toBe(false);
+    expect([!!(await p.rect('.side-nav')), (await p.rect('.shelf-page')).l].join(), 'its cross: the boards fill the window').toBe('false,0');
   },
 
   async '"Код": dragged off the right rail, a block put where it\'s let go'(p) {
