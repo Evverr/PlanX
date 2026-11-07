@@ -20,7 +20,7 @@ import { canCrop, croppingId, subscribeCrop, toggleCrop } from '../labs/imageCro
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['lang', 'sepLang', 'colors', 'text', 'notext', 'align', 'tidy', 'rows', 'cols', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+const ORDER = ['fold', 'lang', 'sepLang', 'colors', 'text', 'notext', 'align', 'tidy', 'rows', 'cols', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -398,6 +398,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   if (!items.length && (over || !linkCount)) return null;
   const tables = items.filter((i) => i.type === 'table'), links = editor.selectedLinks();
   // (Shapes, not blocks of code: «Без текста».)
+  const group = items.length === 1 && items[0].type === 'frame' && !items[0].tl && !items[0].inst ? items[0] : null;
   const shapes = items.filter((i) => (i.type === 'rect' || i.type === 'ellipse' || i.type === 'polygon') && !i.code), noText = shapes.length > 0 && shapes.every((s) => s.nt);
   // An instance picked alone, or something in one (not of a built-in component: those aren't changed).
   const inOne = items.length === 1 ? (items[0].host ? editor.board.get(items[0].host) : items[0]) : undefined;
@@ -470,7 +471,12 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
         back: items.length > 0 ? btn('to-back', 'На слой ниже', () => editor.shiftZ(-1)) : undefined,
         duplicate: items.length > 0 ? btn('duplicate', 'Дублировать (Ctrl+D)', () => editor.duplicate()) : undefined,
         // Features on trial (src/labs), while they're switched on.
-        text: onText ? btn('text', 'Текст и шрифт', onText) : undefined,
+        // A group (a frame, not a timeline, nor a component's copy): an arrow folding it into a bar, or
+        // unfolding it.
+        fold: group ? <button className="ib" title={group.fold ? 'Развернуть группу' : 'Свернуть группу'} aria-label={group.fold ? 'Развернуть группу' : 'Свернуть группу'}
+          onClick={() => editor.setFolded(group.id, !group.fold)}><PanelIcon name={group.fold ? 'arrow-right' : 'arrow-left'} /></button> : undefined,
+        // (Shapes with no typing in them, «Без текста»: no text to set.)
+        text: onText ? <button className="ib" title="Текст и шрифт" aria-label="Текст и шрифт" disabled={noText} onClick={onText}><PanelIcon name="text" /></button> : undefined,
         // Shapes with no typing in them: what's written stays, a double click doesn't open them for typing.
         notext: shapes.length && shapes.length === items.length ? (
           <button className={`ib ${noText ? 'on' : ''}`} title={noText ? 'Разрешить текст' : 'Без текста'} aria-label="Без текста" aria-pressed={noText}
