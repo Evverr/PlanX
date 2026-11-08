@@ -67,12 +67,12 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
   // Esc while a component's being changed: done with it (as by its tick).
   if (e.key === 'Escape' && ed.finishComponent()) return;
   if (e.key === 'Escape') { ed.pickedLines = []; ed.setSelection([]); ed.setTool('select'); window.dispatchEvent(new CustomEvent('planx:close-popovers')); return; }
-  // On a mind map node, Tab adds a branch to it (Shift+Tab picks its parent) and Enter one beside it (to
+  // On a mind map node, Tab adds a branch to it (Shift+Tab types in its parent) and Enter one beside it (to
   // the centre: a branch).
   const one = ed.selection.size === 1 ? ed.board.get([...ed.selection][0]) : undefined;
   if (one?.type === 'mind' && (e.key === 'Tab' || e.key === 'Enter')) {
     e.preventDefault();
-    if (e.key === 'Tab' && e.shiftKey) { if (one.parent) ed.setSelection([one.parent]); return; }
+    if (e.key === 'Tab' && e.shiftKey) { if (one.parent) { ed.setSelection([one.parent]); ed.startEditing(one.parent, null, 'end'); } return; }
     ed.addMindNode(one.id, e.key === 'Enter' && one.parent ? 'below' : 'child');
     return;
   }

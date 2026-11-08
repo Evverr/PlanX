@@ -265,7 +265,7 @@ export const checks = {
     expect(await p.ev(`planx.board.get('${left}').collapsed`), 'its branch folded').toBe(true);
   },
 
-  async 'typing in a mind map node: Tab goes on in a branch of it, Shift+Tab picks its parent, Enter one beside it, Shift+Enter a new line'(p) {
+  async 'typing in a mind map node: Tab goes on in a branch of it, Shift+Tab back in its parent, Enter one beside it, Shift+Enter a new line'(p) {
     await p.make('mind', [500, 400]);
     await p.escape();
     const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
@@ -278,9 +278,8 @@ export const checks = {
     expect(await p.ev(`planx.board.get('${child}').parent`), 'a branch of it typed in').toBe(first);
     await p.cdp('Input.insertText', { text: 'Б' });
     await p.key('Tab', 'Tab', 9, 8);
-    expect([await p.ev('planx.editor.editingId') ?? 'none', await p.ev(`[...planx.editor.selection].join()`)].join(), 'its parent picked').toBe(`none,${first}`);
-    await p.ev(`planx.editor.startEditing('${first}', null, 'end')`);
     await sleep(200);
+    expect(await p.ev('planx.editor.editingId'), 'its parent typed in').toBe(first);
     await p.key('Enter', 'Enter', 13, 8);
     expect(await p.ev('planx.editor.editingId'), 'Shift+Enter: still typed in (a new line there)').toBe(first);
     await p.key('Enter', 'Enter', 13);

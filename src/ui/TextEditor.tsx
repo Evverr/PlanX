@@ -244,13 +244,13 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           editor.setSelection([next.id]);
           editor.startEditing(next.id, null, 'end');
         } else if (item.type === 'mind' && (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey))) {
-          // In a mind map, Tab goes on typing in a new branch of it (a child), Shift+Tab back to its parent
-          // (picked); Enter in a new one beside it (a central topic's: a branch of it), typed in at once, and
+          // In a mind map, Tab goes on typing in a new branch of it (a child), Shift+Tab back in its parent
+          // (typed in, at its end); Enter in a new one beside it (a central topic's: a branch of it), typed in at once, and
           // so on while the typing goes on from one to the next, standing centred on their node as they come
           // (see commitText). Shift+Enter starts a new line.
           e.preventDefault();
           commit();
-          if (e.key === 'Tab' && e.shiftKey) { if (item.parent) editor.setSelection([item.parent]); return; }
+          if (e.key === 'Tab' && e.shiftKey) { if (item.parent) { editor.setSelection([item.parent]); editor.startEditing(item.parent, null, 'end'); } return; }
           if (e.key === 'Enter' && item.parent) {
             editor.tabRun = item.parent;
             editor.tabStep = true;
