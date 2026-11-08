@@ -1360,7 +1360,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   if (s.stroke) strokeInk(ctx, s.stroke, theme);
   if (s.guides.length) {
     ctx.strokeStyle = theme.muted;
-    ctx.globalAlpha = 0.45;
+    ctx.globalAlpha = 0.3;
     ctx.lineWidth = 1 / cam.z;
     ctx.setLineDash([4 / cam.z, 4 / cam.z]);
     ctx.beginPath();
