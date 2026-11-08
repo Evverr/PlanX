@@ -853,6 +853,22 @@ export const checks = {
     expect(await p.ev(`[planx.board.get('lo').x, planx.board.get('ink').x].join()`), 'the picked one taken from under the drawing').toBe('140,120');
   },
 
+  async 'a task opened and closed by its right corner: its «ЗАДАЧА» pill, by its arrow, the corner round it'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('task', 200, 200, { id: 't', text: 'Задача', w: 293, h: 52 })); e.setSelection([]); })()`);
+    await sleep(300);
+    const tv = () => p.ev(`planx.board.get('t').tv ?? 'closed'`);
+    const at = (dx, dy) => p.ev(`(() => { const t = planx.board.get('t'), s = planx.editor.toScreen({ x: t.x + t.w - ${dx}, y: t.y + ${dy} }); return [s.x, s.y]; })()`);
+    await p.mouse('mouseMoved', ...(await at(46, 4)));
+    await sleep(100);
+    expect(await p.ev('planx.editor.hotPlus'), 'the pill lit').toBe('task:t:arrow');
+    await p.click(await at(46, 4));
+    expect(await tv(), 'its pill: opened').toBe('full');
+    await sleep(450);
+    await p.click(await at(8, 45));
+    expect(await tv(), 'the corner by its arrow: closed').toBe('closed');
+  },
+
   async 'a task\'s menu (the burger at its foot): pinned, its pin over it, its buttons shown or not'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('task', 100, 60, { id: 't', text: 'Задача', desc: 'Описание', w: 494, h: 52, tv: 'full' })); e.setSelection(['t']); })()`);
