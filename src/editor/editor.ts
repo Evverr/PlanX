@@ -1500,8 +1500,9 @@ export class Editor {
       const value = text.replace(/\s+$/, '');
       if (it.type === 'task') {
         // Its title, its description or a subtask (see model/task.ts); as tall as it then takes.
-        const patch = taskTextPatch(it, cell, value);
-        if (patch) this.board.update(id, { ...patch, h: fitTask(it, patch) });
+        // (Refit even with nothing new: it may have grown for what was typed past the end, now dropped.)
+        const patch = taskTextPatch(it, cell, value), h = fitTask(it, patch ?? {});
+        if (patch || h !== it.h) this.board.update(id, { ...patch, h });
       } else if (it.type === 'table') {
         if (cell !== null && value !== (it.cells?.[cell] ?? '')) {
           const cells = [...(it.cells ?? [])];
