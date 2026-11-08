@@ -1314,6 +1314,16 @@ export const checks = {
     expect(await at(5), 'nearer than 6: still').toBe('col');
   },
 
+  async '"Авторасположение" lined up meanwhile («Выравнивание»): kept so as its gaps change'(p) {
+    await p.ev(`(async () => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.transact(() => { b.add(e.newItem('rect', 300, 100, { id: 'a', w: 100, h: 80 })); b.add(e.newItem('rect', 300, 300, { id: 'c', w: 240, h: 80 })); b.add(e.newItem('rect', 300, 500, { id: 'd', w: 160, h: 80 })); });
+      e.setSelection(['a', 'c', 'd']); const t = await import('/src/labs/tidy.ts'); t.startTidy(e, 'col'); (await import('/src/labs/align.ts')).alignItems(e, 'center'); t.setGaps(e, 60, 60); })()`);
+    await sleep(200);
+    const mids = await p.ev(`['a', 'c', 'd'].map((k) => { const i = planx.board.get(k); return i.x + i.w / 2; }).join()`);
+    expect(mids, 'centred still').toBe('420,420,420');
+    expect(await p.ev(`planx.board.get('c').y - (planx.board.get('a').y + 80)`), 'the new gap').toBe(60);
+  },
+
   async '"Авторасположение" on one mind map node lays out what grows from it as a mind map does; one Ctrl+Z puts it back'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.transact(() => {

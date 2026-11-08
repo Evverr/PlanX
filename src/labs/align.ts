@@ -1,6 +1,7 @@
 import type { Editor } from '../editor/editor';
 import { boxOf } from '../canvas/geometry';
 import { isLocked } from './labs';
+import { noteAlign } from './tidy';
 
 /** How the selected line up: by their left sides, middles or right sides, or their tops, middles or bottoms. */
 export type AlignTo = 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom';
@@ -20,4 +21,6 @@ export function alignItems(ed: Editor, to: AlignTo): void {
     const dy = to === 'top' ? y1 - b.y : to === 'bottom' ? y2 - b.y - b.h : to === 'middle' ? (y1 + y2) / 2 - b.y - b.h / 2 : 0;
     if (dx || dy) ed.board.update(it.id, { x: Math.round(it.x + dx), y: Math.round(it.y + dy) });
   }));
+  // Laid out by «Авторасположение»: kept lined up so as its gaps change.
+  noteAlign(ed, to);
 }
