@@ -62,15 +62,21 @@ export const checks = {
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
     it = await t();
     expect([it.tv, it.w, it.z > 50].join(), 'its arrow: all of it, wider, on top').toBe('full,494,true');
-    // Who does it only, the arrow by it showing who set it and by when too, and back.
-    const rows = () => p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).rows.map((r) => r.key).join())()`);
-    expect(await rows(), 'who does it').toBe('doer');
-    for (const want of ['boss,doer,due', 'doer']) {
-      await sleep(450);
-      await p.click(await at('(t, l) => ({ x: t.x + l.peopleAt.x + 12, y: t.y + l.peopleAt.y + 12 })'));
-      expect(await rows(), 'rows shown').toBe(want);
-      expect((await t()).h, 'as tall as them').toBe(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).h)()`));
-    }
+    // Its blocks added by its menu (the burger at its foot): none at first; who set it and does it, by when.
+    const rows = () => p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).rows?.map((r) => r.key).join() ?? '')()`);
+    const menu = async (label) => {
+      await p.click(await at('(t, l) => ({ x: t.x + l.menu.x + 16, y: t.y + l.menu.y + 16 })'));
+      await sleep(200);
+      await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.task-pop .menu-row')].find((b) => b.textContent === '${label}').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+      await sleep(200);
+    };
+    expect(await rows(), 'none at first').toBe('');
+    await menu('Добавить блок с ответственными');
+    await menu('Добавить дату завершения');
+    expect(await rows(), 'who set it, does it, by when').toBe('boss,doer,due');
+    expect((await t()).h, 'as tall as them').toBe(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).h)()`));
+    await menu('Убрать дату завершения');
+    expect(await rows(), 'by when taken away').toBe('boss,doer');
     // «Задача сразу целиком» off: its description first, then all of it by the arrow under it.
     await sleep(450);
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
@@ -83,9 +89,9 @@ export const checks = {
     await p.click(await at('(t, l) => ({ x: t.x + l.more.x + 12, y: t.y + l.more.y + 12 })'));
     expect((await t()).tv, 'all of it').toBe('full');
     await setLab(p, 'taskFull', true);
-    // Subtasks: added by the last row, Enter going on to the next; an empty one goes.
+    // Subtasks: the first added by its menu, Enter going on to the next; an empty one goes.
     await sleep(450);
-    await p.click(await at('(t, l) => ({ x: t.x + 240, y: t.y + l.subs[l.subs.length - 1] + 11 })'));
+    await menu('Добавить подзадачу');
     await sleep(100);
     await p.cdp('Input.insertText', { text: 'Первая' });
     await p.key('Enter', 'Enter', 13);
@@ -852,6 +858,21 @@ export const checks = {
     await sleep(100);
     await p.drag([140, 320], [180, 320]);
     expect(await p.ev(`[planx.board.get('lo').x, planx.board.get('ink').x].join()`), 'the picked one taken from under the drawing').toBe('140,120');
+  },
+
+  async 'a task\'s description pinned by its menu shows closed too'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('task', 100, 60, { id: 't', text: 'Задача', desc: 'Описание', w: 494, h: 52, tv: 'full', keep: true })); e.setSelection([]); })()`);
+    await sleep(300);
+    const l = await p.ev(`(async () => { const t = planx.board.get('t'), l = (await import('/src/canvas/task.ts')).taskLayout(t), s = planx.editor.toScreen({ x: t.x + l.menu.x + 16, y: t.y + l.menu.y + 16 }); return [s.x, s.y]; })()`);
+    await p.click(l);
+    await sleep(200);
+    expect(await p.ev(`[...document.querySelectorAll('.task-pop .menu-row')].map((b) => b.textContent).join()`), 'its menu')
+      .toBe('Закрепить описание,Добавить подзадачу,Добавить блок с ответственными,Добавить дату завершения');
+    await p.click(await p.ev(`(() => { const r = document.querySelector('.task-pop .menu-row').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await p.ev(`(async () => { const m = await import('/src/model/task.ts'); m.setView(planx.board, planx.board.get('t'), undefined); })()`);
+    await sleep(100);
+    expect(await p.ev(`(async () => { const t = planx.board.get('t'); return [t.dpin, t.h > 52, !!(await import('/src/canvas/task.ts')).taskLayout(t).desc].join(); })()`), 'closed, its description still there').toBe('true,true,true');
   },
 
   async 'a task\'s subtask ticked by a click on its text too, typed in on a double click, taken away by the cross left of it'(p) {

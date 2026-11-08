@@ -102,6 +102,12 @@ export interface Item {
   dfs?: number;
   /** A task's people and date all shown (who set it, who does it, by when), not only who does it. */
   people?: boolean;
+  /** A task's blocks added by its menu (its burger): subtasks (tsb), who set it and does it (tpp), by
+   *  when (tdu); its description shown closed too (dpin, «Закрепить описание»). */
+  tsb?: boolean;
+  tpp?: boolean;
+  tdu?: boolean;
+  dpin?: boolean;
   /** A task kept open («Не сворачивать»): not closed by Esc, Cmd+Enter or a click elsewhere. */
   keep?: boolean;
   /** Tables: column widths, row heights and the cells' text row by row (see model/table.ts). */

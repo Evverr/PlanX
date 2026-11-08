@@ -8,7 +8,7 @@ import { SelectionPanel } from './ui/SelectionPanel';
 import { usePanelPlace } from './labs/panelPlace';
 import { TextEditor } from './ui/TextEditor';
 import { TextPanel } from './ui/FormatPanel';
-import { TaskKeepPop, TaskPop, TaskTipBubble } from './ui/TaskPop';
+import { TaskKeepPop, TaskMenu, TaskPop, TaskTipBubble } from './ui/TaskPop';
 import { noteBoard, setSideOpen, useSideOpen } from './labs/SideNav';
 import { navigate } from './route';
 import { Discussion } from './labs/Discussion';
@@ -485,6 +485,7 @@ export function App({ boardId }: { boardId: string }) {
       <TaskPop editor={editor} me={conn.me} peers={peers} />
       <TaskTipBubble />
       <TaskKeepPop editor={editor} />
+      <TaskMenu editor={editor} />
 
       {pop === 'clear' && (
         <div className="pop confirm" role="dialog" aria-label="Очистить доску">
