@@ -1,3 +1,4 @@
+import { firstInstance } from '../model/components';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Point } from '../canvas/geometry';
@@ -196,10 +197,12 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
   // "Авторасположение" (src/labs/tidy.ts): a few picked in a grid, or a mind map node's branches.
   const tidyMind = one?.type === 'mind' && editor.board.list().some((i) => i.parent === one.id) ? one.id : null;
   const tidy = labOn('tidy') && (editor.selection.size > 1 || tidyMind);
-  // A component picked (itself, not an instance of it), or something in one, it not yet one of the board's
-  // objects ("Объекты").
-  const comp = one?.comp ? one : one && editor.board.list().find((f) => f.comp && f.members?.includes(one.id));
-  const toObjects = labOn('objects') && comp && !comp.stowed && !comp.obj ? comp : null;
+  // A component picked (itself, being changed, or something in it), or its first instance (the one it
+  // turned into, standing for it on the board; not the others), it not yet one of the board's objects
+  // ("Объекты").
+  const all = editor.board.list(), main = inOne?.inst ? all.find((c) => c.id === inOne.inst && c.comp) : undefined;
+  const comp = one?.comp ? one : main && firstInstance(main, all)?.id === inOne!.id ? main : one && all.find((f) => f.comp && !f.stowed && f.members?.includes(one.id));
+  const toObjects = labOn('objects') && comp && !comp.obj ? comp : null;
   if (at.params && params.length) {
     return (
       <div ref={ref} className="board-menu context-menu params-pop" role="dialog" aria-label="Параметры" style={comes} onContextMenu={(e) => e.preventDefault()}>
