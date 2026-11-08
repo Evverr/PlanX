@@ -464,12 +464,14 @@ export class Editor {
   }
 
   /** Makes a component one of the board's own objects under `name` ("Объекты документа"), kept in this
-   *  browser's "Мои объекты" too, and an instance of it where it stands. */
+   *  browser's "Мои объекты" too, and (being changed) an instance of it where it stands; put away already,
+   *  its instances stay as they are. */
   makeObject(id: string, name: string): void {
+    const away = !!this.board.get(id)?.stowed;
     this.board.beginGesture();
     this.board.update(id, { text: name, obj: true });
     this.keepObject(id);
-    this.addInstance(id);
+    if (!away) this.addInstance(id);
     this.board.endGesture();
   }
 
