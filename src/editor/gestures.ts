@@ -21,6 +21,7 @@ import { MIND_TOPIC, type PenTool } from './tools';
 import { clickTypes, onMindText } from './hover';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
+import { levelIn } from '../labs/groups';
 import { eraseArea, eraserStyle } from '../labs/eraseArea';
 import { nibDrag, nibRelease } from '../labs/nib';
 import { editablePath, moveNode, startNodeEdit } from '../labs/paths';
@@ -418,8 +419,10 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         ed.startEditing(g.id, null, 'end');
       } else if (g.dbl) {
         const it = board.get(g.id);
-        // A group picked («Группы», src/labs): what's double clicked in it picked on its own.
-        if (labOn('groups') && it?.grp && ed.selection.size > 1 && ed.selection.has(it.id)) { ed.setSelection([it.id], false); return; }
+        // A group picked («Группы», src/labs/groups.ts): a level in, the group within it that's double
+        // clicked in, or that alone.
+        const inner = labOn('groups') && it ? levelIn(board.list(), ed.selection, it) : null;
+        if (inner) { ed.setSelection(inner, false); return; }
         // A path drawn with "Перо" (src/labs): its nodes to change.
         if (labOn('nib') && editablePath(it)) { startNodeEdit(ed, it.id); return; }
         // "Замена двойным кликом": an emoji, an icon or a shape shows its neighbours, a shape opening for

@@ -140,8 +140,9 @@ export interface Item {
   /** A mind map's central topic: its nodes may be moved by hand («Передвигать вручную»); without, a node
    *  dragged goes only to another family, let go by its own it goes back where it was. */
   mfree?: boolean;
-  /** In a group («Группы», src/labs): the group's id, the same on all in it; picked, they're picked together. */
-  grp?: string;
+  /** In groups («Группы», src/labs/groups.ts): the groups it's in, the outermost first; picked, all of the
+   *  outermost is picked with it. */
+  gp?: string[];
   /** A frame that's a timeline (src/labs, "Объекты"): the month it starts with, "YYYY-MM" (see canvas/timeline.ts). */
   tl?: string;
   /** A timeline's step: how many times the usual width a day takes (1, 2, 4 or 6; 1 left out). */

@@ -36,6 +36,7 @@ import { carryCellFormat, noteCellFormat } from '../labs/tableLook';
 import { holds as mindTidyOn, mindTidyKept, restartMindTidy, resumeMindTidy } from '../labs/tidyMind';
 import { clearComments } from '../labs/comments';
 import { heldInPlace, isLocked, labOn, subscribeLabs } from '../labs/labs';
+import { grouped, ungrouped, withGroups } from '../labs/groups';
 import { keepMyObject, myObjects } from '../labs/myObjects';
 import { finishNib, nibPoints } from '../labs/nib';
 import { nodeEditing, shapedBy } from '../labs/paths';
@@ -824,8 +825,7 @@ export class Editor {
     this.selection = new Set(ids);
     // Something in a group («Группы», src/labs) picked with all of it (but on its own, by a double click in it).
     if (groups && labOn('groups')) {
-      const grps = new Set([...this.selection].map((id) => this.board.get(id)?.grp).filter(Boolean));
-      if (grps.size) for (const it of this.board.list()) if (it.grp && grps.has(it.grp)) this.selection.add(it.id);
+      this.selection = withGroups(this.board.list(), this.selection);
     }
     // The component being changed here is the last one worked in; someone else's stays theirs.
     const here = this.pickedComponent(this.board.list().filter((c) => c.comp && !c.stowed));
@@ -1254,17 +1254,19 @@ export class Editor {
 
   /** Ctrl+↑ (dir 1) or Ctrl+↓ (-1): each picked item a layer up or down, past the next one over (or
    *  under) it that isn't picked, those between keeping their order. */
-  /** «Группы» (src/labs): what's picked made one group (out of any it was in), or its groups undone. */
+  /** «Группы» (src/labs/groups.ts): what's picked made one group (within the one it's all in), or the
+   *  group picked undone (a level of it: what's in it stays in the groups within it). */
   group(): void {
-    const items = this.selectedItems().filter((i) => !i.host);
-    if (items.length < 2) return;
-    const grp = uid();
-    this.board.transact(() => items.forEach((i) => this.board.update(i.id, { grp })));
+    const paths = grouped(this.board.list(), this.selectedItems().filter((i) => !i.host));
+    if (!paths) return;
+    this.board.transact(() => paths.forEach((gp, id) => this.board.update(id, { gp })));
     this.emit();
   }
 
   ungroup(): void {
-    this.board.transact(() => this.selectedItems().forEach((i) => { if (i.grp) this.board.update(i.id, { grp: undefined }); }));
+    const paths = ungrouped(this.board.list(), this.selection);
+    if (!paths) return;
+    this.board.transact(() => paths.forEach((gp, id) => this.board.update(id, { gp })));
     this.emit();
   }
 
