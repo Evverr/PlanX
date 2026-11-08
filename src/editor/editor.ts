@@ -43,6 +43,7 @@ import { hiddenByLayers, layersVersion, newItemLayer } from '../labs/layers';
 import { zoomsWithKey } from '../labs/wheelZoom';
 import { codeFit, scrollCode } from '../labs/codeBlock';
 import { closeTask, fitTask, freshTask, renewTasks, taskTextPatch } from '../model/task';
+import { setTaskRedraw } from '../canvas/task';
 
 export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -320,6 +321,8 @@ export class Editor {
   mount(canvas: HTMLCanvasElement): () => void {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
+    // (A task's parts lit under the pointer ease there and back, drawn again meanwhile.)
+    setTaskRedraw(() => this.requestRender());
     this.theme = readTheme();
     const offs: Array<() => void> = [];
     const on = <K extends keyof HTMLElementEventMap>(el: HTMLElement | Window, ev: K, fn: (e: HTMLElementEventMap[K]) => void, opts?: AddEventListenerOptions) => {

@@ -297,6 +297,24 @@ const DATE = (due: string) => {
   return `${day}.${m}.${y}${t ? `  ${t}` : ''}`;
 };
 
+/** How far each task's parts are lit under the pointer (0…1, by "id:part"), easing there and back. */
+const lit = new Map<string, { on: boolean; from: number; at: number }>();
+let redraw: () => void = () => {};
+/** What draws the board again while a part's light eases (the editor's). */
+export const setTaskRedraw = (fn: () => void): void => { redraw = fn; };
+function litNow(key: string, on: boolean, ms = 160): number {
+  const now = performance.now(), at = (t: { on: boolean; from: number; at: number }) => {
+    const k = Math.min(1, (now - t.at) / ms), e = 1 - (1 - k) * (1 - k);
+    return t.from + ((t.on ? 1 : 0) - t.from) * e;
+  };
+  let t = lit.get(key);
+  if (!t) { if (!on) return 0; lit.set(key, (t = { on, from: 0, at: now })); }
+  else if (t.on !== on) lit.set(key, (t = { on, from: at(t), at: now }));
+  if (now - t.at < ms) redraw();
+  else if (!t.on) lit.delete(key);
+  return at(t);
+}
+
 /** The card. `typing` is the part being typed in (its text left to the overlay): null for the title,
  *  0 for the description, 1… for a subtask; undefined when none is. */
 export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typing: number | null | undefined, hot: string | null = null): void {
@@ -330,7 +348,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   const tag = 'ЗАДАЧА', pw = ctx.measureText(tag).width + 12;
   ctx.beginPath();
   ctx.roundRect(x + l.w - 16 - pw, y + 1 - 7, pw, 14, 7);
-  ctx.fillStyle = mix(strong.startsWith('#') ? strong : '#003CFF', bg, hot === `task:${it.id}:arrow` ? 0.45 : 0.3);
+  ctx.fillStyle = mix(strong.startsWith('#') ? strong : '#003CFF', bg, 0.3 + 0.15 * litNow(`${it.id}:arrow`, hot === `task:${it.id}:arrow`));
   ctx.fill();
   ctx.fillStyle = '#FFFFFF';
   ctx.textAlign = 'center';
@@ -343,7 +361,8 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   const pr = progressOf(it);
   drawStatus(ctx, x + 15 + STATUS / 2, y + MID, pr !== null && pr < 1 ? 'doing' : st, look, pr === null ? 0.75 : pr || 0.05);
   // The arrows darker under the pointer.
-  const arrowInk = (part: string) => (hot === `task:${it.id}:${part}` ? (look.dark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.75)') : look.dark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.35)');
+  // (Darker under the pointer, easing there and back.)
+  const arrowInk = (part: string) => { const k = litNow(`${it.id}:${part}`, hot === `task:${it.id}:${part}`); return look.dark ? `rgba(255,255,255,${0.45 + 0.4 * k})` : `rgba(0,0,0,${0.35 + 0.4 * k})`; };
   drawIcon(ctx, it.tv ? 'chevron-up-m' : 'chevron-down-m', x + l.w - 35, y + MID - ARROW / 2, ARROW, arrowInk('arrow'));
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
