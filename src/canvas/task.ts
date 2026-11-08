@@ -223,6 +223,8 @@ const STRONG: Record<string, string> = {
   blue: '#003CFF', green: '#12A53A', orange: '#F28C00', yellow: '#E0B000', pink: '#E8457F', purple: '#7B4DFF', gray: '#7C8590', graphite: '#4E5560',
 };
 const BLUE = '#2A5BFF';
+/** Its ring done or on its way: the blue of what's picked on the panels (--fmt-on-ink), lighter on the dark. */
+const RING_BLUE = (dark?: boolean) => (dark ? '#4DA3FF' : '#0080FF');
 /** A subtask's box ticked: a softer blue. */
 const SOFT_BLUE = '#5C86FF';
 /** A task done: its edge's and tint's colour. */
@@ -274,7 +276,7 @@ export function drawStatus(ctx: CanvasRenderingContext2D, x: number, y: number, 
   if (s === 'done') {
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = BLUE;
+    ctx.fillStyle = RING_BLUE(look.dark);
     ctx.fill();
     ctx.beginPath();
     ctx.moveTo(x - 4.6, y + 0.2);
@@ -294,7 +296,7 @@ export function drawStatus(ctx: CanvasRenderingContext2D, x: number, y: number, 
     if (s === 'doing') {
       ctx.beginPath();
       ctx.arc(x, y, r - 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * part);
-      ctx.strokeStyle = BLUE;
+      ctx.strokeStyle = RING_BLUE(look.dark);
       ctx.lineWidth = 3.5;
       ctx.lineCap = 'round';
       ctx.stroke();
