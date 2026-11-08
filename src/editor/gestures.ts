@@ -418,6 +418,8 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         ed.startEditing(g.id, null, 'end');
       } else if (g.dbl) {
         const it = board.get(g.id);
+        // A group picked («Группы», src/labs): what's double clicked in it picked on its own.
+        if (labOn('groups') && it?.grp && ed.selection.size > 1 && ed.selection.has(it.id)) { ed.setSelection([it.id], false); return; }
         // A path drawn with "Перо" (src/labs): its nodes to change.
         if (labOn('nib') && editablePath(it)) { startNodeEdit(ed, it.id); return; }
         // "Замена двойным кликом": an emoji, an icon or a shape shows its neighbours, a shape opening for

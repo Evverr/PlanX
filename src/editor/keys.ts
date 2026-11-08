@@ -43,7 +43,8 @@ export function onKeyDown(ed: Editor, e: KeyboardEvent): void {
       case 'ArrowUp': e.preventDefault(); ed.shiftZ(1); return;
       case 'ArrowDown': e.preventDefault(); ed.shiftZ(-1); return;
       case 'KeyA': e.preventDefault(); ed.setSelection(ed.shown().map((i) => i.id)); return;
-      case 'KeyG': e.preventDefault(); ed.frameSelection(); return;
+      // Cmd+G a group of what's picked, Cmd+Shift+G undone («Группы», src/labs); without them, a frame round it.
+      case 'KeyG': e.preventDefault(); if (!labOn('groups')) ed.frameSelection(); else if (e.shiftKey) ed.ungroup(); else ed.group(); return;
       // Ctrl+Alt+B, as in Figma: the selected instances cut loose from their components.
       case 'KeyB': if (e.altKey) { e.preventDefault(); ed.detachInstances(); } return;
     }

@@ -95,16 +95,24 @@ function place(ed: Editor, items: Item[], places: Map<string, Point>): void {
   ed.board.transact(() => moves.forEach((p, id) => ed.board.update(id, p)));
 }
 
+/** The ways to lay them out: in a grid as near square as they come, in a row, in a column (or, with
+ *  none asked, as they lie: see gridCols). */
+export type TidyShape = 'grid' | 'row' | 'col';
+
+/** How many columns a shape takes for `n` of them. */
+export const shapeCols = (shape: TidyShape, n: number): number => (shape === 'row' ? n : shape === 'col' ? 1 : Math.ceil(Math.sqrt(n)));
+
 /** Lays out the selected in a grid, a little apart, and turns the gap handles on. */
-export function startTidy(ed: Editor): void {
+export function startTidy(ed: Editor, shape?: TidyShape): void {
   const sel = ed.selectedItems().filter((i) => !i.lock && !i.host).map((i) => seen(ed, i));
   if (sel.length < 2) return;
+  const cols = shape ? shapeCols(shape, sel.length) : gridCols(sel);
   // The last grid, picked again with nothing in it moved since: its handles back, as it is.
-  if (last && last.ids.length === sel.length && sel.every((i) => { const p = last!.at.get(i.id); return p && p.x === i.x && p.y === i.y; })) {
+  if (last && last.ids.length === sel.length && (!shape || last.cols === cols) && sel.every((i) => { const p = last!.at.get(i.id); return p && p.x === i.x && p.y === i.y; })) {
     set({ ids: last.ids, cols: last.cols, gx: last.gx, gy: last.gy });
     return;
   }
-  const cols = gridCols(sel), items = gridOrder(sel, cols);
+  const items = gridOrder(sel, cols);
   const origin = { x: Math.min(...sel.map((i) => i.x)), y: Math.min(...sel.map((i) => i.y)) };
   ed.board.beginGesture();
   place(ed, items, gridPlaces(items, cols, TIDY_GAP, TIDY_GAP, origin));

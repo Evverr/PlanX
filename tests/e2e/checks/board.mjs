@@ -948,7 +948,7 @@ export const checks = {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('sticky', 300, 300, { id: 'a' })); b.add(e.newItem('sticky', 600, 300, { id: 'b' })); b.add(e.newItem('sticky', 900, 300, { id: 'c' })); e.setSelection(['a', 'b']); })()`);
     await sleep(400);
-    await p.click(await p.at('.bar.panel button[aria-label="Сгруппировать"]'));
+    await p.click(await p.at('.bar.panel button[aria-label^="Сгруппировать"]'));
     await sleep(300);
     expect(await p.ev(`!!planx.board.get('a').grp && planx.board.get('a').grp === planx.board.get('b').grp && !planx.board.get('c').grp`), 'grouped').toBe(true);
     await p.ev(`planx.editor.setSelection(['a'])`);
@@ -958,13 +958,28 @@ export const checks = {
     await p.ev(`planx.editor.duplicate()`);
     await sleep(300);
     expect(await p.ev(`(() => { const g = planx.board.get('a').grp, copies = planx.board.list().filter((i) => i.type === 'sticky' && !['a', 'b', 'c'].includes(i.id)); return copies.length === 2 && !!copies[0].grp && copies[0].grp === copies[1].grp && copies[0].grp !== g; })()`), 'copies grouped apart').toBe(true);
+    // A double click in it picks the one clicked on its own.
+    const at = await p.ev(`(() => { const a = planx.board.get('a'), s = planx.editor.toScreen({ x: a.x + a.w / 2, y: a.y + 10 }), r = planx.editor.canvas.getBoundingClientRect(); return [r.left + s.x, r.top + s.y]; })()`);
+    await p.click(at);
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: at[0], y: at[1], button: 'left', buttons: 1, clickCount: 2 });
+    await p.cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: at[0], y: at[1], button: 'left', buttons: 0, clickCount: 2 });
+    await sleep(300);
+    expect(await p.ev(`[...planx.editor.selection].join()`), 'one in it on its own').toBe('a');
     await p.ev(`planx.editor.setSelection(['a'])`);
     await sleep(300);
-    await p.click(await p.at('.bar.panel button[aria-label="Разгруппировать"]'));
+    await p.click(await p.at('.bar.panel button[aria-label^="Разгруппировать"]'));
     await sleep(300);
     expect(await p.ev(`!planx.board.get('a').grp && !planx.board.get('b').grp`), 'ungrouped').toBe(true);
     await p.ev(`planx.editor.setSelection(['a'])`);
     expect(await p.ev(`[...planx.editor.selection].join()`), 'picked alone again').toBe('a');
+    // Cmd+G, Cmd+Shift+G.
+    await p.ev(`planx.editor.setSelection(['a', 'b'])`);
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'g', code: 'KeyG', modifiers: 4 });
+    await sleep(200);
+    expect(await p.ev(`!!planx.board.get('a').grp && planx.board.get('a').grp === planx.board.get('b').grp`), 'grouped by keys').toBe(true);
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'G', code: 'KeyG', modifiers: 12 });
+    await sleep(200);
+    expect(await p.ev(`!planx.board.get('a').grp`), 'ungrouped by keys').toBe(true);
   },
 
   async 'a group folded and unfolded by the arrow on its panel'(p) {
