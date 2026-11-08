@@ -2,6 +2,7 @@ import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { instanceBounds, type Point } from '../canvas/geometry';
 import { drawGapHandle, gapReach } from './gapPill';
+import type { AlignTo } from './align';
 
 /**
  * "Авторасположение": what's selected laid out in an even grid, a little apart, rows and columns as
@@ -10,7 +11,8 @@ import { drawGapHandle, gapReach } from './gapPill';
  */
 
 /** The grid now: what's in it in order (row by row), how many columns, the gaps across and down. */
-export interface Tidy { ids: string[]; cols: number; gx: number; gy: number }
+/** `ax`, `ay`: how they were lined up meanwhile («Выравнивание»), kept as the grid's laid out again. */
+export interface Tidy { ids: string[]; cols: number; gx: number; gy: number; ax?: AlignTo; ay?: AlignTo }
 let tidy: Tidy | null = null;
 /** The last grid laid out, and where each of it was then: picked again untouched, it's taken up as it is. */
 let last: (Tidy & { at: Map<string, Point> }) | null = null;
@@ -109,7 +111,7 @@ export function startTidy(ed: Editor, shape?: TidyShape): void {
   const cols = shape ? shapeCols(shape, sel.length) : gridCols(sel);
   // The last grid, picked again with nothing in it moved since: its handles back, as it is.
   if (last && last.ids.length === sel.length && (!shape || last.cols === cols) && sel.every((i) => { const p = last!.at.get(i.id); return p && p.x === i.x && p.y === i.y; })) {
-    set({ ids: last.ids, cols: last.cols, gx: last.gx, gy: last.gy });
+    set({ ids: last.ids, cols: last.cols, gx: last.gx, gy: last.gy, ax: last.ax, ay: last.ay });
     return;
   }
   const items = gridOrder(sel, cols);
@@ -119,6 +121,26 @@ export function startTidy(ed: Editor, shape?: TidyShape): void {
   ed.board.endGesture();
   set({ ids: items.map((i) => i.id), cols, gx: TIDY_GAP, gy: TIDY_GAP });
   remember(ed, tidy!);
+}
+
+/** Places lined up as the grid was meanwhile (see alignItems): as they'd be lined up there. */
+function aligned(items: Item[], places: Map<string, Point>, t: Tidy): Map<string, Point> {
+  if (!t.ax && !t.ay) return places;
+  const box = items.filter((i) => places.has(i.id)).map((i) => ({ i, ...places.get(i.id)! }));
+  if (!box.length) return places;
+  const x1 = Math.min(...box.map((b) => b.x)), x2 = Math.max(...box.map((b) => b.x + b.i.w));
+  const y1 = Math.min(...box.map((b) => b.y)), y2 = Math.max(...box.map((b) => b.y + b.i.h));
+  return new Map(box.map(({ i, x, y }) => [i.id, {
+    x: Math.round(t.ax === 'left' ? x1 : t.ax === 'right' ? x2 - i.w : t.ax === 'center' ? (x1 + x2) / 2 - i.w / 2 : x),
+    y: Math.round(t.ay === 'top' ? y1 : t.ay === 'bottom' ? y2 - i.h : t.ay === 'middle' ? (y1 + y2) / 2 - i.h / 2 : y),
+  }]));
+}
+
+/** Lined up so («Выравнивание») while laid out: kept so as it's laid out again. */
+export function noteAlign(ed: Editor, to: AlignTo): void {
+  if (!tidy || !tidyMatches(ed)) return;
+  set({ ...tidy, ...(['left', 'center', 'right'].includes(to) ? { ax: to } : { ay: to }) });
+  remember(ed, tidy);
 }
 
 /** The gaps changed: the grid laid out again from where its top left is now. A gap may go below
@@ -132,7 +154,7 @@ export function setGaps(ed: Editor, gx: number, gy: number): void {
   gy = Math.max(8 - Math.min(...items.map((i) => i.h)), gy);
   const origin = { x: Math.min(...items.map((i) => i.x)), y: Math.min(...items.map((i) => i.y)) };
   set({ ...tidy, gx, gy });
-  place(ed, items, gridPlaces(items, tidy.cols, gx, gy, origin));
+  place(ed, items, aligned(items, gridPlaces(items, tidy.cols, gx, gy, origin), tidy));
   remember(ed, tidy!);
 }
 
@@ -178,7 +200,7 @@ export function moveTidyDrag(ed: Editor, w: Point): void {
   if (!it) return;
   const others = tidyItems(ed, tidy).filter((i) => i.id !== it.id);
   const slot = dropSlot(others, it, tidy.cols, tidy.gx, tidy.gy, drag.origin, w);
-  const places = gridPlaces(slot.order, slot.cols, tidy.gx, tidy.gy, drag.origin);
+  const places = aligned([...slot.order, it], gridPlaces(slot.order, slot.cols, tidy.gx, tidy.gy, drag.origin), tidy);
   places.set(it.id, { x: Math.round(w.x - drag.dx), y: Math.round(w.y - drag.dy) });
   place(ed, slot.order, places);
 }
@@ -190,7 +212,7 @@ export function endTidyDrag(ed: Editor, w: Point): void {
   drag = null;
   if (it) {
     const others = tidyItems(ed, tidy).filter((i) => i.id !== it.id), slot = dropSlot(others, it, tidy.cols, tidy.gx, tidy.gy, origin, w);
-    place(ed, slot.order, gridPlaces(slot.order, slot.cols, tidy.gx, tidy.gy, origin));
+    place(ed, slot.order, aligned(slot.order, gridPlaces(slot.order, slot.cols, tidy.gx, tidy.gy, origin), tidy));
     set({ ...tidy, ids: slot.order.map((i) => i.id), cols: slot.cols });
     remember(ed, tidy!);
   }
