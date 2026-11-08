@@ -65,7 +65,7 @@ export interface TaskLayout {
    *  subtasks' heading, each subtask's top (the last: the row adding one) and its text's height (its lines
    *  wrapped to its width), the buttons, and «Не
    *  сворачивать» left of them. */
-  lines?: number[]; rows?: Array<{ key: 'boss' | 'doer' | 'due'; y: number }>; peopleAt?: Point; subsAt?: number; subs?: number[]; subH?: number[]; cancel?: Rect; finish?: Rect; keep?: Rect;
+  lines?: number[]; rows?: Array<{ key: 'boss' | 'doer' | 'due'; y: number }>; menu?: Rect; subsAt?: number; subs?: number[]; subH?: number[]; cancel?: Rect; finish?: Rect; keep?: Rect;
 }
 
 const lineH = (fs: number) => fs * LINE_HEIGHT;
@@ -104,10 +104,14 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   const titleW = Math.max(20, w - TITLE_X - 30), th = lineH(TITLE_FS);
   const top = MID - th / 2, head = 52;
   const out: TaskLayout = { w, h: head, head, title: { x: TITLE_X, y: top, w: titleW, h: th } };
-  if (!it.tv) return out;
   const descW = Math.max(80, w - LEFT - PAD), dy = head + 22;
   // (Its description in a list, as drawn: each paragraph after its bullet or number.)
   const dl = descLook(it), dh = textBlockHeight(it.desc ? withList(it.desc, it.ls) : DESC_HINT, descW, dl.fs, { weight: dl.weight, family: dl.family, italic: dl.italic });
+  // Closed: its title, and its description pinned («Закрепить описание»), if it has one.
+  if (!it.tv) {
+    if (it.dpin && it.desc) { out.desc = { x: LEFT, y: head - 4, w: descW, h: dh }; out.h = Math.ceil(head - 4 + dh + 16); }
+    return out;
+  }
   out.desc = { x: LEFT, y: dy, w: descW, h: dh };
   const d = dy + dh;
   if (it.tv === 'desc') {
@@ -115,26 +119,35 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
     out.h = Math.ceil(d + 40);
     return out;
   }
-  // Under the description its subtasks, then who does it (and who set it, by when): each block between
-  // lines across, a block's first row 33 under the line over it, its last 33 over the line under it.
-  // «Подзадачи:», the subtasks under it, their boxes on the title's line.
-  out.subsAt = d + 25 + 33;
-  // Each subtask as tall as its lines (the row adding one, one), the next 38 on from its first line.
-  const lh = lineH(TEXT_FS), subW = Math.max(40, w - SUB_TEXT_X - PAD);
-  out.subH = [...(it.subs ?? []).map((sub) => textBlockHeight(sub.t || 'Подзадача', subW, TEXT_FS, { weight: 400, family: FAMILY })), lh];
-  out.subs = [];
-  let sy = out.subsAt + 34 - STATUS / 2;
-  for (const h of out.subH) { out.subs.push(sy); sy += SUB + h - lh; }
-  const subsEnd = out.subs[out.subs.length - 1] + STATUS + 27, first = subsEnd + 33;
-  const keys = it.people ? (['boss', 'doer', 'due'] as const) : (['doer'] as const), r = first + ROW * (keys.length - 1);
-  out.rows = keys.map((key, i) => ({ key, y: first + ROW * i }));
-  // (Its chevron, a small one, 17 into the icon at its right end, 2 short of where the lines across end.)
-  out.peopleAt = { x: w - PAD - 2 - 17, y: first - ARROW / 2 };
-  const last = r + 33 - 27;
-  out.lines = [d + 25, subsEnd, r + 33];
-  const by = last + 27 + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - PAD - fw;
+  // Under the description the blocks it has (added by its menu, or with something in them): its subtasks,
+  // who set it and does it, by when; each between lines across, its first row 33 under the line over it,
+  // its last 33 over the line under it. Then «Не сворачивать», its menu and its buttons.
+  out.lines = [];
+  let at = d + 25;
+  if (it.tsb || it.subs?.length) {
+    out.lines.push(at);
+    // «Подзадачи:», the subtasks under it, their boxes on the title's line; each as tall as its lines (the
+    // row adding one, one), the next 38 on from its first line.
+    out.subsAt = at + 33;
+    const lh = lineH(TEXT_FS), subW = Math.max(40, w - SUB_TEXT_X - PAD);
+    out.subH = [...(it.subs ?? []).map((sub) => textBlockHeight(sub.t || 'Подзадача', subW, TEXT_FS, { weight: 400, family: FAMILY })), lh];
+    out.subs = [];
+    let sy = out.subsAt + 34 - STATUS / 2;
+    for (const h of out.subH) { out.subs.push(sy); sy += SUB + h - lh; }
+    at = out.subs[out.subs.length - 1] + STATUS + 27;
+  }
+  const keys = [...(it.tpp || it.boss || it.doer ? (['boss', 'doer'] as const) : []), ...(it.tdu || it.due ? (['due'] as const) : [])];
+  if (keys.length) {
+    out.lines.push(at);
+    out.rows = keys.map((key, i) => ({ key, y: at + 33 + ROW * i }));
+    at = at + 33 + ROW * (keys.length - 1) + 33;
+  }
+  out.lines.push(at);
+  const by = at + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - PAD - fw;
   out.finish = { x: fx, y: by, w: fw, h: BUTTON_H };
   out.cancel = { x: fx - 10 - cw, y: by, w: cw, h: BUTTON_H };
+  // Its menu (a burger) left of the buttons: what's added to it.
+  out.menu = { x: fx - 10 - cw - 10 - BUTTON_H, y: by, w: BUTTON_H, h: BUTTON_H };
   out.keep = { x: LABEL_X, y: by, w: Math.ceil(KEEP_BOX + KEEP_GAP + widthOf(KEEP_LABEL, TEXT_FS, 400)), h: BUTTON_H };
   out.h = Math.ceil(by + BUTTON_H + 31);
   return out;
@@ -144,7 +157,7 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
 export const taskSize = (it: Item, w = it.w): { w: number; h: number } => ({ w, h: taskLayout(it, w).h });
 
 /** What a point on it (from its top left corner) is on. */
-export type TaskPart = 'status' | 'arrow' | 'more' | 'people' | 'head' | 'title' | 'desc' | 'boss' | 'doer' | 'due' | 'add' | 'cancel' | 'finish' | 'keep'
+export type TaskPart = 'status' | 'arrow' | 'more' | 'menu' | 'head' | 'title' | 'desc' | 'boss' | 'doer' | 'due' | 'add' | 'cancel' | 'finish' | 'keep'
   | { sub: number; tick: boolean; del?: boolean };
 
 const inRect = (p: Point, r: Rect, pad = 0) => p.x >= r.x - pad && p.x <= r.x + r.w + pad && p.y >= r.y - pad && p.y <= r.y + r.h + pad;
@@ -163,7 +176,6 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
   }
   if (l.more && near(q, l.more.x + ARROW / 2, l.more.y + ARROW / 2, ARROW / 2 + 4)) return 'more';
   if (l.desc && inRect(q, l.desc)) return 'desc';
-  if (l.peopleAt && near(q, l.peopleAt.x + ARROW / 2, l.peopleAt.y + ARROW / 2, ARROW / 2 + 4)) return 'people';
   if (l.rows) for (const r of l.rows) if (Math.abs(q.y - r.y) <= 14 && q.x >= AVATAR_X - 14 && q.x <= l.w - PAD - 24) return r.key;
   if (l.subs) {
     for (let i = 0; i < l.subs.length; i++) {
@@ -175,6 +187,7 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
       if (q.x >= SUB_TEXT_X && q.x <= l.w - PAD) return { sub: i, tick: false };
     }
   }
+  if (l.menu && inRect(q, l.menu)) return 'menu';
   if (l.cancel && inRect(q, l.cancel)) return 'cancel';
   if (l.finish && inRect(q, l.finish)) return 'finish';
   if (l.keep && inRect(q, l.keep, 4)) return 'keep';
@@ -392,7 +405,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
     });
   }
   if (l.more) drawIcon(ctx, 'chevron-down-m', x + l.more.x, y + l.more.y, ARROW, arrowInk('more'));
-  if (!l.rows || !l.subs || !l.lines || !l.cancel || !l.finish || l.subsAt === undefined) return;
+  if (!l.lines || !l.cancel || !l.finish) return;
   // (The lines across half as strong as the panels' line grey.)
   ctx.fillStyle = look.dark ? 'rgba(255,255,255,0.05)' : 'rgba(223,227,230,0.5)';
   for (const ly of l.lines) ctx.fillRect(x + LEFT, y + ly, l.w - LEFT - PAD, 1);
@@ -421,7 +434,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
     ctx.fillText(p ? p.n : 'Не назначен', x + NAME_X, y + row);
     ctx.globalAlpha = 1;
   };
-  for (const { key, y: ry } of l.rows) {
+  for (const { key, y: ry } of l.rows ?? []) {
     if (key === 'boss') { label('Постановщик', ry); person(it.boss, ry); }
     else if (key === 'doer') { label('Исполнитель', ry); person(it.doer, ry); }
     else {
@@ -434,12 +447,11 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
       ctx.globalAlpha = 1;
     }
   }
-  // The arrow showing who set it and by when too, or only who does it again.
-  // (Pointing left while they're hidden, down once shown; the left one's chevron 3 short of the icon's right.)
-  if (l.peopleAt) drawIcon(ctx, it.people ? 'chevron-down-s' : 'chevron-to-the-left-s', x + l.peopleAt.x + (it.people ? 0 : 3), y + l.peopleAt.y, ARROW, arrowInk('people'));
-  label('Подзадачи:', l.subsAt);
+  // Its menu, a burger, darker under the pointer.
+  if (l.menu) drawIcon(ctx, 'hamburger-menu', x + l.menu.x + (BUTTON_H - ARROW) / 2, y + l.menu.y + (BUTTON_H - ARROW) / 2, ARROW, arrowInk('menu'));
+  if (l.subsAt !== undefined) label('Подзадачи:', l.subsAt);
   const subs = it.subs ?? [];
-  l.subs.forEach((sy, i) => {
+  (l.subs ?? []).forEach((sy, i) => {
     const mid = sy + STATUS / 2, box = { x: SUB_TEXT_X, y: mid - lineH(TEXT_FS) / 2, w: Math.max(40, l.w - SUB_TEXT_X - PAD), h: l.subH?.[i] ?? lineH(TEXT_FS) };
     if (i === subs.length) {
       drawIcon(ctx, 'plus-s', x + SUB_X - 1, y + sy - 1, 24, look.muted);

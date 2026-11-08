@@ -73,6 +73,45 @@ export function TaskKeepPop({ editor }: { editor: Editor }) {
   );
 }
 
+/** A task's menu (its burger, at the foot of it opened): what's added to it, or taken away again. */
+export function TaskMenu({ editor }: { editor: Editor }) {
+  const [at, setAt] = useState<TaskPick | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const open = (e: Event) => setAt((e as CustomEvent<TaskPick>).detail);
+    window.addEventListener('planx:task-menu', open);
+    return () => window.removeEventListener('planx:task-menu', open);
+  }, []);
+  useEffect(() => {
+    if (!at) return;
+    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setAt(null); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setAt(null); };
+    window.addEventListener('pointerdown', close, true);
+    window.addEventListener('keydown', esc);
+    return () => { window.removeEventListener('pointerdown', close, true); window.removeEventListener('keydown', esc); };
+  }, [at]);
+  const it = at ? editor.board.get(at.id) : undefined;
+  if (!at || !it) return null;
+  const set = (patch: Partial<Item>) => { editor.board.update(it.id, { ...patch, h: fitTask(it, patch) }); setAt(null); };
+  const people = !!(it.tpp || it.boss || it.doer), due = !!(it.tdu || it.due);
+  const row = (label: string, run: () => void) => (
+    <div className="menu-item"><button className="menu-row" role="menuitem" onClick={run}><span>{label}</span></button></div>
+  );
+  return (
+    <div ref={ref} className="board-menu task-pop" role="menu" aria-label="Меню задачи" style={{ left: at.x, top: at.y + 16 }}>
+      {row(it.dpin ? 'Открепить описание' : 'Закрепить описание', () => set({ dpin: it.dpin ? undefined : true }))}
+      {row('Добавить подзадачу', () => {
+        const subs = [...(it.subs ?? []), { t: '' }];
+        set({ tsb: true, subs });
+        // (Typed in once the menu's gone: the press would take the typing's focus away.)
+        setTimeout(() => editor.startEditing(it.id, subs.length, 'end'));
+      })}
+      {row(people ? 'Убрать блок с ответственными' : 'Добавить блок с ответственными', () => set(people ? { tpp: undefined, boss: undefined, doer: undefined } : { tpp: true }))}
+      {row(due ? 'Убрать дату завершения' : 'Добавить дату завершения', () => set(due ? { tdu: undefined, due: undefined } : { tdu: true }))}
+    </div>
+  );
+}
+
 export function TaskPop({ editor, me, peers }: { editor: Editor; me: Me; peers: Array<{ name: string; color: string }> }) {
   const [pick, setPick] = useState<TaskPick | null>(null);
   const [name, setName] = useState('');
