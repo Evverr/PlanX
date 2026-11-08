@@ -106,12 +106,17 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   const titleW = Math.max(20, w - TITLE_X - 30), th = lineH(TITLE_FS);
   const top = MID - th / 2, head = 52;
   const out: TaskLayout = { w, h: head, head, title: { x: TITLE_X, y: top, w: titleW, h: th } };
-  const descW = Math.max(80, w - LEFT - PAD), dy = head + 22;
+  // (Its description short of its menu, at the top right of what's under its header.)
+  const descW = Math.max(80, w - LEFT - 44), dy = head + 22;
   // (Its description in a list, as drawn: each paragraph after its bullet or number.)
   const dl = descLook(it), dh = textBlockHeight(it.desc ? withList(it.desc, it.ls) : DESC_HINT, descW, dl.fs, { weight: dl.weight, family: dl.family, italic: dl.italic });
   if (!it.tv) return out;
   out.desc = { x: LEFT, y: dy, w: descW, h: dh };
-  const d = dy + dh, full = it.tv === 'full';
+  // Its menu (a burger) at the top right of what's under its header; its pin under it while it's kept
+  // open («Закрепить описание»), the description as tall as both at least.
+  out.menu = { x: w - 35, y: head + 12, w: ARROW, h: ARROW };
+  if (it.keep) out.pin = { x: w - 35, y: head + 40, w: ARROW, h: ARROW };
+  const d = Math.max(dy + dh, it.keep ? head + 40 + ARROW - 4 : 0), full = it.tv === 'full';
   // All of it: under the description the blocks it has (added by its menu, or with something in them):
   // its subtasks, who set it and does it, by when; each after a line across, its first row 33 under it,
   // its last 33 over what comes next.
@@ -135,20 +140,14 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
     out.rows = keys.map((key, i) => ({ key, y: at + 33 + ROW * i }));
     at = at + 33 + ROW * (keys.length - 1) + 33;
   }
-  // Its foot: at its right its menu (a burger, where the arrow under it was), its pin over it while it's kept
-  // open («Закрепить описание»); left of it «Отмена» and «Завершить», shown by the menu («Показать кнопки»).
-  const buttons = full && !!it.tbtn;
-  let foot = buttons || out.lines.length ? at - 13 : d + 8;
-  if (buttons) { out.lines.push(at); foot = at + 24; }
-  if (it.keep) { out.pin = { x: w - 35, y: foot, w: ARROW, h: ARROW }; foot += 28; }
-  const rowH = buttons ? BUTTON_H : ARROW;
-  if (buttons) {
-    const fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - 35 - 12 - fw;
-    out.finish = { x: fx, y: foot, w: fw, h: BUTTON_H };
-    out.cancel = { x: fx - 10 - cw, y: foot, w: cw, h: BUTTON_H };
-  }
-  out.menu = { x: w - 35, y: foot + (rowH - ARROW) / 2, w: ARROW, h: ARROW };
-  out.h = Math.ceil(foot + rowH + (buttons ? 31 : 14));
+  // Its foot: «Отмена» and «Завершить» at its right, shown by its menu («Показать кнопки»), after a line.
+  if (full && it.tbtn) {
+    out.lines.push(at);
+    const by = at + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - PAD - fw;
+    out.finish = { x: fx, y: by, w: fw, h: BUTTON_H };
+    out.cancel = { x: fx - 10 - cw, y: by, w: cw, h: BUTTON_H };
+    out.h = Math.ceil(by + BUTTON_H + 31);
+  } else out.h = Math.ceil(out.lines.length ? at - 8 : d + 22);
   return out;
 }
 
@@ -463,7 +462,8 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
     }
   }
   // Its menu, a burger, darker under the pointer.
-  if (l.menu) drawIcon(ctx, 'hamburger-menu', x + l.menu.x, y + l.menu.y, ARROW, arrowInk('menu'));
+  // (Lighter than the arrows, darker under the pointer.)
+  if (l.menu) { const k = litNow(`${it.id}:menu`, hot === `task:${it.id}:menu`); drawIcon(ctx, 'hamburger-menu', x + l.menu.x, y + l.menu.y, ARROW, look.dark ? `rgba(255,255,255,${0.3 + 0.55 * k})` : `rgba(0,0,0,${0.2 + 0.55 * k})`); }
   // Kept open («Закрепить описание»): a pin over it, unpinning it on a click.
   if (l.pin) drawIcon(ctx, 'pin', x + l.pin.x, y + l.pin.y, ARROW, hot === `task:${it.id}:pin` ? BLUE : arrowInk('pin'));
   if (l.subsAt !== undefined) label('Подзадачи:', l.subsAt);
