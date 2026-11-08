@@ -315,7 +315,7 @@ function litNow(key: string, on: boolean, ms = 160): number {
 }
 
 /** How long a task takes to open or close (or show more or less of itself), in ms. */
-const GLIDE = 200;
+const GLIDE = 140;
 /** Each task as last drawn, and those gliding from one size to another: from what size, since when,
  *  and the one of the two that shows more (what's under its header fading in or out). */
 const drawnAs = new Map<string, { it: Item; w: number; h: number }>();
