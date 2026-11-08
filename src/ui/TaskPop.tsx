@@ -92,14 +92,23 @@ export function TaskMenu({ editor }: { editor: Editor }) {
   }, [at]);
   const it = at ? editor.board.get(at.id) : undefined;
   if (!at || !it) return null;
-  const set = (patch: Partial<Item>) => { editor.board.update(it.id, { ...patch, h: fitTask(it, patch) }); setAt(null); };
+  // (What's added shows in all of it: opened only to its description, it opens in full.)
+  const set = (patch: Partial<Item>) => {
+    const p = { ...patch, ...(it.tv === 'desc' && !('keep' in patch) && { tv: 'full' as const }) };
+    editor.board.update(it.id, { ...p, h: fitTask(it, p) });
+    setAt(null);
+  };
   const people = !!(it.tpp || it.boss || it.doer), due = !!(it.tdu || it.due);
   const row = (label: string, run: () => void) => (
     <div className="menu-item"><button className="menu-row" role="menuitem" onClick={run}><span>{label}</span></button></div>
   );
   return (
     <div ref={ref} className="board-menu task-pop" role="menu" aria-label="Меню задачи" style={{ left: at.x, top: at.y + 16 }}>
-      {row(it.dpin ? 'Открепить описание' : 'Закрепить описание', () => set({ dpin: it.dpin ? undefined : true }))}
+      {/* Kept open, a pin over its menu (as «Не сворачивать» was). */}
+      {row(it.keep ? 'Открепить описание' : 'Закрепить описание', () => {
+        if (it.keep) set({ keep: undefined });
+        else { keepOpen(editor.board, it.id); set({ keep: true }); }
+      })}
       {row('Добавить подзадачу', () => {
         const subs = [...(it.subs ?? []), { t: '' }];
         set({ tsb: true, subs });
@@ -108,6 +117,7 @@ export function TaskMenu({ editor }: { editor: Editor }) {
       })}
       {row(people ? 'Убрать блок с ответственными' : 'Добавить блок с ответственными', () => set(people ? { tpp: undefined, boss: undefined, doer: undefined } : { tpp: true }))}
       {row(due ? 'Убрать дату завершения' : 'Добавить дату завершения', () => set(due ? { tdu: undefined, due: undefined } : { tdu: true }))}
+      {row(it.tbtn ? 'Скрыть кнопки' : 'Показать кнопки', () => set({ tbtn: it.tbtn ? undefined : true }))}
     </div>
   );
 }
