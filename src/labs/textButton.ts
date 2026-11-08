@@ -84,7 +84,9 @@ function grow(a: HTMLElement | null, r: DOMRect, to: 'tfmt' | 'panel', swap: () 
         reveal();
       };
       const reveal = () => {
-        // What's on it fades in; then it's itself again.
+        // What's on it fades in; then it's itself again. (Its own coming in, a slide up, never played: off
+        // for good on it, as it'd start again once it's no longer held back.)
+        b.style.animation = 'none';
         b.style.opacity = '0';
         delete root.dataset.morphIn;
         void b.offsetWidth;
