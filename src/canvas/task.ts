@@ -26,6 +26,8 @@ const TITLE_X = 47, MID = 26;
 const STATUS = 22, ARROW = 24;
 /** How far round the ring and the arrow a press is still theirs (the rest of the header a double click's). */
 const AROUND = 5;
+/** The «ЗАДАЧА» pill's width, about (its 9 Inter caps and 6 each side), for a press on it. */
+const PILL_W = 60;
 /** Where the people's names start and their circles' middle; a row's height; a subtask's. */
 /** What's under the header keeps this far from its sides (9 more than the header's ring from its left). */
 const PAD = 24;
@@ -167,7 +169,8 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
   if (q.y >= 0 && q.y < l.head && q.x >= 0 && q.x <= l.w) {
     const on = (cx: number, half: number) => Math.abs(q.x - cx) <= half + AROUND && Math.abs(q.y - MID) <= half + AROUND;
     if (on(15 + STATUS / 2, STATUS / 2)) return 'status';
-    if (on(l.w - 35 + ARROW / 2, ARROW / 2)) return 'arrow';
+    // Its right corner all opens or closes it: the arrow's column, and its «ЗАДАЧА» pill along the top edge.
+    if (q.x >= l.w - 47 || (q.y <= 10 && q.x >= l.w - 16 - PILL_W)) return 'arrow';
     const line = titleLine(it.text || 'Название задачи', l.title.w);
     return q.y >= l.title.y && q.y <= l.title.y + l.title.h && q.x >= l.title.x && q.x <= l.title.x + widthOf(line, TITLE_FS, 500) ? 'title' : 'head';
   }
@@ -323,10 +326,11 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   // At the right of its top edge, a pill saying what it is, of the edge's colour, in white.
   ctx.font = font(9, 600, FAMILY);
   ctx.letterSpacing = '0.5px';
+  // (Opening it on a click, as the arrow; a little stronger under the pointer.)
   const tag = 'ЗАДАЧА', pw = ctx.measureText(tag).width + 12;
   ctx.beginPath();
   ctx.roundRect(x + l.w - 16 - pw, y + 1 - 7, pw, 14, 7);
-  ctx.fillStyle = mix(strong.startsWith('#') ? strong : '#003CFF', bg, 0.3);
+  ctx.fillStyle = mix(strong.startsWith('#') ? strong : '#003CFF', bg, hot === `task:${it.id}:arrow` ? 0.45 : 0.3);
   ctx.fill();
   ctx.fillStyle = '#FFFFFF';
   ctx.textAlign = 'center';
