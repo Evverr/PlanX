@@ -115,7 +115,9 @@ export function TaskMenu({ editor }: { editor: Editor }) {
         if (it.keep) set({ keep: undefined });
         else { keepOpen(editor.board, it.id); set({ keep: true }); }
       })}
-      {/* Its description shown or not (what's typed in it kept either way). */}
+            {/* (Kept open, apart from what it shows.) */}
+      <div className="menu-line" />
+{/* Its description shown or not (what's typed in it kept either way). */}
       {row('Описание', !it.nd, () => set({ nd: it.nd ? undefined : true }))}
       {/* Ticked, a subtask at once to type in (the menu gone: the press would take the typing's focus away). */}
       {row('Подзадачи', subs, () => {
