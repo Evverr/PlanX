@@ -130,6 +130,10 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 /* A task's popup for who set it, who does it, by when (ui/TaskPop.tsx), where it was pressed. */
 .board-menu.task-pop { position: fixed; min-width: var(--e220, 220px); }
 .task-pop .menu-row.on { color: var(--fmt-on-ink); }
+/* The task's menu: what it has ticked at the right of its row. */
+.task-pop .menu-row.task-check { justify-content: space-between; }
+.task-pop .menu-row.task-check.on { color: var(--ink); }
+.task-pop .menu-row.task-check .pi { width: var(--e24); height: var(--e24); background: var(--fmt-on-ink); }
 .task-avatar { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #fff; font: 600 11px Inter, var(--ui); font-style: normal; }
 .task-pop :is(.task-name, .task-due) { display: block; width: 100%; box-sizing: border-box; margin: var(--s6) 0; padding: var(--s7) var(--s10); border: 1px solid var(--line); border-radius: var(--s8); background: transparent; color: var(--ink); font: 400 var(--s14) Inter, var(--ui); outline: none; }
 .task-pop :is(.task-name, .task-due):focus { border-color: var(--fmt-on-ink); }

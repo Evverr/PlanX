@@ -107,7 +107,7 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   const top = MID - th / 2, head = 52;
   const out: TaskLayout = { w, h: head, head, title: { x: TITLE_X, y: top, w: titleW, h: th } };
   // (Its description short of its menu, at the top right of what's under its header.)
-  const descW = Math.max(80, w - LEFT - 44), dy = head + 22;
+  const descW = Math.max(80, w - LEFT - 44), dy = head + 16;
   // (Its description in a list, as drawn: each paragraph after its bullet or number.)
   const dl = descLook(it), dh = textBlockHeight(it.desc ? withList(it.desc, it.ls) : DESC_HINT, descW, dl.fs, { weight: dl.weight, family: dl.family, italic: dl.italic });
   if (!it.tv) return out;
@@ -185,7 +185,8 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
   if (l.subs) {
     for (let i = 0; i < l.subs.length; i++) {
       if (q.y < l.subs[i] - 6 || q.y > l.subs[i] + STATUS + (l.subH?.[i] ?? 0) - lineH(TEXT_FS) + 6) continue;
-      if (i === l.subs.length - 1) return q.x >= SUB_X - 4 && q.x <= l.w - PAD ? 'add' : null;
+      // (The row adding one: its plus and its word, not past them.)
+      if (i === l.subs.length - 1) return q.x >= SUB_X - 4 && q.x <= SUB_TEXT_X - 3 + widthOf(SUB_HINT, TEXT_FS, 400) + 6 ? 'add' : null;
       // Left of its box, the cross taking it away (shown as the pointer comes over it).
       if (q.x >= SUB_X - 22 && q.x < SUB_X - 1) return { sub: i, tick: false, del: true };
       if (near(q, SUB_X + STATUS / 2, l.subs[i] + STATUS / 2, STATUS / 2 + 4)) return { sub: i, tick: true };
