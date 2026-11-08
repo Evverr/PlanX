@@ -110,10 +110,12 @@ export function TaskMenu({ editor }: { editor: Editor }) {
   return (
     <div ref={ref} className="board-menu task-pop" role="menu" aria-label="Меню задачи" style={{ left: at.x, top: at.y + 16 }}>
       {/* Kept open, a pin over its menu (as «Не сворачивать» was). */}
-      {row('Закрепить описание', !!it.keep, () => {
+      {row('Закрепить подробности', !!it.keep, () => {
         if (it.keep) set({ keep: undefined });
         else { keepOpen(editor.board, it.id); set({ keep: true }); }
       })}
+      {/* Its description shown or not (what's typed in it kept either way). */}
+      {row('Описание', !it.nd, () => set({ nd: it.nd ? undefined : true }))}
       {/* Ticked, a subtask at once to type in (the menu gone: the press would take the typing's focus away). */}
       {row('Подзадачи', subs, () => {
         if (subs) { set({ tsb: undefined, subs: undefined }); return; }

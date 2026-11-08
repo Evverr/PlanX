@@ -187,7 +187,8 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           e.preventDefault();
           commit();
           const it = editor.board.get(id);
-          if (!it) return;
+          // (Its description not shown, «Описание» unticked: done with it.)
+          if (!it || it.nd) return;
           if (!it.tv) setView(editor.board, it, taskOpen());
           editor.startEditing(id, 0, 'end');
         } else if (field && editor.editingCell && e.key === 'Enter' && !e.shiftKey) {
