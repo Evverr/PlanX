@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { LABS, setLab, useLabs } from '../labs/labs';
 import { setZoomsWithKey, useZoomsWithKey, zoomKeyName } from '../labs/wheelZoom';
 import { setGlass, useGlass } from '../labs/glass';
+import { setDarkPanels, useDarkPanels } from '../labs/darkPanels';
 import { readJSON, writeJSON } from '../storage';
 import { Switch } from './BoardMenu';
 import avatar from '../../assets/doodles/people/03-red-hair.png';
@@ -75,7 +76,7 @@ export function ProfileDialog({ name, onRename, onClose, page }: { name: string;
 
 /** "Настройки" (the board menu): the theme and such, then every feature on trial ("Нововведения", src/labs) with its switch. */
 export function SettingsDialog({ onClose, dark, onDark, page }: { onClose: () => void; dark: boolean; onDark: () => void; page?: boolean }) {
-  const labs = useLabs(), byKey = useZoomsWithKey(), glass = useGlass();
+  const labs = useLabs(), byKey = useZoomsWithKey(), glass = useGlass(), darkPanels = useDarkPanels();
   return (
     <Modal title="Настройки" onClose={onClose} className="settings" page={page}>
       <div className="settings-list">
@@ -90,6 +91,10 @@ export function SettingsDialog({ onClose, dark, onDark, page }: { onClose: () =>
         <button className="settings-row" role="menuitemcheckbox" aria-checked={glass} onClick={() => setGlass(!glass)}>
           <span><b>Стекло</b><i>Панели и попапы полупрозрачные (84%), доска за ними размыта</i></span>
           <Switch on={glass} />
+        </button>
+        <button className="settings-row" role="menuitemcheckbox" aria-checked={darkPanels} onClick={() => setDarkPanels(!darkPanels)}>
+          <span><b>Панели тёмного цвета</b><i>Панели, меню и попапы как в тёмной теме, доска и всё на ней светлые</i></span>
+          <Switch on={darkPanels} />
         </button>
       </div>
       <div className="settings-title">Нововведения</div>
