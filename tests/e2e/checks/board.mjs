@@ -869,6 +869,15 @@ export const checks = {
     expect(await tv(), 'the corner by its arrow: closed').toBe('closed');
   },
 
+  async 'a picked item\'s handle under something solid over it is neither drawn nor taken hold of'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add({ id: 'low', type: 'task', x: 300, y: 300, w: 293, h: 52, z: 1, text: 'Нижняя' }); b.add({ id: 'up', type: 'task', x: 500, y: 320, w: 293, h: 52, z: 2, text: 'Верхняя' }); e.setSelection(['low']); })()`);
+    await sleep(300);
+    const corner = await p.ev(`(() => { const s = planx.editor.toScreen({ x: 596, y: 355 }), r = planx.editor.canvas.getBoundingClientRect(); return [r.left + s.x, r.top + s.y]; })()`);
+    await p.drag(corner, [corner[0] + 80, corner[1] + 40]);
+    expect(await p.ev(`[planx.board.get('low').w, planx.board.get('up').x > 500].join()`), 'not stretched: the one over it taken').toBe('293,true');
+  },
+
   async '"Перетаскивание подзадач": a subtask dragged down past another goes there; a click on one still ticks it'(p) {
     await p.ev(`(async () => { const { taskSize } = await import('/src/canvas/task.ts'); const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       const t = { id: 't', type: 'task', x: 300, y: 100, w: 494, h: 52, z: 1, text: 'З', tv: 'full', subs: [{ t: 'Один' }, { t: 'Два' }, { t: 'Три' }] }; t.h = taskSize(t).h; b.add(t); e.setSelection(['t']); })()`);

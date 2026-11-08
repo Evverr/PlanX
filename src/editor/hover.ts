@@ -3,7 +3,7 @@ import { DEFAULTS, EDITABLE, ROTATABLE, textPad, textPadY } from '../model/types
 import { fontOf, textBlockHeight, withList } from '../canvas/text';
 import { taskPartAt } from '../canvas/task';
 import type { Point } from '../canvas/geometry';
-import { hitItem, hitLink, instanceBounds, linkBox, linkHandles, linkShape, onAudioButton, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
+import { coveredAt, hitItem, hitLink, instanceBounds, linkBox, linkHandles, linkShape, onAudioButton, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, dotGap, HANDLE } from '../canvas/renderer';
 import { instanceGlyph, instancePlus, objectArrow } from '../model/components';
 import { taskButtonAt } from './tasks';
@@ -25,6 +25,8 @@ const ROTATE_ZONE = 18;
 export function onHandle(ed: Editor, it: Item, w: Point, more = 0): boolean {
   // What's in an instance is as big as the instance makes it; the instance's handle is at its contents' corner.
   if (it.type === 'mind' || it.fold || it.host) return false;
+  // (Under something solid over it there, it's neither drawn nor taken hold of.)
+  if (!it.inst && !it.rot && coveredAt(ed.shown(), it, { x: it.x + it.w, y: it.y + it.h })) return false;
   const hs = ed.reach((HANDLE + 6 + more) / 2) * 2, off = 3 / ed.cam.z, b = it.inst ? instanceBounds(it, ed.board.list()) : it;
   return pointInRect(it.inst ? w : toLocal(it, w), { x: b.x + b.w + off - hs / 2, y: b.y + b.h + off - hs / 2, w: hs, h: hs });
 }

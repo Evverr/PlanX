@@ -22,7 +22,7 @@ import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
 import { autoInk } from '../model/color';
 import cursorUrl from './cursor.svg';
-import { anchorAt, angleOf, linkBox, traceStar, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, pathNodes, flattenPath, linkHandles, spreadElbows, polyPoints, linkShape, nearestSide, pointInRect, rectsIntersect, sidePoint, SIDES, type Bezier, type LinkShape } from './geometry';
+import { anchorAt, coveredAt, solid, angleOf, linkBox, traceStar, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, pathNodes, flattenPath, linkHandles, spreadElbows, polyPoints, linkShape, nearestSide, pointInRect, rectsIntersect, sidePoint, SIDES, type Bezier, type LinkShape } from './geometry';
 import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
@@ -198,8 +198,7 @@ function hiddenUnder(ctx: CanvasRenderingContext2D, it: Item, s: Scene, view: Re
   const at = s.items.findIndex((i) => i.id === it.id);
   if (at < 0) return;
   const b = boxOf(it), pad = 6 / s.cam.z;
-  const over = s.items.slice(at + 1).map(taskShown).filter((o) => !o.rot
-    && (o.type === 'task' || o.type === 'sticky' || o.type === 'image' || o.type === 'table' || ((o.type === 'rect' || o.type === 'ellipse') && o.color !== 'none'))
+  const over = s.items.slice(at + 1).map(taskShown).filter((o) => solid(o)
     && o.x < b.x + b.w + pad && b.x - pad < o.x + o.w && o.y < b.y + b.h + pad && b.y - pad < o.y + o.h);
   if (!over.length) return;
   // (One cut after another, so where two of them meet stays cut.)
@@ -1447,13 +1446,14 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       ctx.stroke();
       ctx.globalAlpha = 1;
     } else if (s.showHandle && s.editingId !== id) {
-      const hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z;
+      // (Not over what lies over its corner: see coveredAt.)
+      const hs = (s.byFinger ? HANDLE * 1.5 : HANDLE) / cam.z, off = 3 / cam.z, hidden = !it.rot && coveredAt(s.items, it, { x: it.x + it.w, y: it.y + it.h });
       ctx.fillStyle = theme.surface;
       ctx.strokeStyle = theme.pick;
       ctx.lineWidth = PICK_LINE / cam.z;
       ctx.beginPath();
       turned(ctx, it, () => ctx.roundRect(it.x + it.w + off - hs / 2, it.y + it.h + off - hs / 2, hs, hs, 3 / cam.z));
-      ctx.globalAlpha = handleFade;
+      ctx.globalAlpha = hidden ? 0 : handleFade;
       ctx.fill();
       ctx.stroke();
       ctx.globalAlpha = 1;

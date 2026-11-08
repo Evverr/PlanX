@@ -147,12 +147,12 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
     out.cancel = { x: cx, y: by, w: cw, h: BUTTON_H };
     out.finish = { x: cx + cw + 10, y: by, w: fw, h: BUTTON_H };
     out.h = Math.ceil(by + BUTTON_H + 31);
-    if (it.keep) out.pin = { x: w - 35, y: by + (BUTTON_H - ARROW) / 2, w: ARROW, h: ARROW };
+    if (it.keep) out.pin = { x: w - 35, y: by + (BUTTON_H - ARROW) / 2 - 4, w: ARROW, h: ARROW };
   } else {
-    out.h = Math.ceil(out.lines.length ? at - 8 : d + 22);
+    out.h = Math.ceil(out.lines.length ? at - 8 : d + 12);
     if (it.keep) {
-      out.h = Math.max(out.h, head + 12 + ARROW * 2 + 4 + 10);
-      out.pin = { x: w - 35, y: out.h - 10 - ARROW, w: ARROW, h: ARROW };
+      out.h = Math.max(out.h, head + 12 + ARROW * 2 + 4 + 14);
+      out.pin = { x: w - 35, y: out.h - 14 - ARROW, w: ARROW, h: ARROW };
     }
   }
   return out;
