@@ -38,7 +38,7 @@ const LABEL_X = LEFT, NAME_X = LEFT + 153, AVATAR_X = LEFT + 135, ROW = 33, SUB 
 const SUB_X = LEFT - 2, SUB_TEXT_X = LEFT + 26;
 /** The buttons as the panels' (.btn in popups.css): 32 tall, their text 12 bold Inter with 14 each side. */
 const BUTTON_H = 32, BUTTON_PAD = 14, BUTTON_FONT = { size: 12, weight: 600 };
-export const DESC_HINT = 'Добавить описание', SUB_HINT = 'Добавить подзадачу', KEEP_LABEL = 'Не сворачивать';
+export const DESC_HINT = 'Добавить описание', SUB_HINT = 'подзадача', KEEP_LABEL = 'Не сворачивать';
 /** The box of «Не сворачивать», and its label after it. */
 const KEEP_BOX = 18, KEEP_GAP = 8;
 
@@ -112,11 +112,9 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   const dl = descLook(it), dh = textBlockHeight(it.desc ? withList(it.desc, it.ls) : DESC_HINT, descW, dl.fs, { weight: dl.weight, family: dl.family, italic: dl.italic });
   if (!it.tv) return out;
   out.desc = { x: LEFT, y: dy, w: descW, h: dh };
-  // Its menu (three dots one over another) at the top right of what's under its header; its pin under it while it's kept
-  // open («Закрепить описание»), the description as tall as both at least.
+  // Its menu (three dots one over another) at the top right of what's under its header.
   out.menu = { x: w - 35, y: head + 12, w: ARROW, h: ARROW };
-  if (it.keep) out.pin = { x: w - 35, y: head + 44, w: ARROW, h: ARROW };
-  const d = Math.max(dy + dh, it.keep ? head + 44 + ARROW - 4 : 0), full = it.tv === 'full';
+  const d = dy + dh, full = it.tv === 'full';
   // All of it: under the description the blocks it has (added by its menu, or with something in them):
   // its subtasks, who set it and does it, by when; each after a line across, its first row 33 under it,
   // its last 33 over what comes next.
@@ -140,14 +138,23 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
     out.rows = keys.map((key, i) => ({ key, y: at + 33 + ROW * i }));
     at = at + 33 + ROW * (keys.length - 1) + 33;
   }
-  // Its foot: «Отмена» and «Завершить» at its right, shown by its menu («Показать кнопки»), after a line.
+  // Its foot: «Отмена» and «Завершить» in the middle, shown by its menu («Показать кнопки»), after a line.
+  // Kept open («Закрепить описание»): a pin at the right of its very bottom (by the buttons, level with
+  // them), with room for it under the menu.
   if (full && it.tbtn) {
     out.lines.push(at);
-    const by = at + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - PAD - fw;
-    out.finish = { x: fx, y: by, w: fw, h: BUTTON_H };
-    out.cancel = { x: fx - 10 - cw, y: by, w: cw, h: BUTTON_H };
+    const by = at + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), cx = Math.round((w - fw - 10 - cw) / 2);
+    out.cancel = { x: cx, y: by, w: cw, h: BUTTON_H };
+    out.finish = { x: cx + cw + 10, y: by, w: fw, h: BUTTON_H };
     out.h = Math.ceil(by + BUTTON_H + 31);
-  } else out.h = Math.ceil(out.lines.length ? at - 8 : d + 22);
+    if (it.keep) out.pin = { x: w - 35, y: by + (BUTTON_H - ARROW) / 2, w: ARROW, h: ARROW };
+  } else {
+    out.h = Math.ceil(out.lines.length ? at - 8 : d + 22);
+    if (it.keep) {
+      out.h = Math.max(out.h, head + 12 + ARROW * 2 + 4 + 10);
+      out.pin = { x: w - 35, y: out.h - 10 - ARROW, w: ARROW, h: ARROW };
+    }
+  }
   return out;
 }
 
@@ -312,6 +319,29 @@ function litNow(key: string, on: boolean, ms = 160): number {
   if (now - t.at < ms) redraw();
   else if (!t.on) lit.delete(key);
   return at(t);
+}
+
+/** A subtask being dragged among the others ("Перетаскивание подзадач", src/labs): of which task, from
+ *  where, to where it'd go, and how far it's been dragged up or down. */
+let subDrag: { id: string; from: number; to: number; dy: number } | null = null;
+export const setSubDrag = (d: typeof subDrag): void => { subDrag = d; };
+
+/** Where each row of subtasks stands (the last, adding one, too), the one `from` put at `to`. */
+function subsMoved(l: TaskLayout, from: number, to: number): number[] {
+  const n = l.subs!.length - 1, order = [...Array(n).keys()];
+  order.splice(to, 0, ...order.splice(from, 1));
+  const step = (i: number) => SUB + (l.subH?.[i] ?? 0) - lineH(TEXT_FS), out = [...l.subs!];
+  let sy = l.subs![0];
+  for (const i of order) { out[i] = sy; sy += step(i); }
+  return out;
+}
+
+/** Where a subtask dragged (from `from`) to `y` on its task (from its top) would go among them. */
+export function subDropAt(it: Item, from: number, y: number): number {
+  const l = taskLayout(it), n = (l.subs?.length ?? 1) - 1;
+  let to = 0;
+  for (let i = 0; i < n; i++) if (i !== from && y > l.subs![i] + STATUS / 2) to++;
+  return Math.max(0, Math.min(n - 1, to));
 }
 
 /** How long a task takes to open or close (or show more or less of itself), in ms. */
@@ -535,10 +565,15 @@ function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typin
   if (l.pin) { const k = litNow(`${it.id}:pin`, hot === `task:${it.id}:pin`); drawIcon(ctx, 'pin', x + l.pin.x, y + l.pin.y, ARROW, look.dark ? `rgba(255,255,255,${0.3 + 0.55 * k})` : `rgba(0,0,0,${0.2 + 0.55 * k})`); }
   if (l.subsAt !== undefined) label('Подзадачи:', l.subsAt);
   const subs = it.subs ?? [];
-  (l.subs ?? []).forEach((sy, i) => {
+  // One being dragged to another place among them ("Перетаскивание подзадач", src/labs): it after the
+  // pointer, the others where they'd go.
+  const drag = subDrag?.id === it.id ? subDrag : null, ys = drag && l.subs ? subsMoved(l, drag.from, drag.to) : l.subs;
+  (l.subs ?? []).forEach((_, i) => {
+    const sy = drag && i === drag.from ? l.subs![i] + drag.dy : ys![i];
     const mid = sy + STATUS / 2, box = { x: SUB_TEXT_X, y: mid - lineH(TEXT_FS) / 2, w: Math.max(40, l.w - SUB_TEXT_X - PAD), h: l.subH?.[i] ?? lineH(TEXT_FS) };
     if (i === subs.length) {
-      drawIcon(ctx, 'plus-s', x + SUB_X - 1, y + sy - 1, 24, look.muted);
+      // (A little smaller than the boxes over it.)
+      drawIcon(ctx, 'plus-s', x + SUB_X + 2, y + sy + 2, 18, look.muted);
       lines(SUB_HINT, box, TEXT_FS, 400, look.muted);
       return;
     }
@@ -547,10 +582,11 @@ function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typin
     drawBox(ctx, x + SUB_X + STATUS / 2 - KEEP_BOX / 2, y + mid - KEEP_BOX / 2, !!sub.done, SOFT_BLUE, look);
     // Its lines wrapped to its width; done, grey (not struck through).
     if (typing !== i + 1) lines(sub.t || 'Подзадача', box, TEXT_FS, 400, sub.t && !sub.done ? look.ink : look.muted);
-    // The pointer on it: left of its box a cross taking it away, darker on it.
-    if (hot === `task:${it.id}:sub:${i}` || hot === `task:${it.id}:del:${i}`) {
-      const cx = x + SUB_X - 12, cy = y + mid, d = 4;
-      ctx.strokeStyle = hot.includes(':del:') ? (look.dark ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.7)') : look.dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)';
+    // The pointer on it: left of its box a cross taking it away, darker on it, both easing in and out.
+    const shown = litNow(`${it.id}:sub:${i}`, !drag && (hot === `task:${it.id}:sub:${i}` || hot === `task:${it.id}:del:${i}`));
+    if (shown) {
+      const cx = x + SUB_X - 12, cy = y + mid, d = 4, k = litNow(`${it.id}:del:${i}`, hot === `task:${it.id}:del:${i}`);
+      ctx.strokeStyle = look.dark ? `rgba(255,255,255,${(0.4 + 0.45 * k) * shown})` : `rgba(0,0,0,${(0.3 + 0.4 * k) * shown})`;
       ctx.lineWidth = 1.5;
       ctx.lineCap = 'round';
       ctx.beginPath();

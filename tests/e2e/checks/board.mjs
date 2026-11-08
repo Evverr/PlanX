@@ -869,6 +869,22 @@ export const checks = {
     expect(await tv(), 'the corner by its arrow: closed').toBe('closed');
   },
 
+  async '"Перетаскивание подзадач": a subtask dragged down past another goes there; a click on one still ticks it'(p) {
+    await p.ev(`(async () => { const { taskSize } = await import('/src/canvas/task.ts'); const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      const t = { id: 't', type: 'task', x: 300, y: 100, w: 494, h: 52, z: 1, text: 'З', tv: 'full', subs: [{ t: 'Один' }, { t: 'Два' }, { t: 'Три' }] }; t.h = taskSize(t).h; b.add(t); e.setSelection(['t']); })()`);
+    await sleep(400);
+    const row = (i) => p.ev(`(async () => { const { taskLayout } = await import('/src/canvas/task.ts'); const t = planx.board.get('t'), l = taskLayout(t), s = planx.editor.toScreen({ x: t.x + 140, y: t.y + l.subs[${i}] + 11 }), r = planx.editor.canvas.getBoundingClientRect(); return [r.left + s.x, r.top + s.y]; })()`);
+    const subs = () => p.ev(`planx.board.get('t').subs.map((s) => s.t + (s.done ? '✓' : '')).join()`);
+    const [a, c] = [await row(0), await row(2)];
+    await p.drag(a, [a[0], c[1] + 6]);
+    await sleep(200);
+    expect(await subs(), 'the first now last').toBe('Два,Три,Один');
+    expect(await p.ev(`[planx.board.get('t').x, planx.board.get('t').y].join()`), 'the task stays').toBe('300,100');
+    await p.click(await row(0));
+    await sleep(200);
+    expect(await subs(), 'a click ticks it').toBe('Два✓,Три,Один');
+  },
+
   async 'a task\'s menu (the burger at its foot): pinned, its pin over it, its buttons shown or not'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('task', 100, 60, { id: 't', text: 'Задача', desc: 'Описание', w: 494, h: 52, tv: 'full' })); e.setSelection(['t']); })()`);
