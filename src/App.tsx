@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Board } from './model/board';
 import { Editor } from './editor/editor';
 import { Connection, newBoardId } from './collab/connection';
@@ -32,7 +32,7 @@ import { useBar } from './ui/panels/bar';
 import type { Item, Link } from './model/types';
 import { Labs } from './labs/LabsLayer';
 import { labOn, useLabs } from './labs/labs';
-import { morphPanel } from './labs/textButton';
+import { morphFrom, morphPanel } from './labs/textButton';
 import { toggleDots, useDotsOn } from './labs/linkTool';
 import { joinDropped } from './labs/linkJoint';
 import { HelpPop } from './ui/HelpPop';
@@ -259,7 +259,8 @@ export function App({ boardId }: { boardId: string }) {
   // picked, till something else is picked or typing starts again.
   const [quiet, setQuiet] = useState<string | null>(null);
   const wasEditing = useRef<string | null>(null);
-  useEffect(() => {
+  // (Before it's drawn: the selection panel back is never seen beside it a moment.)
+  useLayoutEffect(() => {
     // (Not when typing ended for one of the panel's own fields, the link's address.)
     if (wasEditing.current && !ui.editingId && !document.activeElement?.closest('.tfmt')) setQuiet(textItem?.id ?? null);
     else if (ui.editingId) setQuiet(null);
@@ -305,13 +306,28 @@ export function App({ boardId }: { boardId: string }) {
   // "Панель над элементом" (src/labs); it and the text panel, coming in where the other's going, wait for it to go.
   const place = usePanelPlace(editor, selItems);
   // (While typing: kept for a mind map node, and a task but its description, see below.)
-  const staysTyping = !editing || editing.type === 'mind' || (editing.type === 'task' && ui.editingCell !== 0);
+  const staysTyping = !editing || editing.type === 'mind' || (editing.type === 'task' && ui.editingCell !== 0)
+    // (And till the text panel's there for what's typed in: it turns into that, see below.)
+    || (textItem?.id === editing.id && !panelOn);
   const overOn = labs.panelOver && staysTyping && !tMode, overShown = overOn && place === 'over' && selItems.length > 0;
   const overWent = useRef({ shown: false, at: 0 });
   // What's picked, and whether that's instead of something else picked just now (the panel over it
   // fading out and coming back in by the new one).
   const selKey = selItems.map((i) => i.id).join(), lastSel = useRef(''), swapped = !!lastSel.current && lastSel.current !== selKey && !!selKey;
   useEffect(() => { lastSel.current = selKey; }, [selKey]);
+  // The text panel and the selection panel turning into one another, as by the T ("Кнопка T", src/labs),
+  // rather than one going and the other coming: typing starting with the text panel coming, or ending with
+  // the selection panel back, the same picked. Where each stood is kept for the next time.
+  const morphWas = useRef<{ sel: string; text: boolean; textAt: DOMRect | null; panelAt: DOMRect | null } | null>(null);
+  useLayoutEffect(() => {
+    const was = morphWas.current, text = panelOn && !tMode;
+    const at = (q: string) => document.querySelector<HTMLElement>(q)?.getBoundingClientRect() ?? null;
+    if (was && selKey && was.sel === selKey && !tMode && was.text !== text) {
+      if (text && was.panelAt && at('.tfmt:not(.gone):not(.leaving)')) morphFrom(was.panelAt, 'tfmt');
+      else if (!text && was.textAt && at('.bar.panel:not(.gone)')) morphFrom(was.textAt, 'panel');
+    }
+    morphWas.current = { sel: selKey, text, textAt: at('.tfmt:not(.gone):not(.leaving)'), panelAt: at('.bar.panel:not(.gone)') };
+  });
   if (overWent.current.shown && !overShown) overWent.current.at = performance.now();
   overWent.current.shown = overShown;
   const following = useFollowing();
