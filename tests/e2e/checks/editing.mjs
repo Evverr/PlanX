@@ -282,6 +282,8 @@ export const checks = {
     expect(await p.ev('planx.editor.editingId'), 'its parent typed in').toBe(first);
     await p.key('Enter', 'Enter', 13, 8);
     expect(await p.ev('planx.editor.editingId'), 'Shift+Enter: still typed in (a new line there)').toBe(first);
+    await p.key('Enter', 'Enter', 13, 4);
+    expect([await p.ev('planx.editor.editingId') === first, await p.ev(`document.querySelector('textarea.text-edit').value.endsWith('\\n')`)].join(), 'Cmd+Enter: a new line').toBe('true,true');
     await p.key('Enter', 'Enter', 13);
     const next = await p.ev('planx.editor.editingId');
     expect([next !== first, await p.ev(`planx.board.get('${next}').parent`)].join(), 'one beside it typed in').toBe(`true,${root}`);

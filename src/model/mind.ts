@@ -613,8 +613,8 @@ export function folding(it: Item, way: Way, on: boolean): Partial<Item> {
   return { foldedWays: ways.length ? ways : undefined };
 }
 
-/** The ways a central topic offers to grow branches (its "Конфигурация"): right and left unless set. */
-export const mindWays = (it: Item): Way[] => it.mw ?? ['right', 'left'];
+/** The ways a central topic offers to grow branches (its "Конфигурация"): right only unless set. */
+export const mindWays = (it: Item): Way[] => it.mw ?? ['right'];
 
 /** How far a node's branches go on straight out of it before they curve: room for the ring folding them. */
 export const BRANCH_STUB = 16;
