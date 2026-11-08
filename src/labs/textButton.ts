@@ -5,9 +5,11 @@ import { layerRoot } from './sideViewport';
  * what's on it fades out, then it takes the other's width, then what's on that fades in.
  */
 
-/** How long what's on the panel takes to fade out, the panel to take the new width, and the new
- *  buttons to fade in, in ms (the first two in labs.css too). */
-const OUT = 70, WIDEN = 200, IN = 120;
+/** How long the panel takes to take the new size and the new buttons to fade in, in ms (the first in
+ *  labs.css too; what's on it fades out in 70 there). They overlap: the panel starts to take the
+ *  other's size as what's on it is down to 30% (SHIFT), and the new buttons start to fade in before
+ *  it's done (REVEAL into it, three quarters of the way there as it eases). */
+const WIDEN = 200, IN = 120, SHIFT = 50, REVEAL = 120;
 
 let busy = false;
 
@@ -68,10 +70,11 @@ function grow(a: HTMLElement | null, r: DOMRect, to: 'tfmt' | 'panel', swap: () 
       // Its usual coming in (with a slide) is off for good: it only fades in, below.
       b.getAnimations().forEach((a) => a.cancel());
       // The body follows where it stands and its size each frame as it finds them (a panel measures what
-      // fits it, and may again as the other one goes), gliding there (labs.css); what's on it fades in
-      // once that's held still the body's whole way there. (The text panel over what's picked, the
-      // selection panel at the bottom: the body glides from one to the other.)
-      let last = '', since = performance.now();
+      // fits it, and may again as the other one goes), gliding there (labs.css); what's on it starts to
+      // fade in once that's held still most of the body's way there, and the body's done once it's
+      // there and that's in. (The text panel over what's picked, the selection panel at the bottom:
+      // the body glides from one to the other.)
+      let last = '', since = performance.now(), shown = 0;
       const t0 = since;
       const follow = () => {
         const q = settledRect(b), now = `${Math.round(q.left)}|${Math.round(q.top)}|${Math.round(q.width)}|${Math.round(q.height)}`, t = performance.now();
@@ -80,8 +83,16 @@ function grow(a: HTMLElement | null, r: DOMRect, to: 'tfmt' | 'panel', swap: () 
           since = t;
           Object.assign(shell.style, { left: `${q.left}px`, top: `${q.top}px`, width: `${q.width}px`, height: `${q.height}px` });
         }
-        if (t - since < WIDEN && t - t0 < 1000) { requestAnimationFrame(follow); return; }
-        reveal();
+        const late = t - t0 > 1000;
+        if (!shown && (t - since >= REVEAL || late)) { shown = t; reveal(); }
+        if (shown && ((t - since >= WIDEN && t - shown >= IN + 10) || late)) { finish(); return; }
+        requestAnimationFrame(follow);
+      };
+      const finish = () => {
+        b.style.transition = '';
+        b.style.opacity = '';
+        delete b.dataset.morph;
+        done();
       };
       const reveal = () => {
         // What's on it fades in; then it's itself again. (Its own coming in, a slide up, never played: off
@@ -92,15 +103,9 @@ function grow(a: HTMLElement | null, r: DOMRect, to: 'tfmt' | 'panel', swap: () 
         void b.offsetWidth;
         b.style.transition = `opacity ${IN}ms ease`;
         b.style.opacity = '1';
-        setTimeout(() => {
-          b.style.transition = '';
-          b.style.opacity = '';
-          delete b.dataset.morph;
-          done();
-        }, IN + 10);
       };
       follow();
     };
     requestAnimationFrame(find);
-  }, OUT);
+  }, SHIFT);
 }
