@@ -235,10 +235,13 @@ export class Editor {
     };
     for (const ev of ['stack-item-added', 'stack-item-popped', 'stack-cleared'] as const) board.undoManager.on(ev, history);
     // Tasks of before made the tasks of now, and every task as tall as its contents (see model/task.ts),
-    // once the board's come in or changed, and once the fonts have.
+    // once the board's come in, as it's changed here, and once the fonts have. (Not as others change it:
+    // a window measuring otherwise, say a tab left open with another font, and this one would set it back
+    // and forth for good.)
     let renew = 0;
     const later = () => { clearTimeout(renew); renew = setTimeout(() => { renewTasks(board, this.editingId); this.renewMinds(); }, 300) as unknown as number; };
-    board.subscribe(later);
+    const opened = Date.now();
+    board.doc.on('afterTransaction', (tr: { local: boolean }) => { if (tr.local || Date.now() - opened < 3000) later(); });
     if (typeof document !== 'undefined') void document.fonts?.ready.then(later);
   }
 
