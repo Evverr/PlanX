@@ -184,6 +184,9 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
     const line = titleLine(it.text || 'Название задачи', l.title.w);
     return q.y >= l.title.y && q.y <= l.title.y + l.title.h && q.x >= l.title.x && q.x <= l.title.x + widthOf(line, TITLE_FS, 500) ? 'title' : 'head';
   }
+  // (Its menu and its pin first, whatever row they're level with.)
+  if (l.menu && inRect(q, l.menu, 4)) return 'menu';
+  if (l.pin && inRect(q, l.pin, 2)) return 'pin';
   if (l.more && near(q, l.more.x + ARROW / 2, l.more.y + ARROW / 2, ARROW / 2 + 4)) return 'more';
   if (l.desc && inRect(q, l.desc)) return 'desc';
   if (l.rows) for (const r of l.rows) if (Math.abs(q.y - r.y) <= 14 && q.x >= AVATAR_X - 14 && q.x <= l.w - PAD - 24) return r.key;
@@ -198,8 +201,6 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
       if (q.x >= SUB_TEXT_X && q.x <= l.w - PAD) return { sub: i, tick: false };
     }
   }
-  if (l.menu && inRect(q, l.menu, 4)) return 'menu';
-  if (l.pin && inRect(q, l.pin, 2)) return 'pin';
   if (l.cancel && inRect(q, l.cancel)) return 'cancel';
   if (l.finish && inRect(q, l.finish)) return 'finish';
   if (l.keep && inRect(q, l.keep, 4)) return 'keep';
