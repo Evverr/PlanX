@@ -432,24 +432,23 @@ export const checks = {
     expect(`${l.from === ids.c} ${l.to === ids.a}`, 'turned round onto its own start').toBe('true true');
   },
 
-  async 'Esc and Cmd+Enter are done with a component being changed, as its tick'(p) {
-    for (const key of ['esc', 'enter']) {
-      await put(p, `const a = e.newItem('sticky', X, Y, { text: 'Привет' }); b.add(a); e.setSelection([a.id]); return {};`);
-      await p.click(await p.at('.bar.panel button[aria-label="Компонент из выделенного"]'));
-      await sleep(100);
-      // Its title being typed in: done there and then.
-      if (key === 'esc') await p.escape(); else await p.key('Enter', 'Enter', 13, 4);
-      await sleep(200);
-      const c = await p.ev(`planx.board.list().filter((i) => i.comp).pop()`);
-      expect(`${!!c.stowed} ${await p.ev(`planx.board.list().filter((i) => i.inst === '${c.id}').length`)}`, `${key}: an instance in its place`).toBe('true 1');
-    }
-    // Out again with nothing picked (the focus anywhere): Esc is done with it all the same.
-    const c = await p.ev(`planx.board.list().filter((i) => i.comp).pop().id`);
-    await p.ev(`planx.editor.goToComponent(planx.board.list().find((i) => i.inst === '${c}').id); planx.editor.setSelection([]);`);
+  async 'Cmd+Enter is done with a component being changed, as its tick; Esc is not'(p) {
+    await put(p, `const a = e.newItem('sticky', X, Y, { text: 'Привет' }); b.add(a); e.setSelection([a.id]); return {};`);
+    await p.click(await p.at('.bar.panel button[aria-label="Компонент из выделенного"]'));
+    await sleep(100);
+    // Its title being typed in: Esc only done with the typing.
+    await p.escape();
     await sleep(200);
+    let c = await p.ev(`planx.board.list().filter((i) => i.comp).pop()`);
+    expect(`${!!c.stowed} ${await p.ev(`planx.board.list().filter((i) => i.inst === '${c.id}').length`)}`, 'esc: still being changed').toBe('false 0');
     await p.escape();
     await sleep(100);
-    expect(await p.ev(`!!planx.board.get('${c}').stowed`), 'nothing picked: done with it').toBe(true);
+    expect(await p.ev(`!!planx.board.get('${c.id}').stowed`), 'esc again: still').toBe(false);
+    await p.ev(`planx.editor.setSelection(['${c.id}'])`);
+    await p.key('Enter', 'Enter', 13, 4);
+    await sleep(200);
+    c = await p.ev(`planx.board.get('${c.id}')`);
+    expect(`${!!c.stowed} ${await p.ev(`planx.board.list().filter((i) => i.inst === '${c.id}').length`)}`, 'cmd+enter: an instance in its place').toBe('true 1');
   },
 
   async 'an instance detached from its component leaves its items, as they were, with no frame, and they stay so'(p) {

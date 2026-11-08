@@ -36,9 +36,6 @@ export function firstInstance(comp: Item, items: Item[]): Item | undefined {
   return mine.find((i) => i.id === comp.first) ?? mine.reduce<Item | undefined>((a, b) => (!a || (b.born ?? Infinity) < (a.born ?? Infinity) ? b : a), undefined);
 }
 
-/** A component's arrow past its tick ("Объекты", src/labs): made one of the board's own objects. */
-export const objectArrow = (it: Item, zoom: number) => ({ x: it.x + it.w + 66 / zoom, y: it.y + it.h / 2, r: 10 / zoom });
-
 /** Rectangles: the board-aligned box around them all. */
 export const around = (rs: Item[]) => {
   const x = Math.min(...rs.map((r) => r.x)), y = Math.min(...rs.map((r) => r.y));

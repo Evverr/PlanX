@@ -5,7 +5,7 @@ import { taskButtonAt } from './tasks';
 import { taskPartAt } from '../canvas/task';
 import { copyCode, onCodeCopy } from '../labs/codeBlock';
 import { toggleAudio } from '../canvas/audio';
-import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, ringAt, tickAt, objectArrowAt, pickedUnder } from './hover';
+import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, ringAt, tickAt, pickedUnder } from './hover';
 import { grabbableLine } from './tables';
 import { cancelGesture, eraseAlong } from './gestures';
 import { isPoly } from './tools';
@@ -100,7 +100,7 @@ export function press(ed: Editor, e: PointerEvent): void {
   // or on a table's line.
   const picked = ed.selection.size === 1 ? board.get([...ed.selection][0]) : undefined;
   const onControl = (!!picked && !ed.editingId && !isLocked(picked) && (onHandle(ed, picked, w) || onTopLeft(ed, picked, w) || onBottomLeft(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!sideAt(ed, picked, w))) || (!!ed.plusNode() && !!plusAt(ed, ed.plusNode()!, w))
-    || !!foldBadgeAt(ed, w) || !!tickAt(ed, w) || !!objectArrowAt(ed, w);
+    || !!foldBadgeAt(ed, w) || !!tickAt(ed, w);
   const empty = ed.tool === 'select' && e.button === 0 && !ed.spaceDown && !e.shiftKey && !hit && !link && !onControl
     && !grabbableLine(ed, w, hit, e.pointerType) && !ed.editingId
     // With Z held ("Зум рамкой"), anywhere is as the empty board.
@@ -216,11 +216,6 @@ export function press(ed: Editor, e: PointerEvent): void {
     return;
   }
   // Its arrow past the tick asks for a name, to make it one of the board's objects ("Объекты").
-  const arrow = objectArrowAt(ed, w);
-  if (arrow) {
-    ed.askObject(arrow.id);
-    return;
-  }
   // A folded mind map node's count unfolds it (that way), and leaves nothing picked: the map to look at.
   const unfold = e.shiftKey ? null : foldBadgeAt(ed, w);
   if (unfold) {

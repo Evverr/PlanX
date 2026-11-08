@@ -1694,13 +1694,17 @@ export const checks = {
     expect(await p.ev('window.opened'), 'and it goes there').toBe('https://docs.example.com');
   },
 
-  async '"Объекты": a component\'s arrow names it and makes it one of «Мои объекты», an instance where it stood; the menu puts more'(p) {
+  async '"Объекты": «Добавить в объекты» in a component\'s «…» menu names it and makes it one of «Мои объекты», an instance where it stood; the menu puts more'(p) {
     await p.ev(`(() => { localStorage.removeItem('planx-my-objects'); const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('sticky', 300, 300, { id: 's', w: 100, h: 100 })); e.setSelection(['s']); e.makeComponent(); e.stopEditing(); })()`);
     await sleep(200);
     const comp = await p.ev(`planx.board.list().find((i) => i.comp)`);
-    const arrow = await p.ev(`(() => { const s = planx.editor.toScreen({ x: ${comp.x + comp.w} + 66, y: ${comp.y + comp.h / 2} }); return [s.x, s.y]; })()`);
-    await p.click(arrow);
+    // (Its title done being typed in.)
+    await p.ev(`planx.editor.stopEditing(); planx.editor.setSelection(['${comp.id}'])`);
+    await sleep(300);
+    await p.click(await p.at('.bar.panel button[aria-label="Действия"]'));
+    await sleep(200);
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent.includes('Добавить в объекты')).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     await sleep(200);
     expect(await p.ev(`document.querySelector('.confirm p')?.textContent`), 'asked').toBe('Добавить в «Мои объекты»? Он будет в меню «Объекты» на любой доске в этом браузере.');
     await p.ev(`(() => { const i = document.querySelector('.confirm-input'); const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; set.call(i, 'Карточка'); i.dispatchEvent(new Event('input', { bubbles: true })); })()`);

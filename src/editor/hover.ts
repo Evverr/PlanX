@@ -5,7 +5,7 @@ import { taskPartAt } from '../canvas/task';
 import type { Point } from '../canvas/geometry';
 import { coveredAt, hitItem, hitLink, instanceBounds, linkBox, linkHandles, linkShape, onAudioButton, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, dotGap, HANDLE } from '../canvas/renderer';
-import { instanceGlyph, instancePlus, objectArrow } from '../model/components';
+import { instanceGlyph, instancePlus } from '../model/components';
 import { taskButtonAt } from './tasks';
 import { onCodeCopy } from '../labs/codeBlock';
 import { branchBase, buttonKey, foldBadge, foldedWays, mindButtons, mindWay, ringRadius, type MindButtonAt, type Way } from '../model/mind';
@@ -152,20 +152,13 @@ export function onInstancePlus(ed: Editor, it: Item, w: Point): boolean {
 /** The component in sight whose tick is under the point, picked or not. */
 export const tickAt = (ed: Editor, w: Point): Item | null => ed.shown().find((it) => onInstancePlus(ed, it, w)) ?? null;
 
-/** The component in sight whose arrow (made one of the board's objects, "Объекты") is under the point. */
-export const objectArrowAt = (ed: Editor, w: Point): Item | null => !labOn('objects') ? null : ed.shown().find((it) => {
-  if (!it.comp || it.stowed || it.obj || !zoomShows('comp', ed.cam.z, ed.selection.has(it.id))) return false;
-  const p = objectArrow(it, ed.cam.z / zoomSize('comp', ed.cam.z, ed.selection.has(it.id)));
-  return Math.hypot(w.x - p.x, w.y - p.y) <= Math.max(p.r * 1.3, ed.reach(0));
-}) ?? null;
-
 /** Whether a press is off the component being changed here: not on it, on what it holds or on the controls there. */
 export function offComponent(ed: Editor, w: Point, hit: Item | null): boolean {
   const c = ed.compHere ? ed.board.get(ed.compHere) : undefined;
   if (!c?.comp || c.stowed) return false;
   if ((hit && ed.carried([c]).has(hit.id)) || pointInRect(toLocal(c, w), c)) return false;
   const picked = ed.selection.size === 1 ? ed.board.get([...ed.selection][0]) : undefined;
-  return !tickAt(ed, w) && !objectArrowAt(ed, w) && frameButtonUnder(ed, w)?.id !== c.id
+  return !tickAt(ed, w) && frameButtonUnder(ed, w)?.id !== c.id
     && !(picked && (onHandle(ed, picked, w) || onTopLeft(ed, picked, w) || onBottomLeft(ed, picked, w) || !!dotAt(ed, picked, w) || onRotate(ed, picked, w) || !!sideAt(ed, picked, w)));
 }
 
@@ -311,12 +304,12 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   const mind = rest && (pointInRect(w, rest) || plusAt(ed, rest, w)) ? rest.id : over?.type === 'mind' && !over.host ? over.id : null;
   if (mind !== ed.mindHover) { ed.mindHover = mind; ed.requestRender(); }
   const node = ed.plusNode();
-  const tick = tickAt(ed, w), arrow = tick ? null : objectArrowAt(ed, w), plus = node ? plusAt(ed, node, w) : null;
+  const tick = tickAt(ed, w), plus = node ? plusAt(ed, node, w) : null;
   // A task's arrow under the pointer, darker (see canvas/task.ts).
   const tp = over?.type === 'task' && ed.editingId !== over.id ? taskButtonAt(over, w) : null;
   // The ring where a node's branches leave it, nearer than its "+" that way: lit, to fold them.
   const ring = ringAt(ed, w), ringFirst = ring && (!plus || ring.d < Math.hypot(w.x - plus.x, w.y - plus.y));
-  const hot = ringFirst ? `ring:${ring.id}:${ring.way}` : plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : arrow ? `obj:${arrow.id}` : glyph ?? (tp === 'arrow' || tp === 'more' || tp === 'menu' || tp === 'pin' ? `task:${over!.id}:${tp}` : typeof tp === 'object' && tp ? `task:${over!.id}:${tp.del ? 'del' : 'sub'}:${tp.sub}` : null)
+  const hot = ringFirst ? `ring:${ring.id}:${ring.way}` : plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : glyph ?? (tp === 'arrow' || tp === 'more' || tp === 'menu' || tp === 'pin' ? `task:${over!.id}:${tp}` : typeof tp === 'object' && tp ? `task:${over!.id}:${tp.del ? 'del' : 'sub'}:${tp.sub}` : null)
     ?? (over?.code && ed.editingId !== over.id && onCodeCopy(over, w) ? `code:${over.id}` : null);
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
