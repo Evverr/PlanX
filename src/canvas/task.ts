@@ -116,7 +116,8 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   if (!it.nd) out.desc = { x: LEFT, y: dy, w: descW, h: dh };
   // Its menu (three dots one over another) at the top right of what's under its header.
   out.menu = { x: w - 35, y: head + 12, w: ARROW, h: ARROW };
-  const d = it.nd ? head + 12 + ARROW - 8 : dy + dh, full = it.tv === 'full';
+  // (What's ticked in its menu shown as soon as it's opened, to its description or in full alike.)
+  const d = it.nd ? head + 12 + ARROW - 8 : dy + dh, full = !!it.tv;
   // All of it: under the description the blocks it has (added by its menu, or with something in them):
   // its subtasks, who set it and does it, by when; each after a line across, its first row 33 under it,
   // its last 33 over what comes next.

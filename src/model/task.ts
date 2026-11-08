@@ -42,10 +42,10 @@ export function closeTask(board: Board, id: string): void {
   if (it?.type === 'task' && it.tv && !it.keep) setView(board, it, undefined);
 }
 
-/** A double click on its header: closed, opened (`open`: to its description, or all of it), all of it,
- *  closed again. */
+/** A double click on its header: opened (`open`: to its description, or all of it, alike now: what's
+ *  ticked in its menu shows either way), or closed; nothing between. */
 export const nextView = (board: Board, it: Item, open: Item['tv'] = 'desc'): void =>
-  setView(board, it, !it.tv ? open : it.tv === 'desc' ? 'full' : undefined);
+  setView(board, it, !it.tv ? open : undefined);
 
 /** A new task, its middle at `c`: opened (`open`: to its description, as one put on the board comes, or
  *  all of it; closed, as wide as usual), up over the board as opened ones are, closed where it was put. */
