@@ -104,7 +104,8 @@ export function TaskMenu({ editor }: { editor: Editor }) {
   // Each what it has or not, ticked if it has it; a press on it the other way.
   const row = (label: string, on: boolean, run: () => void) => (
     <div className="menu-item"><button className={`menu-row task-check ${on ? 'on' : ''}`} role="menuitemcheckbox" aria-checked={on} onClick={run}>
-      <span>{label}</span>{on && <PanelIcon name="check-m" />}
+      {/* (The tick's room kept unticked too: the menu as wide either way.) */}
+      <span>{label}</span><PanelIcon name="check-m" style={on ? undefined : { visibility: 'hidden' }} />
     </button></div>
   );
   return (
