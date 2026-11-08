@@ -483,9 +483,9 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
         grouped: !labs.groups ? undefined : oneGroup ? (
           <div className="sw-group group-count">
             <span>{objects(items.length)}</span>
-            {btn('expand-m', 'Разгруппировать', () => editor.ungroup())}
+            {btn('expand-m', 'Разгруппировать (Ctrl+Shift+G)', () => editor.ungroup())}
           </div>
-        ) : items.filter((i) => !i.host).length > 1 ? btn('collapse-m', 'Сгруппировать', () => editor.group()) : undefined,
+        ) : items.filter((i) => !i.host).length > 1 ? btn('collapse-m', 'Сгруппировать (Ctrl+G)', () => editor.group()) : undefined,
         // (Shapes with no typing in them, «Без текста»: no text to set.)
         text: onText ? <button className="ib" title="Текст и шрифт" aria-label="Текст и шрифт" disabled={noText} onClick={onText}><PanelIcon name="text" /></button> : undefined,
         // Shapes with no typing in them: what's written stays, a double click doesn't open them for typing.
@@ -493,9 +493,10 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
           <button className={`ib ${noText ? 'on' : ''}`} title={noText ? 'Разрешить текст' : 'Без текста'} aria-label="Без текста" aria-pressed={noText}
             onClick={() => editor.board.transact(() => shapes.forEach((s) => editor.board.update(s.id, { nt: noText ? undefined : true })))}><PanelIcon name="text-off" /></button>
         ) : undefined,
-        tidy: labs.tidy && items.length > 1 ? <TidyButton editor={editor} />
-          : labs.tidy && items[0]?.type === 'mind' && editor.board.list().some((i) => i.parent === items[0].id) ? <TidyButton editor={editor} mind={items[0].id} /> : undefined,
-        align: labs.align && items.length > 1 ? <AlignButton editor={editor} /> : undefined,
+        // (Several picked: «Авторасположение» in the alignment's menu, below, while that's on.)
+        tidy: labs.tidy && items.length > 1 && !labs.align ? <TidyButton editor={editor} />
+          : labs.tidy && items.length === 1 && items[0]?.type === 'mind' && editor.board.list().some((i) => i.parent === items[0].id) ? <TidyButton editor={editor} mind={items[0].id} /> : undefined,
+        align: labs.align && items.length > 1 ? <AlignButton editor={editor} tidy={labs.tidy} /> : undefined,
         lock: labs.lock && items.length > 0 ? <LockButton editor={editor} items={items} /> : undefined,
         react: labs.reactions && items.length > 0 ? <ReactButton editor={editor} items={items} /> : undefined,
         trash: btn('trashcan', 'Удалить (Del)', () => editor.deleteSelection()),

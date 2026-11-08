@@ -5,7 +5,7 @@ import { emojiSrc } from '../emoji/emoji';
 import { PanelIcon } from '../ui/PanelIcon';
 import { myId } from './labs';
 import { REACTIONS, toggleReaction } from './overlays';
-import { startTidy, stopTidy, subscribeTidy, tidyMatches, tidyNow } from './tidy';
+import { shapeCols, startTidy, stopTidy, subscribeTidy, tidyMatches, tidyNow, type TidyShape } from './tidy';
 import { holds } from './tidyMind';
 import { alignItems, type AlignTo } from './align';
 
@@ -27,9 +27,18 @@ const ALIGNS: Array<[AlignTo, 'align-items-left' | 'align-items-center' | 'align
   ['top', 'align-items-top', 'По верхнему краю'], ['middle', 'align-items-middle', 'По середине'], ['bottom', 'align-items-bottom', 'По нижнему краю'],
 ];
 
+/** «Авторасположение» in the three ways (as near square as they come, in a row, in a column), with the
+ *  ways to line up: each lit while what's picked is laid out so, a press again turning it off. */
+const TIDIES: Array<[TidyShape, 'apps' | 'columns', string, React.CSSProperties?]> = [
+  ['grid', 'apps', 'Авторасположение квадратом'], ['row', 'columns', 'Авторасположение по горизонтали'], ['col', 'columns', 'Авторасположение по вертикали', { transform: 'rotate(90deg)' }],
+];
+
 /** "Выравнивание" on the selection panel: a button opening the six ways to line what's selected up,
- *  across and down; it stays open to try one after another. */
-export function AlignButton({ editor }: { editor: Editor }) {
+ *  across and down, and, with «Авторасположение» on, the three ways to lay it out; it stays open to try
+ *  one after another. */
+export function AlignButton({ editor, tidy: withTidy }: { editor: Editor; tidy?: boolean }) {
+  const t = useSyncExternalStore(subscribeTidy, tidyNow), on = !!t && tidyMatches(editor);
+  const n = t?.ids.length ?? 0, shapeOn = (s: TidyShape) => on && t!.cols === shapeCols(s, n) && (s !== 'grid' || (t!.cols !== 1 && t!.cols !== n));
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -45,6 +54,11 @@ export function AlignButton({ editor }: { editor: Editor }) {
       </button>
       {open && (
         <div className="op-pop align-pop" data-nosort role="toolbar" aria-label="Выравнивание">
+          {withTidy && TIDIES.map(([shape, icon, title, style]) => (
+            <button key={shape} className={`ib ${shapeOn(shape) ? 'on' : ''}`} title={title} aria-label={title} aria-pressed={shapeOn(shape)}
+              onClick={() => { if (shapeOn(shape)) stopTidy(); else { stopTidy(); startTidy(editor, shape); } editor.requestRender(); }}><PanelIcon name={icon} style={style} /></button>
+          ))}
+          {withTidy && <span className="align-cell"><span className="sep" /></span>}
           {ALIGNS.map(([to, icon, title], i) => <span key={to} className="align-cell">
             {i === 3 && <span className="sep" />}
             <button className="ib" title={title} aria-label={title} onClick={() => alignItems(editor, to)}><PanelIcon name={icon} /></button>

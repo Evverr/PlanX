@@ -819,11 +819,11 @@ export class Editor {
     this.emit();
   }
 
-  setSelection(ids: Iterable<string>): void {
+  setSelection(ids: Iterable<string>, groups = true): void {
     const was = [...this.selection];
     this.selection = new Set(ids);
-    // Something in a group («Группы», src/labs) picked with all of it.
-    if (labOn('groups')) {
+    // Something in a group («Группы», src/labs) picked with all of it (but on its own, by a double click in it).
+    if (groups && labOn('groups')) {
       const grps = new Set([...this.selection].map((id) => this.board.get(id)?.grp).filter(Boolean));
       if (grps.size) for (const it of this.board.list()) if (it.grp && grps.has(it.grp)) this.selection.add(it.id);
     }

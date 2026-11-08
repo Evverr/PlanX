@@ -1272,7 +1272,9 @@ export const checks = {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.transact(() => { b.add(e.newItem('rect', 300, 300, { id: 'a', w: 200, h: 200 })); b.add(e.newItem('rect', 560, 300, { id: 'c', w: 200, h: 200 })); }); e.setSelection(['a', 'c']); })()`);
     await sleep(300);
-    await p.click(await p.at('.bar.panel button[aria-label="Авторасположение"]'));
+    // (In the alignment's menu, several picked.)
+    await p.click(await p.at('.bar.panel button[aria-label="Выравнивание"]'));
+    await p.click(await p.at('.align-pop button[aria-label="Авторасположение по горизонтали"]'));
     await sleep(200);
     const m = await p.ev(`(() => { const a = planx.board.get('a'), c = planx.board.get('c'), s = planx.editor.toScreen({ x: (a.x + a.w + c.x) / 2, y: (a.y + a.y + a.h) / 2 }); return [Math.round(s.x), Math.round(s.y)]; })()`);
     // How many solid red dots across its middle and along it just off its middle line.
@@ -1502,7 +1504,8 @@ export const checks = {
     await sleep(300);
     await p.drag([250, 200], [800, 560]);
     expect((await p.ev(`[...planx.editor.selection].filter((id) => !id.includes('~')).sort().join()`)), 'both picked').toBe('i1,i2');
-    await p.click(await p.at('.bar.panel button[aria-label="Авторасположение"]'));
+    await p.click(await p.at('.bar.panel button[aria-label="Выравнивание"]'));
+    await p.click(await p.at('.align-pop button[aria-label="Авторасположение по горизонтали"]'));
     await sleep(200);
     const gap = () => p.ev(`planx.board.get('i2~a').x - (planx.board.get('i1~a').x + planx.board.get('i1~a').w)`);
     expect(await gap(), 'what they show 24 apart').toBe(24);
