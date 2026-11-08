@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Editor } from '../editor/editor';
 import type { Item } from '../model/types';
 import { emojiSrc } from '../emoji/emoji';
@@ -38,6 +38,14 @@ const TIDIES: Array<[TidyShape, 'apps' | 'columns', string, React.CSSProperties?
  *  one after another. */
 export function AlignButton({ editor, tidy: withTidy }: { editor: Editor; tidy?: boolean }) {
   const t = useSyncExternalStore(subscribeTidy, tidyNow), on = !!t && tidyMatches(editor);
+  // (Its left edge level with the panel's it opens from.)
+  const popRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const pop = popRef.current, wrap = pop?.parentElement, bar = wrap?.closest('.bar');
+    if (!pop || !wrap || !bar) return;
+    pop.style.transform = 'none';
+    pop.style.left = `${Math.round(bar.getBoundingClientRect().left - wrap.getBoundingClientRect().left)}px`;
+  });
   const n = t?.ids.length ?? 0, shapeOn = (s: TidyShape) => on && t!.cols === shapeCols(s, n) && (s !== 'grid' || (t!.cols !== 1 && t!.cols !== n));
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -53,7 +61,7 @@ export function AlignButton({ editor, tidy: withTidy }: { editor: Editor; tidy?:
         <PanelIcon name="align-items-left" />
       </button>
       {open && (
-        <div className="op-pop align-pop" data-nosort role="toolbar" aria-label="Выравнивание">
+        <div ref={popRef} className="op-pop align-pop" data-nosort role="toolbar" aria-label="Выравнивание">
           {withTidy && TIDIES.map(([shape, icon, title, style]) => (
             <button key={shape} className={`ib ${shapeOn(shape) ? 'on' : ''}`} title={title} aria-label={title} aria-pressed={shapeOn(shape)}
               onClick={() => { if (shapeOn(shape)) stopTidy(); else { stopTidy(); startTidy(editor, shape); } editor.requestRender(); }}><PanelIcon name={icon} style={style} /></button>
