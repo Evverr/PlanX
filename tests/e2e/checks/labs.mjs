@@ -743,13 +743,13 @@ export const checks = {
     await sleep(300);
     const below = await p.rect('.panel-over:not(.gone)');
     expect(!!below && below.t > 200 && below.t < 260, 'under it').toBe(true);
-    // With the handles of «Авторасположение» up: at the bottom, out of their way.
+    // With the handles of «Авторасположение» up: still over them.
     await p.ev(`(async () => { const e = planx.editor, b = planx.board; b.update('a', { x: 400, y: 300 }); b.add(e.newItem('rect', 700, 300, { id: 'c', w: 100, h: 100 })); e.setSelection(['a', 'c']); })()`);
     await sleep(300);
     expect(!!(await p.rect('.panel-over:not(.gone)')), 'two picked: over them').toBe(true);
     await p.ev(`(async () => { (await import('/src/labs/tidy.ts')).startTidy(planx.editor); })()`);
     await sleep(300);
-    expect([!!(await p.rect('.panel-over:not(.gone)')), !!(await p.rect('.bar.panel:not(.panel-over, .gone)'))].join(), 'laid out: at the bottom').toBe('false,true');
+    expect([!!(await p.rect('.panel-over:not(.gone)')), !!(await p.rect('.bar.panel:not(.panel-over, .gone)'))].join(), 'laid out: still over them').toBe('true,false');
     // Switched off, only the one at the bottom.
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
     await sleep(150);
