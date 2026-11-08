@@ -18,7 +18,7 @@ import { pullOut } from '../labs/linkJoint';
 import { noteMindMoved } from '../labs/tidyMind';
 import { rotateCursor } from './cursors';
 import { MIND_TOPIC, type PenTool } from './tools';
-import { clickTypes, onMindText } from './hover';
+import { clickTypes, onMindText, updateCursor } from './hover';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
 import { levelIn } from '../labs/groups';
@@ -435,8 +435,10 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         if (it && g.dbl && typeof part === 'object' && part && !part.tick && !part.del) { toggleSub(board, it, part.sub); ed.startEditing(g.id, part.sub + 1, 'end'); }
         else if (it) {
           pressTask(ed, it, g.start, g.tap);
-          // (What was under the pointer may have moved off it, opened or closed: lit no more till it moves.)
-          ed.hotPlus = null;
+          // What's under the pointer now lit (opened or closed, what was there may have moved off it; what's
+          // still there stays lit).
+          if (ed.pointerAt) updateCursor(ed, ed.toWorld(ed.pointerAt.x, ed.pointerAt.y), e.altKey);
+          else ed.hotPlus = null;
           ed.requestRender();
         }
       } else if (board.get(g.id)?.code && !board.get(g.id)?.text && !g.dbl && ed.editingId !== g.id) {
