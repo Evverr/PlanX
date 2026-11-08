@@ -84,12 +84,17 @@ export const checks = {
     await setLab(p, 'taskFull', false);
     await sleep(450);
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
-    expect((await t()).tv, 'its description').toBe('desc');
+    expect([(await t()).tv, await rows()].join(), 'its description, what\'s ticked in its menu with it').toBe('desc,boss,doer');
+    // A double click on its header: closed, then opened again, nothing between.
     await sleep(450);
     await dblClick(p, await at('(t) => ({ x: t.x + 300, y: t.y + 12 })'));
     await sleep(100);
-    expect((await t()).tv, 'all of it, by a double click on its header').toBe('full');
+    expect((await t()).tv ?? 'closed', 'closed by a double click on its header').toBe('closed');
     await setLab(p, 'taskFull', true);
+    await sleep(450);
+    await dblClick(p, await at('(t) => ({ x: t.x + 150, y: t.y + 12 })'));
+    await sleep(100);
+    expect((await t()).tv, 'opened again').toBe('full');
     // Subtasks: the first added by its menu, Enter going on to the next; an empty one goes.
     await sleep(450);
     await menu('Подзадачи');
