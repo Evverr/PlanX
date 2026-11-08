@@ -56,6 +56,9 @@ export type Gesture =
 
 /** How near (in screen pixels) an edge or middle has to come to another's to line up with it. */
 const GUIDE_SNAP = 6;
+/** «Направляющие по близким объектам» (src/labs): how near another must be (the gap between them, in
+ *  screen pixels) for what's dragged to line up with it. */
+const NEAR_GUIDES = 200;
 /** How close to a square angle (in degrees) a turn sticks to it. */
 const ROTATE_SNAP = 3;
 /** What's resized to whole and half days on a timeline. */
@@ -117,14 +120,18 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         pullOut(ed, g.orig.keys());
       }
       // With Shift held as it's dragged, what's dragged lines up with what's on screen around it when near.
+      // With «Направляющие по близким объектам» (src/labs), without Shift too, but only with what's near it
+      // (see NEAR_GUIDES); Shift then as ever. (Not a mind map's node: its map places it.)
       let sx = 0, sy = 0;
       g.guides = undefined;
-      if (e.shiftKey) {
+      const near = !e.shiftKey && labOn('nearGuides') && board.get(g.id)?.type !== 'mind';
+      if (e.shiftKey || near) {
         const moving = [...g.orig].map(([id, o]) => { const it = board.get(id); return it && { ...it, x: o.x + dx, y: o.y + dy }; }).filter((i): i is Item => !!i);
         const bs = moving.map(boxOf), view = ed.viewRect();
         const x = Math.min(...bs.map((b) => b.x)), y = Math.min(...bs.map((b) => b.y));
         const box = bs.length ? { x, y, w: Math.max(...bs.map((b) => b.x + b.w)) - x, h: Math.max(...bs.map((b) => b.y + b.h)) - y } : null;
-        const others = ed.shown().filter((i) => !g.orig.has(i.id) && i.type !== 'ink').map(boxOf).filter((r) => rectsIntersect(r, view));
+        const reach = NEAR_GUIDES / ed.cam.z, gap = (r: Rect, b: Rect) => Math.hypot(Math.max(0, r.x - b.x - b.w, b.x - r.x - r.w), Math.max(0, r.y - b.y - b.h, b.y - r.y - r.h));
+        const others = ed.shown().filter((i) => !g.orig.has(i.id) && i.type !== 'ink').map(boxOf).filter((r) => rectsIntersect(r, view) && (!near || (!!box && gap(r, box) <= reach)));
         if (box) ({ dx: sx, dy: sy, guides: g.guides } = snapToGuides(box, others, GUIDE_SNAP / ed.cam.z));
       }
       // On a timeline ("Объекты", src/labs), what's dragged keeps its left side to whole and half days.
