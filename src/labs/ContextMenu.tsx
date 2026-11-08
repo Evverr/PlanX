@@ -237,8 +237,8 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
         {row('copy', 'Скопировать', run(() => { if (editor.copy()) onToast('Скопировано. Вставить: Ctrl+V или правым кликом'); }))}
         {row('arrow-top-l', 'Переместить вверх', run(() => editor.shiftZ(1)))}
         {row('arrow-down-l', 'Переместить вниз', run(() => editor.shiftZ(-1)))}
-        {/* (Not for a component picked alone: it's one already, as on the panel.) */}
-        {!(editor.selection.size === 1 && one?.comp) && row('component', 'Сделать компонентом', run(() => editor.makeComponent()))}
+        {/* (Not for a component or an instance of one picked alone: it's one already, as on the panel.) */}
+        {!(editor.selection.size === 1 && (one?.comp || inOne?.inst)) && row('component', 'Сделать компонентом', run(() => editor.makeComponent()))}
         {editInst && row('edit-l', 'Редактировать компонент', run(() => editor.editComponentAt(editInst)))}
         {toObjects && row('package', 'Добавить в объекты', run(() => editor.askObject(toObjects.id)))}
         {tidy && row('apps', 'Авторасположение', run(() => { if (tidyMind) editor.tidyMind(tidyMind); else startTidy(editor); editor.requestRender(); }))}
