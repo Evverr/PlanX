@@ -219,9 +219,10 @@ describe('mind map: folding a node\'s branches away', () => {
     expect(branchCurve(a, node('aa', 360, 0, { parent: 'a' }))[0]).toEqual({ x: 276, y: 20 });
   });
 
-  it('the central topic grows the ways it\'s set to (right and left unless set), each folding on its own', () => {
+  it('the central topic grows the ways it\'s set to (right only unless set), each folding on its own', () => {
     const folded = { ...r, foldedWays: ['left' as const] };
-    expect(mindButtons(folded, get, 1).map(buttonKey)).toEqual(['child', 'left']);
+    expect(mindButtons(folded, get, 1).map(buttonKey)).toEqual(['child']);
+    expect(mindButtons({ ...r, mw: ['right', 'left'] }, get, 1).map(buttonKey)).toEqual(['child', 'left']);
     expect(mindButtons({ ...r, mw: ['right', 'left', 'down', 'up'] }, get, 1).map(buttonKey)).toEqual(['child', 'left', 'down', 'up']);
     expect([...foldedAway(folded, all, get)]).toEqual([['left', ['l']]]);
     expect(folding(folded, 'down', true)).toEqual({ foldedWays: ['left', 'down'] });

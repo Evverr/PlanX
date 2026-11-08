@@ -176,6 +176,10 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           e.preventDefault();
           commit();
           closeTask(editor.board, id);
+        } else if (item.type === 'mind' && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          // In a mind map node, Cmd+Enter (Ctrl+Enter) a new line, as Shift+Enter (Enter making one beside it).
+          e.preventDefault();
+          document.execCommand('insertText', false, '\n');
         } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
           // Cmd+Enter is done with it: the text kept and nothing left picked; in a component being changed,
           // done with that too.
