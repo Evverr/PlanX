@@ -5,7 +5,7 @@ import { fittedSize, fontOf, FONTS, LINE_HEIGHT, textBlockHeight, withList } fro
 import { FOLD_FS, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP } from '../model/frame';
 import { center } from '../canvas/geometry';
 import { descLook, TASK_FONT, taskFieldBox } from '../canvas/task';
-import { addChild, rootTextColor, siblingOf, siblingTints } from '../model/mind';
+import { addChild, rootTextColor, siblingTints } from '../model/mind';
 import { autoInk } from '../model/color';
 import { colsOf, rowsOf } from '../model/table';
 import { openSwap, swapKind } from '../labs/swap';
@@ -243,32 +243,22 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           commit();
           editor.setSelection([next.id]);
           editor.startEditing(next.id, null, 'end');
-        } else if (item.type === 'mind' && e.key === 'Tab') {
-          // In a mind map, Tab goes on typing in the next branch of the same parent (Shift+Tab, the one
-          // before), round to the first past the last. Typing in a branch alone there, it makes another
-          // after it (before it), typed in at once, and so on while the typing goes on from one to the
-          // next (see commitText). Enter starts a new line.
+        } else if (item.type === 'mind' && (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey))) {
+          // In a mind map, Tab goes on typing in a new branch of it (a child), Shift+Tab back to its parent
+          // (picked); Enter in a new one beside it (a central topic's: a branch of it), typed in at once, and
+          // so on while the typing goes on from one to the next, standing centred on their node as they come
+          // (see commitText). Shift+Enter starts a new line.
           e.preventDefault();
-          const next = siblingOf(id, editor.board.list(), e.shiftKey ? -1 : 1);
-          if (item.parent && (!next || editor.tabRun === item.parent)) {
+          commit();
+          if (e.key === 'Tab' && e.shiftKey) { if (item.parent) editor.setSelection([item.parent]); return; }
+          if (e.key === 'Enter' && item.parent) {
             editor.tabRun = item.parent;
             editor.tabStep = true;
-            commit();
-            editor.addMindNode(id, e.shiftKey ? 'above' : 'below');
-            // They stand centred on their node as they come, gliding there.
+            editor.addMindNode(id, 'below');
             if (editor.editingId) editor.glide(addChild(editor.editingId, editor.board.list()));
             return;
           }
-          // Typing in a central topic, Tab goes on in a new branch of it, to the right.
-          if (!item.parent) {
-            commit();
-            editor.addMindNode(id, 'child');
-            return;
-          }
-          if (!next) return;
-          commit();
-          editor.setSelection([next]);
-          editor.startEditing(next, null, 'end');
+          editor.addMindNode(id, 'child');
         }
       }}
     />

@@ -265,24 +265,30 @@ export const checks = {
     expect(await p.ev(`planx.board.get('${left}').collapsed`), 'its branch folded').toBe(true);
   },
 
-  async 'Tab while typing in a mind map node goes on to the next branch of the same parent, Shift+Tab back'(p) {
+  async 'typing in a mind map node: Tab goes on in a branch of it, Shift+Tab picks its parent, Enter one beside it, Shift+Enter a new line'(p) {
     await p.make('mind', [500, 400]);
     await p.escape();
     const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
-    await p.ev(`(() => { for (let i = 0; i < 3; i++) planx.editor.addMindNode('${root}', 'child', true); })()`);
-    const kids = await p.ev(`planx.board.list().filter((i) => i.parent === '${root}').sort((m, n) => m.y - n.y).map((i) => i.id)`);
-    await p.ev(`planx.editor.setSelection(['${kids[0]}']); planx.editor.startEditing('${kids[0]}')`);
+    await p.ev(`planx.editor.addMindNode('${root}', 'child', true)`);
     await sleep(200);
+    const first = await p.ev('planx.editor.editingId');
+    await p.cdp('Input.insertText', { text: 'А' });
     await p.key('Tab', 'Tab', 9);
-    expect(await p.ev('planx.editor.editingId'), 'the second one typed in').toBe(kids[1]);
+    const child = await p.ev('planx.editor.editingId');
+    expect(await p.ev(`planx.board.get('${child}').parent`), 'a branch of it typed in').toBe(first);
+    await p.cdp('Input.insertText', { text: 'Б' });
     await p.key('Tab', 'Tab', 9, 8);
-    expect(await p.ev('planx.editor.editingId'), 'back to the first').toBe(kids[0]);
-    await p.key('Tab', 'Tab', 9, 8);
-    expect(await p.ev('planx.editor.editingId'), 'round to the last').toBe(kids[2]);
-    expect(await p.ev(`planx.board.list().filter((i) => i.type === 'mind').length`), 'nothing new made').toBe(4);
+    expect([await p.ev('planx.editor.editingId') ?? 'none', await p.ev(`[...planx.editor.selection].join()`)].join(), 'its parent picked').toBe(`none,${first}`);
+    await p.ev(`planx.editor.startEditing('${first}', null, 'end')`);
+    await sleep(200);
+    await p.key('Enter', 'Enter', 13, 8);
+    expect(await p.ev('planx.editor.editingId'), 'Shift+Enter: still typed in (a new line there)').toBe(first);
+    await p.key('Enter', 'Enter', 13);
+    const next = await p.ev('planx.editor.editingId');
+    expect([next !== first, await p.ev(`planx.board.get('${next}').parent`)].join(), 'one beside it typed in').toBe(`true,${root}`);
   },
 
-  async 'Tab while typing in a lone mind map branch makes the next, and the next; once done they centre, and Tab goes round them'(p) {
+  async 'Enter while typing in a lone mind map branch makes the next, and the next; once done they centre'(p) {
     await p.make('mind', [400, 400]);
     await p.escape();
     const root = await p.ev(`planx.board.list().find((i) => i.type === 'mind').id`);
@@ -290,7 +296,7 @@ export const checks = {
     await p.key('Tab', 'Tab', 9);
     for (const t of ['один', 'два', 'три']) {
       await p.cdp('Input.insertText', { text: t });
-      await p.key('Tab', 'Tab', 9);
+      await p.key('Enter', 'Enter', 13);
     }
     await p.cdp('Input.insertText', { text: 'четыре' });
     const kids = () => p.ev(`planx.board.list().filter((i) => i.parent === '${root}').sort((m, n) => m.y - n.y)`);
@@ -305,12 +311,6 @@ export const checks = {
     const done = await kids(), r = await p.ev(`planx.board.get('${root}')`);
     expect(done.map((k) => k.text).join(), 'what was typed').toBe('один,два,три,четыре');
     expect((done[0].y + done[3].y + done[3].h) / 2, 'centred on the topic').toBeNear(r.y + r.h / 2, 1);
-    // Typed in again later, Tab only goes from one to the next.
-    await p.ev(`planx.editor.setSelection(['${done[3].id}']); planx.editor.startEditing('${done[3].id}')`);
-    await sleep(200);
-    await p.key('Tab', 'Tab', 9);
-    expect(await p.ev('planx.editor.editingId'), 'round to the first').toBe(done[0].id);
-    expect((await kids()).length, 'nothing more made').toBe(4);
   },
 
   async 'Cmd+Enter while typing keeps the text and leaves nothing picked'(p) {
