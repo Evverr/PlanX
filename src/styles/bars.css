@@ -84,9 +84,8 @@
 .paint-fill, .paint-stroke { width: var(--e18); height: var(--e18); border-radius: 50%; box-sizing: border-box; }
 .paint-fill { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); }
 .paint-stroke { border: 2.5px solid; }
-/* The text's: a letter over a bar in its colour. */
-.paint-text { display: flex; align-items: center; justify-content: center; width: var(--e18); height: var(--e18); box-sizing: border-box;
-  border-bottom: var(--s3) solid; font: 700 var(--s13)/1 "Inter", var(--ui); color: var(--menu-ink); }
+/* The text's: as the text panel's colour (format.css), its icon over a bar in its colour. */
+.ib > .swatch { position: absolute; left: var(--s12); right: var(--s12); bottom: var(--s4); height: var(--e4); border-radius: var(--s2); }
 .paint-fill.none, .paint-stroke.none { background: linear-gradient(135deg, transparent 44%, var(--danger) 44%, var(--danger) 56%, transparent 56%) !important; box-shadow: inset 0 0 0 1px var(--line); border: 0; }
 /* On a board, the logo is the way back to the shelf: the whole piece of the bar up to its separator
    takes the click, the logo staying where it was and looking the same under the pointer; but for the
