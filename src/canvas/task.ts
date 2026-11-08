@@ -115,8 +115,8 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   // Its menu (three dots one over another) at the top right of what's under its header; its pin under it while it's kept
   // open («Закрепить описание»), the description as tall as both at least.
   out.menu = { x: w - 35, y: head + 12, w: ARROW, h: ARROW };
-  if (it.keep) out.pin = { x: w - 35, y: head + 40, w: ARROW, h: ARROW };
-  const d = Math.max(dy + dh, it.keep ? head + 40 + ARROW - 4 : 0), full = it.tv === 'full';
+  if (it.keep) out.pin = { x: w - 35, y: head + 44, w: ARROW, h: ARROW };
+  const d = Math.max(dy + dh, it.keep ? head + 44 + ARROW - 4 : 0), full = it.tv === 'full';
   // All of it: under the description the blocks it has (added by its menu, or with something in them):
   // its subtasks, who set it and does it, by when; each after a line across, its first row 33 under it,
   // its last 33 over what comes next.
@@ -531,7 +531,8 @@ function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typin
   // (Lighter than the arrows, darker under the pointer.)
   if (l.menu) { const k = litNow(`${it.id}:menu`, hot === `task:${it.id}:menu`); drawIcon(ctx, 'more-vertical-l', x + l.menu.x, y + l.menu.y, ARROW, look.dark ? `rgba(255,255,255,${0.3 + 0.55 * k})` : `rgba(0,0,0,${0.2 + 0.55 * k})`); }
   // Kept open («Закрепить описание»): a pin over it, unpinning it on a click.
-  if (l.pin) drawIcon(ctx, 'pin', x + l.pin.x, y + l.pin.y, ARROW, hot === `task:${it.id}:pin` ? BLUE : arrowInk('pin'));
+  // (Lit as the menu is.)
+  if (l.pin) { const k = litNow(`${it.id}:pin`, hot === `task:${it.id}:pin`); drawIcon(ctx, 'pin', x + l.pin.x, y + l.pin.y, ARROW, look.dark ? `rgba(255,255,255,${0.3 + 0.55 * k})` : `rgba(0,0,0,${0.2 + 0.55 * k})`); }
   if (l.subsAt !== undefined) label('Подзадачи:', l.subsAt);
   const subs = it.subs ?? [];
   (l.subs ?? []).forEach((sy, i) => {
