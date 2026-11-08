@@ -65,7 +65,7 @@ export interface TaskLayout {
    *  subtasks' heading, each subtask's top (the last: the row adding one) and its text's height (its lines
    *  wrapped to its width), the buttons, and «Не
    *  сворачивать» left of them. */
-  lines?: number[]; rows?: Array<{ key: 'boss' | 'doer' | 'due'; y: number }>; menu?: Rect; subsAt?: number; subs?: number[]; subH?: number[]; cancel?: Rect; finish?: Rect; keep?: Rect;
+  lines?: number[]; rows?: Array<{ key: 'boss' | 'doer' | 'due'; y: number }>; menu?: Rect; pin?: Rect; subsAt?: number; subs?: number[]; subH?: number[]; cancel?: Rect; finish?: Rect; keep?: Rect;
 }
 
 const lineH = (fs: number) => fs * LINE_HEIGHT;
@@ -107,24 +107,15 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   const descW = Math.max(80, w - LEFT - PAD), dy = head + 22;
   // (Its description in a list, as drawn: each paragraph after its bullet or number.)
   const dl = descLook(it), dh = textBlockHeight(it.desc ? withList(it.desc, it.ls) : DESC_HINT, descW, dl.fs, { weight: dl.weight, family: dl.family, italic: dl.italic });
-  // Closed: its title, and its description pinned («Закрепить описание»), if it has one.
-  if (!it.tv) {
-    if (it.dpin && it.desc) { out.desc = { x: LEFT, y: head - 4, w: descW, h: dh }; out.h = Math.ceil(head - 4 + dh + 16); }
-    return out;
-  }
+  if (!it.tv) return out;
   out.desc = { x: LEFT, y: dy, w: descW, h: dh };
-  const d = dy + dh;
-  if (it.tv === 'desc') {
-    out.more = { x: w - 35, y: d };
-    out.h = Math.ceil(d + 40);
-    return out;
-  }
-  // Under the description the blocks it has (added by its menu, or with something in them): its subtasks,
-  // who set it and does it, by when; each between lines across, its first row 33 under the line over it,
-  // its last 33 over the line under it. Then «Не сворачивать», its menu and its buttons.
+  const d = dy + dh, full = it.tv === 'full';
+  // All of it: under the description the blocks it has (added by its menu, or with something in them):
+  // its subtasks, who set it and does it, by when; each after a line across, its first row 33 under it,
+  // its last 33 over what comes next.
   out.lines = [];
   let at = d + 25;
-  if (it.tsb || it.subs?.length) {
+  if (full && (it.tsb || it.subs?.length)) {
     out.lines.push(at);
     // «Подзадачи:», the subtasks under it, their boxes on the title's line; each as tall as its lines (the
     // row adding one, one), the next 38 on from its first line.
@@ -136,20 +127,26 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
     for (const h of out.subH) { out.subs.push(sy); sy += SUB + h - lh; }
     at = out.subs[out.subs.length - 1] + STATUS + 27;
   }
-  const keys = [...(it.tpp || it.boss || it.doer ? (['boss', 'doer'] as const) : []), ...(it.tdu || it.due ? (['due'] as const) : [])];
+  const keys = full ? [...(it.tpp || it.boss || it.doer ? (['boss', 'doer'] as const) : []), ...(it.tdu || it.due ? (['due'] as const) : [])] : [];
   if (keys.length) {
     out.lines.push(at);
     out.rows = keys.map((key, i) => ({ key, y: at + 33 + ROW * i }));
     at = at + 33 + ROW * (keys.length - 1) + 33;
   }
-  out.lines.push(at);
-  const by = at + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - PAD - fw;
-  out.finish = { x: fx, y: by, w: fw, h: BUTTON_H };
-  out.cancel = { x: fx - 10 - cw, y: by, w: cw, h: BUTTON_H };
-  // Its menu (a burger) left of the buttons: what's added to it.
-  out.menu = { x: fx - 10 - cw - 10 - BUTTON_H, y: by, w: BUTTON_H, h: BUTTON_H };
-  out.keep = { x: LABEL_X, y: by, w: Math.ceil(KEEP_BOX + KEEP_GAP + widthOf(KEEP_LABEL, TEXT_FS, 400)), h: BUTTON_H };
-  out.h = Math.ceil(by + BUTTON_H + 31);
+  // Its foot: at its right its menu (a burger, where the arrow under it was), its pin over it while it's kept
+  // open («Закрепить описание»); left of it «Отмена» and «Завершить», shown by the menu («Показать кнопки»).
+  const buttons = full && !!it.tbtn;
+  let foot = buttons || out.lines.length ? at - 13 : d + 8;
+  if (buttons) { out.lines.push(at); foot = at + 24; }
+  if (it.keep) { out.pin = { x: w - 35, y: foot, w: ARROW, h: ARROW }; foot += 28; }
+  const rowH = buttons ? BUTTON_H : ARROW;
+  if (buttons) {
+    const fw = buttonW('Завершить'), cw = buttonW('Отмена'), fx = w - 35 - 12 - fw;
+    out.finish = { x: fx, y: foot, w: fw, h: BUTTON_H };
+    out.cancel = { x: fx - 10 - cw, y: foot, w: cw, h: BUTTON_H };
+  }
+  out.menu = { x: w - 35, y: foot + (rowH - ARROW) / 2, w: ARROW, h: ARROW };
+  out.h = Math.ceil(foot + rowH + (buttons ? 31 : 14));
   return out;
 }
 
@@ -157,7 +154,7 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
 export const taskSize = (it: Item, w = it.w): { w: number; h: number } => ({ w, h: taskLayout(it, w).h });
 
 /** What a point on it (from its top left corner) is on. */
-export type TaskPart = 'status' | 'arrow' | 'more' | 'menu' | 'head' | 'title' | 'desc' | 'boss' | 'doer' | 'due' | 'add' | 'cancel' | 'finish' | 'keep'
+export type TaskPart = 'status' | 'arrow' | 'more' | 'menu' | 'pin' | 'head' | 'title' | 'desc' | 'boss' | 'doer' | 'due' | 'add' | 'cancel' | 'finish' | 'keep'
   | { sub: number; tick: boolean; del?: boolean };
 
 const inRect = (p: Point, r: Rect, pad = 0) => p.x >= r.x - pad && p.x <= r.x + r.w + pad && p.y >= r.y - pad && p.y <= r.y + r.h + pad;
@@ -187,7 +184,8 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
       if (q.x >= SUB_TEXT_X && q.x <= l.w - PAD) return { sub: i, tick: false };
     }
   }
-  if (l.menu && inRect(q, l.menu)) return 'menu';
+  if (l.menu && inRect(q, l.menu, 4)) return 'menu';
+  if (l.pin && inRect(q, l.pin, 2)) return 'pin';
   if (l.cancel && inRect(q, l.cancel)) return 'cancel';
   if (l.finish && inRect(q, l.finish)) return 'finish';
   if (l.keep && inRect(q, l.keep, 4)) return 'keep';
@@ -308,14 +306,8 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   ctx.beginPath();
   ctx.roundRect(x + 1, y + 1, l.w - 2, l.h - 2, TASK_RAD - 1);
   ctx.fillStyle = it.tv ? bg : tint;
-  if (it.tv) {
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.25)';
-    ctx.shadowOffsetY = 3 * look.px;
-    ctx.shadowBlur = 8 * look.px;
-    ctx.fill();
-    ctx.restore();
-  } else ctx.fill();
+  // (No shadow, opened or not.)
+  ctx.fill();
   if (it.tv) {
     ctx.beginPath();
     ctx.roundRect(x + 2, y + 2, l.w - 4, l.head - 4, [10, 10, 0, 0]);
@@ -405,7 +397,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
     });
   }
   if (l.more) drawIcon(ctx, 'chevron-down-m', x + l.more.x, y + l.more.y, ARROW, arrowInk('more'));
-  if (!l.lines || !l.cancel || !l.finish) return;
+  if (!l.lines) return;
   // (The lines across half as strong as the panels' line grey.)
   ctx.fillStyle = look.dark ? 'rgba(255,255,255,0.05)' : 'rgba(223,227,230,0.5)';
   for (const ly of l.lines) ctx.fillRect(x + LEFT, y + ly, l.w - LEFT - PAD, 1);
@@ -448,7 +440,9 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
     }
   }
   // Its menu, a burger, darker under the pointer.
-  if (l.menu) drawIcon(ctx, 'hamburger-menu', x + l.menu.x + (BUTTON_H - ARROW) / 2, y + l.menu.y + (BUTTON_H - ARROW) / 2, ARROW, arrowInk('menu'));
+  if (l.menu) drawIcon(ctx, 'hamburger-menu', x + l.menu.x, y + l.menu.y, ARROW, arrowInk('menu'));
+  // Kept open («Закрепить описание»): a pin over it, unpinning it on a click.
+  if (l.pin) drawIcon(ctx, 'pin', x + l.pin.x, y + l.pin.y, ARROW, hot === `task:${it.id}:pin` ? BLUE : arrowInk('pin'));
   if (l.subsAt !== undefined) label('Подзадачи:', l.subsAt);
   const subs = it.subs ?? [];
   (l.subs ?? []).forEach((sy, i) => {
@@ -498,8 +492,8 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
     ctx.fillText(text, x + r.x + r.w / 2, y + r.y + r.h / 2);
     ctx.textAlign = 'left';
   };
-  button(l.cancel, 'Отмена', false);
-  button(l.finish, 'Завершить', true);
+  if (l.cancel) button(l.cancel, 'Отмена', false);
+  if (l.finish) button(l.finish, 'Завершить', true);
   // «Не сворачивать»: a box, ticked in blue when it's to stay open.
   if (l.keep) {
     const bx = x + l.keep.x, by = y + l.keep.y + (BUTTON_H - KEEP_BOX) / 2;

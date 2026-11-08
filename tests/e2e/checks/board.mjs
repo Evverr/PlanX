@@ -77,7 +77,7 @@ export const checks = {
     expect((await t()).h, 'as tall as them').toBe(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).h)()`));
     await menu('Убрать дату завершения');
     expect(await rows(), 'by when taken away').toBe('boss,doer');
-    // «Задача сразу целиком» off: its description first, then all of it by the arrow under it.
+    // «Задача сразу целиком» off: its description first, then all of it.
     await sleep(450);
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
     expect((await t()).tv ?? 'closed', 'closed by its arrow').toBe('closed');
@@ -86,8 +86,9 @@ export const checks = {
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
     expect((await t()).tv, 'its description').toBe('desc');
     await sleep(450);
-    await p.click(await at('(t, l) => ({ x: t.x + l.more.x + 12, y: t.y + l.more.y + 12 })'));
-    expect((await t()).tv, 'all of it').toBe('full');
+    await dblClick(p, await at('(t) => ({ x: t.x + 300, y: t.y + 12 })'));
+    await sleep(100);
+    expect((await t()).tv, 'all of it, by a double click on its header').toBe('full');
     await setLab(p, 'taskFull', true);
     // Subtasks: the first added by its menu, Enter going on to the next; an empty one goes.
     await sleep(450);
@@ -109,20 +110,9 @@ export const checks = {
     await sleep(450);
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
     await sleep(450);
-    const keepBox = await at('(t, l) => ({ x: t.x + l.keep.x + 9, y: t.y + l.keep.y + 16 })');
-    await p.click(keepBox);
-    await sleep(100);
-    expect(await p.ev(`document.querySelector('.task-keep')?.textContent.includes('Рекомендуем оставлять задачи свернутыми')`), 'why not to, said first').toBe(true);
-    const pop = await p.rect('.task-keep');
-    expect(Math.abs(pop.t - keepBox[1]) < 80, 'by its box').toBe(true);
-    await p.click(await p.at('.task-keep .btn:not(.primary)'));
-    await sleep(100);
-    expect([(await t()).keep ?? false, !!(await p.rect('.task-keep'))].join(), '«Отменить»: not ticked').toBe('false,false');
-    await p.click(keepBox);
-    await sleep(100);
-    await p.click(await p.at('.task-keep .btn.primary'));
-    await sleep(100);
-    expect((await t()).keep, '«Не сворачивать»: kept open').toBe(true);
+    // «Закрепить описание» in its menu: kept open, a pin over its menu.
+    await menu('Закрепить описание');
+    expect([(await t()).keep, !!(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).pin)()`))].join(), 'kept open, its pin').toBe('true,true');
     await p.ev(`planx.board.add(planx.editor.newItem('sticky', planx.board.get('${id}').x, planx.board.get('${id}').y, { id: 'atop' }))`);
     expect(await p.ev(`planx.board.list().at(-1).id`), 'over what is put later').toBe(id);
     await p.ev(`planx.board.remove(['atop'])`);
@@ -130,11 +120,12 @@ export const checks = {
     await p.click([1100, 100]);
     await sleep(100);
     expect((await t()).tv, 'still open after Esc and a click elsewhere').toBe('full');
-    await p.click(await at('(t, l) => ({ x: t.x + l.keep.x + 9, y: t.y + l.keep.y + 16 })'));
+    // Its pin clicked: unpinned.
+    await p.click(await at('(t, l) => ({ x: t.x + l.pin.x + 12, y: t.y + l.pin.y + 12 })'));
     await sleep(100);
     await p.click([1100, 100]);
     await sleep(100);
-    expect((await t()).tv ?? 'closed', 'unticked: closed by a click elsewhere').toBe('closed');
+    expect((await t()).tv ?? 'closed', 'unpinned: closed by a click elsewhere').toBe('closed');
     await sleep(450);
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
     await sleep(100);
@@ -142,7 +133,9 @@ export const checks = {
     expect((await t()).subs.map((s) => !!s.done).join(), 'the first ticked off').toBe('true,false');
     it = await t();
     expect(it.h, 'as tall as all of it').toBe(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).h)()`));
-    // Subtasks left to do: its ring and «Завершить» only say it's done by them.
+    // Subtasks left to do: its ring and «Завершить» (its buttons shown by its menu) only say it's done by them.
+    await sleep(450);
+    await menu('Показать кнопки');
     await sleep(450);
     await p.click(await at('(t, l) => ({ x: t.x + l.finish.x + 20, y: t.y + l.finish.y + 16 })'));
     await sleep(100);
@@ -860,19 +853,24 @@ export const checks = {
     expect(await p.ev(`[planx.board.get('lo').x, planx.board.get('ink').x].join()`), 'the picked one taken from under the drawing').toBe('140,120');
   },
 
-  async 'a task\'s description pinned by its menu shows closed too'(p) {
+  async 'a task\'s menu (the burger at its foot): pinned, its pin over it, its buttons shown or not'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
-      b.add(e.newItem('task', 100, 60, { id: 't', text: 'Задача', desc: 'Описание', w: 494, h: 52, tv: 'full', keep: true })); e.setSelection([]); })()`);
+      b.add(e.newItem('task', 100, 60, { id: 't', text: 'Задача', desc: 'Описание', w: 494, h: 52, tv: 'full' })); e.setSelection(['t']); })()`);
     await sleep(300);
-    const l = await p.ev(`(async () => { const t = planx.board.get('t'), l = (await import('/src/canvas/task.ts')).taskLayout(t), s = planx.editor.toScreen({ x: t.x + l.menu.x + 16, y: t.y + l.menu.y + 16 }); return [s.x, s.y]; })()`);
-    await p.click(l);
-    await sleep(200);
+    const lay = () => p.ev(`(async () => { const t = planx.board.get('t'), l = (await import('/src/canvas/task.ts')).taskLayout(t); return { menu: l.menu, pin: !!l.pin, buttons: !!l.finish, w: t.w }; })()`);
+    const open = async () => { const t = await p.ev(`planx.board.get('t')`), l = await lay(); await p.click(await p.ev(`(() => { const s = planx.editor.toScreen({ x: ${t.x} + ${l.menu.x} + 12, y: ${t.y} + ${l.menu.y} + 12 }); return [s.x, s.y]; })()`)); await sleep(200); };
+    const pick = async (label) => { await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.task-pop .menu-row')].find((b) => b.textContent === '${label}').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`)); await sleep(200); };
+    let l = await lay();
+    expect([l.menu.x, l.pin, l.buttons].join(), 'its burger at its right, nothing else at its foot').toBe(`${l.w - 35},false,false`);
+    await open();
     expect(await p.ev(`[...document.querySelectorAll('.task-pop .menu-row')].map((b) => b.textContent).join()`), 'its menu')
-      .toBe('Закрепить описание,Добавить подзадачу,Добавить блок с ответственными,Добавить дату завершения');
-    await p.click(await p.ev(`(() => { const r = document.querySelector('.task-pop .menu-row').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
-    await p.ev(`(async () => { const m = await import('/src/model/task.ts'); m.setView(planx.board, planx.board.get('t'), undefined); })()`);
-    await sleep(100);
-    expect(await p.ev(`(async () => { const t = planx.board.get('t'); return [t.dpin, t.h > 52, !!(await import('/src/canvas/task.ts')).taskLayout(t).desc].join(); })()`), 'closed, its description still there').toBe('true,true,true');
+      .toBe('Закрепить описание,Добавить подзадачу,Добавить блок с ответственными,Добавить дату завершения,Показать кнопки');
+    await pick('Закрепить описание');
+    await open();
+    await pick('Показать кнопки');
+    l = await lay();
+    expect([await p.ev(`planx.board.get('t').keep`), l.pin, l.buttons].join(), 'pinned (kept open), its pin; its buttons').toBe('true,true,true');
+    expect(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('t')).h)()`), 'as tall as it').toBe(await p.ev(`planx.board.get('t').h`));
   },
 
   async 'a task\'s subtask ticked by a click on its text too, typed in on a double click, taken away by the cross left of it'(p) {

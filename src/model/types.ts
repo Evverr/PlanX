@@ -107,7 +107,8 @@ export interface Item {
   tsb?: boolean;
   tpp?: boolean;
   tdu?: boolean;
-  dpin?: boolean;
+  /** A task's «Отмена» and «Завершить» shown at its foot («Показать кнопки» in its menu). */
+  tbtn?: boolean;
   /** A task kept open («Не сворачивать»): not closed by Esc, Cmd+Enter or a click elsewhere. */
   keep?: boolean;
   /** Tables: column widths, row heights and the cells' text row by row (see model/table.ts). */

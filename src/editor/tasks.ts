@@ -2,7 +2,7 @@ import type { Editor } from './editor';
 import type { Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { nextStatus, progressOf, statusOf, taskLayout, taskPartAt, type TaskPart } from '../canvas/task';
-import { addSub, removeSub, setStatus, setView, toggleSub } from '../model/task';
+import { addSub, fitTask, removeSub, setStatus, setView, toggleSub } from '../model/task';
 import { isLocked } from '../labs/labs';
 import { taskOpen } from '../labs/taskFull';
 
@@ -40,6 +40,7 @@ export function pressTask(ed: Editor, it: Item, w: Point, sp: Point): boolean {
   if (part === 'status') { if (pr === null) setStatus(board, it.id, nextStatus(statusOf(it))); else toggleSub(board, it, it.subs!.length - 1); }
   else if (part === 'arrow') setView(board, it, it.tv ? undefined : taskOpen());
   else if (part === 'more') setView(board, it, 'full');
+  else if (part === 'pin') board.update(it.id, { keep: undefined, h: fitTask(it, { keep: undefined }) });
   else if (part === 'menu') window.dispatchEvent(new CustomEvent<TaskPick>('planx:task-menu', { detail: { id: it.id, field: 'boss', x: sp.x, y: sp.y } }));
   else if (part === 'cancel') setView(board, it, undefined);
   else if (part === 'keep') {
