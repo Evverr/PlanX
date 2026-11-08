@@ -67,7 +67,7 @@ export interface TaskLayout {
    *  subtasks' heading, each subtask's top (the last: the row adding one) and its text's height (its lines
    *  wrapped to its width), the buttons, and «Не
    *  сворачивать» left of them. */
-  lines?: number[]; rows?: Array<{ key: 'boss' | 'doer' | 'due'; y: number }>; menu?: Rect; pin?: Rect; subsAt?: number; subs?: number[]; subH?: number[]; cancel?: Rect; finish?: Rect; keep?: Rect;
+  lines?: number[]; rows?: Array<{ key: 'boss' | 'doer' | 'due'; y: number }>; menu?: Rect; pin?: Rect; subs?: number[]; subH?: number[]; cancel?: Rect; finish?: Rect; keep?: Rect;
 }
 
 const lineH = (fs: number) => fs * LINE_HEIGHT;
@@ -122,13 +122,12 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   let at = d + 25;
   if (full && (it.tsb || it.subs?.length)) {
     out.lines.push(at);
-    // «Подзадачи:», the subtasks under it, their boxes on the title's line; each as tall as its lines (the
-    // row adding one, one), the next 38 on from its first line.
-    out.subsAt = at + 33;
+    // The subtasks (no heading: they're plain to see), the first 33 under the line, their boxes on the
+    // title's line; each as tall as its lines (the row adding one, one), the next 38 on from its first line.
     const lh = lineH(TEXT_FS), subW = Math.max(40, w - SUB_TEXT_X - PAD);
     out.subH = [...(it.subs ?? []).map((sub) => textBlockHeight(sub.t || 'Подзадача', subW, TEXT_FS, { weight: 400, family: FAMILY })), lh];
     out.subs = [];
-    let sy = out.subsAt + 34 - STATUS / 2;
+    let sy = at + 33 - STATUS / 2;
     for (const h of out.subH) { out.subs.push(sy); sy += SUB + h - lh; }
     at = out.subs[out.subs.length - 1] + STATUS + 27;
   }
@@ -563,7 +562,6 @@ function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typin
   // Kept open («Закрепить описание»): a pin over it, unpinning it on a click.
   // (Lit as the menu is.)
   if (l.pin) { const k = litNow(`${it.id}:pin`, hot === `task:${it.id}:pin`); drawIcon(ctx, 'pin', x + l.pin.x, y + l.pin.y, ARROW, look.dark ? `rgba(255,255,255,${0.3 + 0.55 * k})` : `rgba(0,0,0,${0.2 + 0.55 * k})`); }
-  if (l.subsAt !== undefined) label('Подзадачи:', l.subsAt);
   const subs = it.subs ?? [];
   // One being dragged to another place among them ("Перетаскивание подзадач", src/labs): it after the
   // pointer, the others where they'd go.
@@ -574,7 +572,8 @@ function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typin
     if (i === subs.length) {
       // (A little smaller than the boxes over it.)
       drawIcon(ctx, 'plus-s', x + SUB_X + 2, y + sy + 2, 18, look.muted);
-      lines(SUB_HINT, box, TEXT_FS, 400, look.muted);
+      // (Its word 3 nearer the plus than the subtasks' text to their boxes.)
+      lines(SUB_HINT, { ...box, x: box.x - 3 }, TEXT_FS, 400, look.muted);
       return;
     }
     const sub = subs[i];
