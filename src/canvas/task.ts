@@ -314,9 +314,75 @@ function litNow(key: string, on: boolean, ms = 160): number {
   return at(t);
 }
 
-/** The card. `typing` is the part being typed in (its text left to the overlay): null for the title,
- *  0 for the description, 1… for a subtask; undefined when none is. */
+/** How long a task takes to open or close (or show more or less of itself), in ms. */
+const GLIDE = 200;
+/** Each task as last drawn, and those gliding from one size to another: from what size, since when,
+ *  and the one of the two that shows more (what's under its header fading in or out). */
+const drawnAs = new Map<string, { it: Item; w: number; h: number }>();
+const glides = new Map<string, { w: number; h: number; at: number; more: Item; fade: boolean }>();
+
+/** Where a task gliding open or closed is in it: its size now, and how opened it looks (1 opened). */
+function glideNow(it: Item): { w: number; h: number; open: number; more: Item } | null {
+  const g = glides.get(it.id);
+  if (!g) return null;
+  const k = (performance.now() - g.at) / GLIDE;
+  if (k >= 1) return null;
+  const e = k < 0.5 ? 2 * k * k : 1 - (2 - 2 * k) * (2 - 2 * k) / 2, to = taskLayout(it);
+  const open = !g.fade ? 1 : it.tv ? e : 1 - e;
+  return { w: g.w + (to.w - g.w) * e, h: g.h + (to.h - g.h) * e, open, more: g.more };
+}
+
+/** The size a task's drawn at now (gliding open or closed, not yet the size it is): for its frame
+ *  when picked. */
+export function taskShown(it: Item): Item {
+  const g = it.type === 'task' && glideNow(it);
+  return g ? { ...it, w: g.w, h: g.h } : it;
+}
+
+/** The card, gliding to its new size as it's opened or closed. `typing` is the part being typed in
+ *  (its text left to the overlay): null for the title, 0 for the description, 1… for a subtask;
+ *  undefined when none is. */
 export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typing: number | null | undefined, hot: string | null = null): void {
+  const was = drawnAs.get(it.id), l = taskLayout(it);
+  if (was && was.it.tv !== it.tv) {
+    // (From where it is if it's gliding already.)
+    const now = glideNow(was.it) ?? was, wl = taskLayout(was.it);
+    glides.set(it.id, { w: now.w, h: now.h, at: performance.now(), more: !it.tv || (was.it.tv && wl.h > l.h) ? was.it : it, fade: !it.tv || !was.it.tv });
+  }
+  drawnAs.set(it.id, { it, w: l.w, h: l.h });
+  const g = glideNow(it);
+  if (!g) { glides.delete(it.id); drawCard(ctx, it, look, typing, hot); return; }
+  redraw();
+  const { x, y } = it, strong = statusOf(it) === 'done' ? DONE_GREY : strongOf(it.color);
+  const bg = look.dark ? '#26272C' : '#FFFFFF', tint = mix(strong, bg, look.dark ? 0.16 : 0.05);
+  const head = taskLayout(g.more).head;
+  // Its body tinted as closed; over it, the one showing more as it is (what's under its header seen as
+  // opened as it looks, in its size now); its header in its width now; its edge round all of it.
+  ctx.beginPath();
+  ctx.roundRect(x + 1, y + 1, g.w - 2, g.h - 2, TASK_RAD - 1);
+  ctx.fillStyle = tint;
+  ctx.fill();
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(x + 1, y + 1, g.w - 2, g.h - 2, TASK_RAD - 1);
+  ctx.clip();
+  ctx.globalAlpha = g.open;
+  drawCard(ctx, g.more, look, undefined, hot);
+  ctx.restore();
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x - 1, y - 10, g.w + 2, Math.min(head - 2, g.h) + 10);
+  ctx.clip();
+  drawCard(ctx, { ...g.more, w: g.w }, look, undefined, hot);
+  ctx.restore();
+  ctx.beginPath();
+  ctx.roundRect(x + 1, y + 1, g.w - 2, g.h - 2, TASK_RAD - 1);
+  ctx.strokeStyle = `rgba(${rgb(strong.startsWith('#') ? strong : '#003CFF').join(',')}, 0.3)`;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typing: number | null | undefined, hot: string | null = null): void {
   // Done, it's grey, darker than the grey given to anything (a colour not given to those still to do).
   const l = taskLayout(it), { x, y } = it, strong = statusOf(it) === 'done' ? DONE_GREY : strongOf(it.color);
   const bg = look.dark ? '#26272C' : '#FFFFFF', tint = mix(strong, bg, look.dark ? 0.16 : 0.05);

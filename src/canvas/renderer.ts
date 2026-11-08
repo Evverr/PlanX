@@ -16,7 +16,7 @@ import { zoomFade, zoomSize } from '../labs/zoomFade';
 import { gripsOn } from '../labs/tableMove';
 import { gridKind } from '../labs/boardGrid';
 import { drawCode } from '../labs/codeBlock';
-import { drawTaskCard, TASK_RAD } from './task';
+import { drawTaskCard, TASK_RAD, taskShown } from './task';
 import { dotsAlways, dotsUnder } from '../labs/linkTool';
 import { drawnLinks } from '../model/textLinks';
 import { drawTimeline } from './timeline';
@@ -1390,7 +1390,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   if (s.live) picked = new Set(s.selection);
   if (s.live) pickedAlone = s.selection.size === 1 && s.showHandle ? [...s.selection][0] : null;
   if (s.live) for (const [id, u] of unpicked) {
-    const k = (now - u.at) / PICK_OUT, it = s.get(id);
+    // (A task gliding open or closed, as it's drawn now.)
+    const k = (now - u.at) / PICK_OUT, got = s.get(id), it = got && taskShown(got);
     if (k >= 1 || !it) { unpicked.delete(id); continue; }
     if (it.type === 'mind' || it.inst || it.host) continue;
     ctx.globalAlpha = PICK_FRAME * (1 - k);
@@ -1410,7 +1411,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     ctx.globalAlpha = 1;
   }
   for (const id of s.selection) {
-    const it = s.get(id);
+    const got = s.get(id), it = got && taskShown(got);
     if (!it || s.nodesOf === id) continue;
     // A mind map node shows it's picked by its "+" buttons alone, which a few picked together don't get.
     // An instance keeps its red title alone, without a selection frame.
