@@ -2,6 +2,7 @@ import type { TableLine } from '../model/table';
 import { colsOf, rowsOf } from '../model/table';
 import { center, hitItem, hitLink, instanceBounds, linkBox, linkShape, onAudioButton } from '../canvas/geometry';
 import { taskButtonAt } from './tasks';
+import { taskPartAt } from '../canvas/task';
 import { copyCode, onCodeCopy } from '../labs/codeBlock';
 import { toggleAudio } from '../canvas/audio';
 import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, ringAt, tickAt, objectArrowAt, pickedUnder } from './hover';
@@ -317,7 +318,9 @@ export function press(ed: Editor, e: PointerEvent): void {
     const url = e.button === 0 && !e.shiftKey && !e.altKey && ed.editingId !== hit.id ? linkPartAt(hit, w) ?? undefined : undefined;
     // A task's buttons (its ring, arrows, a subtask's ring, the people…) alike: dragged, it moves.
     const tap = hit.type === 'task' && !entering && !e.shiftKey && e.button === 0 && ed.editingId !== hit.id && taskButtonAt(hit, w) ? sp : undefined;
-    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(items), moved: false, id: hit.id, dbl, cell, enter, again, url, tap };
+    // A subtask pressed: dragged, it goes elsewhere among them ("Перетаскивание подзадач", src/labs).
+    const part = tap && labOn('subDrag') ? taskPartAt(hit, w) : null, sub = typeof part === 'object' && part && !part.del ? part.sub : undefined;
+    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(items), moved: false, id: hit.id, dbl, cell, enter, again, url, tap, sub };
     return;
   }
   ed.lastTap = { id: '', t: 0 };

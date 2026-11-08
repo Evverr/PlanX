@@ -65,6 +65,14 @@ export function toggleSub(board: Board, it: Item, i: number): void {
   board.update(it.id, { subs });
 }
 
+/** A subtask put elsewhere among them ("Перетаскивание подзадач", src/labs). */
+export function moveSub(board: Board, it: Item, from: number, to: number): void {
+  const subs = [...(it.subs ?? [])];
+  if (from === to || !subs[from]) return;
+  subs.splice(to, 0, ...subs.splice(from, 1));
+  board.update(it.id, { subs });
+}
+
 /** A subtask taken away (its cross), the task as tall as what's left. */
 export function removeSub(board: Board, it: Item, i: number): void {
   const subs = (it.subs ?? []).filter((_, k) => k !== i);

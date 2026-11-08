@@ -3,8 +3,8 @@ import { DEFAULTS, ROTATABLE, uid } from '../model/types';
 import type { PathNode, Point, Rect } from '../canvas/geometry';
 import { anchorAt, angleOf, boxOf, center, hitItem, linkBox, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedFrom, toLocal, turn } from '../canvas/geometry';
 import { itemTextHeight, mindSize } from '../canvas/text';
-import { TASK_MIN_W, taskPartAt, taskSize } from '../canvas/task';
-import { freshTask, nextView, toggleSub } from '../model/task';
+import { setSubDrag, subDropAt, TASK_MIN_W, taskPartAt, taskSize } from '../canvas/task';
+import { freshTask, moveSub, nextView, toggleSub } from '../model/task';
 import { taskOpen } from '../labs/taskFull';
 import { pressTask, taskFieldAt } from './tasks';
 import { cellAt, MIN_COL, MIN_ROW, movedLines, freshTable, withScale, type TableLine } from '../model/table';
@@ -34,7 +34,7 @@ import { under } from '../labs/clickThrough';
 export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string; tap?: Point; mindTo?: string | null; mindWay?: Way }
+  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; sub?: number; subTo?: number; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string; tap?: Point; mindTo?: string | null; mindWay?: Way }
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' | 'tl' | 'bl' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point; last?: Point }
@@ -93,6 +93,17 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       return;
     case 'drag': {
       const dx = w.x - g.start.x, dy = w.y - g.start.y;
+      // A subtask dragged ("Перетаскивание подзадач", src/labs): up or down among the others, the task
+      // staying where it is.
+      if (g.sub !== undefined) {
+        const it = board.get(g.id);
+        if (!it || (!g.moved && Math.abs(dy) * ed.cam.z < 3)) return;
+        g.moved = true;
+        g.subTo = subDropAt(it, g.sub, w.y - it.y);
+        setSubDrag({ id: it.id, from: g.sub, to: g.subTo, dy });
+        ed.requestRender();
+        return;
+      }
       if (!g.moved) {
         if (Math.hypot(dx, dy) * ed.cam.z < 3) return;
         g.moved = true;
@@ -385,6 +396,13 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       }
       return;
     case 'drag':
+      if (g.sub !== undefined && g.moved) {
+        const it = board.get(g.id);
+        setSubDrag(null);
+        if (it && g.subTo !== undefined) { moveSub(board, it, g.sub, g.subTo); ed.hotPlus = null; }
+        ed.requestRender();
+        return;
+      }
       if (g.moved) {
         // What was dragged into a frame is in it now, and what was dragged out of one is out.
         ed.settle([...ed.selection].map((id) => board.get(id)?.host ?? id));
