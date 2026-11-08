@@ -279,6 +279,8 @@
    done at once, till its buttons fade in. */
 :root[data-morph-in="tfmt"] .tfmt:not(.gone), :root[data-morph-in="panel"] .bar.panel:not(.gone) {
   opacity: 0 !important; animation-duration: 1ms !important; animation-delay: 0s !important; }
+/* (Come in so, its own coming in never played after; its going away as ever.) */
+[data-morphed]:not(.leaving):not(.gone) { animation: none !important; }
 [data-morph] { background-color: transparent !important; box-shadow: none !important; border-color: transparent !important; }
 [data-morph]::before { opacity: 0 !important; }
 /* (Evenly, so it's at 30% as the body starts to take the other's size: SHIFT in textButton.ts.) */
