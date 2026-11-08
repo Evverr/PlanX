@@ -304,7 +304,9 @@ export function App({ boardId }: { boardId: string }) {
   const peers = conn.peers();
   // "Панель над элементом" (src/labs); it and the text panel, coming in where the other's going, wait for it to go.
   const place = usePanelPlace(editor, selItems);
-  const overOn = labs.panelOver && (!editing || editing.type === 'mind') && !tMode, overShown = overOn && place === 'over' && selItems.length > 0;
+  // (While typing: kept for a mind map node, and a task but its description, see below.)
+  const staysTyping = !editing || editing.type === 'mind' || (editing.type === 'task' && ui.editingCell !== 0);
+  const overOn = labs.panelOver && staysTyping && !tMode, overShown = overOn && place === 'over' && selItems.length > 0;
   const overWent = useRef({ shown: false, at: 0 });
   // What's picked, and whether that's instead of something else picked just now (the panel over it
   // fading out and coming back in by the new one).
@@ -472,9 +474,10 @@ export function App({ boardId }: { boardId: string }) {
       {panelItem && <TextPanel editor={editor} item={panelItem} leaving={!panelOn} after={performance.now() - overWent.current.at < PANEL_OUT} dock={tMode ? textMode?.dock : undefined}
         onBack={tMode ? () => morphPanel('.tfmt', 'panel', () => setTextMode(null)) : undefined} />}
 
-      {/* Hidden while typing, but for a mind map node, which opens for typing on a single click. */}
+      {/* Hidden while typing, but for a mind map node, which opens for typing on a single click, and a task
+          but its description (its text panel there), so it doesn't come and go as its parts are typed in. */}
       {/* "Панель над элементом" (src/labs): over what's picked instead, but where it'd be in the way there (see panelPlace). */}
-      {(!editing || editing.type === 'mind') && !tMode && (!labs.panelOver || place === 'bottom') && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={linkCount} docked={docked} onText={toText} />}
+      {staysTyping && !tMode && (!labs.panelOver || place === 'bottom') && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={linkCount} docked={docked} onText={toText} />}
       {/* Something else picked: the one by the last fades out, a new one comes in by it once that's gone. */}
       {overOn && place === 'over' && <SelectionPanel key={`over:${selKey}`} editor={editor} items={selItems} cells={ui.cells} linkCount={0} docked={false} over after={!!panelItem || swapped} onText={toText} />}
       {/* A table cell is typed into as if it were an item of its own, the size of the cell. */}
