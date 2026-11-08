@@ -133,7 +133,7 @@ kbd { font-family: var(--ui); font-size: 12px; background: var(--accent-soft); b
 /* The task's menu: what it has ticked at the right of its row. */
 .task-pop .menu-row.task-check { justify-content: space-between; gap: var(--s20); }
 /* (Its ticks at the right, 10 from its edge, not the room the other menus keep there for an arrow.) */
-.board-menu.task-pop:has(.task-check) { --menu-pad-r: var(--s10); }
+.board-menu.task-pop:has(.task-check) { --menu-pad-r: var(--s10); padding-left: var(--s16); padding-bottom: var(--s9); }
 .task-pop .menu-row.task-check.on { color: var(--ink); }
 .task-pop .menu-row.task-check .pi { width: var(--e24); height: var(--e24); background: var(--fmt-on-ink); }
 .task-avatar { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #fff; font: 600 11px Inter, var(--ui); font-style: normal; }
