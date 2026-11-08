@@ -217,7 +217,7 @@ export const checks = {
     await p.ev(`planx.editor.setSelection(['${ids.a}', '${ids.c}'])`);
     await sleep(300);
     await p.click(await p.at('.panel button[aria-label="Выравнивание"]'));
-    expect(await p.ev(`document.querySelectorAll('.align-pop button').length`), 'six ways').toBe(6);
+    expect(await p.ev(`document.querySelectorAll('.align-pop button:not([aria-label^="Авторасположение"])').length`), 'six ways (and the three of «Авторасположение»)').toBe(6);
     await p.ev(`document.documentElement.dataset.compact = ''; document.documentElement.dataset.size = 's'`);
     await sleep(100);
     expect(await p.ev(`[...document.querySelectorAll('.panel > * > .ib, .panel > .ib')][0].offsetWidth === document.querySelector('.align-pop .ib').offsetWidth`), 'as small as the panel').toBe(true);
