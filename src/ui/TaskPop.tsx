@@ -4,6 +4,7 @@ import type { Item, Person } from '../model/types';
 import type { TaskKeep, TaskPick, TaskTip } from '../editor/tasks';
 import { PEER_COLORS, type Me } from '../collab/connection';
 import { fitTask, keepOpen } from '../model/task';
+import { PanelIcon } from './PanelIcon';
 
 /** A colour for someone typed in by hand: the same for the same name. */
 const colorFor = (name: string) => PEER_COLORS[[...name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % PEER_COLORS.length];
@@ -92,32 +93,38 @@ export function TaskMenu({ editor }: { editor: Editor }) {
   }, [at]);
   const it = at ? editor.board.get(at.id) : undefined;
   if (!at || !it) return null;
-  // (What's added shows in all of it: opened only to its description, it opens in full.)
+  // (What's added shows in all of it: opened only to its description, it opens in full.) The menu stays,
+  // to tick or untick another.
   const set = (patch: Partial<Item>) => {
     const p = { ...patch, ...(it.tv === 'desc' && !('keep' in patch) && { tv: 'full' as const }) };
     editor.board.update(it.id, { ...p, h: fitTask(it, p) });
-    setAt(null);
+    setAt({ ...at });
   };
-  const people = !!(it.tpp || it.boss || it.doer), due = !!(it.tdu || it.due);
-  const row = (label: string, run: () => void) => (
-    <div className="menu-item"><button className="menu-row" role="menuitem" onClick={run}><span>{label}</span></button></div>
+  const people = !!(it.tpp || it.boss || it.doer), due = !!(it.tdu || it.due), subs = !!(it.tsb || it.subs?.length);
+  // Each what it has or not, ticked if it has it; a press on it the other way.
+  const row = (label: string, on: boolean, run: () => void) => (
+    <div className="menu-item"><button className={`menu-row task-check ${on ? 'on' : ''}`} role="menuitemcheckbox" aria-checked={on} onClick={run}>
+      <span>{label}</span>{on && <PanelIcon name="check-m" />}
+    </button></div>
   );
   return (
     <div ref={ref} className="board-menu task-pop" role="menu" aria-label="Меню задачи" style={{ left: at.x, top: at.y + 16 }}>
       {/* Kept open, a pin over its menu (as «Не сворачивать» was). */}
-      {row(it.keep ? 'Открепить описание' : 'Закрепить описание', () => {
+      {row('Закрепить описание', !!it.keep, () => {
         if (it.keep) set({ keep: undefined });
         else { keepOpen(editor.board, it.id); set({ keep: true }); }
       })}
-      {row('Добавить подзадачу', () => {
-        const subs = [...(it.subs ?? []), { t: '' }];
-        set({ tsb: true, subs });
-        // (Typed in once the menu's gone: the press would take the typing's focus away.)
-        setTimeout(() => editor.startEditing(it.id, subs.length, 'end'));
+      {/* Ticked, a subtask at once to type in (the menu gone: the press would take the typing's focus away). */}
+      {row('Подзадачи', subs, () => {
+        if (subs) { set({ tsb: undefined, subs: undefined }); return; }
+        const next = [{ t: '' }];
+        set({ tsb: true, subs: next });
+        setAt(null);
+        setTimeout(() => editor.startEditing(it.id, next.length, 'end'));
       })}
-      {row(people ? 'Убрать блок с ответственными' : 'Добавить блок с ответственными', () => set(people ? { tpp: undefined, boss: undefined, doer: undefined } : { tpp: true }))}
-      {row(due ? 'Убрать дату завершения' : 'Добавить дату завершения', () => set(due ? { tdu: undefined, due: undefined } : { tdu: true }))}
-      {row(it.tbtn ? 'Скрыть кнопки' : 'Показать кнопки', () => set({ tbtn: it.tbtn ? undefined : true }))}
+      {row('Блок с ответственными', people, () => set(people ? { tpp: undefined, boss: undefined, doer: undefined } : { tpp: true }))}
+      {row('Дата завершения', due, () => set(due ? { tdu: undefined, due: undefined } : { tdu: true }))}
+      {row('Кнопки', !!it.tbtn, () => set({ tbtn: it.tbtn ? undefined : true }))}
     </div>
   );
 }

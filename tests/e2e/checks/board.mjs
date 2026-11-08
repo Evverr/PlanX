@@ -71,11 +71,11 @@ export const checks = {
       await sleep(200);
     };
     expect(await rows(), 'none at first').toBe('');
-    await menu('Добавить блок с ответственными');
-    await menu('Добавить дату завершения');
+    await menu('Блок с ответственными');
+    await menu('Дата завершения');
     expect(await rows(), 'who set it, does it, by when').toBe('boss,doer,due');
     expect((await t()).h, 'as tall as them').toBe(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).h)()`));
-    await menu('Убрать дату завершения');
+    await menu('Дата завершения');
     expect(await rows(), 'by when taken away').toBe('boss,doer');
     // «Задача сразу целиком» off: its description first, then all of it.
     await sleep(450);
@@ -92,7 +92,7 @@ export const checks = {
     await setLab(p, 'taskFull', true);
     // Subtasks: the first added by its menu, Enter going on to the next; an empty one goes.
     await sleep(450);
-    await menu('Добавить подзадачу');
+    await menu('Подзадачи');
     await sleep(100);
     await p.cdp('Input.insertText', { text: 'Первая' });
     await p.key('Enter', 'Enter', 13);
@@ -135,7 +135,7 @@ export const checks = {
     expect(it.h, 'as tall as all of it').toBe(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).h)()`));
     // Subtasks left to do: its ring and «Завершить» (its buttons shown by its menu) only say it's done by them.
     await sleep(450);
-    await menu('Показать кнопки');
+    await menu('Кнопки');
     await sleep(450);
     await p.click(await at('(t, l) => ({ x: t.x + l.finish.x + 20, y: t.y + l.finish.y + 16 })'));
     await sleep(100);
@@ -905,10 +905,10 @@ export const checks = {
     expect([l.menu.x, l.pin, l.buttons].join(), 'its burger at its right, nothing else at its foot').toBe(`${l.w - 35},false,false`);
     await open();
     expect(await p.ev(`[...document.querySelectorAll('.task-pop .menu-row')].map((b) => b.textContent).join()`), 'its menu')
-      .toBe('Закрепить описание,Добавить подзадачу,Добавить блок с ответственными,Добавить дату завершения,Показать кнопки');
+      .toBe('Закрепить описание,Подзадачи,Блок с ответственными,Дата завершения,Кнопки');
     await pick('Закрепить описание');
     await open();
-    await pick('Показать кнопки');
+    await pick('Кнопки');
     l = await lay();
     expect([await p.ev(`planx.board.get('t').keep`), l.pin, l.buttons].join(), 'pinned (kept open), its pin; its buttons').toBe('true,true,true');
     expect(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('t')).h)()`), 'as tall as it').toBe(await p.ev(`planx.board.get('t').h`));
