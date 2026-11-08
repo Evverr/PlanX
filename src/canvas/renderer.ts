@@ -10,7 +10,7 @@ import { branchBase, branchColor, branchFrom, BRANCH_W, branchCurve, branchEdges
 import type { Point, Rect } from './geometry';
 import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
-import { COMPONENT_COLOR, firstInstance, instancePlus, objectArrow } from '../model/components';
+import { COMPONENT_COLOR, firstInstance, instancePlus } from '../model/components';
 import { labOn } from '../labs/labs';
 import { zoomFade, zoomSize } from '../labs/zoomFade';
 import { gripsOn } from '../labs/tableMove';
@@ -1316,19 +1316,6 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     ctx.beginPath();
     ctx.moveTo(p.x - p.r * 0.45, p.y + p.r * 0.02); ctx.lineTo(p.x - p.r * 0.1, p.y + p.r * 0.36); ctx.lineTo(p.x + p.r * 0.45, p.y - p.r * 0.3);
     ctx.stroke();
-    ctx.globalAlpha = 1;
-    // Past it, an arrow: made one of the board's own objects ("Объекты", src/labs), if it isn't yet.
-    if (it.obj || !labOn('objects')) continue;
-    const q = objectArrow(it, z);
-    ctx.fillStyle = COMPONENT_COLOR;
-    ctx.globalAlpha = (s.hotPlus === `obj:${it.id}` ? 1 : 0.75) * fade;
-    ctx.beginPath();
-    ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = fade;
-    // In it, the component icon in white.
-    const k = q.r * 1.6;
-    drawIcon(ctx, 'component', q.x - k / 2, q.y - k / 2, k, '#fff');
     ctx.globalAlpha = 1;
   }
   // A link picked alone: its nodes, and where new ones can be pulled out (the middles of its stretches).

@@ -205,8 +205,6 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
         } else if (e.key === 'Escape' || (e.key === 'Enter' && isFrame)) {
           e.preventDefault();
           commit();
-          // A component being changed: Esc is done with it too.
-          if (e.key === 'Escape') editor.finishComponent();
         } else if (item.type === 'mind' && item.parent && (e.metaKey || e.ctrlKey) && !e.shiftKey && e.code === 'KeyZ' && !e.currentTarget.value) {
           // Nothing typed in a new branch yet: Ctrl+Z takes it away, as the step that added it.
           e.preventDefault();

@@ -196,6 +196,8 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
   // "Авторасположение" (src/labs/tidy.ts): a few picked in a grid, or a mind map node's branches.
   const tidyMind = one?.type === 'mind' && editor.board.list().some((i) => i.parent === one.id) ? one.id : null;
   const tidy = labOn('tidy') && (editor.selection.size > 1 || tidyMind);
+  // A component picked (itself, not an instance of it), not yet one of the board's objects ("Объекты").
+  const toObjects = labOn('objects') && one?.comp && !one.stowed && !one.obj ? one : null;
   if (at.params && params.length) {
     return (
       <div ref={ref} className="board-menu context-menu params-pop" role="dialog" aria-label="Параметры" style={comes} onContextMenu={(e) => e.preventDefault()}>
@@ -232,6 +234,7 @@ export function ContextMenu({ editor, onToast }: { editor: Editor; onToast: (tex
         {row('arrow-down-l', 'Переместить вниз', run(() => editor.shiftZ(-1)))}
         {row('component', 'Сделать компонентом', run(() => editor.makeComponent()))}
         {editInst && row('edit-l', 'Редактировать компонент', run(() => editor.editComponentAt(editInst)))}
+        {toObjects && row('package', 'Добавить в объекты', run(() => editor.askObject(toObjects.id)))}
         {tidy && row('apps', 'Авторасположение', run(() => { if (tidyMind) editor.tidyMind(tidyMind); else startTidy(editor); editor.requestRender(); }))}
         <div className="menu-line" />
         {row('trashcan', 'Удалить', run(() => editor.deleteSelection()))}
