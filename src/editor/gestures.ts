@@ -407,7 +407,12 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // (A subtask's text clicked twice: its tick as it was, it typed in.)
         const it = board.get(g.id), part = it && taskPartAt(it, g.start);
         if (it && g.dbl && typeof part === 'object' && part && !part.tick && !part.del) { toggleSub(board, it, part.sub); ed.startEditing(g.id, part.sub + 1, 'end'); }
-        else if (it) pressTask(ed, it, g.start, g.tap);
+        else if (it) {
+          pressTask(ed, it, g.start, g.tap);
+          // (What was under the pointer may have moved off it, opened or closed: lit no more till it moves.)
+          ed.hotPlus = null;
+          ed.requestRender();
+        }
       } else if (board.get(g.id)?.code && !board.get(g.id)?.text && !g.dbl && ed.editingId !== g.id) {
         // A block of code with nothing in it ("Код", src/labs), clicked: typed in at once, to paste into.
         ed.startEditing(g.id, null, 'end');

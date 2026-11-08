@@ -282,7 +282,7 @@
 [data-morph] { background-color: transparent !important; box-shadow: none !important; border-color: transparent !important; }
 [data-morph]::before { opacity: 0 !important; }
 [data-morph-out] { opacity: 0 !important; transition: opacity .07s ease !important; }
-.panel-shell { position: fixed; z-index: 4; pointer-events: none; transition: left .118s ease, width .118s ease, box-shadow .118s ease; }
+.panel-shell { position: fixed; z-index: 4; pointer-events: none; transition: left .2s ease-in-out, top .2s ease-in-out, width .2s ease-in-out, height .2s ease-in-out, box-shadow .2s ease; }
 :root[data-glass] .panel-shell { background-color: color-mix(in srgb, var(--panel-bg) 84%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 
 /* The text panel's colour and highlight menus: a row of colours and opacity as in «Параметры». */
@@ -369,7 +369,7 @@
 /* (Not the top bar, the zoom bar or the right rail: those stay light.) */
 :root[data-dark-panels]:not([data-theme="dark"]) :is(.bar:not(.topbar, .zoom), .tools:not(.labs-rail), .tools-more, .draw-panel, .tfmt, .pop, .board-menu, .more-pop, .op-pop,
   .minimap, .color-picker, .tf-menu, .comment-menu, .comment-card, .tile-menu, .modal, .peek, .labs-pill, .ink-style, .recorder,
-  .icon-pick, .peers-more, .labs-more, .labs-pop, .discussion, .help, .namepop, .history-pill, .shape-menu, .objects-menu) {
+  .icon-pick, .peers-more, .labs-more, .labs-pop, .discussion, .help, .namepop, .history-pill, .shape-menu, .objects-menu, .panel-shell) {
   --bg: #14171C; --surface: #1E222A; --ink: #E7EAF0; --muted: #9AA3B2; --line: #343A46; --danger: #F07A63;
   --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
   --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --icon-faint: #7B8089;
@@ -379,5 +379,6 @@
   --panel-bg: #1E222A; --panel-shadow: 0 2px 10px rgba(0, 0, 0, .35);
   color-scheme: dark; color: var(--ink);
 }
-/* (The panel given way, while the other grows in its place: gone at once.) */
-:root[data-morph-in] :is(.tfmt.leaving, .tfmt.gone, .bar.panel.gone) { opacity: 0 !important; }
+/* (The panel given way, while the body glides from it: no body of its own, what's on it fading as it does.) */
+:root[data-morph-in] :is(.tfmt.leaving, .tfmt.gone, .bar.panel.gone) { background-color: transparent !important; box-shadow: none !important; }
+:root[data-morph-in] :is(.tfmt.leaving, .tfmt.gone, .bar.panel.gone)::before { opacity: 0 !important; }

@@ -1,3 +1,4 @@
+import { layerRoot } from './sideViewport';
 /**
  * "Кнопка T": on the selection panel of something with text, a T that turns the panel into the text
  * panel (its font and text), till the next press on the board. It stays the one panel where it is:
@@ -6,7 +7,7 @@
 
 /** How long what's on the panel takes to fade out, the panel to take the new width, and the new
  *  buttons to fade in, in ms (the first two in labs.css too). */
-const OUT = 70, WIDEN = 118, IN = 94;
+const OUT = 70, WIDEN = 200, IN = 120;
 
 let busy = false;
 
@@ -50,7 +51,7 @@ function grow(a: HTMLElement | null, r: DOMRect, to: 'tfmt' | 'panel', swap: () 
   shell.className = 'panel-shell';
   // (Its shadow too: the main panels at the window's edges have one of their own.)
   Object.assign(shell.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, boxShadow: a ? getComputedStyle(a).boxShadow : 'var(--panel-shadow)' });
-  document.body.append(shell);
+  layerRoot().append(shell);
   // What's on it fades out, and stays out whatever it does as it goes (its own going away, its ghost).
   if (a) { a.dataset.morph = ''; a.dataset.morphOut = ''; }
   const done = () => { shell.remove(); delete root.dataset.morphIn; busy = false; };
@@ -66,17 +67,18 @@ function grow(a: HTMLElement | null, r: DOMRect, to: 'tfmt' | 'panel', swap: () 
       b.dataset.morph = '';
       // Its usual coming in (with a slide) is off for good: it only fades in, below.
       b.getAnimations().forEach((a) => a.cancel());
-      // The body follows its width each frame as it finds it (a panel measures what fits it, and may
-      // again as the other one goes); what's on it fades in once that's held still the body's whole
-      // way there. (The two are alike but for their width: only that changes.)
+      // The body follows where it stands and its size each frame as it finds them (a panel measures what
+      // fits it, and may again as the other one goes), gliding there (labs.css); what's on it fades in
+      // once that's held still the body's whole way there. (The text panel over what's picked, the
+      // selection panel at the bottom: the body glides from one to the other.)
       let last = '', since = performance.now();
       const t0 = since;
       const follow = () => {
-        const q = settledRect(b), now = `${Math.round(q.left)}|${Math.round(q.width)}`, t = performance.now();
+        const q = settledRect(b), now = `${Math.round(q.left)}|${Math.round(q.top)}|${Math.round(q.width)}|${Math.round(q.height)}`, t = performance.now();
         if (now !== last) {
           last = now;
           since = t;
-          Object.assign(shell.style, { left: `${q.left}px`, width: `${q.width}px` });
+          Object.assign(shell.style, { left: `${q.left}px`, top: `${q.top}px`, width: `${q.width}px`, height: `${q.height}px` });
         }
         if (t - since < WIDEN && t - t0 < 1000) { requestAnimationFrame(follow); return; }
         reveal();
