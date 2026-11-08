@@ -1,6 +1,7 @@
 import type { Item, Link } from '../model/types';
 import { uid } from '../model/types';
 import { copyId } from '../model/components';
+import { copyGroups } from '../labs/groups';
 
 /**
  * Copies of items, and of the links among them, with fresh ids, `offset` along both axes: they keep
@@ -19,8 +20,7 @@ export function copiesOf(src: Item[], srcLinks: Link[], offset: number, maxZ: nu
   const hosted = (it: Item) => !!it.host && map.has(it.host) && !!it.from;
   for (const it of src) if (it.host) map.set(it.id, hosted(it) ? copyId(map.get(it.host)!, mapped(it.from)!) : uid());
   // Copies of a group in a group of their own.
-  const grps = new Map<string, string>();
-  for (const it of src) if (it.grp && !grps.has(it.grp)) grps.set(it.grp, uid());
+  const groups = copyGroups(src);
   const items = [...src].sort((a, b) => a.z - b.z).map((it) => {
     const id = map.get(it.id)!, hold = it.host ? (hosted(it) ? { host: map.get(it.host) } : { from: undefined, host: undefined, ovr: undefined }) : {};
     // A copy starts with no reactions of its own.
@@ -29,7 +29,7 @@ export function copiesOf(src: Item[], srcLinks: Link[], offset: number, maxZ: nu
     if (it.parent && map.has(it.parent)) it.parent = map.get(it.parent);
     if (whole) { it.inst = mapped(it.inst); it.from = mapped(it.from); }
     if (it.members) it.members = it.members.map((m) => map.get(m)).filter((m): m is string => !!m);
-    if (it.grp) it.grp = grps.get(it.grp);
+    if (it.gp) it.gp = groups(it.gp);
     return it;
   });
   // A link copied with its instance is named as the instance's sync names it.

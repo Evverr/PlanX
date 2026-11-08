@@ -15,6 +15,7 @@ import { ItemMenuButton, LinkParams } from '../labs/ContextMenu';
 import { boxOf, instanceBounds } from '../canvas/geometry';
 import { placeOver } from './FormatPanel';
 import { canCrop, croppingId, subscribeCrop, toggleCrop } from '../labs/imageCrop';
+import { pickedGroup } from '../labs/groups';
 
 
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
@@ -407,7 +408,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   const editInst = inOne?.inst && !inOne.inst.startsWith('@') ? inOne.id : null;
   // «Группы» (src/labs): one group picked, all of it (how many in it, and undoing it); or several picked
   // that aren't one, to be made one.
-  const grp = items[0]?.grp, oneGroup = !!grp && items.every((i) => i.grp === grp) && editor.board.list().filter((i) => i.grp === grp).length === items.length;
+  const oneGroup = labs.groups ? pickedGroup(editor.board.list(), editor.selection) : null;
   const colored = items.some((i) => (fillable(i) && !i.code) || i.type === 'icon' || i.type === 'ink');
   const btn = (icon: PanelIconName, title: string, fn: () => void) => (
     <button className={`ib ${icon === 'trashcan' ? 'danger' : ''}`} title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
@@ -482,7 +483,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
           onClick={() => editor.setFolded(group.id, !group.fold)}><PanelIcon name={group.fold ? 'arrow-right' : 'arrow-left'} /></button> : undefined,
         grouped: !labs.groups ? undefined : oneGroup ? (
           <div className="sw-group group-count">
-            <span>{objects(items.length)}</span>
+            <span>{objects(oneGroup.count)}</span>
             {btn('expand-m', 'Разгруппировать (Ctrl+Shift+G)', () => editor.ungroup())}
           </div>
         ) : items.filter((i) => !i.host).length > 1 ? btn('collapse-m', 'Сгруппировать (Ctrl+G)', () => editor.group()) : undefined,
