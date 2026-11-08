@@ -19,7 +19,7 @@ describe('search on the board', () => {
   });
 
   it('names what it found and leaves out what has no text', () => {
-    expect(findOnBoard(items, 'план')).toEqual([{ id: 'd', kind: 'Группа', text: 'План', at: 0, len: 4 }]);
+    expect(findOnBoard(items, 'план')).toEqual([{ id: 'd', kind: 'Фрейм', text: 'План', at: 0, len: 4 }]);
     expect(findOnBoard(items, '   ')).toEqual([]);
   });
 

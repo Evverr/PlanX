@@ -59,6 +59,9 @@
 .table-count:first-child::before, .sep + .table-count::before, .table-count + .table-count::before,
 .table-count:last-child::after, .table-count:has(+ .sep)::after { display: none; }
 .table-count span { padding: 0 var(--s4) 0 var(--s8); }
+/* A group picked («Группы», src/labs): how many in it, then its button. */
+.group-count { gap: var(--s2); font-size: var(--s14); color: var(--fmt-ink); white-space: nowrap; }
+.group-count span { padding: 0 var(--s4) 0 var(--s8); }
 .sw.custom { position: relative; overflow: hidden; display: inline-block; background: conic-gradient(#FF5E5E, #FFD25E, #8CE35E, #5ED9E3, #5E8CFF, #C45EFF, #FF5E5E); }
 .sw.custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
 .sw.none { background: linear-gradient(135deg, transparent 45%, var(--danger) 45%, var(--danger) 55%, transparent 55%), var(--surface) !important; }

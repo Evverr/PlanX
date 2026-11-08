@@ -20,7 +20,9 @@ import { canCrop, croppingId, subscribeCrop, toggleCrop } from '../labs/imageCro
 const same = (vals: Array<string | undefined>): string | null => (vals.length && vals.every((v) => v === vals[0]) ? vals[0] ?? null : null);
 
 /** Rearrangeable buttons; the bin comes last until moved. */
-const ORDER = ['fold', 'lang', 'sepLang', 'colors', 'text', 'notext', 'align', 'tidy', 'rows', 'cols', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+/** "2 объекта", "5 объектов", "21 объект". */
+const objects = (n: number) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'объект' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'объекта' : 'объектов'}`;
+const ORDER = ['fold', 'grouped', 'lang', 'sepLang', 'colors', 'text', 'notext', 'align', 'tidy', 'rows', 'cols', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -403,6 +405,9 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   // An instance picked alone, or something in one (not of a built-in component: those aren't changed).
   const inOne = items.length === 1 ? (items[0].host ? editor.board.get(items[0].host) : items[0]) : undefined;
   const editInst = inOne?.inst && !inOne.inst.startsWith('@') ? inOne.id : null;
+  // «Группы» (src/labs): one group picked, all of it (how many in it, and undoing it); or several picked
+  // that aren't one, to be made one.
+  const grp = items[0]?.grp, oneGroup = !!grp && items.every((i) => i.grp === grp) && editor.board.list().filter((i) => i.grp === grp).length === items.length;
   const colored = items.some((i) => (fillable(i) && !i.code) || i.type === 'icon' || i.type === 'ink');
   const btn = (icon: PanelIconName, title: string, fn: () => void) => (
     <button className={`ib ${icon === 'trashcan' ? 'danger' : ''}`} title={title} aria-label={title} onClick={fn}><PanelIcon name={icon} /></button>
@@ -473,8 +478,14 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
         // Features on trial (src/labs), while they're switched on.
         // A group (a frame, not a timeline, nor a component's copy): an arrow folding it into a bar, or
         // unfolding it.
-        fold: group ? <button className="ib" title={group.fold ? 'Развернуть группу' : 'Свернуть группу'} aria-label={group.fold ? 'Развернуть группу' : 'Свернуть группу'}
+        fold: group ? <button className="ib" title={group.fold ? 'Развернуть фрейм' : 'Свернуть фрейм'} aria-label={group.fold ? 'Развернуть фрейм' : 'Свернуть фрейм'}
           onClick={() => editor.setFolded(group.id, !group.fold)}><PanelIcon name={group.fold ? 'arrow-right' : 'arrow-left'} /></button> : undefined,
+        grouped: !labs.groups ? undefined : oneGroup ? (
+          <div className="sw-group group-count">
+            <span>{objects(items.length)}</span>
+            {btn('expand-m', 'Разгруппировать', () => editor.ungroup())}
+          </div>
+        ) : items.filter((i) => !i.host).length > 1 ? btn('collapse-m', 'Сгруппировать', () => editor.group()) : undefined,
         // (Shapes with no typing in them, «Без текста»: no text to set.)
         text: onText ? <button className="ib" title="Текст и шрифт" aria-label="Текст и шрифт" disabled={noText} onClick={onText}><PanelIcon name="text" /></button> : undefined,
         // Shapes with no typing in them: what's written stays, a double click doesn't open them for typing.

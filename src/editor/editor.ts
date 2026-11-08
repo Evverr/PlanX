@@ -822,6 +822,11 @@ export class Editor {
   setSelection(ids: Iterable<string>): void {
     const was = [...this.selection];
     this.selection = new Set(ids);
+    // Something in a group («Группы», src/labs) picked with all of it.
+    if (labOn('groups')) {
+      const grps = new Set([...this.selection].map((id) => this.board.get(id)?.grp).filter(Boolean));
+      if (grps.size) for (const it of this.board.list()) if (it.grp && grps.has(it.grp)) this.selection.add(it.id);
+    }
     // The component being changed here is the last one worked in; someone else's stays theirs.
     const here = this.pickedComponent(this.board.list().filter((c) => c.comp && !c.stowed));
     if (here) this.compHere = here.id;
@@ -1249,6 +1254,20 @@ export class Editor {
 
   /** Ctrl+↑ (dir 1) or Ctrl+↓ (-1): each picked item a layer up or down, past the next one over (or
    *  under) it that isn't picked, those between keeping their order. */
+  /** «Группы» (src/labs): what's picked made one group (out of any it was in), or its groups undone. */
+  group(): void {
+    const items = this.selectedItems().filter((i) => !i.host);
+    if (items.length < 2) return;
+    const grp = uid();
+    this.board.transact(() => items.forEach((i) => this.board.update(i.id, { grp })));
+    this.emit();
+  }
+
+  ungroup(): void {
+    this.board.transact(() => this.selectedItems().forEach((i) => { if (i.grp) this.board.update(i.id, { grp: undefined }); }));
+    this.emit();
+  }
+
   shiftZ(dir: 1 | -1): void {
     const list = this.board.list().filter((i) => !i.host), picked = new Set(this.selectedItems().map((i) => i.id));
     if (!picked.size) return;
