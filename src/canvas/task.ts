@@ -112,7 +112,7 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   const dl = descLook(it), dh = textBlockHeight(it.desc ? withList(it.desc, it.ls) : DESC_HINT, descW, dl.fs, { weight: dl.weight, family: dl.family, italic: dl.italic });
   if (!it.tv) return out;
   out.desc = { x: LEFT, y: dy, w: descW, h: dh };
-  // Its menu (a burger) at the top right of what's under its header; its pin under it while it's kept
+  // Its menu (three dots one over another) at the top right of what's under its header; its pin under it while it's kept
   // open («Закрепить описание»), the description as tall as both at least.
   out.menu = { x: w - 35, y: head + 12, w: ARROW, h: ARROW };
   if (it.keep) out.pin = { x: w - 35, y: head + 40, w: ARROW, h: ARROW };
@@ -461,9 +461,9 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
       ctx.globalAlpha = 1;
     }
   }
-  // Its menu, a burger, darker under the pointer.
+  // Its menu, three dots one over another, darker under the pointer.
   // (Lighter than the arrows, darker under the pointer.)
-  if (l.menu) { const k = litNow(`${it.id}:menu`, hot === `task:${it.id}:menu`); drawIcon(ctx, 'hamburger-menu', x + l.menu.x, y + l.menu.y, ARROW, look.dark ? `rgba(255,255,255,${0.3 + 0.55 * k})` : `rgba(0,0,0,${0.2 + 0.55 * k})`); }
+  if (l.menu) { const k = litNow(`${it.id}:menu`, hot === `task:${it.id}:menu`); drawIcon(ctx, 'more-vertical-solid', x + l.menu.x, y + l.menu.y, ARROW, look.dark ? `rgba(255,255,255,${0.3 + 0.55 * k})` : `rgba(0,0,0,${0.2 + 0.55 * k})`); }
   // Kept open («Закрепить описание»): a pin over it, unpinning it on a click.
   if (l.pin) drawIcon(ctx, 'pin', x + l.pin.x, y + l.pin.y, ARROW, hot === `task:${it.id}:pin` ? BLUE : arrowInk('pin'));
   if (l.subsAt !== undefined) label('Подзадачи:', l.subsAt);
