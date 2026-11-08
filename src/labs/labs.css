@@ -363,3 +363,18 @@
 .discussion-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 18px 18px; }
 .discussion .wishlist { max-width: none; margin: 0; }
 .discussion .wish-head h2 { font-size: 14px; }
+
+/* "Панели тёмного цвета" (darkPanels.ts): the panels, menus and popups take the dark theme's colours, the
+   board staying light (its own colours are the root's). */
+:root[data-dark-panels]:not([data-theme="dark"]) :is(.bar, .tools, .tools-more, .draw-panel, .tfmt, .pop, .board-menu, .more-pop, .op-pop,
+  .minimap, .color-picker, .tf-menu, .comment-menu, .comment-card, .tile-menu, .modal, .peek, .labs-pill, .ink-style, .recorder,
+  .icon-pick, .peers-more, .labs-rail, .labs-more, .labs-pop, .discussion, .help, .namepop, .history-pill, .shape-menu, .objects-menu) {
+  --bg: #14171C; --surface: #1E222A; --ink: #E7EAF0; --muted: #9AA3B2; --line: #343A46; --danger: #F07A63;
+  --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
+  --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --icon-faint: #7B8089;
+  --menu-ink: #E7EAF0; --btn-ink: #E7EAF0; --btn-line: rgba(255, 255, 255, .12); --op-track: #3A404B; --fmt-marker: #BFC4CC;
+  --avatar-bg: transparent; --shadow: 0 2px 10px rgba(0, 0, 0, .35);
+  /* (Taken from --surface at the root, so given here too.) */
+  --panel-bg: #1E222A; --panel-shadow: 0 2px 10px rgba(0, 0, 0, .35);
+  color-scheme: dark; color: var(--ink);
+}
