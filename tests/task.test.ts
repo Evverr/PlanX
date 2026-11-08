@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { nextStatus, progressOf, statusOf } from '../src/canvas/task';
-import { keepOpen, taskTextPatch } from '../src/model/task';
+import { keepOpen, setView, taskTextPatch } from '../src/model/task';
 import { Board } from '../src/model/board';
 import type { Item } from '../src/model/types';
 
@@ -19,15 +19,20 @@ describe('tasks', () => {
     expect([statusOf(task({ st: 'done', subs: subs(false) })), statusOf(task({ subs: subs(true, false) })), statusOf(task({ subs: subs(true, true) }))]).toEqual(['todo', 'doing', 'done']);
   });
 
-  it('kept open, lie over everything, the last kept over the others, what comes after under them', () => {
+  it('opened, lie 500 over everything, the last opened over the others, what comes after under them; closed (kept open or not), back where they lay', () => {
     const b = new Board();
-    b.add(task({ id: 'a', z: 1, tv: 'full' }));
-    b.add(task({ id: 'b', z: 2, tv: 'full' }));
+    b.add(task({ id: 'a', z: 1 }));
+    b.add(task({ id: 'b', z: 2 }));
     b.add(task({ id: 's', type: 'sticky', z: 3 }));
-    keepOpen(b, 'b');
+    setView(b, b.get('b')!, 'full');
+    setView(b, b.get('a')!, 'desc');
     keepOpen(b, 'a');
+    expect(b.get('b')!.z).toBe(503);
     b.add(task({ id: 'n', type: 'sticky', z: b.maxZ() + 1 }));
     expect(b.list().map((i) => i.id).join()).toBe('s,n,b,a');
+    setView(b, b.get('a')!, undefined);
+    setView(b, b.get('b')!, undefined);
+    expect(b.list().map((i) => `${i.id}${i.z}`).join()).toBe('a1,b2,s3,n4');
   });
 
   it('keep what is typed in each part; an empty subtask goes', () => {

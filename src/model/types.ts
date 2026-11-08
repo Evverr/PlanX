@@ -111,6 +111,9 @@ export interface Item {
   tbtn?: boolean;
   /** A task kept open («Не сворачивать»): not closed by Esc, Cmd+Enter or a click elsewhere. */
   keep?: boolean;
+  /** An opened task: where it lay before it went up over the board (see setView in model/task.ts), and
+   *  goes back to once closed. */
+  oz?: number;
   /** Tables: column widths, row heights and the cells' text row by row (see model/table.ts). */
   cols?: number[];
   rows?: number[];

@@ -24,7 +24,8 @@ export function copiesOf(src: Item[], srcLinks: Link[], offset: number, maxZ: nu
   const items = [...src].sort((a, b) => a.z - b.z).map((it) => {
     const id = map.get(it.id)!, hold = it.host ? (hosted(it) ? { host: map.get(it.host) } : { from: undefined, host: undefined, ovr: undefined }) : {};
     // A copy starts with no reactions of its own.
-    return { ...it, ...hold, id, x: it.x + offset, y: it.y + offset, z: it.type === 'frame' ? it.z : ++z, rx: undefined, ...(it.inst && { born: Date.now() }) };
+    // (An opened task's copy, closed, stays where it's put.)
+    return { ...it, ...hold, id, x: it.x + offset, y: it.y + offset, z: it.type === 'frame' ? it.z : ++z, rx: undefined, ...(it.oz !== undefined && { oz: undefined }), ...(it.inst && { born: Date.now() }) };
   }).map((it) => {
     if (it.parent && map.has(it.parent)) it.parent = map.get(it.parent);
     if (whole) { it.inst = mapped(it.inst); it.from = mapped(it.from); }

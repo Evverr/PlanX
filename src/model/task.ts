@@ -14,19 +14,26 @@ export function setStatus(board: Board, id: string, st: TaskStatus): void {
   board.update(id, { st, done: undefined });
 }
 
-/** Opened to its description or all of it, or closed: wider opened, back to its width closed; opened,
- *  on top of everything. */
-export function setView(board: Board, it: Item, tv: Item['tv']): void {
-  const w = tv ? Math.max(it.w, it.tv ? it.w : TASK_OPEN_W) : it.cw ?? TASK_W;
-  const next = { ...it, tv, w }, top = Math.max(...board.list().map((i) => i.z));
-  board.update(it.id, { tv, w, h: taskSize(next).h, cw: tv && !it.tv ? it.w : tv ? it.cw : undefined, ...(tv && !it.tv && it.z < top && { z: top + 1 }) });
+/** Where an opened task goes: 500 over the board's top, over the others opened too (see Board.maxZ,
+ *  which leaves them out, so what's put on the board after stays under them). */
+export function openZ(board: Board): number {
+  const open = board.list().filter((i) => i.type === 'task' && i.tv);
+  return Math.max(board.maxZ() + 500, ...open.map((i) => i.z + 1));
 }
 
-/** Kept open («Не сворачивать»): lifted 500 over the board's top, over the others kept open too, to
- *  stay over what's put on the board after (see Board.maxZ). */
+/** Opened to its description or all of it, or closed: wider opened, back to its width closed. Opened,
+ *  up over the board (see openZ); closed (kept open or not before), back where it lay. */
+export function setView(board: Board, it: Item, tv: Item['tv']): void {
+  const w = tv ? Math.max(it.w, it.tv ? it.w : TASK_OPEN_W) : it.cw ?? TASK_W;
+  const next = { ...it, tv, w };
+  const z = tv && !it.tv ? { oz: it.z, z: openZ(board) } : !tv && it.tv ? { oz: undefined, z: it.oz ?? it.z } : {};
+  board.update(it.id, { tv, w, h: taskSize(next).h, cw: tv && !it.tv ? it.w : tv ? it.cw : undefined, ...z });
+}
+
+/** Kept open («Не сворачивать»): not closed by Esc, Cmd+Enter or a click elsewhere (up over the board
+ *  as any opened one is). */
 export function keepOpen(board: Board, id: string): void {
-  const all = board.list(), top = all.length ? all[all.length - 1].z : 0;
-  board.update(id, { keep: true, z: Math.max(top + 1, board.maxZ() + 500) });
+  board.update(id, { keep: true });
 }
 
 /** Done with it (Esc, Cmd+Enter, picked no more): closed, unless it's to stay open («Не сворачивать»). */
@@ -40,10 +47,11 @@ export function closeTask(board: Board, id: string): void {
 export const nextView = (board: Board, it: Item, open: Item['tv'] = 'desc'): void =>
   setView(board, it, !it.tv ? open : it.tv === 'desc' ? 'full' : undefined);
 
-/** A new task, its middle at `c`: opened (`open`: to its description, as one put on the board comes, or all of it; closed, as wide as usual). */
-export function freshTask(it: Item, c: { x: number; y: number }, open: Item['tv'] = 'desc'): Item {
+/** A new task, its middle at `c`: opened (`open`: to its description, as one put on the board comes, or
+ *  all of it; closed, as wide as usual), up over the board as opened ones are, closed where it was put. */
+export function freshTask(board: Board, it: Item, c: { x: number; y: number }, open: Item['tv'] = 'desc'): Item {
   const t = { ...it, tv: open, w: TASK_OPEN_W, cw: TASK_W }, h = taskSize(t).h;
-  return { ...t, h, x: Math.round(c.x - TASK_OPEN_W / 2), y: Math.round(c.y - h / 2) };
+  return { ...t, h, x: Math.round(c.x - TASK_OPEN_W / 2), y: Math.round(c.y - h / 2), oz: it.z, z: openZ(board) };
 }
 
 /** Its height for what's in it now, with a change to it. */
