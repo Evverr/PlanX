@@ -1039,6 +1039,9 @@ export class Editor {
       for (const it of items) {
         // One being typed in is measured with what's typed, not yet in the board.
         const now = this.board.get(it.id), typed = this.typed?.id === it.id ? this.typed.text : undefined;
+        // (A mind map node, its whole size, its neighbours moved along: see fitMind. Measured as now set:
+        // within the change, the board still has it as it was.)
+        if (now?.type === 'mind') { this.fitMind({ ...now, ...patch }, typed ?? now.text ?? ''); continue; }
         const h = now?.type === 'task' ? fitTask(now, typed !== undefined ? taskTextPatch(now, this.editingCell, typed) ?? {} : {}) : now && fitHeight(now, typed);
         if (now && h && h !== now.h) this.fitTo(now, h);
       }
@@ -1627,17 +1630,20 @@ export class Editor {
     // A block of code ("Код", src/labs) grows with it.
     const fit = it?.code ? codeFit(it, text, this.codeRoom(it)) : null;
     if (fit) this.board.update(id, fit);
-    if (it?.type === 'mind') {
-      // A node growing (a line taller, or wider under its parent) moves its neighbours along, so
-      // nothing overlaps.
-      const fit = mindFit(this, it, text), dw = (fit.w ?? it.w) - it.w, dh = (fit.h ?? it.h) - it.h;
-      // Worked out with it at its new size, as it'll be.
-      const moves = dw || dh ? makeRoom(id, dw, dh, this.board.list().map((i) => (i.id === id ? { ...i, ...fit } : i))) : new Map<string, Point>();
-      this.board.transact(() => {
-        this.board.update(id, fit);
-        moves.forEach((pt, k) => this.board.update(k, pt));
-      });
-    }
+    if (it?.type === 'mind') this.fitMind(it, text);
+  }
+
+  /** A mind map node as big as its text takes (typed, or set bigger or smaller on the text panel): growing
+   *  (a line taller, or wider under its parent), it moves its neighbours along, so nothing overlaps. */
+  private fitMind(it: Item, text: string): void {
+    const fit = mindFit(this, it, text), dw = (fit.w ?? it.w) - it.w, dh = (fit.h ?? it.h) - it.h;
+    if (!dw && !dh && fit.x === it.x && fit.y === it.y) return;
+    // Worked out with it at its new size, as it'll be.
+    const moves = dw || dh ? makeRoom(it.id, dw, dh, this.board.list().map((i) => (i.id === it.id ? { ...i, ...fit } : i))) : new Map<string, Point>();
+    this.board.transact(() => {
+      this.board.update(it.id, fit);
+      moves.forEach((pt, k) => this.board.update(k, pt));
+    });
   }
 
   /** Adds a node to a mind map (see mindOps.ts). */
