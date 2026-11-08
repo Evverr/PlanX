@@ -1057,7 +1057,14 @@ export const checks = {
     await sleep(300);
     const over = () => p.ev(`(() => { const t = planx.board.list().find((i) => i.type === 'task'), r = planx.board.get('r'); return t.z > r.z ? 'over' : 'under'; })()`);
     expect(await over(), 'the task over the rectangle').toBe('over');
+    // (Opened, it lies over all that isn't: a layer down only once it's closed, back where it was put.)
     await p.ev(`(() => { planx.editor.stopEditing(); planx.editor.setSelection([planx.board.list().find((i) => i.type === 'task').id]); })()`);
+    await p.key('ArrowDown', 'ArrowDown', 40, 4);
+    await sleep(200);
+    expect(await over(), 'opened: still over').toBe('over');
+    await p.ev(`(() => { planx.editor.setSelection([]); planx.editor.setSelection([planx.board.list().find((i) => i.type === 'task').id]); })()`);
+    await sleep(200);
+    expect(await p.ev(`(() => { const t = planx.board.list().find((i) => i.type === 'task'); return [t.tv ?? 'closed', t.z > planx.board.get('r').z && t.z < 400].join(); })()`), 'closed, where it was put').toBe('closed,true');
     await p.key('ArrowDown', 'ArrowDown', 40, 4);
     await sleep(200);
     expect(await over(), 'a layer down: under').toBe('under');

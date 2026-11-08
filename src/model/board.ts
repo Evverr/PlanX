@@ -111,11 +111,11 @@ export class Board {
   /** When this client last changed the board (see sync). */
   private lastLocal = 0;
 
-  /** The top of what's on the board, new things going over it: not counting tasks kept open («Не
-   *  сворачивать»), lifted 500 over it to stay over what comes after (see keepOpen in model/task.ts). */
+  /** The top of what's on the board, new things going over it: not counting opened tasks, lifted 500
+   *  over it to stay over what comes after (see setView in model/task.ts). */
   maxZ(): number {
     const l = this.list();
-    for (let i = l.length - 1; i >= 0; i--) if (!(l[i].type === 'task' && l[i].tv && l[i].keep)) return l[i].z;
+    for (let i = l.length - 1; i >= 0; i--) if (!(l[i].type === 'task' && l[i].tv)) return l[i].z;
     return 0;
   }
 

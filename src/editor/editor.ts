@@ -1078,7 +1078,7 @@ export class Editor {
     const c = this.toWorld(at.x, at.y), d = { ...DEFAULTS[type], ...extra };
     const it = this.newItem(type, c.x - d.w / 2, c.y - d.h / 2, extra);
     if (type === 'text') it.h = itemTextHeight(it);
-    if (type === 'task') Object.assign(it, freshTask(it, c));
+    if (type === 'task') Object.assign(it, freshTask(this.board, it, c));
     this.addItem(it);
     this.setTool('select');
     this.setSelection([it.id]);
@@ -1274,7 +1274,7 @@ export class Editor {
     const list = this.board.list().filter((i) => !i.host), picked = new Set(this.selectedItems().map((i) => i.id));
     if (!picked.size) return;
     const z = list.map((i) => i.z), at = [...list];
-    const kept = (i: Item) => i.type === 'task' && !!i.tv && !!i.keep;
+    const kept = (i: Item) => i.type === 'task' && !!i.tv;
     const meet = (a: Item, b: Item) => { const p = boxOf(a), q = boxOf(b); return p.x < q.x + q.w && q.x < p.x + p.w && p.y < q.y + q.h && q.y < p.y + p.h; };
     for (const it of dir > 0 ? [...list].reverse() : list) {
       if (!picked.has(it.id)) continue;
@@ -1284,7 +1284,7 @@ export class Editor {
       // Nothing it lies over (or under) that way: up or down past the next one all the same.
       if (j < 0 || j >= at.length) { j = i + dir; while (j >= 0 && j < at.length && picked.has(at[j].id)) j += dir; }
       if (j < 0 || j >= at.length) continue;
-      // (Tasks kept open stay over everything else, see keepOpen in model/task.ts: neither goes past the other.)
+      // (Opened tasks stay over everything else, see setView in model/task.ts: neither goes past the other.)
       if (kept(at[j]) !== kept(it)) continue;
       at.splice(i, 1);
       at.splice(j, 0, it);
