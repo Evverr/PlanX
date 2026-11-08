@@ -38,6 +38,17 @@ export function resizedFrom(it: Turned, w: number, h: number, dl: number, dt: nu
   return { x: c.x - w / 2, y: c.y - h / 2 };
 }
 
+/** Solid, what's under it hidden there: a task, a sticker, a picture, a table, a shape filled in. */
+export const solid = (o: Item): boolean => !o.rot
+  && (o.type === 'task' || o.type === 'sticky' || o.type === 'image' || o.type === 'table' || ((o.type === 'rect' || o.type === 'ellipse') && o.color !== 'none'));
+
+/** Whether a point of `it` is under something solid over it (`items` bottom to top): its handle there,
+ *  say, neither drawn nor taken hold of. */
+export function coveredAt(items: Item[], it: Item, p: Point): boolean {
+  const at = items.findIndex((i) => i.id === it.id);
+  return at >= 0 && items.slice(at + 1).some((o) => solid(o) && p.x >= o.x && p.x <= o.x + o.w && p.y >= o.y && p.y <= o.y + o.h);
+}
+
 /** The box square to the board around an item, turned or not. */
 export function boxOf(it: Turned): Rect {
   const a = angleOf(it);
