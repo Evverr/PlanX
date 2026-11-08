@@ -40,8 +40,14 @@ export function pressTask(ed: Editor, it: Item, w: Point, sp: Point): boolean {
   if (part === 'status') { if (pr === null) setStatus(board, it.id, nextStatus(statusOf(it))); else toggleSub(board, it, it.subs!.length - 1); }
   else if (part === 'arrow') setView(board, it, it.tv ? undefined : taskOpen());
   else if (part === 'more') setView(board, it, 'full');
-  else if (part === 'pin') board.update(it.id, { keep: undefined, h: fitTask(it, { keep: undefined }) });
-  else if (part === 'menu') window.dispatchEvent(new CustomEvent<TaskPick>('planx:task-menu', { detail: { id: it.id, field: 'boss', x: sp.x, y: sp.y } }));
+  // Its pin: kept open no more; where it'd be, kept open.
+  else if (part === 'pin') board.update(it.id, { keep: it.keep ? undefined : true, h: fitTask(it, { keep: it.keep ? undefined : true }) });
+  else if (part === 'menu') {
+    // Right of its three dots, its first row level with them.
+    const l = taskLayout(it), r = ed.canvas?.getBoundingClientRect(), m = l.menu!;
+    const s = ed.toScreen({ x: it.x + m.x + m.w + 6, y: it.y + m.y + m.h / 2 });
+    window.dispatchEvent(new CustomEvent<TaskPick>('planx:task-menu', { detail: { id: it.id, field: 'boss', x: s.x + (r?.left ?? 0), y: s.y + (r?.top ?? 0) - 26 } }));
+  }
   else if (part === 'cancel') setView(board, it, undefined);
   else if (part === 'keep') {
     // Unticked at once; ticked once said yes to, in a popup by it saying why not to.

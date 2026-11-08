@@ -67,7 +67,7 @@ export interface TaskLayout {
    *  subtasks' heading, each subtask's top (the last: the row adding one) and its text's height (its lines
    *  wrapped to its width), the buttons, and «Не
    *  сворачивать» left of them. */
-  lines?: number[]; rows?: Array<{ key: 'boss' | 'doer' | 'due'; y: number }>; menu?: Rect; pin?: Rect; subs?: number[]; subH?: number[]; cancel?: Rect; finish?: Rect; keep?: Rect;
+  lines?: number[]; rows?: Array<{ key: 'boss' | 'doer' | 'due'; y: number }>; menu?: Rect; pin?: Rect; pinSpot?: Rect; subs?: number[]; subH?: number[]; cancel?: Rect; finish?: Rect; keep?: Rect;
 }
 
 const lineH = (fs: number) => fs * LINE_HEIGHT;
@@ -157,7 +157,9 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   if (it.keep) {
     out.h = Math.max(out.h, head + 12 + ARROW * 2 + 4 + 14);
     out.pin = { x: w - 35, y: out.h - 14 - ARROW, w: ARROW, h: ARROW };
-  }
+  // Not kept open, where its pin would be (if there's room for it under the menu): seen faintly under the
+  // pointer, keeping it open on a click.
+  } else if (out.h - 14 - ARROW >= head + 12 + ARROW + 4) out.pinSpot = { x: w - 35, y: out.h - 14 - ARROW, w: ARROW, h: ARROW };
   return out;
 }
 
@@ -185,7 +187,7 @@ export function taskPartAt(it: Item, p: Point): TaskPart | null {
   }
   // (Its menu and its pin first, whatever row they're level with.)
   if (l.menu && inRect(q, l.menu, 4)) return 'menu';
-  if (l.pin && inRect(q, l.pin, 2)) return 'pin';
+  if ((l.pin ?? l.pinSpot) && inRect(q, (l.pin ?? l.pinSpot)!, 2)) return 'pin';
   if (l.more && near(q, l.more.x + ARROW / 2, l.more.y + ARROW / 2, ARROW / 2 + 4)) return 'more';
   if (l.desc && inRect(q, l.desc)) return 'desc';
   if (l.rows) for (const r of l.rows) if (Math.abs(q.y - r.y) <= 14 && q.x >= AVATAR_X - 14 && q.x <= l.w - PAD - 24) return r.key;
@@ -572,6 +574,8 @@ function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typin
   // Kept open («Закрепить подробности»): a pin over it, unpinning it on a click.
   // (Lit as the menu is.)
   if (l.pin) { const k = litNow(`${it.id}:pin`, hot === `task:${it.id}:pin`); drawIcon(ctx, 'pin', x + l.pin.x, y + l.pin.y, ARROW, look.dark ? `rgba(255,255,255,${0.3 + 0.55 * k})` : `rgba(0,0,0,${0.2 + 0.55 * k})`); }
+  // (Not kept open: barely seen where it'd be, under the pointer.)
+  else if (l.pinSpot) { const k = litNow(`${it.id}:pin`, hot === `task:${it.id}:pin`); if (k) drawIcon(ctx, 'pin', x + l.pinSpot.x, y + l.pinSpot.y, ARROW, look.dark ? `rgba(255,255,255,${0.15 * k})` : `rgba(0,0,0,${0.12 * k})`); }
   const subs = it.subs ?? [];
   // One being dragged to another place among them ("Перетаскивание подзадач", src/labs): it after the
   // pointer, the others where they'd go.

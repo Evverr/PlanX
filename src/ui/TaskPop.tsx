@@ -109,7 +109,7 @@ export function TaskMenu({ editor }: { editor: Editor }) {
     </button></div>
   );
   return (
-    <div ref={ref} className="board-menu task-pop" role="menu" aria-label="Меню задачи" style={{ left: at.x, top: at.y + 16 }}>
+    <div ref={ref} className="board-menu task-pop" role="menu" aria-label="Меню задачи" style={{ left: at.x, top: at.y }}>
       {/* Kept open, a pin over its menu (as «Не сворачивать» was). */}
       {row('Закрепить подробности', !!it.keep, () => {
         if (it.keep) set({ keep: undefined });
