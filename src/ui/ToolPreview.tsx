@@ -29,7 +29,7 @@ export function ToolPreview({ tool, zoom }: { tool: Tool; zoom: number }) {
       // above and below, 32 to each side.
       return <span className="tp-mind" style={{ fontSize: Math.max(11, 18 * k), lineHeight: 1.4, padding: `${((18 * 1.4 + 30) * 4 / 3 - 18 * 1.4) * k / 2}px ${32 * k}px`, borderRadius: 14 * k }}>Центральная тема</span>;
     case 'frame':
-      return <span className="tp-frame" style={{ width: w, height: h }}><b style={{ fontSize: Math.max(10, 15 * k) }}>Группа</b></span>;
+      return <span className="tp-frame" style={{ width: w, height: h }}><b style={{ fontSize: Math.max(10, 15 * k) }}>Фрейм</b></span>;
     case 'table': {
       const t = { ...newTable(), x: 0, y: 0 } as Item;
       let x = 0, y = 0;

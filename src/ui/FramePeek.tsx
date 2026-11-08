@@ -56,7 +56,7 @@ export function FramePeek({ editor, board }: { editor: Editor; board: Board }) {
   useEffect(() => { if (id && !f) setId(null); }, [id, f]);
   if (!id || !f) return null;
 
-  const title = f.text || 'Группа';
+  const title = f.text || 'Фрейм';
   return createPortal(
     <div className="peek-overlay" onPointerDown={(e) => { if (e.target === e.currentTarget) setId(null); }}>
       <div className="peek" role="dialog" aria-label={title}>

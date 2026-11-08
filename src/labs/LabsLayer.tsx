@@ -401,7 +401,7 @@ function SearchPop({ editor }: { editor: Editor }) {
         <input ref={input} id="labs-search" type="search" placeholder="Найти на доске" aria-label="Найти на доске" value={q}
           onChange={(e) => { setQ(e.target.value); setActive(0); }} onKeyDown={onKey} />
       </div>
-      {!q.trim() && <p className="muted">Ищет в стикерах, текстах, фигурах, задачах, таблицах и группах. Enter переходит к следующему.</p>}
+      {!q.trim() && <p className="muted">Ищет в стикерах, текстах, фигурах, задачах, таблицах и фреймах. Enter переходит к следующему.</p>}
       {q.trim() && !found.length && <p className="muted">Ничего не нашлось</p>}
       {found.length > 0 && <>
         <p className="muted">Найдено: {found.length}{found.length >= 50 ? '+' : ''}</p>

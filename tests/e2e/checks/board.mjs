@@ -717,7 +717,7 @@ export const checks = {
     await sleep(200);
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Параметры').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     await sleep(150);
-    expect(await p.ev(`[...document.querySelectorAll('.params-pop .params-title, .params-pop .params-label')].map((e) => e.textContent).slice(0, 3).join(' | ')`), 'its parameters').toBe('Группа «Фрейм» | Заливка | Обводка');
+    expect(await p.ev(`[...document.querySelectorAll('.params-pop .params-title, .params-pop .params-label')].map((e) => e.textContent).slice(0, 3).join(' | ')`), 'its parameters').toBe('Фрейм «Фрейм» | Заливка | Обводка');
     // Any colour floats over the parameters, not pushing them down; a press elsewhere puts it away.
     const tall = await p.ev(`document.querySelector('.params-pop').scrollHeight`);
     await p.click(await p.at('.params-pop .sw.custom'));
@@ -944,14 +944,37 @@ export const checks = {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
   },
 
+  async '«Группы»: several made one group, picked together, how many on the panel, undone; copies in a group of their own'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
+      b.add(e.newItem('sticky', 300, 300, { id: 'a' })); b.add(e.newItem('sticky', 600, 300, { id: 'b' })); b.add(e.newItem('sticky', 900, 300, { id: 'c' })); e.setSelection(['a', 'b']); })()`);
+    await sleep(400);
+    await p.click(await p.at('.bar.panel button[aria-label="Сгруппировать"]'));
+    await sleep(300);
+    expect(await p.ev(`!!planx.board.get('a').grp && planx.board.get('a').grp === planx.board.get('b').grp && !planx.board.get('c').grp`), 'grouped').toBe(true);
+    await p.ev(`planx.editor.setSelection(['a'])`);
+    await sleep(300);
+    expect(await p.ev(`[...planx.editor.selection].sort().join()`), 'picked together').toBe('a,b');
+    expect(await p.ev(`document.querySelector('.bar.panel .group-count span')?.textContent`), 'how many').toBe('2 объекта');
+    await p.ev(`planx.editor.duplicate()`);
+    await sleep(300);
+    expect(await p.ev(`(() => { const g = planx.board.get('a').grp, copies = planx.board.list().filter((i) => i.type === 'sticky' && !['a', 'b', 'c'].includes(i.id)); return copies.length === 2 && !!copies[0].grp && copies[0].grp === copies[1].grp && copies[0].grp !== g; })()`), 'copies grouped apart').toBe(true);
+    await p.ev(`planx.editor.setSelection(['a'])`);
+    await sleep(300);
+    await p.click(await p.at('.bar.panel button[aria-label="Разгруппировать"]'));
+    await sleep(300);
+    expect(await p.ev(`!planx.board.get('a').grp && !planx.board.get('b').grp`), 'ungrouped').toBe(true);
+    await p.ev(`planx.editor.setSelection(['a'])`);
+    expect(await p.ev(`[...planx.editor.selection].join()`), 'picked alone again').toBe('a');
+  },
+
   async 'a group folded and unfolded by the arrow on its panel'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('sticky', 450, 350, { id: 's' })); b.add(e.newItem('frame', 400, 300, { id: 'f', w: 300, h: 260, members: ['s'], text: 'Группа' })); e.setSelection(['f']); })()`);
     await sleep(400);
-    await p.click(await p.at('.bar.panel button[aria-label="Свернуть группу"]'));
+    await p.click(await p.at('.bar.panel button[aria-label="Свернуть фрейм"]'));
     await sleep(300);
     expect(!!(await p.ev(`planx.board.get('f').fold`)), 'folded').toBe(true);
-    await p.click(await p.at('.bar.panel button[aria-label="Развернуть группу"]'));
+    await p.click(await p.at('.bar.panel button[aria-label="Развернуть фрейм"]'));
     await sleep(300);
     expect(!!(await p.ev(`planx.board.get('f').fold`)), 'unfolded').toBe(false);
   },
