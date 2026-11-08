@@ -107,7 +107,8 @@ function PaintSwitch({ paint, pick, fill, stroke, fillLabel, strokeLabel, down, 
         {text !== undefined && (
           <button className={`ib ${paint.includes('text') ? 'on' : ''}`} title="Цвет текста" aria-label="Цвет текста"
             aria-pressed={paint.includes('text')} onClick={(e) => pick('text', e.shiftKey)}>
-            <span className="paint-text" style={{ borderColor: textLook(text) }}>A</span>
+            {/* (As the text panel's: its icon over a bar in the colour.) */}
+            <PanelIcon name="color" /><i className="swatch" style={{ background: textLook(text) }} />
           </button>
         )}
       </div>
