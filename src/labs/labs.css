@@ -366,9 +366,10 @@
 
 /* "Панели тёмного цвета" (darkPanels.ts): the panels, menus and popups take the dark theme's colours, the
    board staying light (its own colours are the root's). */
-:root[data-dark-panels]:not([data-theme="dark"]) :is(.bar, .tools, .tools-more, .draw-panel, .tfmt, .pop, .board-menu, .more-pop, .op-pop,
+/* (Not the top bar, the zoom bar or the right rail: those stay light.) */
+:root[data-dark-panels]:not([data-theme="dark"]) :is(.bar:not(.topbar, .zoom), .tools:not(.labs-rail), .tools-more, .draw-panel, .tfmt, .pop, .board-menu, .more-pop, .op-pop,
   .minimap, .color-picker, .tf-menu, .comment-menu, .comment-card, .tile-menu, .modal, .peek, .labs-pill, .ink-style, .recorder,
-  .icon-pick, .peers-more, .labs-rail, .labs-more, .labs-pop, .discussion, .help, .namepop, .history-pill, .shape-menu, .objects-menu) {
+  .icon-pick, .peers-more, .labs-more, .labs-pop, .discussion, .help, .namepop, .history-pill, .shape-menu, .objects-menu) {
   --bg: #14171C; --surface: #1E222A; --ink: #E7EAF0; --muted: #9AA3B2; --line: #343A46; --danger: #F07A63;
   --fmt-bg: rgba(30, 34, 42, .92); --fmt-ink: #D5D9E0; --fmt-line: rgba(255, 255, 255, .1); --fmt-hover: rgba(255, 255, 255, .07);
   --fmt-on: rgba(75, 145, 255, .24); --fmt-shadow: 0 2px 10px rgba(0, 0, 0, .5); --fmt-on-ink: #4DA3FF; --fmt-off-ink: #4A4F58; --icon-faint: #7B8089;
