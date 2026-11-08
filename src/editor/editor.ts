@@ -97,11 +97,15 @@ export interface UIState {
 /** How far a copy made by Ctrl+D stands off what it's a copy of. */
 const DUPLICATE_GAP = 24;
 
-/** The column (axis y: one under another, left edges level) or row (x: side by side, tops level) of
- *  items like `it` (of its kind and size) it stands in, in order, with two or more in it; none else. */
+/** How far off level the items of a column or row may stand (Ctrl+D), of their width (a column) or
+ *  height (a row): put by hand, roughly. */
+const LINE_SLACK = 0.2;
+
+/** The column (axis y: one under another, left edges level, roughly) or row (x: side by side, tops level,
+ *  roughly) of items like `it` (of its kind and size) it stands in, in order, with two or more in it; none else. */
 function lineOf(it: Item, all: Item[], axis: 'x' | 'y'): (Item[] & { axis: 'x' | 'y' }) | null {
   const like = all.filter((o) => o.type === it.type && !o.host && Math.abs(o.w - it.w) <= 2 && Math.abs(o.h - it.h) <= 2
-    && (axis === 'y' ? Math.abs(o.x - it.x) <= 2 : Math.abs(o.y - it.y) <= 2));
+    && (axis === 'y' ? Math.abs(o.x - it.x) <= it.w * LINE_SLACK : Math.abs(o.y - it.y) <= it.h * LINE_SLACK));
   const start = (o: Item) => (axis === 'y' ? o.y : o.x), size = (o: Item) => (axis === 'y' ? o.h : o.w);
   // Next to one another: the gap between two no bigger than one of them.
   const next = (o: Item, d: 1 | -1) => like.filter((k) => k !== o && (d > 0 ? start(k) >= start(o) + size(o) && start(k) - start(o) - size(o) <= size(o)

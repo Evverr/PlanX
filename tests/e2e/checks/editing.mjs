@@ -86,6 +86,11 @@ export const checks = {
     await p.key('d', 'KeyD', 68, 2);
     const right = await p.ev(`(() => { const c = planx.board.get([...planx.editor.selection][0]), s = planx.board.get('${id}'); return [c.x - s.x - s.w, c.y - s.y].join(); })()`);
     expect(right, 'its like under it: right of it').toBe('24,0');
+    // A column put by hand, a little off level (up to a fifth of their width): still under it; further
+    // off, right of it.
+    const dup = (dx) => p.ev(`(() => { const b = planx.board, e = planx.editor; b.add(e.newItem('sticky', 2000, 2000, { id: 'c0${dx}', w: 200, h: 200 })); b.add(e.newItem('sticky', 2000 + ${dx}, 2240, { id: 'c1${dx}', w: 200, h: 200 }));
+      e.setSelection(['c1${dx}']); e.duplicate(); const c = b.get([...e.selection][0]), l = b.get('c1${dx}'); b.remove(['c0${dx}', 'c1${dx}', c.id]); return c.y > l.y + l.h ? 'under' : 'right'; })()`);
+    expect([await dup(30), await dup(50)].join(), 'a little off: under; more: right').toBe('under,right');
   },
 
   async 'a mind map node: a click on its edge picks it, on its text opens it; Delete held deletes once'(p) {
