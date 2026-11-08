@@ -144,22 +144,19 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
     at = at + 33 + ROW * (keys.length - 1) + 33;
   }
   // Its foot: «Отмена» and «Завершить» in the middle, shown by its menu («Показать кнопки»), after a line.
-  // Kept open («Закрепить подробности»): a pin at the right of its very bottom (by the buttons, level with
-  // them), with room for it under the menu.
   if (full && it.tbtn) {
     line();
     const by = at + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), cx = Math.round((w - fw - 10 - cw) / 2);
     out.cancel = { x: cx, y: by, w: cw, h: BUTTON_H };
     out.finish = { x: cx + cw + 10, y: by, w: fw, h: BUTTON_H };
     out.h = Math.ceil(by + BUTTON_H + 31);
-    if (it.keep) out.pin = { x: w - 35, y: by + (BUTTON_H - ARROW) / 2 - 4, w: ARROW, h: ARROW };
-  } else {
-    // (Subtasks or who's on it last: 10 more under them, clear of its edge.)
-    out.h = Math.ceil(at !== start ? at + 2 : d + 22);
-    if (it.keep) {
-      out.h = Math.max(out.h, head + 12 + ARROW * 2 + 4 + 14);
-      out.pin = { x: w - 35, y: out.h - 14 - ARROW, w: ARROW, h: ARROW };
-    }
+  // (Subtasks or who's on it last: 10 more under them, clear of its edge.)
+  } else out.h = Math.ceil(at !== start ? at + 2 : d + 22);
+  // Kept open («Закрепить подробности»): a pin at the right of its very bottom, whatever's over it, with
+  // room for it under the menu.
+  if (it.keep) {
+    out.h = Math.max(out.h, head + 12 + ARROW * 2 + 4 + 14);
+    out.pin = { x: w - 35, y: out.h - 14 - ARROW, w: ARROW, h: ARROW };
   }
   return out;
 }
