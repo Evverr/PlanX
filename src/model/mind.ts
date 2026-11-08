@@ -688,8 +688,9 @@ export function branchCurve(parent: Item, child: Item, edges?: Map<string, numbe
     return [a, { x: a.x, y: a.y + dy }, { x: b.x, y: b.y - dy }, b];
   }
   const side = mindSide(child, parent);
-  // (By the right edges of their rows, if given: see branchEdges.)
-  const a = { x: root ? parent.x + parent.w / 2 : side > 0 ? (edges?.get(parent.id) ?? parent.x + parent.w) + stub : parent.x - stub, y: parent.y + parent.h / 2 };
+  // (On the right out of its own edge, the sheaf at once; on the left into its row's edge, if given: see
+  // branchEdges.)
+  const a = { x: root ? parent.x + parent.w / 2 : side > 0 ? parent.x + parent.w + stub : parent.x - stub, y: parent.y + parent.h / 2 };
   const b = { x: side > 0 ? child.x : edges?.get(child.id) ?? child.x + child.w, y: child.y + child.h / 2 };
   const dx = (b.x - a.x) / 2;
   return [a, { x: a.x + dx, y: a.y }, { x: b.x - dx, y: b.y }, b];
@@ -698,7 +699,7 @@ export function branchCurve(parent: Item, child: Item, edges?: Map<string, numbe
 /** Each node beside its parent's unseen right edge: that of the widest of the row it stands in (its
  *  parent's branches that side), the left edges of the row being level. Branches curve from and to it,
  *  all alike, going on straight to the node's own edge short of it, so they keep together as a sheaf:
- *  on the right, out from it to the next level; on the left, in to it from the parent. */
+ *  on the left, in to it from the parent (on the right, they leave each node's own edge, see branchCurve). */
 export function branchEdges(items: Item[], get: Get): Map<string, number> {
   const rows = new Map<string, Item[]>();
   for (const it of items) {

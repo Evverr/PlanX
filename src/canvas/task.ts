@@ -153,7 +153,8 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
     out.h = Math.ceil(by + BUTTON_H + 31);
     if (it.keep) out.pin = { x: w - 35, y: by + (BUTTON_H - ARROW) / 2 - 4, w: ARROW, h: ARROW };
   } else {
-    out.h = Math.ceil(at !== start ? at - 8 : d + 22);
+    // (Subtasks or who's on it last: 10 more under them, clear of its edge.)
+    out.h = Math.ceil(at !== start ? at + 2 : d + 22);
     if (it.keep) {
       out.h = Math.max(out.h, head + 12 + ARROW * 2 + 4 + 14);
       out.pin = { x: w - 35, y: out.h - 14 - ARROW, w: ARROW, h: ARROW };
