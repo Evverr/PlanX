@@ -841,7 +841,7 @@ export const checks = {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('task', 100, 100, { id: 'lo', w: 494, h: 400, tv: 'full', keep: true, z: 600 }));
       b.add(e.newItem('task', 300, 200, { id: 'hi', w: 494, h: 400, tv: 'full', keep: true, z: 601 }));
-      b.add(e.newItem('ink', 120, 300, { id: 'ink', w: 40, h: 40, pts: [0, 0, 40, 40], z: 602 })); e.setSelection(['lo']); })()`);
+      b.add(e.newItem('ink', 120, 160, { id: 'ink', w: 40, h: 40, pts: [0, 0, 40, 40], z: 602 })); e.setSelection(['lo']); })()`);
     await sleep(200);
     // Over both, where the upper one's header is.
     await p.drag([520, 226], [560, 226]);
@@ -849,7 +849,7 @@ export const checks = {
     // A drawing over what's picked doesn't hide it.
     await p.ev(`planx.editor.setSelection(['lo'])`);
     await sleep(100);
-    await p.drag([140, 320], [180, 320]);
+    await p.drag([140, 180], [180, 180]);
     expect(await p.ev(`[planx.board.get('lo').x, planx.board.get('ink').x].join()`), 'the picked one taken from under the drawing').toBe('140,120');
   },
 

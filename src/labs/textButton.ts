@@ -28,15 +28,31 @@ export function morphPanel(from: string, to: 'tfmt' | 'panel', swap: () => void)
   const a = document.querySelector<HTMLElement>(`${from}:not(.gone):not(.leaving)`);
   if (!a || busy) { swap(); return; }
   busy = true;
-  const root = document.documentElement, r = a.getBoundingClientRect();
+  grow(a, a.getBoundingClientRect(), to, swap);
+}
+
+/**
+ * The same, once one panel's already given way to the other (by what's typed in starting or ending, say):
+ * from where the one stood (`r`), the other coming in unseen as it comes, then its buttons fading in. So
+ * the text panel and the selection panel turn into one another rather than one going and the other coming.
+ */
+export function morphFrom(r: DOMRect | null, to: 'tfmt' | 'panel'): void {
+  if (!r || busy) return;
+  busy = true;
+  // (Unseen at once, before it's drawn: see labs.css.)
+  document.documentElement.dataset.morphIn = to;
+  grow(null, r, to, () => {});
+}
+
+function grow(a: HTMLElement | null, r: DOMRect, to: 'tfmt' | 'panel', swap: () => void): void {
+  const root = document.documentElement;
   const shell = document.createElement('div');
   shell.className = 'panel-shell';
   // (Its shadow too: the main panels at the window's edges have one of their own.)
-  Object.assign(shell.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, boxShadow: getComputedStyle(a).boxShadow });
+  Object.assign(shell.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, boxShadow: a ? getComputedStyle(a).boxShadow : 'var(--panel-shadow)' });
   document.body.append(shell);
   // What's on it fades out, and stays out whatever it does as it goes (its own going away, its ghost).
-  a.dataset.morph = '';
-  a.dataset.morphOut = '';
+  if (a) { a.dataset.morph = ''; a.dataset.morphOut = ''; }
   const done = () => { shell.remove(); delete root.dataset.morphIn; busy = false; };
   setTimeout(() => {
     // The other comes in unseen (see labs.css), and the body takes its width.
