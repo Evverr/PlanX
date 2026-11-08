@@ -110,8 +110,8 @@ export const checks = {
     await sleep(450);
     await p.click(await at('(t) => ({ x: t.x + t.w - 23, y: t.y + 26 })'));
     await sleep(450);
-    // «Закрепить описание» in its menu: kept open, a pin over its menu.
-    await menu('Закрепить описание');
+    // «Закрепить подробности» in its menu: kept open, a pin over its menu.
+    await menu('Закрепить подробности');
     expect([(await t()).keep, !!(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('${id}')).pin)()`))].join(), 'kept open, its pin').toBe('true,true');
     await p.ev(`planx.board.add(planx.editor.newItem('sticky', planx.board.get('${id}').x, planx.board.get('${id}').y, { id: 'atop' }))`);
     expect(await p.ev(`planx.board.list().at(-1).id`), 'over what is put later').toBe(id);
@@ -905,13 +905,20 @@ export const checks = {
     expect([l.menu.x, l.pin, l.buttons].join(), 'its burger at its right, nothing else at its foot').toBe(`${l.w - 35},false,false`);
     await open();
     expect(await p.ev(`[...document.querySelectorAll('.task-pop .menu-row')].map((b) => b.textContent).join()`), 'its menu')
-      .toBe('Закрепить описание,Подзадачи,Блок с ответственными,Дата завершения,Кнопки');
-    await pick('Закрепить описание');
+      .toBe('Закрепить подробности,Описание,Подзадачи,Блок с ответственными,Дата завершения,Кнопки');
+    await pick('Закрепить подробности');
     await open();
     await pick('Кнопки');
     l = await lay();
     expect([await p.ev(`planx.board.get('t').keep`), l.pin, l.buttons].join(), 'pinned (kept open), its pin; its buttons').toBe('true,true,true');
     expect(await p.ev(`(async () => (await import('/src/canvas/task.ts')).taskLayout(planx.board.get('t')).h)()`), 'as tall as it').toBe(await p.ev(`planx.board.get('t').h`));
+    // «Описание» unticked: only the buttons under its header, what's typed in it kept.
+    await open();
+    await pick('Описание');
+    expect(await p.ev(`(async () => { const t = planx.board.get('t'), l = (await import('/src/canvas/task.ts')).taskLayout(t); return [!!l.desc, !!l.finish, t.desc, l.h === t.h, l.lines.length].join(); })()`), 'no description, kept').toBe('false,true,Описание,true,0');
+    await open();
+    await pick('Описание');
+    expect(await p.ev(`(async () => !!(await import('/src/canvas/task.ts')).taskLayout(planx.board.get('t')).desc)()`), 'shown again').toBe(true);
   },
 
   async 'a task\'s subtask ticked by a click on its text too, typed in on a double click, taken away by the cross left of it'(p) {

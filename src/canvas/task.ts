@@ -111,17 +111,22 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   // (Its description in a list, as drawn: each paragraph after its bullet or number.)
   const dl = descLook(it), dh = textBlockHeight(it.desc ? withList(it.desc, it.ls) : DESC_HINT, descW, dl.fs, { weight: dl.weight, family: dl.family, italic: dl.italic });
   if (!it.tv) return out;
-  out.desc = { x: LEFT, y: dy, w: descW, h: dh };
+  // (Its description not shown, «Описание» unticked in its menu: what's under its header starts with what
+  // comes next, no line over it, as tall as its menu at least.)
+  if (!it.nd) out.desc = { x: LEFT, y: dy, w: descW, h: dh };
   // Its menu (three dots one over another) at the top right of what's under its header.
   out.menu = { x: w - 35, y: head + 12, w: ARROW, h: ARROW };
-  const d = dy + dh, full = it.tv === 'full';
+  const d = it.nd ? head + 12 + ARROW - 8 : dy + dh, full = it.tv === 'full';
   // All of it: under the description the blocks it has (added by its menu, or with something in them):
   // its subtasks, who set it and does it, by when; each after a line across, its first row 33 under it,
   // its last 33 over what comes next.
   out.lines = [];
-  let at = d + 25;
+  let at = it.nd ? head - 7 : d + 25, first = !it.nd;
+  const start = at;
+  // (A line over each block, but the first with no description over it.)
+  const line = () => { if (first) out.lines!.push(at); first = true; };
   if (full && (it.tsb || it.subs?.length)) {
-    out.lines.push(at);
+    line();
     // The subtasks (no heading: they're plain to see), the first 33 under the line, their boxes on the
     // title's line; each as tall as its lines (the row adding one, one), the next 38 on from its first line.
     const lh = lineH(TEXT_FS), subW = Math.max(40, w - SUB_TEXT_X - PAD);
@@ -133,22 +138,22 @@ export function taskLayout(it: Item, w = it.w): TaskLayout {
   }
   const keys = full ? [...(it.tpp || it.boss || it.doer ? (['boss', 'doer'] as const) : []), ...(it.tdu || it.due ? (['due'] as const) : [])] : [];
   if (keys.length) {
-    out.lines.push(at);
+    line();
     out.rows = keys.map((key, i) => ({ key, y: at + 33 + ROW * i }));
     at = at + 33 + ROW * (keys.length - 1) + 33;
   }
   // Its foot: «Отмена» and «Завершить» in the middle, shown by its menu («Показать кнопки»), after a line.
-  // Kept open («Закрепить описание»): a pin at the right of its very bottom (by the buttons, level with
+  // Kept open («Закрепить подробности»): a pin at the right of its very bottom (by the buttons, level with
   // them), with room for it under the menu.
   if (full && it.tbtn) {
-    out.lines.push(at);
+    line();
     const by = at + 24, fw = buttonW('Завершить'), cw = buttonW('Отмена'), cx = Math.round((w - fw - 10 - cw) / 2);
     out.cancel = { x: cx, y: by, w: cw, h: BUTTON_H };
     out.finish = { x: cx + cw + 10, y: by, w: fw, h: BUTTON_H };
     out.h = Math.ceil(by + BUTTON_H + 31);
     if (it.keep) out.pin = { x: w - 35, y: by + (BUTTON_H - ARROW) / 2 - 4, w: ARROW, h: ARROW };
   } else {
-    out.h = Math.ceil(out.lines.length ? at - 8 : d + 22);
+    out.h = Math.ceil(at !== start ? at - 8 : d + 22);
     if (it.keep) {
       out.h = Math.max(out.h, head + 12 + ARROW * 2 + 4 + 14);
       out.pin = { x: w - 35, y: out.h - 14 - ARROW, w: ARROW, h: ARROW };
@@ -477,8 +482,10 @@ function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typin
     ctx.globalAlpha = 1;
   };
   if (typing !== null) lines(titleLine(it.text || 'Название задачи', l.title.w), { ...l.title, w: Infinity }, TITLE_FS, 500, it.text ? look.ink : look.muted);
-  if (!l.desc) return;
-  if (typing !== 0 && !it.desc) lines(DESC_HINT, l.desc, TEXT_FS, 400, look.muted);
+  if (!it.tv) return;
+  // (Its description not shown, «Описание» unticked in its menu: none.)
+  if (!l.desc) { /* nothing */ }
+  else if (typing !== 0 && !it.desc) lines(DESC_HINT, l.desc, TEXT_FS, 400, look.muted);
   else if (typing !== 0) {
     // As the text panel set it, in a list as it's set, links on parts of it blue and underlined (see
     // model/textLinks.ts).
@@ -560,7 +567,7 @@ function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typin
   // Its menu, three dots one over another, darker under the pointer.
   // (Lighter than the arrows, darker under the pointer.)
   if (l.menu) { const k = litNow(`${it.id}:menu`, hot === `task:${it.id}:menu`); drawIcon(ctx, 'more-vertical-l', x + l.menu.x, y + l.menu.y, ARROW, look.dark ? `rgba(255,255,255,${0.3 + 0.55 * k})` : `rgba(0,0,0,${0.2 + 0.55 * k})`); }
-  // Kept open («Закрепить описание»): a pin over it, unpinning it on a click.
+  // Kept open («Закрепить подробности»): a pin over it, unpinning it on a click.
   // (Lit as the menu is.)
   if (l.pin) { const k = litNow(`${it.id}:pin`, hot === `task:${it.id}:pin`); drawIcon(ctx, 'pin', x + l.pin.x, y + l.pin.y, ARROW, look.dark ? `rgba(255,255,255,${0.3 + 0.55 * k})` : `rgba(0,0,0,${0.2 + 0.55 * k})`); }
   const subs = it.subs ?? [];
