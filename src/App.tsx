@@ -332,7 +332,8 @@ export function App({ boardId }: { boardId: string }) {
   overWent.current.shown = overShown;
   const following = useFollowing();
   // The T (on something with text, alone, the text panel not up already, or going): the panel turns into the text panel.
-  const toText = labs.textButton && tItem && !panelOn
+  // (Not while typing: the text panel comes by itself then, turning out of this one.)
+  const toText = labs.textButton && tItem && !panelOn && !editing
     ? () => {
       const bar = document.querySelector('.bar.panel:not(.gone)'), r = bar?.getBoundingClientRect();
       const dock = r && !bar!.classList.contains('panel-over') ? { cx: r.left + r.width / 2, bottom: r.bottom } : undefined;
