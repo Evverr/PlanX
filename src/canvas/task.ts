@@ -317,15 +317,17 @@ const lit = new Map<string, { on: boolean; from: number; at: number }>();
 let redraw: () => void = () => {};
 /** What draws the board again while a part's light eases (the editor's). */
 export const setTaskRedraw = (fn: () => void): void => { redraw = fn; };
-function litNow(key: string, on: boolean, ms = 160): number {
+function litNow(key: string, on: boolean, ms = 160, wait = 0): number {
+  // (`wait`: how long it waits before it starts to light; going dark, at once and in 160 at most.)
+  const dur = (t: { on: boolean }) => (t.on ? ms : Math.min(ms, 160));
   const now = performance.now(), at = (t: { on: boolean; from: number; at: number }) => {
-    const k = Math.min(1, (now - t.at) / ms), e = 1 - (1 - k) * (1 - k);
+    const k = Math.max(0, Math.min(1, (now - t.at) / dur(t))), e = 1 - (1 - k) * (1 - k);
     return t.from + ((t.on ? 1 : 0) - t.from) * e;
   };
   let t = lit.get(key);
-  if (!t) { if (!on) return 0; lit.set(key, (t = { on, from: 0, at: now })); }
-  else if (t.on !== on) lit.set(key, (t = { on, from: at(t), at: now }));
-  if (now - t.at < ms) redraw();
+  if (!t) { if (!on) return 0; lit.set(key, (t = { on, from: 0, at: now + wait })); }
+  else if (t.on !== on) lit.set(key, (t = { on, from: at(t), at: on ? now + wait : now }));
+  if (now - t.at < dur(t)) redraw();
   else if (!t.on) lit.delete(key);
   return at(t);
 }
@@ -595,8 +597,9 @@ function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typin
     drawBox(ctx, x + SUB_X + STATUS / 2 - KEEP_BOX / 2, y + mid - KEEP_BOX / 2, !!sub.done, SOFT_BLUE, look);
     // Its lines wrapped to its width; done, grey (not struck through).
     if (typing !== i + 1) lines(sub.t || 'Подзадача', box, TEXT_FS, 400, sub.t && !sub.done ? look.ink : look.muted);
-    // The pointer on it: left of its box a cross taking it away, darker on it, both easing in and out.
-    const shown = litNow(`${it.id}:sub:${i}`, !drag && (hot === `task:${it.id}:sub:${i}` || hot === `task:${it.id}:del:${i}`));
+    // The pointer on it: left of its box a cross taking it away, darker on it, both easing in and out (the
+    // cross after 300, slowly, in 480).
+    const shown = litNow(`${it.id}:sub:${i}`, !drag && (hot === `task:${it.id}:sub:${i}` || hot === `task:${it.id}:del:${i}`), 480, 300);
     if (shown) {
       const cx = x + SUB_X - 12, cy = y + mid, d = 4, k = litNow(`${it.id}:del:${i}`, hot === `task:${it.id}:del:${i}`);
       ctx.strokeStyle = look.dark ? `rgba(255,255,255,${(0.4 + 0.45 * k) * shown})` : `rgba(0,0,0,${(0.3 + 0.4 * k) * shown})`;
