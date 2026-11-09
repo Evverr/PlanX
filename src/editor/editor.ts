@@ -1425,8 +1425,10 @@ export class Editor {
     if (!data) return;
     const b = boundsOf((JSON.parse(data) as { items: Item[] }).items), one = this.selectedItems()[0];
     if (!b || !one) return;
-    // (The first free place that way: past the copies made before.)
-    const d = towardOffset(one, side, this.shown()), at = { x: b.x + b.w / 2 + d.x, y: b.y + b.h / 2 + d.y };
+    // (Nothing if that place is taken: a copy made before, say.)
+    const d = towardOffset(one, side, this.shown());
+    if (!d) return;
+    const at = { x: b.x + b.w / 2 + d.x, y: b.y + b.h / 2 + d.y };
     this.clipboard = data;
     this.paste(0, at);
     this.clipboard = keep;
