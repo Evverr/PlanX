@@ -873,7 +873,7 @@ export const checks = {
     expect(await tv(), 'the corner by its arrow: closed').toBe('closed');
   },
 
-  async '"Текст рамкой": the text tool dragged makes a text the box\'s size (as tall at least), its lines wrapping in it; a click as before'(p) {
+  async '"Текст рамкой": the text tool dragged makes a text the box\'s size, its lines wrapping in it, what doesn\'t fit past it; stretched both ways; a click as before'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('text'); })()`);
     const a = await p.ev(`(() => { const r = planx.editor.canvas.getBoundingClientRect(), s = planx.editor.toScreen({ x: 400, y: 300 }); return [r.left + s.x, r.top + s.y]; })()`);
     await p.drag(a, [a[0] + 380, a[1] + 120]);
@@ -881,13 +881,25 @@ export const checks = {
     await p.cdp('Input.insertText', { text: 'Длинный текст, который должен переноситься по строкам внутри рамки нужной ширины.' });
     await sleep(200);
     expect(await p.ev(`(() => { const t = planx.board.list().find((i) => i.type === 'text'); return [t.x, t.y, t.w, t.h].join(); })()`), 'the box: its width, lines wrapping, its height').toBe('400,300,380,120');
-    // More than fits: taller.
-    await p.cdp('Input.insertText', { text: ' Ещё и ещё строки, чтобы текст точно не поместился в рамку такой высоты и она подросла вниз.' });
+    // More than fits: as it is, the text showing past it.
+    await p.cdp('Input.insertText', { text: ' Ещё и ещё строки, чтобы текст точно не поместился в рамку такой высоты.' });
     await sleep(200);
-    expect(await p.ev(`planx.board.list().find((i) => i.type === 'text').h > 120`), 'more than fits: taller').toBe(true);
+    expect(await p.ev(`planx.board.list().find((i) => i.type === 'text').h`), 'more than fits: as it is').toBe(120);
+    await p.escape();
+    await sleep(100);
+    // Taller by its bottom side, wider by its right one.
+    const id = await p.ev(`planx.board.list().find((i) => i.type === 'text').id`);
+    await p.ev(`planx.editor.setSelection(['${id}'])`);
+    await sleep(200);
+    const side = (x, y) => p.ev(`(() => { const r = planx.editor.canvas.getBoundingClientRect(), s = planx.editor.toScreen({ x: ${'${x}'}, y: ${'${y}'} }); return [r.left + s.x, r.top + s.y]; })()`.replace('${x}', x).replace('${y}', y));
+    const bottom = await side(480, 420);
+    await p.drag(bottom, [bottom[0], bottom[1] + 80]);
+    const right = await side(780, 340);
+    await p.drag(right, [right[0] + 40, right[1]]);
+    expect(await p.ev(`(() => { const t = planx.board.get('${id}'); return [t.w, t.h].join(); })()`), 'stretched both ways').toBe('420,200');
     await p.escape();
     await p.ev(`planx.editor.setTool('text')`);
-    await p.click([a[0], a[1] + 300]);
+    await p.click([a[0], a[1] + 400]);
     await sleep(200);
     expect(await p.ev(`planx.board.list().filter((i) => i.type === 'text').pop().w`), 'a click: as wide as ever').toBe(260);
   },

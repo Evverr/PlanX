@@ -209,7 +209,8 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         if (nw < least) nw += Math.ceil((least - nw) / half) * half;
         if (keep) nh = Math.round((h0 * nw) / w0);
       }
-      if (it.type === 'text') nh = Math.max(itemTextHeight(it, it.text, nw), it.mh ?? 0);
+      // (A text drawn as a box, «Текст рамкой»: as stretched, what doesn't fit showing past it.)
+      if (it.type === 'text' && !it.tb) nh = itemTextHeight(it, it.text, nw);
       // A task only wider or narrower, as tall as what's in it then (see canvas/task.ts).
       if (it.type === 'task') { nw = Math.max(it.tv ? 360 : TASK_MIN_W, nw); nh = taskSize(it, nw).h; }
       // Text wrapping onto more lines (or fewer) takes the text just under it along.
@@ -498,10 +499,10 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       const d = DEFAULTS[g.tool];
       const box = g.to && normRect(g.at, g.to);
       const it = g.tool === 'text'
-        // (Dragged, «Текст рамкой»: the box, at its top left, as wide and (at least) as tall.)
-        ? box ? ed.newItem('text', box.x, box.y, { w: Math.max(40, Math.round(box.w)), mh: Math.round(box.h) }) : ed.newItem('text', g.at.x - 4, g.at.y - 14)
+        // (Dragged, «Текст рамкой»: the box, at its top left, its size; a line tall at least.)
+        ? box ? ed.newItem('text', box.x, box.y, { w: Math.max(40, Math.round(box.w)), h: Math.round(box.h), tb: true }) : ed.newItem('text', g.at.x - 4, g.at.y - 14)
         : ed.newItem(g.tool, g.at.x - d.w / 2, g.at.y - d.h / 2, g.tool === 'table' ? freshTable() : g.tool === 'mind' ? { text: MIND_TOPIC } : {});
-      if (it.type === 'text') it.h = Math.max(itemTextHeight(it), it.mh ?? 0);
+      if (it.type === 'text') it.h = it.tb ? Math.max(it.h, itemTextHeight(it)) : itemTextHeight(it);
       if (it.type === 'mind') Object.assign(it, mindSize(it), { x: Math.round(g.at.x - mindSize(it).w / 2) });
       if (it.type === 'task') Object.assign(it, freshTask(board, it, g.at));
       ed.addItem(it);
