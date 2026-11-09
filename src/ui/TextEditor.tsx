@@ -8,7 +8,6 @@ import { descLook, TASK_FONT, taskFieldBox } from '../canvas/task';
 import { addChild, rootTextColor, siblingTints } from '../model/mind';
 import { autoInk } from '../model/color';
 import { colsOf, rowsOf } from '../model/table';
-import { openSwap, swapKind } from '../labs/swap';
 import { linkedTexts } from '../labs/textPush';
 import { addSub, closeTask, setView } from '../model/task';
 import { taskOpen } from '../labs/taskFull';
@@ -117,8 +116,6 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
       aria-label="Текст"
       spellCheck={false}
       wrap={code || sub ? 'off' : undefined}
-      // "Замена двойным кликом": a shape typed in shows its neighbours on a double click on its text too.
-      onDoubleClick={() => { if (swapKind(item)) openSwap(item.id); }}
       style={{
         left: p.x, top: p.y, width,
         height: item.type === 'text' ? item.h : isFrame ? 26 : undefined,
