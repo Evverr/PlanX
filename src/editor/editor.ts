@@ -840,6 +840,9 @@ export class Editor {
   setSelection(ids: Iterable<string>, groups = true): void {
     const was = [...this.selection];
     this.selection = new Set(ids);
+    // («Полукруги на рамке», src/labs: worked out afresh for what's picked now, as the pointer next moves.)
+    this.tabAims = null;
+    this.hotTab = null;
     // Something in a group («Группы», src/labs) picked with all of it (but on its own, by a double click in it).
     if (groups && labOn('groups')) {
       this.selection = withGroups(this.board.list(), this.selection);
