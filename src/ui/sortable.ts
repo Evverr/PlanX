@@ -84,6 +84,7 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
   } | null>(null);
   const press = useRef<{ el: HTMLElement; key: string; zone: Zone; x0: number; y0: number; x: number; y: number; timer: number; held?: boolean } | null>(null);
   const ref = useRef<HTMLElement>(null);
+  const insertionRef = useRef<HTMLSpanElement>(null);
   const els = useRef(new Map<string, HTMLElement>());
   const swallowClick = useRef(false);
   const shown = useRef<string[]>(order);
@@ -125,6 +126,14 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
     if (!el || !zones[drag.zone].box()) return;
     if (drag.out) { el.style.transform = ''; el.style.opacity = '.3'; return; }
     const at = slot(drag.zone, el);
+    // Mark the gap before the actual landing slot, independent of the lifted button's transform.
+    const marker = insertionRef.current, box = zones[drag.zone].box()!;
+    if (marker) {
+      const gap = parseFloat(getComputedStyle(box).rowGap) || 0;
+      marker.style.left = `${el.offsetLeft}px`;
+      marker.style.top = `${el.offsetTop - gap / 2}px`;
+      marker.style.width = `${el.offsetWidth}px`;
+    }
     let dx = drag.x - drag.gx - at.x, dy = drag.y - drag.gy - at.y;
     if (drag.zone === 'bar') { if (axis === 'y') dx = 0; else dy = 0; }
     el.style.transform = `translate(${dx}px, ${dy}px) scale(1.12)`;
@@ -372,6 +381,10 @@ export function useSortable(storageKey: string, defaults: string[], axis: 'x' | 
       ref: (el: HTMLElement | null) => { if (el) els.current.set(key, el); else els.current.delete(key); },
     }),
     lifted: (key: string) => drag?.key === key,
+    /** Optional insertion hint, rendered by the tool rail (including its "more" menu). */
+    insertion: drag?.moved && !drag.out && canRearrange() && zones[drag.zone].box()
+      ? createPortal(createElement('span', { ref: insertionRef, className: 'sort-insertion', 'aria-hidden': true }), zones[drag.zone].box()!)
+      : null,
     /** Props for the "more" popover holding the buttons `keys` (in order), whose buttons can be
      *  rearranged among themselves (and dragged out onto the board, with dropOut). */
     moreZone: (keys: string[]) => {

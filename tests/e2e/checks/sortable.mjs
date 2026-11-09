@@ -28,6 +28,69 @@ export async function carry(p, from, path) {
 }
 
 export const checks = {
+  async 'rail insertion line marks the landing slot and disappears outside the rail'(p) {
+    const from = await p.at('.tools [data-key="sticky"]'), to = await p.at('.tools [data-key="task"]');
+    await p.mouse('mouseMoved', ...from);
+    await p.mouse('mousePressed', ...from);
+    await sleep(250);
+    expect(!!(await p.rect('.sort-insertion')), 'no line before moving').toBe(false);
+    for (let i = 1; i <= 20; i++) {
+      await p.mouse('mouseMoved', from[0], from[1] + (to[1] - from[1]) * i / 20);
+      await sleep(25);
+    }
+    await sleep(200);
+    const mark = await p.rect('.tools .sort-insertion');
+    expect(!!mark, 'a visible insertion line').toBe(true);
+    expect(mark.w > 10 && mark.h > 0 && mark.h <= 4, 'a horizontal line').toBe(true);
+    await p.mouse('mouseReleased', ...to);
+    await sleep(250);
+    const landed = await p.rect('.tools [data-key="sticky"]'), before = await p.rect('.tools [data-key="oval"]');
+    expect(mark.t >= before.b && mark.b <= landed.t, 'line was in the gap before the landing slot').toBe(true);
+    expect(!!(await p.rect('.sort-insertion')), 'line removed after drop').toBe(false);
+    const again = await p.at('.tools [data-key="sticky"]');
+    await p.mouse('mouseMoved', ...again);
+    await p.mouse('mousePressed', ...again);
+    await sleep(250);
+    await p.mouse('mouseMoved', again[0], again[1] + 10);
+    await sleep(100);
+    expect(!!(await p.rect('.sort-insertion')), 'line shown on rail').toBe(true);
+    await p.mouse('mouseMoved', 600, 400);
+    await sleep(100);
+    expect(!!(await p.rect('.sort-insertion')), 'no line over the board').toBe(false);
+    await p.mouse('mouseReleased', 600, 400);
+  },
+
+  async 'rail insertion line follows a button in the more menu and hides when rearranging is disabled'(p) {
+    await p.open(700, 420);
+    await p.click(await p.at('.tools > button[aria-label="Ещё"]'));
+    const keys = await moreKeys(p, '.tools-more'), from = keys[0].slice(1), to = keys[2].slice(1);
+    await p.mouse('mouseMoved', ...from);
+    await p.mouse('mousePressed', ...from);
+    await sleep(250);
+    for (let i = 1; i <= 20; i++) {
+      await p.mouse('mouseMoved', from[0] + (to[0] - from[0]) * i / 20, from[1] + (to[1] - from[1]) * i / 20);
+      await sleep(25);
+    }
+    await sleep(200);
+    const mark = await p.rect('.tools-more .sort-insertion');
+    expect(!!mark, 'line in more menu').toBe(true);
+    await p.mouse('mouseReleased', ...to);
+    await sleep(250);
+    const landed = await p.rect(`.tools-more [data-more-key="${keys[0][0]}"]`);
+    expect(Math.abs(mark.l - landed.l) <= 1 && mark.b < landed.t, 'line above the destination in the same column').toBe(true);
+    expect(!!(await p.rect('.sort-insertion')), 'no line after release').toBe(false);
+    await p.open();
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('customize', true))()`);
+    const sticky = await p.at('.tools [data-key="sticky"]');
+    await p.mouse('mouseMoved', ...sticky);
+    await p.mouse('mousePressed', ...sticky);
+    await sleep(250);
+    await p.mouse('mouseMoved', sticky[0], sticky[1] + 20);
+    await sleep(100);
+    expect(!!(await p.rect('.sort-insertion')), 'no insertion hint when rearranging is disabled').toBe(false);
+    await p.mouse('mouseReleased', sticky[0], sticky[1] + 20);
+  },
+
   async 'rail buttons rearrange along the rail'(p) {
     const k0 = await mainKeys(p, '.tools');
     const from = k0.find((k) => k[0] === 'sticky'), to = k0.find((k) => k[0] === 'task');

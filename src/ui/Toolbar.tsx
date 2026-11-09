@@ -272,6 +272,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     <input ref={filePicker} type="file" accept="image/*" multiple hidden
       onChange={(e) => { const at = pictureAt.current; void readPictures(e.target.files ?? []).then((pics) => editor.addPictures(pics, at)); e.target.value = ''; }} />
     {sort.ghost}
+    {sort.insertion}
     </>
   );
 }

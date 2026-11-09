@@ -61,6 +61,7 @@
 .sortable .lifted { position: relative; z-index: 1; }
 .sortable .fb.lifted::before { background: var(--fmt-bg); box-shadow: var(--fmt-shadow); }
 .sortable .lifted:not(.fb, .sep, .tsep, .fsep) { background: var(--surface); box-shadow: var(--fmt-shadow); border-radius: var(--s6); }
+.sort-insertion { position: absolute; z-index: 2; height: 2px; border-radius: 2px; background: var(--accent); transform: translateY(-50%); pointer-events: none; }
 .tsep { flex: none; width: var(--s20); height: var(--s7); position: relative; }
 /* Drawing tools, opened from the rail's drawing button: a second rail beside the first. */
 .draw-panel { position: fixed; z-index: 5; left: calc(24px + var(--rail-w) + env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%);
