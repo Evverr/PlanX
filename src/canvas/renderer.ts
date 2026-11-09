@@ -466,7 +466,16 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       break;
     }
     case 'text':
-      if (!editing) drawText(ctx, it, 0, theme.ink, false, s);
+      if (editing) break;
+      // A text drawn as a box («Текст рамкой», src/labs): what doesn't fit cut off at it but while it's picked.
+      if (it.tb && !s.selection.has(it.id)) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(it.x, it.y, it.w, it.h);
+        ctx.clip();
+        drawText(ctx, it, 0, theme.ink, false, s);
+        ctx.restore();
+      } else drawText(ctx, it, 0, theme.ink, false, s);
       break;
     case 'frame': {
       if (it.tl) { drawTimeline(ctx, it, { card: theme.surface, ink: theme.ink }, cam.z); break; }
