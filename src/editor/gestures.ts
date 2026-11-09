@@ -121,11 +121,12 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       }
       // With Shift held as it's dragged, what's dragged lines up with what's on screen around it when near.
       // With «Направляющие по близким объектам» (src/labs), without Shift too, but only with what's near it
-      // (see NEAR_GUIDES); Shift then as ever. (Not a mind map's node: its map places it.)
+      // (see NEAR_GUIDES); Shift then as ever. (Not a mind map's node: its map places it.) With Cmd (Ctrl)
+      // held, none: put where it's let go.
       let sx = 0, sy = 0;
       g.guides = undefined;
-      const near = !e.shiftKey && labOn('nearGuides') && board.get(g.id)?.type !== 'mind';
-      if (e.shiftKey || near) {
+      const free = e.metaKey || e.ctrlKey, near = !e.shiftKey && labOn('nearGuides') && board.get(g.id)?.type !== 'mind';
+      if (!free && (e.shiftKey || near)) {
         const moving = [...g.orig].map(([id, o]) => { const it = board.get(id); return it && { ...it, x: o.x + dx, y: o.y + dy }; }).filter((i): i is Item => !!i);
         const bs = moving.map(boxOf), view = ed.viewRect();
         const x = Math.min(...bs.map((b) => b.x)), y = Math.min(...bs.map((b) => b.y));
