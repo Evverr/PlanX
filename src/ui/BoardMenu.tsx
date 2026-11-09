@@ -4,6 +4,8 @@ import { usePanelSize, type PanelSize } from './panels/size';
 import { setGridKind, useGridKind, type GridKind } from '../labs/boardGrid';
 import { useLabs } from '../labs/labs';
 import { setCustomize, useCustomize } from '../labs/customize';
+import { boardUrl, readShelf } from '../shelf/boards';
+import { navigate } from '../route';
 
 /**
  * The board's menu, opened from the button after its name (Figma "Mol / Menu right"): first the board
@@ -72,11 +74,13 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
       {/* "Фон доски" (src/labs). */}
       {level === 0 && labs.boardGrid
         ? row('apps', 'Фон', { end: <PickDots label="Фон" now={grid} of={[['lines', 'Линии'], ['dots', 'Точки'], ['none', 'Пусто']] as Array<[GridKind, string]>} onPick={setGridKind} /> })
-        : row('link-settings', 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
+        : level > 0 && row('link-settings', 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
       {/* "Режим настройки меню" (src/labs). */}
       {level === 0 && labs.customize
         ? row('change-order', 'Режим настройки меню', { onClick: () => setCustomize(!customize), end: <Switch on={customize} /> })
-        : row('change-order', 'Оглавление', { light: true, onClick: () => setOn2(!on2), end: <Switch on={on2} /> })}
+        : level > 0 && row('change-order', 'Оглавление', { light: true, onClick: () => setOn2(!on2), end: <Switch on={on2} /> })}
+      {/* The boards opened here last. */}
+      {level === 0 && row('clock-l', 'Недавнее', { more: <Recent />, end: arrow })}
     </div>
   );
 }
@@ -100,6 +104,24 @@ const MAX_LEVEL = 3;
 
 /** The switch at the end of a row (Figma "Check" and "Check 2"): a blue track with the knob right when on,
  *  grey with it left when off. */
+/** The boards last opened in this browser, the latest first, ten of them (not the one open). */
+const RECENT = 10;
+function Recent() {
+  const here = new URLSearchParams(location.search).get('board');
+  const list = (readShelf() ?? []).filter((b) => b.id !== here).sort((a, b) => b.opened - a.opened).slice(0, RECENT);
+  const open = (id: string) => {
+    window.dispatchEvent(new Event('planx:leave'));
+    navigate(boardUrl(id));
+  };
+  return (
+    <div className="board-menu sub plain" role="menu" aria-label="Недавнее">
+      {list.length ? list.map((b) => (
+        <div key={b.id} className="menu-item"><button className="menu-row" role="menuitem" onClick={() => open(b.id)}><span>{b.title || 'Без названия'}</span></button></div>
+      )) : <div className="menu-item"><span className="menu-row light">Пока пусто</span></div>}
+    </div>
+  );
+}
+
 /** A further level that's still to come: three rows, no icons. */
 function Stub() {
   return (
