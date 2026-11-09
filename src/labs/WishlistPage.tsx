@@ -1,8 +1,61 @@
-import { useEffect, useMemo, useReducer, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { ago } from '../shelf/boards';
-import { Glyph } from '../ui/glyphs';
 import { readText, writeText } from '../storage';
-import { Wishes, type WishSort } from './wishes';
+import { emojiSrc } from '../emoji/emoji';
+import { PanelIcon } from '../ui/PanelIcon';
+import { REACTIONS } from './overlays';
+import { Wishes, type Wish, type WishSort } from './wishes';
+
+/** A wish's menu: under the three dots at its right (shown with the pointer on it), «Удалить» and
+ *  «Скрыть» (shown faintly; for now anyone's, later the admins' alone). */
+function WishMenu({ wishes, w }: { wishes: Wishes; w: Wish }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    window.addEventListener('pointerdown', close, true);
+    return () => window.removeEventListener('pointerdown', close, true);
+  }, [open]);
+  const row = (label: string, run: () => void) => (
+    <div className="menu-item"><button className="menu-row" role="menuitem" onClick={() => { setOpen(false); run(); }}><span>{label}</span></button></div>
+  );
+  return (
+    <div ref={ref} className={`wish-more-wrap ${open ? 'open' : ''}`}>
+      <button className="wish-more" title="Ещё" aria-label="Ещё" aria-expanded={open} onClick={() => setOpen(!open)}><PanelIcon name="more-vertical" /></button>
+      {open && (
+        <div className="board-menu wish-menu" role="menu" aria-label="Пожелание">
+          {row('Удалить', () => wishes.remove(w.id))}
+          {row(w.hidden ? 'Показать' : 'Скрыть', () => wishes.hide(w.id))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** A wish's reactions, as those on the board's items: those put on it, each with how many; and, with the
+ *  pointer on the wish, a faint one, all of them coming out with the pointer on it. */
+function WishReactions({ wishes, w }: { wishes: Wishes; w: Wish }) {
+  const img = (emoji: string) => <img src={emojiSrc(emoji)} alt="" draggable={false} />;
+  return (
+    <div className="wish-rx">
+      {w.rx.map((r) => (
+        <button key={r.emoji} className={`wish-pill ${r.mine ? 'mine' : ''}`} aria-pressed={r.mine} aria-label={`Реакция, ${r.n}`} onClick={() => wishes.react(w.id, r.emoji)}>
+          {img(r.emoji)}<span>{r.n}</span>
+        </button>
+      ))}
+      <span className="wish-react">
+        <span className="wish-react-faint" aria-hidden="true">{img(REACTIONS[0])}</span>
+        <span className="wish-react-all" role="menu" aria-label="Реакции">
+          {REACTIONS.map((emoji) => (
+            <button key={emoji} className="wish-react-btn" role="menuitemcheckbox" aria-checked={!!w.rx.find((r) => r.emoji === emoji)?.mine}
+              aria-label={`Реакция ${emoji}`} onClick={() => wishes.react(w.id, emoji)}>{img(emoji)}</button>
+          ))}
+        </span>
+      </span>
+    </div>
+  );
+}
 
 const SORT_KEY = 'planx-wish-sort';
 /** Wishes on a page; with more, page numbers under them. */
@@ -34,23 +87,20 @@ export function WishlistPage() {
       <div className="wish-head">
         <h2>Пожелания{list.length ? ` · ${list.length}` : ''}</h2>
         <select className="shelf-sort" aria-label="Порядок" value={sort} onChange={(e) => { setSort(e.target.value as WishSort); setPage(0); }}>
-          <option value="likes">По лайкам</option>
+          <option value="likes">По реакциям</option>
           <option value="new">По дате</option>
         </select>
       </div>
       {!list.length && <p className="wish-empty">Пока пусто. Напишите первое пожелание.</p>}
       <ul className="wish-list">
         {list.slice(at * PAGE, (at + 1) * PAGE).map((w) => (
-          <li key={w.id} className="wish">
+          <li key={w.id} className={`wish ${w.hidden ? 'hidden' : ''}`}>
             <div className="wish-body">
               <p>{w.text}</p>
               <span className="wish-meta">{w.by ? `${w.by} · ` : ''}{ago(w.at)}</span>
+              <WishReactions wishes={wishes} w={w} />
             </div>
-            <button className={`wish-like ${w.mine ? 'on' : ''}`} aria-pressed={w.mine} title={w.mine ? 'Убрать лайк' : 'Нравится'}
-              aria-label={`Лайк, ${w.likes}`} onClick={() => wishes.like(w.id)}>
-              <Glyph id="like" />
-              <span>{w.likes}</span>
-            </button>
+            <WishMenu wishes={wishes} w={w} />
           </li>
         ))}
       </ul>

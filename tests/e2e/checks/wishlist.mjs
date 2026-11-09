@@ -4,7 +4,7 @@ import { expect, sleep } from '../lib.mjs';
 const at = (p, sel) => p.ev(`(() => { const r = document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
 
 export const checks = {
-  async 'wishes are written in, liked once each, sorted by likes or date, and "Мои доски" leads back'(p) {
+  async 'wishes are written in, reacted to once each (as items on the board), sorted by reactions or date, hidden, deleted, and "Мои доски" leads back'(p) {
     // Kept to this browser: the sync server (the dev one, if it's running) never sees the test's wishes.
     // (No WebSocket at all: blocking its address isn't enough for Chrome.)
     await p.cdp('Page.enable');
@@ -29,14 +29,30 @@ export const checks = {
     await say('Экспорт в Figma');
     const texts = () => p.ev(`[...document.querySelectorAll('.wish p')].map((e) => e.textContent)`);
     expect((await texts()).join(' | '), 'the newer first while none is liked').toBe('Экспорт в Figma | Тёмная тема для меню');
-    // Liking the older one twice leaves one like; once more, and it's on top by likes.
-    const like = (i) => p.ev(`document.querySelectorAll('.wish-like')[${i}].click()`);
+    // A like (the first reaction) on the older one: on top by reactions; pressed again, taken back.
+    const like = (i) => p.ev(`document.querySelectorAll('.wish')[${i}].querySelector('.wish-react-btn').click()`);
     await like(1); await sleep(100);
     expect((await texts())[0], 'liked goes on top').toBe('Тёмная тема для меню');
-    expect(await p.ev(`document.querySelector('.wish-like').textContent`), 'one like').toBe('1');
+    expect(await p.ev(`document.querySelector('.wish .wish-pill')?.textContent`), 'one like').toBe('1');
     await like(0); await sleep(100);
-    expect(await p.ev(`document.querySelectorAll('.wish-like')[0].textContent + document.querySelectorAll('.wish-like')[1].textContent`), 'a second press takes it back').toBe('00');
+    expect(await p.ev(`document.querySelectorAll('.wish-pill').length`), 'a second press takes it back').toBe(0);
     await like(1); await sleep(100);
+    // Its menu: hidden (faint), shown again; deleted.
+    const menu = async (i, label) => {
+      await p.ev(`document.querySelectorAll('.wish')[${i}].querySelector('.wish-more').click()`);
+      await sleep(100);
+      await p.ev(`[...document.querySelectorAll('.wish-menu .menu-row')].find((b) => b.textContent === '${label}').click()`);
+      await sleep(100);
+    };
+    await menu(0, 'Скрыть');
+    expect(await p.ev(`document.querySelectorAll('.wish.hidden').length`), 'hidden, faint').toBe(1);
+    await menu(0, 'Показать');
+    expect(await p.ev(`document.querySelectorAll('.wish.hidden').length`), 'shown again').toBe(0);
+    await say('Удалить меня');
+    await p.ev(`(() => { const s = document.querySelector('.wish-head select'); s.value = 'new'; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await sleep(100);
+    await menu(0, 'Удалить');
+    expect((await texts()).includes('Удалить меня'), 'deleted').toBe(false);
     await p.ev(`(() => { const s = document.querySelector('.wish-head select'); s.value = 'new'; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
     await sleep(100);
     expect((await texts())[0], 'by date, the newest first').toBe('Экспорт в Figma');
