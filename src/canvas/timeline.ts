@@ -47,7 +47,7 @@ export function timelineSize(start: Date): { w: number; h: number } {
 /** The steps a timeline can have (see `ts`), and a day across at its own. */
 export const TL_STEPS = [1, 2, 4, 6];
 /** How many times the usual size its writing may be (see Item.tfs). */
-export const TL_FONTS = [1, 2, 4, 6];
+export const TL_FONTS = [1, 2, 3, 4];
 export const dayOf = (it: Item): number => DAY * (it.ts ?? 1);
 
 /** How many days its width holds. */

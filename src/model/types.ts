@@ -158,7 +158,7 @@ export interface Item {
   tl?: string;
   /** A timeline's step: how many times the usual width a day takes (1, 2, 4 or 6; 1 left out). */
   ts?: number;
-  /** A timeline's months and day numbers this many times their usual size (1, 2, 4 or 6; 1 left out). */
+  /** A timeline's months and day numbers this many times their usual size (1, 2, 3 or 4; 1 left out). */
   tfs?: number;
   /** A folded frame's unfolded size (see model/frame.ts). */
   fold?: { w: number; h: number };

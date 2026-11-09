@@ -554,7 +554,8 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // Let go on nothing («Линия в пустоту», src/labs): to an unseen point there (not on its own item).
         const src = board.get(g.from);
         if (src && !pointInRect(g.to, linkBox(src))) {
-          const l: Link = { id: uid(), from: g.from, to: '', fromSide: g.fromSide ?? nearestSide(src, g.to) };
+          // (Curved as it was drawn: out of the side it was pulled from, into the point facing it.)
+          const l: Link = { id: uid(), from: g.from, to: '', fromSide: g.fromSide ?? nearestSide(src, g.to), toSide: facing(g.to, center(linkBox(src))) };
           if (ed.linkStyle) l.style = ed.linkStyle;
           board.transact(() => { l.to = ed.addLineEnd(g.to); board.addLink(l); });
           ed.setTool('select');
@@ -583,7 +584,12 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         if (point) board.update(point.id, { x: Math.round(g.to.x), y: Math.round(g.to.y) });
         else board.transact(() => {
           const id = ed.addLineEnd(g.to);
-          board.relink(l.id, g.start ? { from: id, to: l.to, toSide: l.toSide, toAt: l.toAt } : { from: l.from, to: id, fromSide: l.fromSide, fromAt: l.fromAt });
+          // (Curved: its other end pinned to a side, as it's drawn; the point's facing it.)
+          const other = board.get(g.start ? l.to : l.from), oc = other ? center(linkBox(other)) : g.from;
+          const otherSide = (g.start ? l.toSide : l.fromSide) ?? (other ? nearestSide(other, g.to) : undefined), mine = facing(g.to, oc);
+          board.relink(l.id, g.start
+            ? { from: id, to: l.to, fromSide: mine, toSide: otherSide, toAt: l.toAt }
+            : { from: l.from, to: id, fromSide: otherSide, fromAt: l.fromAt, toSide: mine });
         });
       } else if (l && g.away && !target && g.going) {
         board.remove([l.id]);
@@ -731,4 +737,10 @@ function relinkTo(ed: Editor, l: Link, target: Item, p: Point, start: boolean): 
       toAt: sided && at !== 0.5 ? at : undefined,
     });
   });
+}
+
+/** «Линия в пустоту» (src/labs): the side of a point (of no size) facing `to`. */
+function facing(at: Point, to: Point): Side {
+  const dx = to.x - at.x, dy = to.y - at.y;
+  return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'bottom' : 'top';
 }
