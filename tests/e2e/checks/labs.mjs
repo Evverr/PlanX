@@ -1893,10 +1893,10 @@ export const checks = {
     expect(await p.ev(`planx.board.get('m').color`), 'its colour').toBe('#30A46C');
     await p.click(await p.at('.params-tabs button:nth-child(2)'));
     await sleep(100);
-    expect(await p.ev(`[...document.querySelectorAll('.params-pop .menu-row')].map((b) => b.textContent + ':' + b.getAttribute('aria-checked')).join()`), 'right and left at first')
-      .toBe('Вправо:true,Влево:true,Вверх:false,Вниз:false,Передвигать вручную:false,Боковая полоса:true,Бэкграунд:true');
+    expect(await p.ev(`[...document.querySelectorAll('.params-pop .menu-row')].map((b) => b.textContent + ':' + b.getAttribute('aria-checked')).join()`), 'right only at first')
+      .toBe('Вправо:true,Влево:false,Вверх:false,Вниз:false,Передвигать вручную:false,Боковая полоса:true,Бэкграунд:true');
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.params-pop .menu-row')].find((b) => b.textContent === 'Вверх').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
-    expect(await p.ev(`JSON.stringify(planx.board.get('m').mw)`), 'up too').toBe('["right","left","up"]');
+    expect(await p.ev(`JSON.stringify(planx.board.get('m').mw)`), 'up too').toBe('["right","up"]');
     for (const label of ['Боковая полоса', 'Бэкграунд']) await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.params-pop .menu-row')].find((b) => b.textContent === '${label}').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect([await p.ev(`planx.board.get('m').mns`), await p.ev(`planx.board.get('m').mnb`)].join(), 'no strips, no cards: the text alone').toBe('true,true');
   },
