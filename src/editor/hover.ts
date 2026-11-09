@@ -3,6 +3,7 @@ import { DEFAULTS, EDITABLE, ROTATABLE, textPad, textPadY } from '../model/types
 import { fontOf, textBlockHeight, withList } from '../canvas/text';
 import { taskPartAt } from '../canvas/task';
 import type { Point } from '../canvas/geometry';
+import { tabAt, tabsFor } from '../labs/sideTabs';
 import { coveredAt, hitItem, hitLink, instanceBounds, linkBox, linkHandles, linkShape, onAudioButton, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, dotGap, HANDLE } from '../canvas/renderer';
 import { instanceGlyph, instancePlus } from '../model/components';
@@ -281,7 +282,10 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   const picked = ed.selection.size === 1 ? ed.board.get([...ed.selection][0]) : undefined;
   // A locked item has no handles to take.
   const single = isLocked(picked) ? undefined : picked;
-  const dot = single && !ed.editingId ? dotAt(ed, single, w) : null;
+  // («Полукруги на рамке», src/labs: its half circles, before anything else there.)
+  const tab = tabsFor(single, ed.editingId) ? tabAt(ed, single, w) : null;
+  if (tab !== ed.hotTab) { ed.hotTab = tab; ed.requestRender(); }
+  const dot = single && !ed.editingId && !tab ? dotAt(ed, single, w) : null;
   if (dot !== ed.hotDot) { ed.hotDot = dot; ed.requestRender(); }
   let cursor = '';
   // (Typing in a table's cell, its lines are still taken.)
@@ -316,6 +320,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (linkHandleAt(ed, w)) cursor = 'move';
+  else if (tab) cursor = 'pointer';
   else if (dot) cursor = 'crosshair';
   else if (single && (onHandle(ed, single, w) || onTopLeft(ed, single, w))) cursor = 'nwse-resize';
   else if (single && onBottomLeft(ed, single, w)) cursor = 'nesw-resize';

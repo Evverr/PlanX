@@ -7,7 +7,7 @@ import { readJSON, readText, writeJSON, writeText } from '../storage';
  * browser. Everything they need lives in this folder; the app only asks labOn() where a feature
  * changes what it does, so one that isn't kept comes out by deleting its file and those few lines.
  */
-export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib' | 'softEraser' | 'layers' | 'solidTool' | 'history' | 'panelOver' | 'zoomFade' | 'zoomKeys' | 'tableMove' | 'textButton' | 'tableCut' | 'linkJoint' | 'tableLook' | 'imageCrop' | 'boardGrid' | 'linkTool' | 'customize' | 'codeBlock' | 'taskFull' | 'sideNav' | 'discussion' | 'groups' | 'subDrag' | 'nearGuides' | 'textBox';
+export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib' | 'softEraser' | 'layers' | 'solidTool' | 'history' | 'panelOver' | 'zoomFade' | 'zoomKeys' | 'tableMove' | 'textButton' | 'tableCut' | 'linkJoint' | 'tableLook' | 'imageCrop' | 'boardGrid' | 'linkTool' | 'customize' | 'codeBlock' | 'taskFull' | 'sideNav' | 'discussion' | 'groups' | 'subDrag' | 'nearGuides' | 'textBox' | 'sideTabs';
 
 export interface Lab { id: LabId; label: string; icon: string; hint: string }
 
@@ -60,6 +60,7 @@ export const LABS: Lab[] = [
   { id: 'subDrag', label: 'Перетаскивание подзадач', icon: 'check-list', hint: 'В развёрнутой задаче подзадачу можно потянуть вверх или вниз и поставить на другое место' },
   { id: 'nearGuides', label: 'Направляющие по близким объектам', icon: 'align-left', hint: 'Перетаскиваемое само выравнивается по объектам рядом с ним (в 200 точках экрана), линии — только до них. С Shift — по всем на экране, как раньше; с Cmd — без направляющих. Выключено: направляющие только с Shift' },
   { id: 'textBox', label: 'Текст рамкой', icon: 'text', hint: 'Инструмент «Текст»: протяните рамку — текст переносится по её ширине; её размер меняется за края и уголок, не поместившееся торчит из неё. Клик, как раньше, ставит строку' },
+  { id: 'sideTabs', label: 'Полукруги на рамке', icon: 'shape-cross', hint: 'У выбранного на середине каждой стороны рамки полукруг. Наведите — шарик; клик — копия в эту сторону; потяните — линия к чему-нибудь' },
   { id: 'swap', label: 'Замена двойным кликом', icon: 'repeat', hint: 'Двойной клик по эмодзи, иконке или фигуре: выбрать другую на её место, и в копии компонента тоже' },
 ];
 

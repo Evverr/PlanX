@@ -873,6 +873,24 @@ export const checks = {
     expect(await tv(), 'the corner by its arrow: closed').toBe('closed');
   },
 
+  async '"Полукруги на рамке": a half circle on each side of the picked one\'s frame; under the pointer a ball; a click a copy that way, dragged a link'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); b.add(e.newItem('sticky', 400, 300, { id: 's', w: 160, h: 160 })); b.add(e.newItem('rect', 900, 300, { id: 'r', w: 160, h: 160 })); e.setSelection(['s']); })()`);
+    await sleep(300);
+    const at = (x, y) => p.ev(`(() => { const r = planx.editor.canvas.getBoundingClientRect(), s = planx.editor.toScreen({ x: ${'X'}, y: ${'Y'} }); return [r.left + s.x, r.top + s.y]; })()`.replace('X', x).replace('Y', y));
+    const right = await at(563, 380);
+    await p.mouse('mouseMoved', ...right);
+    await sleep(150);
+    expect(await p.ev('planx.editor.hotTab'), 'its ball').toBe('right');
+    await p.click(right);
+    await sleep(300);
+    expect(await p.ev(`(() => { const c = planx.board.list().filter((i) => i.type === 'sticky' && i.id !== 's')[0]; return c ? [c.x, c.y, [...planx.editor.selection].join() === c.id].join() : 'none'; })()`), 'a copy right of it, picked').toBe('584,300,true');
+    await p.ev(`planx.editor.setSelection(['s'])`);
+    await sleep(200);
+    await p.drag(await at(480, 463), await at(980, 380));
+    await sleep(300);
+    expect(await p.ev(`JSON.stringify(planx.board.linkList().map((l) => [l.from, l.to]))`), 'dragged: a link').toBe('[["s","r"]]');
+  },
+
   async '"Текст рамкой": the text tool dragged makes a text the box\'s size, its lines wrapping in it, what doesn\'t fit past it; stretched both ways; a click as before'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('text'); })()`);
     const a = await p.ev(`(() => { const r = planx.editor.canvas.getBoundingClientRect(), s = planx.editor.toScreen({ x: 400, y: 300 }); return [r.left + s.x, r.top + s.y]; })()`);
