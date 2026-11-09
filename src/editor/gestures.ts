@@ -550,6 +550,16 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         board.addLink(l);
         ed.setTool('select');
         ed.setSelection([l.id]);
+      } else if (!g.target && labOn('lineEnd')) {
+        // Let go on nothing («Линия в пустоту», src/labs): to an unseen point there (not on its own item).
+        const src = board.get(g.from);
+        if (src && !pointInRect(g.to, linkBox(src))) {
+          const l: Link = { id: uid(), from: g.from, to: '', fromSide: g.fromSide ?? nearestSide(src, g.to) };
+          if (ed.linkStyle) l.style = ed.linkStyle;
+          board.transact(() => { l.to = ed.addLineEnd(g.to); board.addLink(l); });
+          ed.setTool('select');
+          ed.setSelection([l.id]);
+        }
       }
       ed.requestRender();
       return;
@@ -561,8 +571,21 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       // Let go on another item, the arrow goes to it; taken off its item (by its head or its line) and let
       // go on none, it's gone. A click on its line just picks it.
       const l = board.getLink(g.id), target = g.target ? board.get(g.target) : undefined;
-      if (l && g.going && target) relinkTo(ed, l, target, g.to, !!g.start);
-      else if (l && g.away && !target && g.going) {
+      // («Линия в пустоту», src/labs: the end taken was an unseen point: it goes once the end's on an item.)
+      const held = l && board.get(g.start ? l.from : l.to), point = held?.pt ? held : undefined;
+      if (l && g.going && target) {
+        board.transact(() => {
+          relinkTo(ed, l, target, g.to, !!g.start);
+          if (point && !board.linkList().some((k) => k.id !== l.id && (k.from === point.id || k.to === point.id))) board.remove([point.id]);
+        });
+      } else if (l && g.away && !target && g.going && labOn('lineEnd')) {
+        // Let go on nothing: the end stays there, at an unseen point (moved, if it was one already).
+        if (point) board.update(point.id, { x: Math.round(g.to.x), y: Math.round(g.to.y) });
+        else board.transact(() => {
+          const id = ed.addLineEnd(g.to);
+          board.relink(l.id, g.start ? { from: id, to: l.to, toSide: l.toSide, toAt: l.toAt } : { from: l.from, to: id, fromSide: l.fromSide, fromAt: l.fromAt });
+        });
+      } else if (l && g.away && !target && g.going) {
         board.remove([l.id]);
         ed.setSelection([]);
       }

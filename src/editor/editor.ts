@@ -979,6 +979,9 @@ export class Editor {
     const going = [...ids, ...held, ...descendants(ids, items)].filter((id) => !heldInPlace(this.board.get(id), items));
     // What was put into a line going: the line made one again ("Узел на линии", src/labs).
     const lines = labOn('linkJoint') ? rejoined(this, new Set(going)) : [];
+    // A line's unseen end («Линия в пустоту», src/labs) goes with its last line.
+    const gone = new Set(going), left = this.board.linkList().filter((l) => !gone.has(l.id) && !gone.has(l.from) && !gone.has(l.to));
+    for (const i of items) if (i.pt && !left.some((l) => l.from === i.id || l.to === i.id)) going.push(i.id);
     this.board.transact(() => {
       this.board.remove(going);
       lines.forEach((l) => this.board.addLink(l));
@@ -1422,6 +1425,13 @@ export class Editor {
   /** The copy of what's picked beside it, level with it: one in a column of its like (two or more one
    *  under another), the last of it, under it as far as the last two are apart; one in a row of them, past
    *  the row's last alike; else (one with its like under it too), right of it, 24 off. */
+  /** «Линия в пустоту» (src/labs): an unseen point at `p` for a line's end let go on nothing; its id. */
+  addLineEnd(p: Point): string {
+    const it = this.newItem('rect', Math.round(p.x), Math.round(p.y), { w: 0, h: 0, color: 'none', sc: 'none', text: '', pt: true });
+    this.board.add(it);
+    return it.id;
+  }
+
   /** «Полукруги на рамке» (src/labs): a copy of what's picked beside it that way (see towardOffset), picked. */
   duplicateToward(side: Side): void {
     const keep = this.clipboard, data = this.copyData();
