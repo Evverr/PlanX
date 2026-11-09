@@ -6,7 +6,7 @@ import { Glyph } from '../ui/glyphs';
 import { labOn, subscribeLabs, useLabs } from './labs';
 import { LabsRail, type RailButton } from './LabsRail';
 import { addCode } from './codeBlock';
-import { drawLabs, laser, LASER_FADE, pillAt, toggleReaction } from './overlays';
+import { drawLabs, drawMarks, laser, LASER_FADE, pillAt, toggleReaction } from './overlays';
 import { LabsPresence, useFollowing } from './presence';
 import { cameraFor, flyTo, stopFlight } from './camera';
 import { downloadPicture, pictureSize, renderPicture, type Background, type ExportOptions } from './exportPng';
@@ -63,10 +63,13 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
   // locks as it goes, so its handles change too).
   useEffect(() => {
     const draw = (ctx: CanvasRenderingContext2D) => { const more = drawLabs(ctx, editor); if (labOn('tidy')) { drawTidy(ctx, editor); drawMindTidy(ctx, editor); } if (labOn('tableMove')) drawGrips(ctx, editor); if (labOn('linkJoint')) drawJoint(ctx, editor); drawCrop(ctx, editor); drawGroup(ctx, editor); drawNib(ctx, editor); if (labOn('nib')) drawEditedPath(ctx, editor); if (labOn('softEraser')) drawEraser(ctx, editor); return more; };
+    // (Locks and reactions under the selection frames.)
+    const marks = (ctx: CanvasRenderingContext2D) => drawMarks(ctx, editor);
     editor.overlays.add(draw);
+    editor.underlays.add(marks);
     editor.requestRender();
     const off = subscribeLabs(() => { editor.emit(); editor.requestRender(); }), offGrid = subscribeGrid(() => editor.requestRender());
-    return () => { editor.overlays.delete(draw); off(); offGrid(); };
+    return () => { editor.overlays.delete(draw); editor.underlays.delete(marks); off(); offGrid(); };
   }, [editor]);
 
   // "Ластик кружком": the circle is the eraser's pointer.

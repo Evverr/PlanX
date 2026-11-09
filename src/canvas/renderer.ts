@@ -65,6 +65,8 @@ export interface Peer {
 }
 
 export interface Scene {
+  /** Drawn on the screen (not the board) under the selection frames: see Editor.underlays. */
+  underPicks?: (ctx: CanvasRenderingContext2D) => void;
   items: Item[];
   links: Link[];
   get: (id: string) => Item | undefined;
@@ -1370,6 +1372,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   if (resting) drawMindButtons(ctx, resting, s);
   const leaving = s.plusLeaving && s.get(s.plusLeaving.id);
   if (leaving) drawMindButtons(ctx, leaving, { ...s, plusFade: s.plusLeaving!.fade, hotPlus: null, chevronless: null });
+  if (s.underPicks) { ctx.save(); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); s.underPicks(ctx); ctx.restore(); }
   // Just unpicked: its frame, handle and dots going.
   const now = performance.now();
   if (s.live) for (const id of picked) if (!s.selection.has(id) && !unpicked.has(id)) unpicked.set(id, { at: now, dots: id === pickedAlone });
