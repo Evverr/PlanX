@@ -142,5 +142,5 @@ export function foldedSize(title: string): { w: number; h: number } {
 
 /** Height a text item or task needs for its text; other items have none to fit. */
 export const fitHeight = (it: Item, text = it.text ?? '', width = it.w): number | null =>
-  // (A text drawn as a box as tall as that at least: «Текст рамкой», src/labs.)
-  it.type === 'text' ? Math.max(itemTextHeight(it, text, width), it.mh ?? 0) : it.type === 'task' ? taskSize({ ...it, text }, width).h : null;
+  // (A text drawn as a box as tall as it's set: «Текст рамкой», src/labs.)
+  it.type === 'text' ? (it.tb ? it.h : itemTextHeight(it, text, width)) : it.type === 'task' ? taskSize({ ...it, text }, width).h : null;
