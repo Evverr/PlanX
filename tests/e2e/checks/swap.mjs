@@ -34,7 +34,7 @@ export const checks = {
     expect(await tiles(p), 'a press beside it closes it').toBe(0);
   },
 
-  async 'an icon gets the icon set with its search, a shape the shapes and also opens for typing'(p) {
+  async 'an icon gets the icon set with its search; a shape only opens for typing'(p) {
     await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 250); planx.board.add(e.newItem('icon', x, y, { id: 'ic', icon: 'heart', w: 60, h: 60 }));
       planx.board.add(e.newItem('ellipse', x + 300, y, { id: 'sh', w: 120, h: 80, text: 'Фигура' })); e.setSelection([]); })()`);
     await dbl(p, [330, 280]);
@@ -44,14 +44,10 @@ export const checks = {
     expect(await tiles(p) < 10, 'searched').toBe(true);
     await p.key('Escape', 'Escape', 27);
     expect(await tiles(p), 'Esc closes it').toBe(0);
+    // A shape: no neighbours, its text opens for typing.
     await dbl(p, [650, 280]);
-    expect(await tiles(p), 'the shapes').toBe(11);
-    expect(await p.ev('planx.editor.editingId'), 'typing into the shape too').toBe('sh');
-    await pickTile(p, 1);
-    expect(await p.ev(`planx.board.get('sh').type`), 'an ellipse now').toBe('ellipse');
-    await pickTile(p, 5);
-    const sh = await p.ev(`(() => { const s = planx.board.get('sh'); return { type: s.type, shape: s.shape, text: s.text, w: s.w }; })()`);
-    expect(`${sh.type} ${sh.shape} ${sh.text} ${sh.w}`, 'a star, keeping its text and size').toBe('polygon star Фигура 120');
+    expect(await tiles(p), 'no shapes to pick').toBe(0);
+    expect(await p.ev('planx.editor.editingId'), 'typing into the shape').toBe('sh');
   },
 
   async 'in an instance, a double-click on its emoji swaps it there only, and the instance holds'(p) {
@@ -85,15 +81,4 @@ export const checks = {
     expect(after.w, 'its size follows').toBe(50);
   },
 
-  async 'a shape being typed in shows its neighbours again on a double click on its text'(p) {
-    await p.ev(`(() => { const e = planx.editor, { x, y } = e.toWorld(300, 250); planx.board.add(e.newItem('ellipse', x, y, { id: 'sh', w: 200, h: 120, text: 'Фигура' })); e.setSelection([]); })()`);
-    await dbl(p, [400, 360]);
-    expect(await p.ev('planx.editor.editingId'), 'typing').toBe('sh');
-    // A press in the text (as for the caret) puts the popup away; a double click there brings it back.
-    const t = await p.ev(`(() => { const r = document.querySelector('textarea.text-edit').getBoundingClientRect(); return [r.x + 20, r.y + r.height / 2]; })()`);
-    await p.click(t);
-    expect(await tiles(p), 'put away').toBe(0);
-    await dbl(p, t);
-    expect(await tiles(p), 'back on a double click in the text').toBe(11);
-  },
 };

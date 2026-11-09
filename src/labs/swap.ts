@@ -19,8 +19,7 @@ export function swapKind(it: Item | undefined): SwapKind | null {
   if (it.type === 'emoji') return 'emoji';
   if (it.type === 'icon') return 'icon';
   if (it.type === 'image' && it.doodle) return 'doodle';
-  // (Not a rectangle: a double click on it opens its text for typing.)
-  if (it.type === 'ellipse' || it.type === 'polygon') return 'shape';
+  // (Not a shape: a double click on it opens its text for typing.)
   return null;
 }
 
