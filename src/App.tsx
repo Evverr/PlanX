@@ -305,8 +305,9 @@ export function App({ boardId }: { boardId: string }) {
   const peers = conn.peers();
   // "Панель над элементом" (src/labs); it and the text panel, coming in where the other's going, wait for it to go.
   const place = usePanelPlace(editor, selItems);
-  // (While typing: kept for a mind map node, and a task but its description, see below.)
-  const staysTyping = !editing || editing.type === 'mind' || (editing.type === 'task' && ui.editingCell !== 0)
+  // (While typing: kept for a mind map node, and a task but its description, see below. Not while the text
+  // panel stays for a task's description, its typing gone to the panel's own field: a link's address.)
+  const staysTyping = !editing ? !(taskDesc && panelOn) : editing.type === 'mind' || (editing.type === 'task' && ui.editingCell !== 0)
     // (And till the text panel's there for what's typed in: it turns into that, see below.)
     || (textItem?.id === editing.id && !panelOn);
   const overOn = labs.panelOver && staysTyping && !tMode, overShown = overOn && place === 'over' && selItems.length > 0;
