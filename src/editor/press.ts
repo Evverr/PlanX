@@ -297,7 +297,8 @@ export function press(ed: Editor, e: PointerEvent): void {
     // Pressed twice: on the same item, or (an emoji, an icon, a shape) as the second press enters
     // the instance it's in.
     const enter = entering && ed.lastTap.id === hit.host && !!swapKind(hit);
-    const dbl = (ed.lastTap.id === hit.id || enter) && now - ed.lastTap.t < 380 && !e.shiftKey;
+    // (Or as the system counts a double click, however slow it's set to be.)
+    const dbl = (ed.lastTap.id === hit.id || enter) && (now - ed.lastTap.t < 380 || e.detail >= 2) && !e.shiftKey;
     ed.lastTap = { id: hit.id, t: now };
     // A slow click on the one item picked: let go without dragging, it may pick what's under it.
     const again = !dbl && !entering && !e.shiftKey && ed.selection.size === 1 && ed.selection.has(hit.id);
