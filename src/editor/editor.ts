@@ -53,8 +53,8 @@ export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
 const LINK_STYLE_KEY = 'planx-link-style';
 /** How big a finger's target is, in screen pixels. */
 const FINGER = 40;
-/** The mind map "+" buttons' wait after a node is picked, their fade in, and (going) their fade out, in ms. */
-const PLUS_DELAY = 990, PLUS_FADE = 900, PLUS_OUT = 150;
+/** The mind map "+" buttons' wait after a node is picked, and their fade in, in ms. */
+const PLUS_DELAY = 330, PLUS_FADE = 300;
 /** What was copied, kept in this browser for every board and tab (on the system's clipboard, see CLIP_MARK). */
 const CLIP_KEY = 'planx-clipboard';
 /** Whether "the instance differs from its component" isn't to be said any more. */
@@ -617,7 +617,7 @@ export class Editor {
     const plusFade = this.plusFade(), target = this.plusNode()?.id;
     if (plusFade > 0 && plusFade < 1) this.requestRender();
     this.plusShown = target ? { id: target, fade: plusFade } : null;
-    const l = this.plusLeaving, leaving = l && l.id !== target ? l.from * (1 - (performance.now() - l.at) / PLUS_OUT) : 0;
+    const l = this.plusLeaving, leaving = l && l.id !== target ? l.from * (1 - (performance.now() - l.at) / (PLUS_FADE / 2)) : 0;
     if (leaving > 0) this.requestRender();
     else this.plusLeaving = null;
     const glide = this.gliding();
@@ -1704,8 +1704,7 @@ export class Editor {
         let v = to;
         if (to < was.v) {
           const from = was.from ?? was.v, since = was.since ?? now;
-          // (Back as fast as ever, 300.)
-          v = Math.max(to, from * (1 - (now - since) / (PLUS_OUT * 2)));
+          v = Math.max(to, from * (1 - (now - since) / PLUS_FADE));
           this.slides.set(key, { v, from, since });
           if (v > to) this.requestRender();
         } else this.slides.set(key, { v });
