@@ -1310,7 +1310,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   const ghostOf = gh && s.get(gh.id);
   if (gh && ghostOf) {
     // (Drawn on a layer of its own and laid on at 60%: drawing it sets its own opacities.)
-    const d = towardOffset(ghostOf, gh.side), c = ctx.canvas;
+    const d = towardOffset(ghostOf, gh.side, s.items), c = ctx.canvas;
     if (!ghostLayer || ghostLayer.width !== c.width || ghostLayer.height !== c.height) { ghostLayer = document.createElement('canvas'); ghostLayer.width = c.width; ghostLayer.height = c.height; }
     const g = ghostLayer.getContext('2d');
     if (g) {
