@@ -60,7 +60,8 @@ function drawReactions(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, k: n
   ctx.translate(x0, y0);
   ctx.scale(k, k);
   let x = 0;
-  const y = 6, h = 24;
+  // (1 off its edge, over its frame when picked.)
+  const y = 1, h = 24;
   ctx.font = font(12, 600);
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
