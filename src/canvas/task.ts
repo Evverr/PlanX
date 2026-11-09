@@ -598,11 +598,12 @@ function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typin
     // Its lines wrapped to its width; done, grey (not struck through).
     if (typing !== i + 1) lines(sub.t || 'Подзадача', box, TEXT_FS, 400, sub.t && !sub.done ? look.ink : look.muted);
     // The pointer on it: left of its box a cross taking it away, darker on it, both easing in and out (the
-    // cross after 300, slowly, in 480).
-    const shown = litNow(`${it.id}:sub:${i}`, !drag && (hot === `task:${it.id}:sub:${i}` || hot === `task:${it.id}:del:${i}`), 480, 300);
+    // cross after 300, slowly, in 480; the pointer on the cross itself, there at once).
+    const onCross = !drag && hot === `task:${it.id}:del:${i}`;
+    if (onCross) lit.set(`${it.id}:sub:${i}`, { on: true, from: 1, at: 0 });
+    const shown = litNow(`${it.id}:sub:${i}`, !drag && (hot === `task:${it.id}:sub:${i}` || onCross), 480, 300);
     if (shown) {
-      // (Darker on it as slowly, 480.)
-      const cx = x + SUB_X - 12, cy = y + mid, d = 4, k = litNow(`${it.id}:del:${i}`, hot === `task:${it.id}:del:${i}`, 480);
+      const cx = x + SUB_X - 12, cy = y + mid, d = 4, k = litNow(`${it.id}:del:${i}`, hot === `task:${it.id}:del:${i}`);
       ctx.strokeStyle = look.dark ? `rgba(255,255,255,${(0.4 + 0.45 * k) * shown})` : `rgba(0,0,0,${(0.3 + 0.4 * k) * shown})`;
       ctx.lineWidth = 1.5;
       ctx.lineCap = 'round';
