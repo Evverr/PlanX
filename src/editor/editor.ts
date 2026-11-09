@@ -187,6 +187,8 @@ export class Editor {
   /** Drawn over the board after it, at screen scale (the features on trial, src/labs): each returns
    *  true while it's still moving and wants another frame. */
   overlays = new Set<(ctx: CanvasRenderingContext2D) => boolean | void>();
+  /** Drawn as overlays are (on the screen), but under the selection frames. */
+  underlays = new Set<(ctx: CanvasRenderingContext2D) => void>();
 
   private ctx: CanvasRenderingContext2D | null = null;
   private theme: Theme | null = null;
@@ -659,6 +661,7 @@ export class Editor {
       tableLines: this.hotLine ? [...this.pickedLines, this.hotLine] : this.pickedLines,
       editingCell: this.editingCell,
       live: true,
+      underPicks: this.underlays.size ? (c) => this.underlays.forEach((d) => { c.save(); d(c); c.restore(); }) : undefined,
       guides: g?.type === 'drag' ? g.guides ?? [] : [],
       pickedCells: this.cells.length && this.selection.size === 1 ? { id: [...this.selection][0], cells: this.cells } : null,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker', op: this.penStyle(g.tool).op } : null,

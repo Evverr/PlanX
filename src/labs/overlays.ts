@@ -49,7 +49,7 @@ let pills: Pill[] = [];
 /** The reaction under a point on the canvas, if any. */
 export const pillAt = (p: Point): Pill | undefined => pills.find((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
 
-/** Under the item's lower left corner, a row of pills: an emoji and how many put it, on white 80% opaque
+/** Under the item's lower left corner, a row of pills (under its selection frame): an emoji and how many put it, on white 80% opaque
  *  (yours alike). */
 function drawReactions(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, k: number) {
   const b = boxOf(it), p = ed.toScreen({ x: b.x, y: b.y + b.h });
@@ -60,7 +60,7 @@ function drawReactions(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, k: n
   ctx.translate(x0, y0);
   ctx.scale(k, k);
   let x = 0;
-  // (1 off its edge, over its frame when picked.)
+  // (1 off its edge.)
   const y = 1, h = 24;
   ctx.font = font(12, 600);
   ctx.textBaseline = 'middle';
@@ -150,8 +150,8 @@ function drawTrail(ctx: CanvasRenderingContext2D, ed: Editor, pts: TrailPoint[],
 
 export const LASER_COLOR = '#FF3B30';
 
-/** Everything above; returns whether anything's still fading (and wants another frame). */
-export function drawLabs(ctx: CanvasRenderingContext2D, ed: Editor): boolean {
+/** Locks and reactions on items: drawn under the selection frames (see Editor.underlays). */
+export function drawMarks(ctx: CanvasRenderingContext2D, ed: Editor): void {
   pills = [];
   const lock = labOn('lock'), reactions = labOn('reactions');
   if (lock || reactions) {
@@ -166,6 +166,10 @@ export function drawLabs(ctx: CanvasRenderingContext2D, ed: Editor): boolean {
       if (lk) drawLock(ctx, ed, it, lk, zoomSize('lock', ed.cam.z));
     }
   }
+}
+
+/** Everything else above; returns whether anything's still fading (and wants another frame). */
+export function drawLabs(ctx: CanvasRenderingContext2D, ed: Editor): boolean {
   let moving = false;
   const now = performance.now();
   if (labOn('laser')) {
