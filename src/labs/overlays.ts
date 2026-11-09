@@ -49,7 +49,7 @@ let pills: Pill[] = [];
 /** The reaction under a point on the canvas, if any. */
 export const pillAt = (p: Point): Pill | undefined => pills.find((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
 
-/** Under the item's lower left corner, a row of pills: an emoji and how many put it, on white 60% see-through
+/** Under the item's lower left corner, a row of pills: an emoji and how many put it, on white 80% opaque
  *  (yours alike). */
 function drawReactions(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, k: number) {
   const b = boxOf(it), p = ed.toScreen({ x: b.x, y: b.y + b.h });
@@ -71,7 +71,7 @@ function drawReactions(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, k: n
     ctx.shadowColor = 'rgba(0, 0, 0, .12)';
     ctx.shadowBlur = 3;
     ctx.shadowOffsetY = 1;
-    ctx.fillStyle = dark() ? 'rgba(42, 47, 56, .6)' : 'rgba(255, 255, 255, .6)';
+    ctx.fillStyle = dark() ? 'rgba(42, 47, 56, .8)' : 'rgba(255, 255, 255, .8)';
     ctx.beginPath();
     ctx.roundRect(x, y, w, h, h / 2);
     ctx.fill();
