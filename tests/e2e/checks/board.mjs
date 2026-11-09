@@ -873,6 +873,20 @@ export const checks = {
     expect(await tv(), 'the corner by its arrow: closed').toBe('closed');
   },
 
+  async 'the board menu\'s «Недавнее»: the ten boards opened here last, not this one; a press opens one'(p) {
+    await p.ev(`(async () => { const s = await import('/src/shelf/boards.ts'); const now = Date.now(); s.writeShelf([...Array(12).keys()].map((i) => s.newEntry('b' + i, { title: 'Доска ' + i, opened: now - i * 1000 }, now))); })()`);
+    await p.click(await p.at('.topbar button[aria-label="Меню"]'));
+    await sleep(300);
+    const row = await p.ev(`(() => { const r = [...document.querySelectorAll('.board-menu .menu-row')].find((b) => b.textContent.includes('Недавнее')).getBoundingClientRect(); return [r.x + 40, r.y + r.height / 2]; })()`);
+    await p.mouse('mouseMoved', ...row);
+    await sleep(300);
+    expect(await p.ev(`[...document.querySelectorAll('.board-menu[aria-label="Недавнее"] .menu-row')].map((b) => b.textContent).join(',')`), 'ten, the latest first')
+      .toBe([...Array(10).keys()].map((i) => `Доска ${i}`).join(','));
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.board-menu[aria-label="Недавнее"] .menu-row')][2].getBoundingClientRect(); return [r.x + 20, r.y + r.height / 2]; })()`));
+    await sleep(800);
+    expect(await p.ev('location.search'), 'that one opened').toBe('?board=b2');
+  },
+
   async 'a picked item\'s handle under something solid over it is neither drawn nor taken hold of'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add({ id: 'low', type: 'task', x: 300, y: 300, w: 293, h: 52, z: 1, text: 'Нижняя' }); b.add({ id: 'up', type: 'task', x: 500, y: 320, w: 293, h: 52, z: 2, text: 'Верхняя' }); e.setSelection(['low']); })()`);
