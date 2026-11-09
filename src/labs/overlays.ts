@@ -49,8 +49,9 @@ let pills: Pill[] = [];
 /** The reaction under a point on the canvas, if any. */
 export const pillAt = (p: Point): Pill | undefined => pills.find((r) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
 
-/** Under the item's lower left corner, a row of pills: an emoji and how many put it; blue if you did. */
-function drawReactions(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, me: string, k: number) {
+/** Under the item's lower left corner, a row of pills: an emoji and how many put it, on white 60% see-through
+ *  (yours alike). */
+function drawReactions(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, k: number) {
   const b = boxOf(it), p = ed.toScreen({ x: b.x, y: b.y + b.h });
   if (b.w * ed.cam.z < 24) return;
   // k times their size, from the item's corner.
@@ -66,18 +67,17 @@ function drawReactions(ctx: CanvasRenderingContext2D, ed: Editor, it: Item, me: 
   for (const emoji of REACTIONS) {
     const who = it.rx?.[emoji];
     if (!who?.length) continue;
-    const mine = who.includes(me), text = String(who.length), w = 8 + 16 + 5 + Math.ceil(ctx.measureText(text).width) + 9;
+    const text = String(who.length), w = 8 + 16 + 5 + Math.ceil(ctx.measureText(text).width) + 9;
     ctx.shadowColor = 'rgba(0, 0, 0, .12)';
     ctx.shadowBlur = 3;
     ctx.shadowOffsetY = 1;
-    ctx.fillStyle = mine ? (dark() ? '#1D3A5F' : '#E5F1FF') : dark() ? '#2A2F38' : '#fff';
+    ctx.fillStyle = dark() ? 'rgba(42, 47, 56, .6)' : 'rgba(255, 255, 255, .6)';
     ctx.beginPath();
     ctx.roundRect(x, y, w, h, h / 2);
     ctx.fill();
     ctx.shadowColor = 'transparent';
-    if (mine) { ctx.strokeStyle = '#4DA3FF'; ctx.lineWidth = 1.5; ctx.stroke(); }
     drawEmoji(ctx, emoji, x + 8, y + 4, 16);
-    ctx.fillStyle = mine ? (dark() ? '#9CCBFF' : '#0066D6') : dark() ? '#D5D9E0' : '#454545';
+    ctx.fillStyle = dark() ? '#D5D9E0' : '#454545';
     ctx.fillText(text, x + 8 + 16 + 5, y + h / 2 + 0.5);
     pills.push({ x: x0 + x * k, y: y0 + y * k, w: w * k, h: h * k, id: it.id, emoji });
     x += w + 4;
@@ -154,14 +154,14 @@ export function drawLabs(ctx: CanvasRenderingContext2D, ed: Editor): boolean {
   pills = [];
   const lock = labOn('lock'), reactions = labOn('reactions');
   if (lock || reactions) {
-    const me = myId(), view = ed.viewRect();
+    const view = ed.viewRect();
     for (const it of ed.shown()) {
       if (!it.lock && !it.rx) continue;
       const b = boxOf(it);
       if (b.x > view.x + view.w || b.y > view.y + view.h + 40 / ed.cam.z || b.x + b.w < view.x - 40 / ed.cam.z || b.y + b.h < view.y) continue;
       // (Picked or not: they aren't what's done to it.)
       const rx = reactions && it.rx ? zoomFade('reactions', ed.cam.z) : 0, lk = lock && it.lock ? zoomFade('lock', ed.cam.z) : 0;
-      if (rx) { ctx.globalAlpha = rx; drawReactions(ctx, ed, it, me, zoomSize('reactions', ed.cam.z)); ctx.globalAlpha = 1; }
+      if (rx) { ctx.globalAlpha = rx; drawReactions(ctx, ed, it, zoomSize('reactions', ed.cam.z)); ctx.globalAlpha = 1; }
       if (lk) drawLock(ctx, ed, it, lk, zoomSize('lock', ed.cam.z));
     }
   }
