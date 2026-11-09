@@ -1313,12 +1313,12 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     }
   }
 
-  // («Полукруги на рамке», src/labs: the copy a click on the ball out would make, at 60%, easing in and out.)
+  // («Полукруги на рамке», src/labs: the copy a click on the ball out would make, at 40%, easing in and out.)
   const alone = s.selection.size === 1 ? s.get([...s.selection][0]) : undefined;
   const gh = s.live ? ghostNow(alone && s.ghostTab && tabsFor(alone, s.editingId ?? null) ? alone.id : null, s.ghostTab ?? null) : null;
   const ghostOf = gh && s.get(gh.id);
   if (gh && ghostOf) {
-    // (Drawn on a layer of its own and laid on at 60%: drawing it sets its own opacities.)
+    // (Drawn on a layer of its own and laid on at 40%: drawing it sets its own opacities.)
     const d = towardOffset(ghostOf, gh.side, s.items), c = ctx.canvas;
     if (d && (!ghostLayer || ghostLayer.width !== c.width || ghostLayer.height !== c.height)) { ghostLayer = document.createElement('canvas'); ghostLayer.width = c.width; ghostLayer.height = c.height; }
     const g = d && ghostLayer?.getContext('2d');
@@ -1329,7 +1329,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       drawItem(g, { ...ghostOf, id: `${ghostOf.id}~ghost`, x: ghostOf.x + d.x, y: ghostOf.y + d.y }, s);
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.globalAlpha = 0.6 * gh.k;
+      ctx.globalAlpha = 0.4 * gh.k;
       ctx.drawImage(ghostLayer, 0, 0);
       ctx.restore();
     }
