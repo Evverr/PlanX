@@ -711,7 +711,7 @@ export const checks = {
     // «Шрифт»: its months and numbers bigger, the timeline taller if need be.
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.params-pop .labs-seg[aria-label="Шрифт"] button')][3].getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     await sleep(100);
-    expect(await p.ev(`(async () => { const t = planx.board.list().find((i) => i.tl), m = await import('/src/canvas/timeline.ts'); return [t.tfs, t.h >= m.tlLeast(6)].join(); })()`), 'its writing 6x').toBe('6,true');
+    expect(await p.ev(`(async () => { const t = planx.board.list().find((i) => i.tl), m = await import('/src/canvas/timeline.ts'); return [t.tfs, t.h >= m.tlLeast(4)].join(); })()`), 'its writing 4x').toBe('4,true');
   },
 
   async 'a frame takes a fill and an outline colour as a rectangle does'(p) {

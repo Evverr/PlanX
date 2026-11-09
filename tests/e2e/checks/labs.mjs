@@ -502,7 +502,9 @@ export const checks = {
       const s = e.toScreen(g.sidePoint(it, 'right', r.dotGap(it, 'right') / e.cam.z)), b = e.canvas.getBoundingClientRect(); return [s.x + b.left, s.y + b.top]; })()`);
     const mid = (id) => p.ev(`(() => { const e = planx.editor, i = planx.board.get('${id}'), s = e.toScreen({ x: i.x + i.w / 2, y: i.y + i.h / 2 }), b = e.canvas.getBoundingClientRect(); return [s.x + b.left, s.y + b.top]; })()`);
     const links = () => p.ev(`planx.board.linkList().length`);
-    // Picked: pulled from where its dot was, it's moved, not linked.
+    // Picked: pulled from where its dot was, it's moved, not linked. (Without «Полукруги на рамке»: its
+    // ball's there, a line pulled out of it.)
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('sideTabs', false))()`);
     await p.ev(`planx.editor.setSelection(['${a}'])`);
     await sleep(100);
     const d = await dot(a);
