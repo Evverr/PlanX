@@ -7,7 +7,8 @@ import { isLocked, labOn } from './labs';
 /**
  * «Полукруги на рамке»: on the selection frame of what's picked alone, at the middle of each side, a ball
  * showing past the frame as much as the pointer's near it: a quarter at rest, a little more with the pointer
- * near it, all of it (a ball just outside) with the pointer on it or a few pixels round it.
+ * near it, all of it (a ball just outside) with the pointer on it or a few pixels round it, past the item's
+ * side (between it and its frame counts).
  * A click on it, a copy of what's picked that way; pressed and dragged, a link from that side, as from a
  * link dot.
  */
@@ -38,10 +39,16 @@ export const tabsFor = (it: Item | undefined, editing: string | null): it is Ite
 /** The middle of a side on the frame. */
 const framePoint = (it: Item, side: Side, zoom: number): Point => sidePoint(it, side, FRAME_OFF / zoom);
 
-/** The side whose ball is under the point, if any: by it on the frame, or on it wholly out. */
+/** Whether the point is past the item's side (between it and its frame counts). */
+const past = (it: Item, side: Side, w: Point) =>
+  side === 'right' ? w.x > it.x + it.w : side === 'left' ? w.x < it.x : side === 'bottom' ? w.y > it.y + it.h : w.y < it.y;
+
+/** The side whose ball is under the point, if any: past the item's side, by it on the frame or on it
+ *  wholly out (on the item itself, the item's). */
 export function tabAt(ed: Editor, it: Item, w: Point): Side | null {
   const z = ed.cam.z, r = radius(z);
   for (const side of SIDES) {
+    if (!past(it, side, w)) continue;
     const by = framePoint(it, side, z), out = sidePoint(it, side, FRAME_OFF / z + r * (2 * ON - 1));
     if (Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) || Math.hypot(w.x - out.x, w.y - out.y) <= r * 1.3) return side;
   }
