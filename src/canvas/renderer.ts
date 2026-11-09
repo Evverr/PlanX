@@ -12,7 +12,7 @@ import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
 import { COMPONENT_COLOR, firstInstance, instancePlus } from '../model/components';
 import { labOn } from '../labs/labs';
-import { drawTabs, tabsFor, type TabAims } from '../labs/sideTabs';
+import { drawTabs, tabsFor, towardOffset, type TabAims } from '../labs/sideTabs';
 import { zoomFade, zoomSize } from '../labs/zoomFade';
 import { gripsOn } from '../labs/tableMove';
 import { gridKind } from '../labs/boardGrid';
@@ -92,6 +92,8 @@ export interface Scene {
   hotDot: Side | null;
   /** «Полукруги на рамке» (src/labs): how much each side's ball shows, by where the pointer is. */
   tabAims?: TabAims | null;
+  /** The same: the ball the pointer's on, the copy a click there would make seen faintly that way. */
+  ghostTab?: Side | null;
   /** The pointer on the picked item's handle (or a little round it): the handle stronger. */
   hotHandle?: boolean;
   /** With the line tool, the item whose link dots show. */
@@ -1276,6 +1278,9 @@ function drawDots(ctx: CanvasRenderingContext2D, it: Item, s: Scene, fade = 1) {
   ctx.globalAlpha = 1;
 }
 
+/** «Полукруги на рамке»: the layer the copy a click would make is drawn on (see drawScene). */
+let ghostLayer: HTMLCanvasElement | null = null;
+
 /** Mind map colours parallel branches take from a coloured one, worked out once per drawing. */
 let tints = new Map<string, { color?: string; fill?: string }>();
 
@@ -1299,6 +1304,25 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     }
   }
 
+  // («Полукруги на рамке», src/labs: the copy a click on the ball would make, at 60%.)
+  const ghostOf = s.ghostTab && s.selection.size === 1 ? s.get([...s.selection][0]) : undefined;
+  if (ghostOf && s.ghostTab && tabsFor(ghostOf, s.editingId ?? null)) {
+    // (Drawn on a layer of its own and laid on at 60%: drawing it sets its own opacities.)
+    const d = towardOffset(ghostOf, s.ghostTab), c = ctx.canvas;
+    if (!ghostLayer || ghostLayer.width !== c.width || ghostLayer.height !== c.height) { ghostLayer = document.createElement('canvas'); ghostLayer.width = c.width; ghostLayer.height = c.height; }
+    const g = ghostLayer.getContext('2d');
+    if (g) {
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.clearRect(0, 0, c.width, c.height);
+      g.setTransform(ctx.getTransform());
+      drawItem(g, { ...ghostOf, id: `${ghostOf.id}~ghost`, x: ghostOf.x + d.x, y: ghostOf.y + d.y }, s);
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 0.6;
+      ctx.drawImage(ghostLayer, 0, 0);
+      ctx.restore();
+    }
+  }
   if (s.links.length) drawLinks(ctx, s, view);
   // Every component's tick, right of it: an instance in its place, the component put away.
   for (const it of s.items) {
