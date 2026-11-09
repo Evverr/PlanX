@@ -89,10 +89,12 @@ export const checks = {
     await go('Работа');
     await sleep(800);
     expect([await p.ev('location.search').then((q) => q.startsWith('?board=')), await p.ev(`!!document.querySelector('.board-canvas')`)].join(), '«Работа»: the board again').toBe('true,true');
-    // Its logo: straight to the boards.
+    // Its logo: the start, a hero; no cross there, by the boards one.
     await p.click(await p.at('.side-nav .side-nav-logo'));
+    await sleep(300);
+    expect([await p.ev('location.search'), await p.ev(`!!document.querySelector('.hero h1')`), !!(await p.rect('.side-nav-close'))].join(), 'the start').toBe('?page=home,true,false');
+    await go('Доски');
     await sleep(500);
-    expect([await p.ev('location.search'), !!(await p.rect('.shelf-page'))].join(), 'the logo: the boards').toBe(',true');
     await p.click(await p.at('.side-nav-close'));
     await sleep(200);
     expect([!!(await p.rect('.side-nav')), (await p.rect('.shelf-page')).l].join(), 'its cross: the boards fill the window').toBe('false,0');
