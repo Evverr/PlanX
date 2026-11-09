@@ -38,6 +38,7 @@ export type Gesture =
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' | 'tl' | 'bl' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point; last?: Point }
+  | { type: 'tab'; id: string; side: Side; start: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline'; to?: Point }
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
@@ -338,6 +339,13 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       eraseAlong(ed, g.last, w);
       g.last = w;
       return;
+    case 'tab':
+      // Dragged off its half circle: a link from that side, as from a link dot.
+      if (Math.hypot(w.x - g.start.x, w.y - g.start.y) * ed.cam.z > 4) {
+        ed.gesture = { type: 'link', from: g.id, fromSide: g.side, to: w, target: null };
+        moveGesture(ed, ed.gesture, e, sp, w);
+      }
+      return;
     case 'place':
       // «Текст рамкой» (src/labs): the text tool dragged, a box its text will fill the width of.
       if (g.tool === 'text' && labOn('textBox') && (g.to || Math.hypot(w.x - g.at.x, w.y - g.at.y) * ed.cam.z > 4)) { g.to = w; ed.requestRender(); }
@@ -566,6 +574,10 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       // let go nearest to: right, left, down or up. A folded node unfolds to show it.
       if (g.target) hangBranch(ed, g.id, g.target, g.to);
       ed.requestRender();
+      return;
+    case 'tab':
+      // Clicked: a copy that way.
+      ed.duplicateToward(g.side);
       return;
     case 'marquee':
       if (g.zoom) zoomToBox(ed, g.rect);

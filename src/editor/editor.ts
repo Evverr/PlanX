@@ -143,6 +143,8 @@ export class Editor {
   lastEmpty = { t: 0, x: 0, y: 0 };
   needsFit: boolean;
   hotDot: Side | null = null;
+  /** «Полукруги на рамке» (src/labs/sideTabs.ts): the half circle under the pointer. */
+  hotTab: Side | null = null;
   /** With the line tool, the item showing its link dots (see lineToolHover). */
   linkDots: string | null = null;
   /** Shared: the link under the pointer, faintly lit. */
@@ -645,6 +647,7 @@ export class Editor {
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]) && !isLocked(this.board.get([...this.selection][0])),
       byFinger: this.byFinger,
       hotDot: this.hotDot,
+      hotTab: this.hotTab,
       hotHandle: this.hotHandle,
       linkDots: (this.tool === 'link' || dotsMode) && !this.gesture ? this.linkDots : null,
       linkTool: labOn('linkTool'),
@@ -1411,6 +1414,19 @@ export class Editor {
   /** The copy of what's picked beside it, level with it: one in a column of its like (two or more one
    *  under another), the last of it, under it as far as the last two are apart; one in a row of them, past
    *  the row's last alike; else (one with its like under it too), right of it, 24 off. */
+  /** «Полукруги на рамке» (src/labs): a copy of what's picked beside it that way, 24 off, picked. */
+  duplicateToward(side: Side): void {
+    const keep = this.clipboard, data = this.copyData();
+    if (!data) return;
+    const b = boundsOf((JSON.parse(data) as { items: Item[] }).items);
+    if (!b) return;
+    const cx = b.x + b.w / 2, cy = b.y + b.h / 2, g = DUPLICATE_GAP;
+    const at = side === 'right' ? { x: cx + b.w + g, y: cy } : side === 'left' ? { x: cx - b.w - g, y: cy } : side === 'bottom' ? { x: cx, y: cy + b.h + g } : { x: cx, y: cy - b.h - g };
+    this.clipboard = data;
+    this.paste(0, at);
+    this.clipboard = keep;
+  }
+
   duplicate(): void {
     // Not copied: what was copied before stays to be pasted.
     const keep = this.clipboard, data = this.copyData();
