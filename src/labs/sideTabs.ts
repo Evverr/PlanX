@@ -130,15 +130,13 @@ export function drawTabs(ctx: CanvasRenderingContext2D, it: Item, zoom: number, 
 /** How far the copy a click makes stands off it that way (see Editor.duplicateToward): room for the
  *  copy's own ball between them, to make another. */
 export const TAB_GAP = 72;
-/** Where the copy goes from it that way: the first place that way nothing's in (past the copies made
- *  before, say), each step its size and the gap further. (`items`: what's on the board.) */
-export function towardOffset(it: Item, side: Side, items: Item[] = []): Point {
-  const step = side === 'right' ? { x: it.w + TAB_GAP, y: 0 } : side === 'left' ? { x: -it.w - TAB_GAP, y: 0 } : side === 'bottom' ? { x: 0, y: it.h + TAB_GAP } : { x: 0, y: -it.h - TAB_GAP };
-  const taken = (d: Point) => items.some((o) => o.id !== it.id && !o.host && o.type !== 'frame' && o.type !== 'ink'
+/** Where the copy goes from it that way, its size and the gap off it; none if something's there already
+ *  (a copy made before, say): nothing made that way, nor shown. (`items`: what's on the board.) */
+export function towardOffset(it: Item, side: Side, items: Item[] = []): Point | null {
+  const d = side === 'right' ? { x: it.w + TAB_GAP, y: 0 } : side === 'left' ? { x: -it.w - TAB_GAP, y: 0 } : side === 'bottom' ? { x: 0, y: it.h + TAB_GAP } : { x: 0, y: -it.h - TAB_GAP };
+  const taken = items.some((o) => o.id !== it.id && !o.host && o.type !== 'frame' && o.type !== 'ink'
     && o.x < it.x + d.x + it.w && it.x + d.x < o.x + o.w && o.y < it.y + d.y + it.h && it.y + d.y < o.y + o.h);
-  let d = step;
-  for (let i = 0; i < 50 && taken(d); i++) d = { x: d.x + step.x, y: d.y + step.y };
-  return d;
+  return taken ? null : d;
 }
 
 /** The side whose ball is out whole (the pointer by it), if any. */
