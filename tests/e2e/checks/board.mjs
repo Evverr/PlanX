@@ -873,14 +873,18 @@ export const checks = {
     expect(await tv(), 'the corner by its arrow: closed').toBe('closed');
   },
 
-  async '"Текст рамкой": the text tool dragged makes a text as wide as the box, its lines wrapping in it; a click as before'(p) {
+  async '"Текст рамкой": the text tool dragged makes a text the box\'s size (as tall at least), its lines wrapping in it; a click as before'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('text'); })()`);
     const a = await p.ev(`(() => { const r = planx.editor.canvas.getBoundingClientRect(), s = planx.editor.toScreen({ x: 400, y: 300 }); return [r.left + s.x, r.top + s.y]; })()`);
     await p.drag(a, [a[0] + 380, a[1] + 120]);
     await sleep(300);
     await p.cdp('Input.insertText', { text: 'Длинный текст, который должен переноситься по строкам внутри рамки нужной ширины.' });
     await sleep(200);
-    expect(await p.ev(`(() => { const t = planx.board.list().find((i) => i.type === 'text'); return [t.x, t.y, t.w, t.h > 40].join(); })()`), 'the box\'s width, lines wrapping').toBe('400,300,380,true');
+    expect(await p.ev(`(() => { const t = planx.board.list().find((i) => i.type === 'text'); return [t.x, t.y, t.w, t.h].join(); })()`), 'the box: its width, lines wrapping, its height').toBe('400,300,380,120');
+    // More than fits: taller.
+    await p.cdp('Input.insertText', { text: ' Ещё и ещё строки, чтобы текст точно не поместился в рамку такой высоты и она подросла вниз.' });
+    await sleep(200);
+    expect(await p.ev(`planx.board.list().find((i) => i.type === 'text').h > 120`), 'more than fits: taller').toBe(true);
     await p.escape();
     await p.ev(`planx.editor.setTool('text')`);
     await p.click([a[0], a[1] + 300]);

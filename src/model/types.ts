@@ -113,6 +113,8 @@ export interface Item {
   keep?: boolean;
   /** A task's description not shown (its menu's «Описание» unticked): kept, only hidden. */
   nd?: boolean;
+  /** A text drawn as a box («Текст рамкой», src/labs): the box's height, as tall as that at least. */
+  mh?: number;
   /** An opened task: where it lay before it went up over the board (see setView in model/task.ts), and
    *  goes back to once closed. */
   oz?: number;
