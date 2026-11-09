@@ -38,7 +38,7 @@ export type Gesture =
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' | 'tl' | 'bl' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point; last?: Point }
-  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline' }
+  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline'; to?: Point }
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
   | { type: 'relink'; id: string; from: Point; to: Point; target: string | null; away?: boolean; body?: boolean; going?: boolean;
@@ -337,6 +337,10 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       eraseAlong(ed, g.last, w);
       g.last = w;
       return;
+    case 'place':
+      // «Текст рамкой» (src/labs): the text tool dragged, a box its text will fill the width of.
+      if (g.tool === 'text' && labOn('textBox') && (g.to || Math.hypot(w.x - g.at.x, w.y - g.at.y) * ed.cam.z > 4)) { g.to = w; ed.requestRender(); }
+      return;
     case 'marquee': {
       g.rect = normRect(g.start, w);
       // Drawn with Z held, it's where to zoom to, not what to pick ("Зум рамкой", src/labs).
@@ -492,8 +496,10 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
     case 'place': {
       if (g.tool === 'timeline') { ed.addTimeline(g.at); return; }
       const d = DEFAULTS[g.tool];
+      const box = g.to && normRect(g.at, g.to);
       const it = g.tool === 'text'
-        ? ed.newItem('text', g.at.x - 4, g.at.y - 14)
+        // (Dragged, «Текст рамкой»: as wide as the box, at its top left; its height as its text takes.)
+        ? box ? ed.newItem('text', box.x, box.y, { w: Math.max(40, Math.round(box.w)) }) : ed.newItem('text', g.at.x - 4, g.at.y - 14)
         : ed.newItem(g.tool, g.at.x - d.w / 2, g.at.y - d.h / 2, g.tool === 'table' ? freshTable() : g.tool === 'mind' ? { text: MIND_TOPIC } : {});
       if (it.type === 'text') it.h = itemTextHeight(it);
       if (it.type === 'mind') Object.assign(it, mindSize(it), { x: Math.round(g.at.x - mindSize(it).w / 2) });

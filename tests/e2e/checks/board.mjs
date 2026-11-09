@@ -873,6 +873,21 @@ export const checks = {
     expect(await tv(), 'the corner by its arrow: closed').toBe('closed');
   },
 
+  async '"Текст рамкой": the text tool dragged makes a text as wide as the box, its lines wrapping in it; a click as before'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.setTool('text'); })()`);
+    const a = await p.ev(`(() => { const r = planx.editor.canvas.getBoundingClientRect(), s = planx.editor.toScreen({ x: 400, y: 300 }); return [r.left + s.x, r.top + s.y]; })()`);
+    await p.drag(a, [a[0] + 380, a[1] + 120]);
+    await sleep(300);
+    await p.cdp('Input.insertText', { text: 'Длинный текст, который должен переноситься по строкам внутри рамки нужной ширины.' });
+    await sleep(200);
+    expect(await p.ev(`(() => { const t = planx.board.list().find((i) => i.type === 'text'); return [t.x, t.y, t.w, t.h > 40].join(); })()`), 'the box\'s width, lines wrapping').toBe('400,300,380,true');
+    await p.escape();
+    await p.ev(`planx.editor.setTool('text')`);
+    await p.click([a[0], a[1] + 300]);
+    await sleep(200);
+    expect(await p.ev(`planx.board.list().filter((i) => i.type === 'text').pop().w`), 'a click: as wide as ever').toBe(260);
+  },
+
   async 'the board menu\'s «Недавнее»: the ten boards opened here last, not this one; a press opens one'(p) {
     await p.ev(`(async () => { const s = await import('/src/shelf/boards.ts'); const now = Date.now(); s.writeShelf([...Array(12).keys()].map((i) => s.newEntry('b' + i, { title: 'Доска ' + i, opened: now - i * 1000 }, now))); })()`);
     await p.click(await p.at('.topbar button[aria-label="Меню"]'));

@@ -60,6 +60,8 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
         {row('download', 'Сохранить доску', { onClick: onSaveBoard })}
         {row('download', 'Сохранить как…', { onClick: onSaveBoardAs })}
         {row('upload', 'Загрузить доску', { onClick: onLoadBoard })}
+        {/* The boards opened here last. */}
+        {row('clock-l', 'Недавнее', { more: <Recent />, end: arrow })}
         <div className="menu-line" />
         {row('save-template', 'Сохранить панели', { onClick: onSave })}
         {row('refresh-l', 'Сбросить панели', { onClick: onReset })}
@@ -79,8 +81,7 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
       {level === 0 && labs.customize
         ? row('change-order', 'Режим настройки меню', { onClick: () => setCustomize(!customize), end: <Switch on={customize} /> })
         : level > 0 && row('change-order', 'Оглавление', { light: true, onClick: () => setOn2(!on2), end: <Switch on={on2} /> })}
-      {/* The boards opened here last. */}
-      {level === 0 && row('clock-l', 'Недавнее', { more: <Recent />, end: arrow })}
+
     </div>
   );
 }
