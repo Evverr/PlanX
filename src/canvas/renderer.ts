@@ -12,7 +12,7 @@ import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
 import { COMPONENT_COLOR, firstInstance, instancePlus } from '../model/components';
 import { labOn } from '../labs/labs';
-import { drawTabs, tabsFor } from '../labs/sideTabs';
+import { drawTabs, tabsFor, type TabAims } from '../labs/sideTabs';
 import { zoomFade, zoomSize } from '../labs/zoomFade';
 import { gripsOn } from '../labs/tableMove';
 import { gridKind } from '../labs/boardGrid';
@@ -90,8 +90,8 @@ export interface Scene {
   byFinger: boolean;
   /** The dot under the pointer, drawn larger and at full strength; the others are faint. */
   hotDot: Side | null;
-  /** «Полукруги на рамке» (src/labs): the half circle under the pointer, a ball. */
-  hotTab?: Side | null;
+  /** «Полукруги на рамке» (src/labs): how much each side's ball shows, by where the pointer is. */
+  tabAims?: TabAims | null;
   /** The pointer on the picked item's handle (or a little round it): the handle stronger. */
   hotHandle?: boolean;
   /** With the line tool, the item whose link dots show. */
@@ -1451,7 +1451,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       ctx.stroke();
       ctx.globalAlpha = 1;
       // («Полукруги на рамке», src/labs: its half circles instead.)
-      if (tabsFor(it, s.editingId ?? null)) drawTabs(ctx, it, cam.z, theme.pick, PICK_FRAME, s.hotTab ?? null);
+      if (tabsFor(it, s.editingId ?? null)) drawTabs(ctx, it, cam.z, theme.pick, PICK_FRAME, s.tabAims ?? null);
       else if (!s.linkTool) drawDots(ctx, it, s);
     }
   }
