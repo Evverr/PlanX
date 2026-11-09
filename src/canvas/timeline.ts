@@ -16,7 +16,14 @@ const TODAY = '#E5484D';
 /** A day across, the card's sides, and where its rows are, as in the mockup. */
 export const DAY = 23;
 export const TL_PAD = 19;
-const NAME_Y = 13, NUMBER_Y = 26, LINES_Y = 39, BOTTOM = 19;
+const NAME_Y = 13, BOTTOM = 19;
+/** Its months' and day numbers' sizes at 1x, and the gaps under them. */
+const NAME_FS = 10, NUMBER_FS = 9, NAME_GAP = 3, NUMBER_GAP = 4;
+/** Where its day numbers and its lines start, its writing `k` times the usual size (see Item.tfs). */
+const numberY = (k: number) => NAME_Y + NAME_FS * k + NAME_GAP;
+const linesY = (k: number) => numberY(k) + NUMBER_FS * k + NUMBER_GAP;
+/** How tall a timeline must be with its writing that size: its usual room under its numbers kept. */
+export const tlLeast = (k: number): number => 190 - linesY(1) + linesY(k);
 const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
 /** The day a timeline starts with ("YYYY-MM-DD"; "YYYY-MM", from before, is the first of it). */
@@ -39,6 +46,8 @@ export function timelineSize(start: Date): { w: number; h: number } {
 
 /** The steps a timeline can have (see `ts`), and a day across at its own. */
 export const TL_STEPS = [1, 2, 4, 6];
+/** How many times the usual size its writing may be (see Item.tfs). */
+export const TL_FONTS = [1, 2, 4, 6];
 export const dayOf = (it: Item): number => DAY * (it.ts ?? 1);
 
 /** How many days its width holds. */
@@ -55,8 +64,11 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, it: Item, colors: { 
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, 10);
   ctx.fill();
-  const start = tlStart(it), days = tlDays(it), day = dayOf(it), top = it.y + LINES_Y, bottom = it.y + it.h - BOTTOM;
-  const now = new Date(), thisYear = now.getFullYear(), legible = 9 * z >= 4;
+  const k = it.tfs ?? 1, start = tlStart(it), days = tlDays(it), day = dayOf(it), top = it.y + linesY(k), bottom = it.y + it.h - BOTTOM;
+  const now = new Date(), thisYear = now.getFullYear(), legible = NUMBER_FS * k * z >= 4;
+  // Day numbers too wide for their days: every second, third… (and today's).
+  ctx.font = font(NUMBER_FS * k, 400, 'inter');
+  const every = Math.max(1, Math.ceil((ctx.measureText('28').width + 4 * k) / day));
   const today = (d: Date) => d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === thisYear;
   ctx.fillStyle = colors.ink;
   ctx.textBaseline = 'top';
@@ -69,17 +81,19 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, it: Item, colors: { 
     // A board unit wide, but never under a pixel on the screen; the month's a unit longer.
     ctx.fillRect(first ? x : x - 1, first ? top - 1 : top, Math.max(1, 1 / z), bottom - top + (first ? 1 : 0));
     if (!legible) continue;
-    ctx.globalAlpha = now ? 1 : 0.3;
-    ctx.fillStyle = now ? TODAY : colors.ink;
-    ctx.font = font(9, now ? 600 : 400, 'inter');
-    ctx.textAlign = 'center';
-    ctx.fillText(String(d.getDate()), x + day / 2, it.y + NUMBER_Y + 1);
+    if (now || i % every === 0) {
+      ctx.globalAlpha = now ? 1 : 0.3;
+      ctx.fillStyle = now ? TODAY : colors.ink;
+      ctx.font = font(NUMBER_FS * k, now ? 600 : 400, 'inter');
+      ctx.textAlign = 'center';
+      ctx.fillText(String(d.getDate()), x + day / 2, it.y + numberY(k) + 1);
+    }
     // The month's name over its first day (or the card's, for the month it starts in), with its year
     // when it's not this one.
     if (first || i === 0) {
       ctx.globalAlpha = 0.6;
       ctx.fillStyle = colors.ink;
-      ctx.font = font(10, 500, 'inter');
+      ctx.font = font(NAME_FS * k, 500, 'inter');
       ctx.textAlign = 'left';
       ctx.fillText(`${MONTHS[d.getMonth()]}${d.getFullYear() !== thisYear ? ` ${d.getFullYear()}` : ''}`.toUpperCase(), x, it.y + NAME_Y);
     }
