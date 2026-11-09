@@ -7,7 +7,7 @@ import { isLocked, labOn } from './labs';
 /**
  * «Полукруги на рамке»: on the selection frame of what's picked alone, at the middle of each side, a ball
  * showing past the frame as much as the pointer's near it: a quarter at rest, a little more with the pointer
- * nearer that side, all of it (a ball just outside) with the pointer by it or on it.
+ * near it, all of it (a ball just outside) with the pointer on it or a few pixels round it.
  * A click on it, a copy of what's picked that way; pressed and dragged, a link from that side, as from a
  * link dot.
  */
@@ -15,9 +15,9 @@ import { isLocked, labOn } from './labs';
 /** The ball's radius in screen pixels at 100%: bigger or smaller with the zoom, but less than the board
  *  (as the square root of it). */
 const BALL_R = 7.5;
-/** How much of the ball shows past the frame (of its width): at rest, the pointer nearer that side, by it
- *  or on it (a whole ball, a little off the frame); BY, where it's caught on the frame. */
-const REST = 0.25, CLOSER = 0.35, BY = 0.5, ON = 1.2;
+/** How much of the ball shows past the frame (of its width): at rest, the pointer near it, on it (and a few
+ *  pixels round it: a whole ball, a little off the frame); BY, where it's caught on the frame. */
+const REST = 0.25, NEARER = 0.35, BY = 0.5, ON = 1.2;
 /** How far off the item the pointer still counts as on it, and how near the ball it's by it, on screen. */
 const OFF = 10, NEAR = 28;
 /** How long the ball takes to grow or shrink to its new size, in ms. */
@@ -62,7 +62,7 @@ export function tabAims(ed: Editor, it: Item, w: Point | null): TabAims {
   const d: TabAims = { left: Math.abs(w.x - it.x), right: Math.abs(it.x + it.w - w.x), top: Math.abs(w.y - it.y), bottom: Math.abs(it.y + it.h - w.y) };
   const side = SIDES.reduce((a, b) => (d[b] < d[a] ? b : a));
   const p = framePoint(it, side, z), far = Math.hypot(w.x - p.x, w.y - p.y);
-  out[side] = far <= NEAR / z ? ON : CLOSER;
+  out[side] = far <= NEAR / z ? NEARER : REST;
   return out;
 }
 
