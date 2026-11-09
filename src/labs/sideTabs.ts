@@ -6,8 +6,8 @@ import { isLocked, labOn } from './labs';
 
 /**
  * «Полукруги на рамке»: on the selection frame of what's picked alone, at the middle of each side, a ball
- * showing past the frame a quarter at rest, all of it (a ball just outside) with the pointer near it; taken
- * (a click, a drag) only past the item's side (between it and its frame counts).
+ * showing past the frame a quarter at rest, all of it (a ball just outside) with the pointer near it past
+ * the frame; taken (a click, a drag) only there.
  * A click on it, a copy of what's picked that way; pressed and dragged, a link from that side, as from a
  * link dot.
  */
@@ -38,16 +38,16 @@ export const tabsFor = (it: Item | undefined, editing: string | null): it is Ite
 /** The middle of a side on the frame. */
 const framePoint = (it: Item, side: Side, zoom: number): Point => sidePoint(it, side, FRAME_OFF / zoom);
 
-/** Whether the point is past the item's side (between it and its frame counts). */
-const past = (it: Item, side: Side, w: Point) =>
-  side === 'right' ? w.x > it.x + it.w : side === 'left' ? w.x < it.x : side === 'bottom' ? w.y > it.y + it.h : w.y < it.y;
+/** Whether the point is past the item's frame on that side (`off`: how far the frame stands off it). */
+const past = (it: Item, side: Side, w: Point, off: number) =>
+  side === 'right' ? w.x > it.x + it.w + off : side === 'left' ? w.x < it.x - off : side === 'bottom' ? w.y > it.y + it.h + off : w.y < it.y - off;
 
-/** The side whose ball is under the point, if any: past the item's side, by it on the frame or on it
- *  wholly out (on the item itself, the item's). */
+/** The side whose ball is under the point, if any: past the item's frame, by it on the frame or on it
+ *  wholly out (inside the frame, the item's). */
 export function tabAt(ed: Editor, it: Item, w: Point): Side | null {
   const z = ed.cam.z, r = radius(z);
   for (const side of SIDES) {
-    if (!past(it, side, w)) continue;
+    if (!past(it, side, w, FRAME_OFF / z)) continue;
     const by = framePoint(it, side, z), out = sidePoint(it, side, FRAME_OFF / z + r * (2 * ON - 1));
     if (Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) || Math.hypot(w.x - out.x, w.y - out.y) <= r * 1.3) return side;
   }
@@ -68,7 +68,8 @@ export function tabAims(ed: Editor, it: Item, w: Point | null): TabAims {
   const d: TabAims = { left: Math.abs(w.x - it.x), right: Math.abs(it.x + it.w - w.x), top: Math.abs(w.y - it.y), bottom: Math.abs(it.y + it.h - w.y) };
   const side = SIDES.reduce((a, b) => (d[b] < d[a] ? b : a));
   const p = framePoint(it, side, z), far = Math.hypot(w.x - p.x, w.y - p.y);
-  out[side] = far <= NEAR / z ? ON : REST;
+  // (Whole only with the pointer past the frame that side.)
+  out[side] = far <= NEAR / z && past(it, side, w, FRAME_OFF / z) ? ON : REST;
   return out;
 }
 
@@ -126,8 +127,9 @@ export function drawTabs(ctx: CanvasRenderingContext2D, it: Item, zoom: number, 
   ctx.restore();
 }
 
-/** How far the copy a click makes goes that way (as Editor.duplicateToward: 24 off it). */
-export const TAB_GAP = 24;
+/** How far the copy a click makes stands off it that way (see Editor.duplicateToward): room for the
+ *  copy's own ball between them, to make another. */
+export const TAB_GAP = 72;
 export function towardOffset(it: Item, side: Side): Point {
   return side === 'right' ? { x: it.w + TAB_GAP, y: 0 } : side === 'left' ? { x: -it.w - TAB_GAP, y: 0 } : side === 'bottom' ? { x: 0, y: it.h + TAB_GAP } : { x: 0, y: -it.h - TAB_GAP };
 }
