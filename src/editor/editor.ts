@@ -2,7 +2,7 @@ import type { Board } from '../model/board';
 import type { Item, ItemType, Link, LinkStyle, Side } from '../model/types';
 import { DEFAULTS, EDITABLE, fillable, HAS_FONT, strokable, uid } from '../model/types';
 import type { PathNode, Point, Rect } from '../canvas/geometry';
-import { boundsOf, boxOf, center, instanceBounds, linkBox, pointInRect, resizedAt, setInstanceBox } from '../canvas/geometry';
+import { boundsOf, boxOf, center, instanceBounds, linkBox, normRect, pointInRect, resizedAt, setInstanceBox } from '../canvas/geometry';
 import { clearTextCache, dotsMoving, drawScene, readTheme, type Camera, type Peer, type Scene, type Theme } from '../canvas/renderer';
 import { fitHeight, foldedSize, font, itemTextHeight, mindHeight, mindSize } from '../canvas/text';
 import { onEmojiLoad } from '../emoji/emoji';
@@ -638,7 +638,7 @@ export class Editor {
       selection: this.selection,
       editingId: this.editingId,
       nodesOf: nodeEditing() ?? croppingId(),
-      marquee: g?.type === 'marquee' ? g.rect : null,
+      marquee: g?.type === 'marquee' ? g.rect : g?.type === 'place' && g.to ? normRect(g.at, g.to) : null,
       linkPreview,
       // Other people's cursors, unless switched off ("Нововведения").
       peers: labOn('cursors') ? this.presence?.peers() ?? [] : (this.presence?.peers() ?? []).map((p) => ({ ...p, cursor: null })),
