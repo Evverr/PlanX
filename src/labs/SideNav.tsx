@@ -6,7 +6,7 @@ import { navigate } from '../route';
 
 /**
  * "Боковая панель": a dark side down the left edge, 200 wide, opened by the board's logo (its own leading
- * to the start, a hero; its cross, by the board or the boards, putting it away for them to fill the window), kept open
+ * to the boards; its cross, by the board or the boards, putting it away for them to fill the window), kept open
  * whatever's beside it: the board worked on («Работа»), the boards (the shelf, its folders), the profile, the settings and, at its
  * foot, the help, each a page beside it on this one page (see main.tsx), the board put away.
  */
@@ -42,7 +42,8 @@ export function SideNav({ page, board }: { page: SidePage | null; board: boolean
   return (
     <nav className="side-nav" aria-label="Боковая панель">
       <div className="side-nav-top">
-        <button className={`side-nav-logo ${page === 'home' ? 'on' : ''}`} title="Начало" aria-label="Начало" onClick={() => navigate(pageUrl('home'))}>Plan</button>
+        {/* (Straight to the boards.) */}
+        <button className="side-nav-logo" title="Доски" aria-label="Доски" onClick={() => navigate(pageUrl(null))}>Plan</button>
         {/* With the board or the boards beside it: put away, they fill the window. */}
         {(board || !page) && <button className="side-nav-close" title="Свернуть панель" aria-label="Свернуть панель" onClick={() => setSideOpen(false)}>×</button>}
       </div>
