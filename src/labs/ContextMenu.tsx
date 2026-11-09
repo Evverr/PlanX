@@ -12,7 +12,7 @@ import { Glyph } from '../ui/glyphs';
 import { ColorPicker } from '../ui/ColorPicker';
 import { Switch } from '../ui/BoardMenu';
 import { labOn } from './labs';
-import { TL_STEPS } from '../canvas/timeline';
+import { TL_FONTS, TL_STEPS, tlLeast } from '../canvas/timeline';
 import { startTidy } from './tidy';
 import { startComment } from './comments';
 
@@ -455,16 +455,26 @@ function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch
   const own = it.type === 'icon' ? ICON_COLORS : it.type === 'ink' ? INK_COLORS : null;
   const fs = it.fs ?? DEFAULTS[it.type].fs ?? 16, bold = (it.fw ?? baseWeight(it.type)) >= 600, align = alignOf(it);
   const text = (patch: Partial<Item>) => set(restyle(it, patch));
-  // A timeline: its step alone.
+  // A timeline: its step, and the size of its months and day numbers.
   if (it.tl) return (
-    <div className="params-group">
-      <div className="params-label">Шаг</div>
-      <div className="labs-seg" role="radiogroup" aria-label="Шаг">
-        {TL_STEPS.map((k) => (
-          <button key={k} role="radio" aria-checked={(it.ts ?? 1) === k} className={(it.ts ?? 1) === k ? 'on' : ''} onClick={() => editor.setTimelineStep(it.id, k)}>{k}x</button>
-        ))}
+    <>
+      <div className="params-group">
+        <div className="params-label">Шаг</div>
+        <div className="labs-seg" role="radiogroup" aria-label="Шаг">
+          {TL_STEPS.map((k) => (
+            <button key={k} role="radio" aria-checked={(it.ts ?? 1) === k} className={(it.ts ?? 1) === k ? 'on' : ''} onClick={() => editor.setTimelineStep(it.id, k)}>{k}x</button>
+          ))}
+        </div>
       </div>
-    </div>
+      <div className="params-group">
+        <div className="params-label">Шрифт</div>
+        <div className="labs-seg" role="radiogroup" aria-label="Шрифт">
+          {TL_FONTS.map((k) => (
+            <button key={k} role="radio" aria-checked={(it.tfs ?? 1) === k} className={(it.tfs ?? 1) === k ? 'on' : ''} onClick={() => set({ tfs: k === 1 ? undefined : k, h: Math.max(it.h, tlLeast(k)) })}>{k}x</button>
+          ))}
+        </div>
+      </div>
+    </>
   );
   const toggle = (icon: PanelIconName, label: string, on: boolean, patch: Partial<Item>) => (
     <button className={`params-btn ${on ? 'on' : ''}`} title={label} aria-label={label} aria-pressed={on} onClick={() => text(patch)}><PanelIcon name={icon} /></button>
