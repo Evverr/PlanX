@@ -703,11 +703,15 @@ export const checks = {
     await sleep(200);
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.context-menu .menu-row')].find((b) => b.textContent === 'Параметры').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     await sleep(200);
-    expect(await p.ev(`[...document.querySelectorAll('.params-pop .labs-seg button')].map((b) => b.textContent).join()`), 'the steps').toBe('1x,2x,4x,6x');
+    expect(await p.ev(`[...document.querySelectorAll('.params-pop .labs-seg[aria-label="Шаг"] button')].map((b) => b.textContent).join()`), 'the steps').toBe('1x,2x,4x,6x');
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.params-pop .labs-seg button')][1].getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     await sleep(100);
     const t1 = await p.ev(`planx.board.get('${t0.id}')`), on = await p.ev(`planx.board.get('on')`);
     expect(`${t1.ts} ${t1.w === t0.w} ${on.x - t1.x - 19}`, 'twice as wide a day, as wide a card, the sticker on day 10 still').toBe('2 true 460');
+    // «Шрифт»: its months and numbers bigger, the timeline taller if need be.
+    await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.params-pop .labs-seg[aria-label="Шрифт"] button')][3].getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
+    await sleep(100);
+    expect(await p.ev(`(async () => { const t = planx.board.list().find((i) => i.tl), m = await import('/src/canvas/timeline.ts'); return [t.tfs, t.h >= m.tlLeast(6)].join(); })()`), 'its writing 6x').toBe('6,true');
   },
 
   async 'a frame takes a fill and an outline colour as a rectangle does'(p) {
