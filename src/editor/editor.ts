@@ -45,7 +45,7 @@ import { zoomsWithKey } from '../labs/wheelZoom';
 import { codeFit, scrollCode } from '../labs/codeBlock';
 import { closeTask, fitTask, freshTask, renewTasks, taskTextPatch } from '../model/task';
 import { setTaskRedraw } from '../canvas/task';
-import { outSide, setTabsRedraw, TAB_GAP, type TabAims } from '../labs/sideTabs';
+import { outSide, setTabsRedraw, towardOffset, type TabAims } from '../labs/sideTabs';
 
 export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -1419,14 +1419,14 @@ export class Editor {
   /** The copy of what's picked beside it, level with it: one in a column of its like (two or more one
    *  under another), the last of it, under it as far as the last two are apart; one in a row of them, past
    *  the row's last alike; else (one with its like under it too), right of it, 24 off. */
-  /** «Полукруги на рамке» (src/labs): a copy of what's picked beside it that way, TAB_GAP off, picked. */
+  /** «Полукруги на рамке» (src/labs): a copy of what's picked beside it that way (see towardOffset), picked. */
   duplicateToward(side: Side): void {
     const keep = this.clipboard, data = this.copyData();
     if (!data) return;
-    const b = boundsOf((JSON.parse(data) as { items: Item[] }).items);
-    if (!b) return;
-    const cx = b.x + b.w / 2, cy = b.y + b.h / 2, g = TAB_GAP;
-    const at = side === 'right' ? { x: cx + b.w + g, y: cy } : side === 'left' ? { x: cx - b.w - g, y: cy } : side === 'bottom' ? { x: cx, y: cy + b.h + g } : { x: cx, y: cy - b.h - g };
+    const b = boundsOf((JSON.parse(data) as { items: Item[] }).items), one = this.selectedItems()[0];
+    if (!b || !one) return;
+    // (The first free place that way: past the copies made before.)
+    const d = towardOffset(one, side, this.shown()), at = { x: b.x + b.w / 2 + d.x, y: b.y + b.h / 2 + d.y };
     this.clipboard = data;
     this.paste(0, at);
     this.clipboard = keep;
