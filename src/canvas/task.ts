@@ -601,7 +601,8 @@ function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typin
     // cross after 300, slowly, in 480).
     const shown = litNow(`${it.id}:sub:${i}`, !drag && (hot === `task:${it.id}:sub:${i}` || hot === `task:${it.id}:del:${i}`), 480, 300);
     if (shown) {
-      const cx = x + SUB_X - 12, cy = y + mid, d = 4, k = litNow(`${it.id}:del:${i}`, hot === `task:${it.id}:del:${i}`);
+      // (Darker on it as slowly, 480.)
+      const cx = x + SUB_X - 12, cy = y + mid, d = 4, k = litNow(`${it.id}:del:${i}`, hot === `task:${it.id}:del:${i}`, 480);
       ctx.strokeStyle = look.dark ? `rgba(255,255,255,${(0.4 + 0.45 * k) * shown})` : `rgba(0,0,0,${(0.3 + 0.4 * k) * shown})`;
       ctx.lineWidth = 1.5;
       ctx.lineCap = 'round';
