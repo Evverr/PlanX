@@ -3,7 +3,7 @@ import { DEFAULTS, EDITABLE, ROTATABLE, textPad, textPadY } from '../model/types
 import { fontOf, textBlockHeight, withList } from '../canvas/text';
 import { taskPartAt } from '../canvas/task';
 import type { Point } from '../canvas/geometry';
-import { tabAt, tabsFor } from '../labs/sideTabs';
+import { sameAims, tabAims, tabAt, tabsFor } from '../labs/sideTabs';
 import { coveredAt, hitItem, hitLink, instanceBounds, linkBox, linkHandles, linkShape, onAudioButton, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, dotGap, HANDLE } from '../canvas/renderer';
 import { instanceGlyph, instancePlus } from '../model/components';
@@ -285,6 +285,8 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   // («Полукруги на рамке», src/labs: its half circles, before anything else there.)
   const tab = tabsFor(single, ed.editingId) ? tabAt(ed, single, w) : null;
   if (tab !== ed.hotTab) { ed.hotTab = tab; ed.requestRender(); }
+  const aims = tabsFor(single, ed.editingId) ? tabAims(ed, single, w) : null;
+  if (!sameAims(aims, ed.tabAims)) { ed.tabAims = aims; ed.requestRender(); }
   const dot = single && !ed.editingId && !tab ? dotAt(ed, single, w) : null;
   if (dot !== ed.hotDot) { ed.hotDot = dot; ed.requestRender(); }
   let cursor = '';

@@ -45,6 +45,7 @@ import { zoomsWithKey } from '../labs/wheelZoom';
 import { codeFit, scrollCode } from '../labs/codeBlock';
 import { closeTask, fitTask, freshTask, renewTasks, taskTextPatch } from '../model/task';
 import { setTaskRedraw } from '../canvas/task';
+import { setTabsRedraw, type TabAims } from '../labs/sideTabs';
 
 export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -143,8 +144,9 @@ export class Editor {
   lastEmpty = { t: 0, x: 0, y: 0 };
   needsFit: boolean;
   hotDot: Side | null = null;
-  /** «Полукруги на рамке» (src/labs/sideTabs.ts): the half circle under the pointer. */
+  /** «Полукруги на рамке» (src/labs/sideTabs.ts): the ball under the pointer, and how much each shows. */
   hotTab: Side | null = null;
+  tabAims: TabAims | null = null;
   /** With the line tool, the item showing its link dots (see lineToolHover). */
   linkDots: string | null = null;
   /** Shared: the link under the pointer, faintly lit. */
@@ -335,6 +337,7 @@ export class Editor {
     this.ctx = canvas.getContext('2d');
     // (A task's parts lit under the pointer ease there and back, drawn again meanwhile.)
     setTaskRedraw(() => this.requestRender());
+    setTabsRedraw(() => this.requestRender());
     this.theme = readTheme();
     const offs: Array<() => void> = [];
     const on = <K extends keyof HTMLElementEventMap>(el: HTMLElement | Window, ev: K, fn: (e: HTMLElementEventMap[K]) => void, opts?: AddEventListenerOptions) => {
@@ -343,7 +346,7 @@ export class Editor {
     };
     on(canvas, 'pointerdown', (e) => press(this, e));
     on(canvas, 'pointermove', (e) => this.onPointerMove(e));
-    on(canvas, 'pointerleave', () => { this.pointerAt = null; });
+    on(canvas, 'pointerleave', () => { this.pointerAt = null; if (this.tabAims) { this.tabAims = null; this.requestRender(); } });
     on(canvas, 'pointerup', (e) => this.onPointerUp(e));
     on(canvas, 'pointercancel', (e) => this.onPointerUp(e));
     on(canvas, 'pointerleave', () => {
@@ -647,7 +650,7 @@ export class Editor {
       showHandle: this.selection.size === 1 && !!this.board.get([...this.selection][0]) && !isLocked(this.board.get([...this.selection][0])),
       byFinger: this.byFinger,
       hotDot: this.hotDot,
-      hotTab: this.hotTab,
+      tabAims: this.tabAims,
       hotHandle: this.hotHandle,
       linkDots: (this.tool === 'link' || dotsMode) && !this.gesture ? this.linkDots : null,
       linkTool: labOn('linkTool'),
