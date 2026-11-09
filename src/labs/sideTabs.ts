@@ -125,3 +125,9 @@ export function drawTabs(ctx: CanvasRenderingContext2D, it: Item, zoom: number, 
   }
   ctx.restore();
 }
+
+/** How far the copy a click makes goes that way (as Editor.duplicateToward: 24 off it). */
+export const TAB_GAP = 24;
+export function towardOffset(it: Item, side: Side): Point {
+  return side === 'right' ? { x: it.w + TAB_GAP, y: 0 } : side === 'left' ? { x: -it.w - TAB_GAP, y: 0 } : side === 'bottom' ? { x: 0, y: it.h + TAB_GAP } : { x: 0, y: -it.h - TAB_GAP };
+}
