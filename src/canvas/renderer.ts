@@ -12,7 +12,7 @@ import type { Guide } from './guides';
 import { FOLD_FS, FOLD_PAD, FOLD_TITLE_MAX, frameButtons } from '../model/frame';
 import { COMPONENT_COLOR, firstInstance, instancePlus } from '../model/components';
 import { labOn } from '../labs/labs';
-import { drawTabs, tabsFor, towardOffset, type TabAims } from '../labs/sideTabs';
+import { drawTabs, ghostNow, tabsFor, towardOffset, type TabAims } from '../labs/sideTabs';
 import { zoomFade, zoomSize } from '../labs/zoomFade';
 import { gripsOn } from '../labs/tableMove';
 import { gridKind } from '../labs/boardGrid';
@@ -92,7 +92,7 @@ export interface Scene {
   hotDot: Side | null;
   /** «Полукруги на рамке» (src/labs): how much each side's ball shows, by where the pointer is. */
   tabAims?: TabAims | null;
-  /** The same: the ball the pointer's on, the copy a click there would make seen faintly that way. */
+  /** The same: the ball out whole, the copy a click on it would make seen faintly that way. */
   ghostTab?: Side | null;
   /** The pointer on the picked item's handle (or a little round it): the handle stronger. */
   hotHandle?: boolean;
@@ -1304,11 +1304,13 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     }
   }
 
-  // («Полукруги на рамке», src/labs: the copy a click on the ball would make, at 60%.)
-  const ghostOf = s.ghostTab && s.selection.size === 1 ? s.get([...s.selection][0]) : undefined;
-  if (ghostOf && s.ghostTab && tabsFor(ghostOf, s.editingId ?? null)) {
+  // («Полукруги на рамке», src/labs: the copy a click on the ball out would make, at 60%, easing in and out.)
+  const alone = s.selection.size === 1 ? s.get([...s.selection][0]) : undefined;
+  const gh = s.live ? ghostNow(alone && s.ghostTab && tabsFor(alone, s.editingId ?? null) ? alone.id : null, s.ghostTab ?? null) : null;
+  const ghostOf = gh && s.get(gh.id);
+  if (gh && ghostOf) {
     // (Drawn on a layer of its own and laid on at 60%: drawing it sets its own opacities.)
-    const d = towardOffset(ghostOf, s.ghostTab), c = ctx.canvas;
+    const d = towardOffset(ghostOf, gh.side), c = ctx.canvas;
     if (!ghostLayer || ghostLayer.width !== c.width || ghostLayer.height !== c.height) { ghostLayer = document.createElement('canvas'); ghostLayer.width = c.width; ghostLayer.height = c.height; }
     const g = ghostLayer.getContext('2d');
     if (g) {
@@ -1318,7 +1320,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       drawItem(g, { ...ghostOf, id: `${ghostOf.id}~ghost`, x: ghostOf.x + d.x, y: ghostOf.y + d.y }, s);
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.globalAlpha = 0.6;
+      ctx.globalAlpha = 0.6 * gh.k;
       ctx.drawImage(ghostLayer, 0, 0);
       ctx.restore();
     }

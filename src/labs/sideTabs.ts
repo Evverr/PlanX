@@ -131,3 +131,25 @@ export const TAB_GAP = 24;
 export function towardOffset(it: Item, side: Side): Point {
   return side === 'right' ? { x: it.w + TAB_GAP, y: 0 } : side === 'left' ? { x: -it.w - TAB_GAP, y: 0 } : side === 'bottom' ? { x: 0, y: it.h + TAB_GAP } : { x: 0, y: -it.h - TAB_GAP };
 }
+
+/** The side whose ball is out whole (the pointer by it), if any. */
+export const outSide = (aims: TabAims | null): Side | null => (aims ? SIDES.find((s) => aims[s] === ON) ?? null : null);
+
+/** The copy a click would make, seen faintly: of which item, which way, coming in or going (in GHOST ms). */
+const GHOST = 150;
+let ghost: { id: string; side: Side | null; from: number; to: number; at: number } = { id: '', side: null, from: 0, to: 0, at: 0 };
+
+/** How far in it is now (0…1) with what's wanted (an item and a side, or none: it goes); null when gone. */
+export function ghostNow(id: string | null, side: Side | null): { id: string; side: Side; k: number } | null {
+  const now = performance.now(), value = () => {
+    const k = Math.min(1, (now - ghost.at) / GHOST), e = 1 - (1 - k) * (1 - k);
+    return ghost.from + (ghost.to - ghost.from) * e;
+  };
+  if (id && side) {
+    if (ghost.id !== id || ghost.side !== side) ghost = { id, side, from: 0, to: 1, at: now };
+    else if (ghost.to !== 1) ghost = { ...ghost, from: value(), to: 1, at: now };
+  } else if (ghost.to !== 0) ghost = { ...ghost, from: value(), to: 0, at: now };
+  const k = value();
+  if (now - ghost.at < GHOST) redraw();
+  return ghost.side && k > 0 ? { id: ghost.id, side: ghost.side, k } : null;
+}

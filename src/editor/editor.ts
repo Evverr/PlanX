@@ -45,7 +45,7 @@ import { zoomsWithKey } from '../labs/wheelZoom';
 import { codeFit, scrollCode } from '../labs/codeBlock';
 import { closeTask, fitTask, freshTask, renewTasks, taskTextPatch } from '../model/task';
 import { setTaskRedraw } from '../canvas/task';
-import { setTabsRedraw, type TabAims } from '../labs/sideTabs';
+import { outSide, setTabsRedraw, type TabAims } from '../labs/sideTabs';
 
 export { DRAW_TOOLS, INK_RANGE, INK_SIZES, SHAPE_TOOLS } from './tools';
 export type { InkStyle, PenSet, Pens, PenTool, Tool } from './tools';
@@ -651,7 +651,8 @@ export class Editor {
       byFinger: this.byFinger,
       hotDot: this.hotDot,
       tabAims: this.tabAims,
-      ghostTab: this.hotTab,
+      // (Not once a link's being pulled out of it.)
+      ghostTab: g?.type === 'link' ? null : outSide(this.tabAims),
       hotHandle: this.hotHandle,
       linkDots: (this.tool === 'link' || dotsMode) && !this.gesture ? this.linkDots : null,
       linkTool: labOn('linkTool'),
