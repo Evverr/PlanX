@@ -66,13 +66,18 @@ export const checks = {
     expect([await p.ev(`!!planx.board.get('c')`), await p.ev('planx.editor.editingId')].join(), 'pressed: gone, nothing typed in').toBe('false,');
   },
 
-  async '"Боковая панель": the logo opens a dark side on the left, kept open; its rows go to pages beside it, the help at its foot; its logo the start, its cross by the boards puts it away'(p) {
+  async '"Боковая панель": the board\'s logo opens a dark side on the left with the boards beside it, kept open; its rows go to pages beside it, the help at its foot; its logo the start, its cross by the boards puts it away'(p) {
     const go = async (label) => p.click(await p.ev(`(() => { const b = [...document.querySelectorAll('.side-nav-row, .side-nav-help')].find((b) => (b.getAttribute('aria-label') ?? b.textContent) === '${label}').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; })()`));
     await p.click(await p.at('.topbar .logo'));
     await sleep(250);
     const r = await p.rect('.side-nav');
     expect([r.l, r.t, r.w, r.h].join(), 'down the left edge').toBe('0,0,200,800');
     expect(await p.ev(`[...document.querySelectorAll('.side-nav-row span')].map((s) => s.textContent).join()`), 'what\'s in it').toBe('Работа,Доски,Профиль,Настройки');
+    // The board's logo leads to the boards beside it; «Работа» back to the board.
+    await sleep(400);
+    expect(!!(await p.rect('.shelf-page')), 'the boards').toBe(true);
+    await go('Работа');
+    await sleep(800);
     // The board pushed over by it: its area right of the side, as wide as what's left of the window.
     expect([await p.ev(`document.querySelector('.app-content').offsetLeft`), await p.ev('innerWidth'), await p.ev(`document.querySelector('.board-canvas').clientWidth`)].join(), 'the board beside it').toBe('200,1000,1000');
     await go('Настройки');

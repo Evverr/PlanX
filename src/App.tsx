@@ -373,9 +373,9 @@ export function App({ boardId }: { boardId: string }) {
         onPointerLeave={topBar.grip.onPointerLeave}>
         {topSort.renderFit({
           // The logo leads back to the shelf, to the folder this board is in.
-          // ("Боковая панель", src/labs: it opens the side instead, a chevron before it under the pointer.)
+          // ("Боковая панель", src/labs: there too, the side opened by it, a chevron before it under the pointer.)
           logo: labs.sideNav
-            ? <button className={`logo to-shelf side-nav-logo-btn ${sideOpen ? "open" : ""}`} title="Боковая панель" aria-label="Боковая панель" aria-expanded={sideOpen} onClick={() => setSideOpen(!sideOpen)}>Plan</button>
+            ? <button className={`logo to-shelf side-nav-logo-btn ${sideOpen ? "open" : ""}`} title="К доскам" aria-label="К доскам" onClick={() => { setSideOpen(true); toShelf(); }}>Plan</button>
             : <button className="logo to-shelf" title="К папке с досками" aria-label="К папке с досками" onClick={toShelf}>Plan</button>,
           sep: <div className="sep" />,
           // The field is as wide as its text (the copy in data-text sizes it), up to 30 characters.
