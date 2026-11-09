@@ -1879,8 +1879,11 @@ export const checks = {
       const m = sh.pts[Math.floor(sh.pts.length / 3)], s = planx.editor.toScreen(m); return [s.x, s.y]; })()`);
     await p.click(mid);
     expect(await p.ev('[...planx.editor.selection].join()'), 'on its line').toBe(l.id);
+    // (With «Линия в пустоту» off: on, it stays, that end at a point there.)
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('lineEnd', false))()`);
     await p.drag(mid, [1000, 150]);
     expect(await p.ev(`planx.board.getLink('${l.id}') ?? null`), 'let go on nothing: gone').toBe(null);
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('lineEnd', true))()`);
   },
 
   async '"Меню по правому клику": a central topic\'s parameters have «Цвет» (its strip) and «Конфигурация» (the ways it grows)'(p) {

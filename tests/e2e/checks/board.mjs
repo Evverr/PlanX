@@ -390,9 +390,11 @@ export const checks = {
     expect(await p.ev('planx.editor.gesture?.target ?? null'), 'nothing lit at first').toBe(null);
     await p.mouse('mouseReleased', tip[0] + 2, tip[1] + 6);
     expect(await p.ev(`planx.board.getLink('L1')?.to`), 'let go there, it stays').toBe(ids.d);
-    // Taken off and let go on nothing, it's gone.
+    // Taken off and let go on nothing, it's gone (with «Линия в пустоту», src/labs, off: on, its end stays there).
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('lineEnd', false))()`);
     await p.drag(tip, [tip[0] + 200, tip[1] + 150]);
     expect(await p.ev(`!!planx.board.getLink('L1')`), 'gone').toBe(false);
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('lineEnd', true))()`);
     await p.key('z', 'KeyZ', 90, 4);
     expect(await p.ev(`planx.board.getLink('L1')?.to`), 'and back on undo').toBe(ids.d);
   },
@@ -897,6 +899,23 @@ export const checks = {
     await p.drag(await at(480, 468), await at(980, 380));
     await sleep(300);
     expect(await p.ev(`JSON.stringify(planx.board.linkList().map((l) => [l.from, l.to]))`), 'dragged: a link').toBe('[["s","r"]]');
+  },
+
+  async '"Линия в пустоту": a line let go on nothing stays, its end at an unseen point; moved there, on an item tied to it; gone with its line'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); b.add(e.newItem('sticky', 300, 300, { id: 's', w: 160, h: 160 })); b.add(e.newItem('rect', 900, 600, { id: 'r', w: 160, h: 160 })); e.setSelection(['s']); })()`);
+    await sleep(300);
+    const at = (x, y) => p.ev(`(() => { const r = planx.editor.canvas.getBoundingClientRect(), s = planx.editor.toScreen({ x: ${'X'}, y: ${'Y'} }); return [r.left + s.x, r.top + s.y]; })()`.replace('X', x).replace('Y', y));
+    const state = () => p.ev(`(() => { const l = planx.board.linkList()[0], t = l && planx.board.get(l.to); return !l ? 'none' : t?.pt ? 'point ' + t.x + ',' + t.y : l.to; })()`);
+    await p.mouse('mouseMoved', ...(await at(468, 380)));
+    await sleep(200);
+    await p.drag(await at(468, 380), await at(700, 380));
+    await sleep(300);
+    expect(await state(), 'let go on nothing: to a point there').toBe('point 700,380');
+    await p.drag(await at(700, 380), await at(760, 480));
+    await sleep(300);
+    expect(await state(), 'its end moved').toBe('point 760,480');
+    await p.ev(`(() => { planx.editor.setSelection([planx.board.linkList()[0].id]); planx.editor.deleteSelection(); })()`);
+    expect(await p.ev(`planx.board.list().filter((i) => i.pt).length + ' ' + planx.board.linkList().length`), 'gone with its line').toBe('0 0');
   },
 
   async '"Текст рамкой": the text tool dragged makes a text the box\'s size, its lines wrapping in it, what doesn\'t fit past it; stretched both ways; a click as before'(p) {

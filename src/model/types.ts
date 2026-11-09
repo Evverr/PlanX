@@ -116,6 +116,9 @@ export interface Item {
   /** A text drawn as a box («Текст рамкой», src/labs): as wide and as tall as it's set, what doesn't fit
    *  showing past it; stretched both ways. */
   tb?: boolean;
+  /** A line's end let go on nothing («Линия в пустоту», src/labs): an unseen point it's tied to (a shape
+   *  of no size, no fill and no line, see unseen in editor/frames.ts). */
+  pt?: boolean;
   /** An opened task: where it lay before it went up over the board (see setView in model/task.ts), and
    *  goes back to once closed. */
   oz?: number;
