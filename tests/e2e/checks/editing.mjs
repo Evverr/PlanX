@@ -130,7 +130,8 @@ export const checks = {
     await p.mouse('mouseMoved', 360, 320);
     await sleep(100);
     expect(await p.ev('planx.editor.plusFade()'), 'not yet').toBe(0);
-    await sleep(700);
+    // (Its buttons wait about a second, then fade in.)
+    await sleep(1400);
     expect(await p.ev('planx.editor.plusNode()?.id'), 'its buttons').toBe('r');
     const plus = await p.ev(`(async () => { const m = await import('/src/model/mind.ts'), e = planx.editor, it = planx.board.get('r');
       const b = m.mindButtons(it, (id) => planx.board.get(id), e.cam.z, []).find((b) => b.kind === 'child'); return [b.x, b.y]; })()`);
@@ -166,7 +167,7 @@ export const checks = {
       const s = ed.toScreen(b), c = ed.canvas.getBoundingClientRect(); return [s.x + c.left, s.y + c.top]; })()`);
     // The buttons show a moment after it's picked.
     await p.mouse('mouseMoved', ...plus);
-    await sleep(700);
+    await sleep(1400);
     await p.click(plus);
     await p.escape();
     const d = await p.ev(`(() => { const r = planx.board.get('${root}'), d = planx.board.list().find((i) => i.parent === r.id);
@@ -189,7 +190,7 @@ export const checks = {
       const b = m.mindButtons(planx.board.get('${root}'), (k) => planx.board.get(k), ed.cam.z).find((b) => b.kind === 'up');
       const s = ed.toScreen(b), c = ed.canvas.getBoundingClientRect(); return [s.x + c.left, s.y + c.top]; })()`);
     await p.mouse('mouseMoved', ...plus);
-    await sleep(700);
+    await sleep(1400);
     await p.click(plus);
     const u = await p.ev(`(() => { const r = planx.board.get('${root}'), u = planx.board.list().find((i) => i.parent === r.id);
       return { id: u.id, up: u.up, over: u.y + u.h < r.y, centred: Math.abs(u.x + u.w / 2 - (r.x + r.w / 2)) < 1, bottom: u.y + u.h, h: u.h }; })()`);
