@@ -455,7 +455,7 @@ function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch
   const own = it.type === 'icon' ? ICON_COLORS : it.type === 'ink' ? INK_COLORS : null;
   const fs = it.fs ?? DEFAULTS[it.type].fs ?? 16, bold = (it.fw ?? baseWeight(it.type)) >= 600, align = alignOf(it);
   const text = (patch: Partial<Item>) => set(restyle(it, patch));
-  // A timeline: its step, and the size of its months and day numbers.
+  // A timeline: its step, and the size of its months and day numbers (or growing as it's zoomed out).
   if (it.tl) return (
     <>
       <div className="params-group">
@@ -473,6 +473,11 @@ function ItemParams({ editor, it, set }: { editor: Editor; it: Item; set: (patch
             <button key={k} role="radio" aria-checked={(it.tfs ?? 1) === k} className={(it.tfs ?? 1) === k ? 'on' : ''} onClick={() => set({ tfs: k === 1 ? undefined : k, h: Math.max(it.h, tlLeast(k)) })}>{k}x</button>
           ))}
         </div>
+      </div>
+      <div className="menu-item">
+        <button className="menu-row" role="menuitemcheckbox" aria-checked={!!it.tfa} onClick={() => set({ tfa: it.tfa ? undefined : true })}>
+          <span>Адаптивный текст</span><Switch on={!!it.tfa} />
+        </button>
       </div>
     </>
   );

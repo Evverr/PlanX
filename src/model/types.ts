@@ -160,6 +160,8 @@ export interface Item {
   ts?: number;
   /** A timeline's months and day numbers this many times their usual size (1, 2, 3 or 4; 1 left out). */
   tfs?: number;
+  /** A timeline's months and day numbers grow as the board's zoomed out («Адаптивный текст»; see canvas/timeline.ts). */
+  tfa?: boolean;
   /** A folded frame's unfolded size (see model/frame.ts). */
   fold?: { w: number; h: number };
   /** Components (see model/components.ts): a frame that's a component; a frame that's an instance of
