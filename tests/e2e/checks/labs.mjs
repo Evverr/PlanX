@@ -1,5 +1,5 @@
 // The features on trial ("Нововведения", src/labs): their switches, and each doing its job.
-import { expect, sleep } from '../lib.mjs';
+import { expect, openTab, sleep } from '../lib.mjs';
 import { carry } from './sortable.mjs';
 
 /** Two stickers through the app's handle; gives back their ids. */
@@ -2194,5 +2194,28 @@ export const checks = {
     await p.click(await p.at('.bar.panel button[aria-label="Цвет и стрелки линий"]'));
     await sleep(100);
     expect(await p.ev(`planx.editor.linksAsThey`), 'blue again once closed').toBe(false);
+  },
+
+  async '"Аудиозвонок": those who press the call button hear each other; the fourth asks in, someone in it lets them in'(p) {
+    const url = await p.ev('location.href');
+    const [q, r, t] = [await openTab(url), await openTab(url), await openTab(url)];
+    await sleep(2500);
+    // (A button in the popup, or the call button, pressed in a tab.)
+    const press = (x, text) => x.ev(`(() => { const b = ${JSON.stringify(text)} ? [...document.querySelectorAll('.call-pop .btn')].find((b) => b.textContent === ${JSON.stringify(text)}) : document.querySelector('.call-btn'); b?.click(); return !!b; })()`);
+    const lines = (x) => x.ev(`[...document.querySelectorAll('.call-people li')].map((l) => l.classList.contains('joining') ? 'joining' : 'up').join()`);
+    for (const x of [p, q, r]) { await press(x, ''); await sleep(1200); }
+    await sleep(3000);
+    expect(await lines(p), 'three in it, the lines up').toBe('up,up,up');
+    await press(t, '');
+    await sleep(500);
+    expect(await t.ev(`document.querySelector('.call-pop p')?.textContent`), 'the fourth: it is full').toBe('В звонке уже 3 человека');
+    await press(t, 'Попроситься');
+    await sleep(1000);
+    expect(await p.ev(`!!document.querySelector('.call-ask p')?.textContent.endsWith('хочет присоединиться')`), 'asked in: those in it see it').toBe(true);
+    await press(p, 'Пустить');
+    await sleep(5000);
+    expect(await p.ev(`document.querySelector('.call-count')?.textContent`), 'let in: four in it').toBe('4');
+    expect(await lines(t), 'its lines up').toBe('up,up,up,up');
+    for (const x of [q, r, t]) await x.close();
   },
 };
