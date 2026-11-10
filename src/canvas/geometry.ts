@@ -327,7 +327,10 @@ export function linkShape(link: Link, getItem: (id: string) => Item | undefined)
   // Right-angled, with its own bends: out of its sides, through them, square at every turn.
   if (link.via?.length && link.style === 'elbow') {
     const via = link.via, ps = link.fromSide ?? nearestSide(a, via[0]), qs = link.toSide ?? nearestSide(b, via[via.length - 1]);
-    return { pts: squared([endAt(a, ps, 0, link.fromSide ? link.fromAt : 0.5), ...via, endAt(b, qs, 0, link.toSide ? link.toAt : 0.5)], ps === 'left' || ps === 'right') };
+    // Out of its side and into the other square to it (never along it): a bit straight out of each first.
+    const p = endAt(a, ps, 0, link.fromSide ? link.fromAt : 0.5), q = endAt(b, qs, 0, link.toSide ? link.toAt : 0.5), S = 24;
+    const out = { x: p.x + NORMAL[ps].x * S, y: p.y + NORMAL[ps].y * S }, into = { x: q.x + NORMAL[qs].x * S, y: q.y + NORMAL[qs].y * S };
+    return { pts: squared([p, out, ...via, into, q], ps === 'left' || ps === 'right') };
   }
   if (link.via?.length) {
     const via = link.via, p = link.fromSide ? endAt(a, link.fromSide, 0, link.fromAt) : edgePoint(a, via[0]);
