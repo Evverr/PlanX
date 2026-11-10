@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boxOf, polyPoints, distToSegment, edgePoint, elbowRoute, linkShape, spreadElbows, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, rectContains, resizedAt, sidePoint } from '../src/canvas/geometry';
+import { around, boxOf, polyPoints, distToSegment, edgePoint, elbowRoute, linkShape, spreadElbows, hitItem, hitLink, inkPoints, linkCurve, nearestSide, nearInk, rectContains, resizedAt, sidePoint } from '../src/canvas/geometry';
 import { withList, wrapText } from '../src/canvas/text';
 import type { Item } from '../src/model/types';
 
@@ -201,5 +201,14 @@ describe('elbowRoute out across, into a side below behind it', () => {
     expect(elbowRoute({ x: 750, y: 150 }, 'right', { x: 577, y: 60 }, 'bottom')).toEqual([
       { x: 750, y: 150 }, { x: 774, y: 150 }, { x: 774, y: 84 }, { x: 577, y: 84 }, { x: 577, y: 60 },
     ]);
+  });
+});
+
+describe('around', () => {
+  it('a right-angled route through the item it goes into goes round it instead', () => {
+    // Out of the left of one above right (290…912, 70…118) into the bottom of one below it (0…384, 157…205).
+    const from = { x: 290, y: 70, w: 622, h: 48 }, to = { x: 0, y: 157, w: 384, h: 48 };
+    const pts = around(elbowRoute({ x: 290, y: 94 }, 'left', { x: 192, y: 205 }, 'bottom'), 'left', 'bottom', from, to);
+    expect(pts).toEqual([{ x: 290, y: 94 }, { x: 266, y: 94 }, { x: 266, y: 137.5 }, { x: 408, y: 137.5 }, { x: 408, y: 229 }, { x: 192, y: 229 }, { x: 192, y: 205 }]);
   });
 });
