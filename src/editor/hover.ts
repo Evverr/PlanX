@@ -3,7 +3,7 @@ import { DEFAULTS, EDITABLE, ROTATABLE, textPad, textPadY } from '../model/types
 import { fontOf, textBlockHeight, withList } from '../canvas/text';
 import { taskPartAt } from '../canvas/task';
 import type { Point } from '../canvas/geometry';
-import { sameAims, tabAims, tabAt, tabsFor } from '../labs/sideTabs';
+import { nearTab, sameAims, tabAims, tabAt, tabsFor } from '../labs/sideTabs';
 import { coveredAt, hitItem, hitLink, instanceBounds, linkBox, linkHandles, linkShape, onAudioButton, pointInRect, sidePoint, SIDES, toLocal } from '../canvas/geometry';
 import { DOT_GAP, dotGap, HANDLE } from '../canvas/renderer';
 import { instanceGlyph, instancePlus } from '../model/components';
@@ -47,6 +47,8 @@ export const onBottomLeft = (ed: Editor, it: Item, w: Point): boolean => onTopLe
  *  instance by its contents. */
 export function sideAt(ed: Editor, it: Item, w: Point): 'w' | 'h' | 'l' | 't' | null {
   if (it.fold || it.host || ed.editingId || ['mind', 'icon', 'emoji', 'ink', 'audio', 'image'].includes(it.type)) return null;
+  // Near a ball on the frame («Полукруги на рамке»), it's the ball's, not the side's.
+  if (tabsFor(it, ed.editingId) && nearTab(ed, it, w)) return null;
   const b = it.inst ? instanceBounds(it, ed.board.list()) : it, p = it.inst ? w : toLocal(it, w);
   const near = ed.reach(4), corner = ed.reach(10);
   const along = (v: number, from: number, size: number) => v >= from + corner && v <= from + size - corner;
