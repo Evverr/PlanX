@@ -1514,11 +1514,15 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     const dot = fromSide ? dotGap(from, fromSide) / cam.z : 0, along = fromAt ?? 0.5;
     // Over an item: the side it's going into, and where along it (its middle when near that).
     const anchor = target ? anchorAt(target, to, 10 / cam.z) : null;
-    if (style) {
+    if (style && style !== 'arc') {
       const ps = fromSide ?? nearestSide(from, target ? center(target) : to);
       const qs = anchor ? anchor.side : facing(sidePoint(from, ps, dot), to);
       const p = sidePoint(from, ps, dot, fromSide ? along : 0.5), q = target && anchor ? sidePoint(target, anchor.side, 0, anchor.at) : to;
       linkArrow(ctx, { pts: style === 'straight' ? [p, q] : elbowRoute(p, ps, q, qs) }, SELECT_COLOR, cam.z, [6, 6], heads);
+    } else if (style === 'arc') {
+      // An arc: out of its side, into where it's led any way.
+      const ps = fromSide ?? nearestSide(from, target ? center(target) : to), p = sidePoint(from, ps, dot, fromSide ? along : 0.5);
+      curve = curveBetween(p, ps, target && anchor ? sidePoint(target, anchor.side, 0, anchor.at) : to, null, angleOf(from));
     } else if (fromSide || (anchor && anchor.at !== 0.5)) {
       const ps = fromSide ?? nearestSide(from, target ? center(target) : to);
       curve = curveBetween(sidePoint(from, ps, dot, fromSide ? along : 0.5), ps, target && anchor ? sidePoint(target, anchor.side, 0, anchor.at) : to, anchor?.side ?? null, angleOf(from), target ? angleOf(target) : 0);
@@ -1526,7 +1530,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
       const end = target ? edgePoint(target, center(from)) : to, start = edgePoint(from, end);
       curve = [start, start, end, end];
     }
-    if (!style) arrow(ctx, curve!, SELECT_COLOR, cam.z, [6, 6], heads);
+    if (!style || style === 'arc') arrow(ctx, curve!, SELECT_COLOR, cam.z, [6, 6], heads);
   }
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

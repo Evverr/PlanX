@@ -323,7 +323,13 @@ export function linkShape(link: Link, getItem: (id: string) => Item | undefined)
   if (link.via?.length) {
     const via = link.via, p = link.fromSide ? sidePoint(a, link.fromSide, 0, link.fromAt) : edgePoint(a, via[0]);
     const q = link.toSide ? sidePoint(b, link.toSide, 0, link.toAt) : edgePoint(b, via[via.length - 1]), all = [p, ...via, q];
-    return { pts: link.style ? all : throughSmoothly(all) };
+    return { pts: link.style && link.style !== 'arc' ? all : throughSmoothly(all) };
+  }
+  // An arc: out of its side (or the one facing the other), into its other end any way it comes.
+  if (link.style === 'arc') {
+    const ps = link.fromSide ?? nearestSide(a, center(b)), p = sidePoint(a, ps, 0, link.fromSide ? link.fromAt : 0.5);
+    const q = link.toSide ? sidePoint(b, link.toSide, 0, link.toAt) : edgePoint(b, p), curve = curveBetween(p, ps, q, null, angleOf(a), angleOf(b));
+    return { curve, pts: Array.from({ length: 25 }, (_, i) => bezierPoint(curve, i / 24)) };
   }
   if (!link.style) {
     const curve = linkCurve(link, get)!;
@@ -401,7 +407,7 @@ export function linkHandles(link: Link, shape: LinkShape): { nodes: Point[]; mid
   // Without nodes yet, the middle is on the line as it's drawn (a curve's own, not its chord's).
   // On a smooth one, halfway along each stretch of its curve (16 points each, see throughSmoothly).
   const middles = !via.length ? [{ p: halfway(shape.pts), at: 0 }]
-    : all.slice(1).map((q, i) => ({ p: link.style ? { x: (all[i].x + q.x) / 2, y: (all[i].y + q.y) / 2 } : shape.pts[i * 16 + 8], at: i }));
+    : all.slice(1).map((q, i) => ({ p: link.style && link.style !== 'arc' ? { x: (all[i].x + q.x) / 2, y: (all[i].y + q.y) / 2 } : shape.pts[i * 16 + 8], at: i }));
   return { nodes: via, middles };
 }
 
