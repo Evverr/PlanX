@@ -72,9 +72,11 @@ function tabAtZ(it: Item, w: Point, z: number, was: TabAims | null): Side | null
     const k = was?.[side] === ON ? Math.sqrt(HOLD) : 1, ra = r * BIG * k, rl = was?.[side] === ON ? ra * ALONG : ra;
     const m = was?.[side] === ON ? mid + (mid + ra) * FURTHER : mid;
     // Round it, as an oval; and from the frame to its middle at least as wide (no notches where it meets the
-    // frame). Not out yet, NEAR wide at the frame, narrowing to it: from anywhere it came out, the way
-    // straight to it stays in.
-    const base = was?.[side] === ON ? rl : Math.max(rl, NEAR / z), wide = base + (rl - base) * Math.max(0, off) / m;
+    // frame). Not out yet, from the far corners of the strip by the frame where it comes out (see aimsZ)
+    // narrowing to it: from anywhere it came out, the way straight to it stays in.
+    const strip = (OFF - FRAME_OFF) / z, corner = Math.sqrt(Math.max(0, (NEAR / z) ** 2 - strip ** 2));
+    const base = was?.[side] === ON ? rl : Math.max(rl, corner);
+    const wide = off <= strip ? base : base + (rl - base) * Math.min(1, (off - strip) / Math.max(1e-6, m - strip));
     if (((off - m) / ra) ** 2 + (along / rl) ** 2 <= 1 || (off <= m && along <= wide) || Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) * k) return side;
   }
   return null;
