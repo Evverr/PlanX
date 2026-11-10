@@ -248,6 +248,15 @@ export function sidePoint(r: Turned, side: Side, gap = 0, at = 0.5): Point {
   return fromLocal(r, { x: c.x + n.x * (r.w / 2 + gap) + (n.x ? 0 : along * r.w), y: c.y + n.y * (r.h / 2 + gap) + (n.y ? 0 : along * r.h) });
 }
 
+/** Where a task's header's line is, down from its top (its ring's middle, see canvas/task.ts). */
+const TASK_HEAD = 26;
+/** Where a link meets an item's side (see sidePoint); an opened task's left or right middle at its
+ *  header's line, as when it's folded (its bottom's middle is its bottom's). */
+function endAt(it: Item, side: Side, gap = 0, at?: number): Point {
+  if (it.type === 'task' && it.tv && !it.rot && (side === 'left' || side === 'right') && (at ?? 0.5) === 0.5) return { x: sidePoint(it, side, gap).x, y: it.y + TASK_HEAD };
+  return sidePoint(it, side, gap, at);
+}
+
 /** Where on an item's outline a link's end let go at `p` goes: the side nearest it and how far along
  *  (0…1); its middle when within `snap` of it (board units). */
 export function anchorAt(r: Turned, p: Point, snap: number): { side: Side; at: number } {
@@ -285,7 +294,7 @@ export function linkCurve(link: Link, get: (id: string) => Item | undefined): Be
   const a = get(link.from), b = get(link.to);
   if (!a || !b) return null;
   if (link.fromSide && link.toSide) {
-    return curveBetween(sidePoint(a, link.fromSide, 0, link.fromAt), link.fromSide, sidePoint(b, link.toSide, 0, link.toAt), link.toSide, angleOf(a), angleOf(b));
+    return curveBetween(endAt(a, link.fromSide, 0, link.fromAt), link.fromSide, endAt(b, link.toSide, 0, link.toAt), link.toSide, angleOf(a), angleOf(b));
   }
   const [p, q] = linkEnds(link, get)!;
   return [p, p, q, q];
@@ -318,17 +327,17 @@ export function linkShape(link: Link, getItem: (id: string) => Item | undefined)
   // Right-angled, with its own bends: out of its sides, through them, square at every turn.
   if (link.via?.length && link.style === 'elbow') {
     const via = link.via, ps = link.fromSide ?? nearestSide(a, via[0]), qs = link.toSide ?? nearestSide(b, via[via.length - 1]);
-    return { pts: squared([sidePoint(a, ps, 0, link.fromSide ? link.fromAt : 0.5), ...via, sidePoint(b, qs, 0, link.toSide ? link.toAt : 0.5)], ps === 'left' || ps === 'right') };
+    return { pts: squared([endAt(a, ps, 0, link.fromSide ? link.fromAt : 0.5), ...via, endAt(b, qs, 0, link.toSide ? link.toAt : 0.5)], ps === 'left' || ps === 'right') };
   }
   if (link.via?.length) {
-    const via = link.via, p = link.fromSide ? sidePoint(a, link.fromSide, 0, link.fromAt) : edgePoint(a, via[0]);
-    const q = link.toSide ? sidePoint(b, link.toSide, 0, link.toAt) : edgePoint(b, via[via.length - 1]), all = [p, ...via, q];
+    const via = link.via, p = link.fromSide ? endAt(a, link.fromSide, 0, link.fromAt) : edgePoint(a, via[0]);
+    const q = link.toSide ? endAt(b, link.toSide, 0, link.toAt) : edgePoint(b, via[via.length - 1]), all = [p, ...via, q];
     return { pts: link.style && link.style !== 'arc' ? all : throughSmoothly(all) };
   }
   // An arc: out of its side (or the one facing the other), into its other end any way it comes.
   if (link.style === 'arc') {
-    const ps = link.fromSide ?? nearestSide(a, center(b)), p = sidePoint(a, ps, 0, link.fromSide ? link.fromAt : 0.5);
-    const q = link.toSide ? sidePoint(b, link.toSide, 0, link.toAt) : edgePoint(b, p), curve = curveBetween(p, ps, q, null, angleOf(a), angleOf(b));
+    const ps = link.fromSide ?? nearestSide(a, center(b)), p = endAt(a, ps, 0, link.fromSide ? link.fromAt : 0.5);
+    const q = link.toSide ? endAt(b, link.toSide, 0, link.toAt) : edgePoint(b, p), curve = curveBetween(p, ps, q, null, angleOf(a), angleOf(b));
     return { curve, pts: Array.from({ length: 25 }, (_, i) => bezierPoint(curve, i / 24)) };
   }
   if (!link.style) {
@@ -336,8 +345,8 @@ export function linkShape(link: Link, getItem: (id: string) => Item | undefined)
     return { curve, pts: Array.from({ length: 25 }, (_, i) => bezierPoint(curve, i / 24)) };
   }
   const ps = link.fromSide ?? nearestSide(a, center(b)), qs = link.toSide ?? nearestSide(b, center(a));
-  const p = link.fromSide || link.style === 'elbow' ? sidePoint(a, ps, 0, link.fromSide ? link.fromAt : 0.5) : linkEnds(link, get)![0];
-  const q = link.toSide || link.style === 'elbow' ? sidePoint(b, qs, 0, link.toSide ? link.toAt : 0.5) : linkEnds(link, get)![1];
+  const p = link.fromSide || link.style === 'elbow' ? endAt(a, ps, 0, link.fromSide ? link.fromAt : 0.5) : linkEnds(link, get)![0];
+  const q = link.toSide || link.style === 'elbow' ? endAt(b, qs, 0, link.toSide ? link.toAt : 0.5) : linkEnds(link, get)![1];
   return { pts: link.style === 'straight' ? [p, q] : around(elbowRoute(p, ps, q, qs), ps, qs, a, b) };
 }
 

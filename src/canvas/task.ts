@@ -21,7 +21,8 @@ export const TASK_MIN_W = DAY * Math.max(...TL_STEPS);
 /** Its corners' radius, at its outer edge. */
 export const TASK_RAD = 12;
 const TITLE_FS = 16, TEXT_FS = 14, FAMILY = 'inter';
-/** Where the title starts, and where its first line's middle is (the ring's and the arrow's too). */
+/** Where the title starts, and where its first line's middle is (the ring's and the arrow's too; links' too,
+ *  TASK_HEAD in canvas/geometry.ts). */
 const TITLE_X = 47, MID = 26;
 const STATUS = 22, ARROW = 24;
 /** How far round the ring and the arrow a press is still theirs (the rest of the header a double click's). */
