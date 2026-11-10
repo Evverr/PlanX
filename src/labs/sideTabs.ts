@@ -21,8 +21,10 @@ const REST = 0.25, BY = 0.5, ON = 1.2;
 /** How far off the item the pointer still counts as on it, and how near the ball it's by it, on screen. */
 const OFF = 10, NEAR = 28;
 /** Out whole (the pointer by it), the ball this many times bigger, and this much further off the frame's middle (px
- *  on screen): a pixel clear of its line. */
-const BIG = 1.4, AWAY = 2;
+ *  on screen): two pixels clear of its line. */
+const BIG = 1.4, AWAY = 3;
+/** Out whole, it keeps the pointer over this many times the room (area) it took to come out. */
+const HOLD = 1.5;
 /** How near the ball on the frame a side doesn't stretch (no resize cursor there), on screen. */
 const NO_STRETCH = 20;
 /** How long the ball takes to grow or shrink to its new size, in ms. */
@@ -53,8 +55,10 @@ export function tabAt(ed: Editor, it: Item, w: Point): Side | null {
   const z = ed.cam.z, r = radius(z);
   for (const side of SIDES) {
     if (!past(it, side, w, FRAME_OFF / z)) continue;
+    // (Out already: more room round it, so it isn't lost by a slip of the hand.)
+    const k = ed.tabAims?.[side] === ON ? Math.sqrt(HOLD) : 1;
     const by = framePoint(it, side, z), out = sidePoint(it, side, (FRAME_OFF + AWAY) / z + r * (2 * ON - 1));
-    if (Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) || Math.hypot(w.x - out.x, w.y - out.y) <= r * BIG) return side;
+    if (Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) * k || Math.hypot(w.x - out.x, w.y - out.y) <= r * BIG * k) return side;
   }
   return null;
 }
