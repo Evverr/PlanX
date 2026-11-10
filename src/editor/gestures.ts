@@ -555,8 +555,8 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         const src = board.get(g.from);
         if (src && !pointInRect(g.to, linkBox(src))) {
           // (Curved as it was drawn: out of the side it was pulled from, into the point facing it.)
-          const l: Link = { id: uid(), from: g.from, to: '', fromSide: g.fromSide ?? nearestSide(src, g.to), toSide: facing(g.to, center(linkBox(src))) };
-          if (ed.linkStyle) l.style = ed.linkStyle;
+          // An arc, as it was drawn (straight or right-angled if the tool's set so); smooth, to be chosen.
+          const l: Link = { id: uid(), from: g.from, to: '', fromSide: g.fromSide ?? nearestSide(src, g.to), toSide: facing(g.to, center(linkBox(src))), style: ed.linkStyle ?? 'arc' };
           board.transact(() => { l.to = ed.addLineEnd(g.to); board.addLink(l); });
           ed.setTool('select');
           ed.setSelection([l.id]);

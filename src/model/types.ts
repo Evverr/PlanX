@@ -268,7 +268,9 @@ export interface Link {
   lw?: number;
 }
 
-export type LinkStyle = 'straight' | 'elbow';
+/** How a link runs besides smooth (left out): straight, in right angles, or an arc (out of its side, into
+ *  its other end any way, as it's drawn while pulled). */
+export type LinkStyle = 'straight' | 'elbow' | 'arc';
 
 /** Fills for stickers and shapes, by name; an item's colour can also be any '#rrggbb' picked by hand.
  *  Light ones, each over its strong pair in STROKE_COLORS: light grey over grey, grey over black. */

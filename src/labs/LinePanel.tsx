@@ -3,7 +3,7 @@ import type { LinkStyle } from '../model/types';
 import { PanelIcon, type PanelIconName } from '../ui/PanelIcon';
 
 const STYLES: Array<[LinkStyle | undefined, PanelIconName, string]> = [
-  [undefined, 'line-curve', 'Плавная линия'], ['elbow', 'line-elbow', 'Линия с прямыми углами'], ['straight', 'line-straight', 'Прямая линия'],
+  [undefined, 'line-curve', 'Плавная линия'], ['arc', 'line-arc', 'Дуга'], ['elbow', 'line-elbow', 'Линия с прямыми углами'], ['straight', 'line-straight', 'Прямая линия'],
 ];
 
 /**

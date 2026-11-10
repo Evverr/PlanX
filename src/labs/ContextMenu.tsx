@@ -290,6 +290,7 @@ export function LinkParams({ editor, ids }: { editor: Editor; ids: string[] }) {
         <div className="params-label">Вид</div>
         <div className="params-text">
           {btn('line-curve', 'Плавная', !l.style, () => styled(undefined))}
+          {btn('line-arc', 'Дуга', l.style === 'arc', () => styled('arc'))}
           {btn('line-elbow', 'С прямыми углами', l.style === 'elbow', () => styled('elbow'))}
           {btn('line-straight', 'Прямая', l.style === 'straight', () => styled('straight'))}
         </div>

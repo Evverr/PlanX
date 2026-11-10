@@ -905,7 +905,7 @@ export const checks = {
     expect(await p.ev(`JSON.stringify(planx.board.linkList().map((l) => [l.from, l.to]))`), 'dragged: a link').toBe('[["s","r"]]');
   },
 
-  async '"Линия в пустоту": a line let go on nothing stays, its end at an unseen point; moved there, on an item tied to it; gone with its line'(p) {
+  async '"Линия в пустоту": a line let go on nothing stays (an arc), its end at an unseen point; moved there, on an item tied to it; gone with its line'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); b.add(e.newItem('sticky', 300, 300, { id: 's', w: 160, h: 160 })); b.add(e.newItem('rect', 900, 600, { id: 'r', w: 160, h: 160 })); e.setSelection(['s']); })()`);
     await sleep(300);
     const at = (x, y) => p.ev(`(() => { const r = planx.editor.canvas.getBoundingClientRect(), s = planx.editor.toScreen({ x: ${'X'}, y: ${'Y'} }); return [r.left + s.x, r.top + s.y]; })()`.replace('X', x).replace('Y', y));
@@ -915,6 +915,7 @@ export const checks = {
     await p.drag(await at(468, 380), await at(700, 380));
     await sleep(300);
     expect(await state(), 'let go on nothing: to a point there').toBe('point 700,380');
+    expect(await p.ev(`planx.board.linkList()[0].style`), 'an arc, as it was drawn').toBe('arc');
     await p.drag(await at(700, 380), await at(760, 480));
     await sleep(300);
     expect(await state(), 'its end moved').toBe('point 760,480');
