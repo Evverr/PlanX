@@ -212,3 +212,15 @@ describe('around', () => {
     expect(pts).toEqual([{ x: 290, y: 94 }, { x: 266, y: 94 }, { x: 266, y: 137.5 }, { x: 408, y: 137.5 }, { x: 408, y: 229 }, { x: 192, y: 229 }, { x: 192, y: 205 }]);
   });
 });
+
+describe('a right-angled link with bends of its own', () => {
+  it('goes straight on out of its side to them and from them into the other, no knee of its own', () => {
+    const items: Record<string, Item> = {
+      a: { id: 'a', type: 'task', x: 107, y: -5900, w: 1009, h: 52 } as Item,
+      b: { id: 'b', type: 'task', x: 670.5, y: -5088, w: 644, h: 52 } as Item,
+    };
+    const shape = linkShape({ id: 'l', from: 'a', to: 'b', fromSide: 'right', toSide: 'left', style: 'elbow',
+      via: [{ x: 1148, y: -5834 }, { x: 1148, y: -5493 }, { x: 589, y: -5493 }, { x: 589, y: -5153 }] }, (id) => items[id]);
+    expect(shape!.pts).toEqual([{ x: 1116, y: -5874 }, { x: 1148, y: -5874 }, { x: 1148, y: -5493 }, { x: 589, y: -5493 }, { x: 589, y: -5062 }, { x: 670.5, y: -5062 }]);
+  });
+});
