@@ -4,6 +4,7 @@
  * board at once. Off unless MCP_KEY is set (see index.ts).
  */
 import { Board } from '../src/model/board';
+import { addChild, childPlace, type Toward } from '../src/model/mind';
 import { DEFAULTS, FILLS, STROKE_COLORS, TEXT_COLORS, uid, type Item, type ItemType, type LinkStyle, type Side } from '../src/model/types';
 
 /** A board by its id, for `fn` to read or change; null if there's no such board. */
@@ -58,6 +59,16 @@ function patchOf(o: Record<string, unknown>, keep: string[] = []): Partial<Item>
   return out as Partial<Item>;
 }
 
+const WAYS = ['right', 'left', 'down', 'up'];
+
+/** A mind map node's size for its text, near enough without a canvas to measure it on (see mindSize in
+ *  canvas/text.ts, which the board fits it to exactly once it's opened, see refitMind). */
+function mindGuess(text: string, fs: number, root: boolean): { w: number; h: number } {
+  const lines = (text || ' ').split('\n'), widest = Math.max(...lines.map((l) => l.length)) * fs * 0.58;
+  const inner = Math.ceil(Math.max(48, widest + 2)), padX = root ? 32 : 16, tall = root ? 4 / 3 : 1;
+  return { w: inner + padX * 2, h: Math.round((lines.length * Math.ceil(fs * 1.28) + 16) * tall) };
+}
+
 const r = (n: number) => Math.round(n);
 /** An item as Claude reads it: what it is, where, what's written and its colours; pictures, drawings and the like left out. */
 function itemOut(it: Item) {
@@ -108,6 +119,31 @@ const TOOLS = [
     inputSchema: {
       type: 'object', required: ['board', 'items'],
       properties: { board: BOARD, items: { type: 'array', items: { type: 'object', required: ['type', 'x', 'y'], properties: { type: { type: 'string', enum: ADDABLE }, ...FIELD_PROPS } } } },
+    },
+  },
+  {
+    name: 'add_mind_nodes',
+    description: 'Grows a mind map, laid out as in PlanX itself: a central topic (no parent; give x and y), or a node branching from one (parent: the id of a mind node on the board, or the ref of one earlier in this list). Nodes are added in order; returns their ids.',
+    inputSchema: {
+      type: 'object', required: ['board', 'nodes'],
+      properties: {
+        board: BOARD,
+        nodes: {
+          type: 'array',
+          items: {
+            type: 'object', required: ['text'],
+            properties: {
+              text: { type: 'string' },
+              ref: { type: 'string', description: 'A name for this node, for later nodes in this list to give as their parent' },
+              parent: { type: 'string', description: 'The node it branches from: an id, or a ref from this list. None: a new central topic' },
+              way: { type: 'string', enum: WAYS, description: 'A branch of a central topic: which way it grows (unset: right)' },
+              x: FIELD_PROPS.x, y: FIELD_PROPS.y,
+              color: { type: 'string', description: 'Node colour, #rrggbb (unset: by its level)' },
+              fs: FIELD_PROPS.fs,
+            },
+          },
+        },
+      },
     },
   },
   {
@@ -171,6 +207,52 @@ function call(name: string, a: Record<string, unknown>, use: UseBoard): unknown 
         const ids: string[] = [];
         let z = b.maxZ();
         b.transact(() => items.forEach((it) => { const i = uid(); ids.push(i); b.add({ ...it, id: i, z: ++z } as Item); }));
+        return { ids };
+      }
+      case 'add_mind_nodes': {
+        const nodes = arr(a.nodes, 'nodes'), refs = new Map<string, string>(), ids: string[] = [];
+        // Checked first, all of them: nothing is added if any is wrong.
+        const seen = new Set<string>();
+        for (const n of nodes) {
+          if (typeof n.text !== 'string') throw new Bad('Each node needs its text');
+          if (n.parent === undefined) {
+            if (!FIELDS.x(n.x) || !FIELDS.y(n.y)) throw new Bad('A central topic (a node without a parent) needs x and y');
+          } else if (typeof n.parent !== 'string' || (!seen.has(n.parent) && b.get(n.parent)?.type !== 'mind')) {
+            throw new Bad(`No mind node "${String(n.parent)}" on the board or earlier in the list`);
+          }
+          if (n.way !== undefined && !WAYS.includes(n.way as string)) throw new Bad(`Bad way ${JSON.stringify(n.way)}`);
+          if (n.color !== undefined && !(typeof n.color === 'string' && HEX.test(n.color))) throw new Bad(`Bad color ${JSON.stringify(n.color)} (a mind node takes #rrggbb)`);
+          if (n.fs !== undefined && !FIELDS.fs(n.fs)) throw new Bad(`Bad value for "fs": ${JSON.stringify(n.fs)}`);
+          if (typeof n.ref === 'string') seen.add(n.ref);
+        }
+        let z = b.maxZ();
+        b.transact(() => {
+          for (const n of nodes) {
+            const id = uid(), text = n.text as string, extra = { ...(n.color ? { color: n.color as string } : {}) };
+            const pid = n.parent === undefined ? undefined : refs.get(n.parent as string) ?? (n.parent as string);
+            const parent = pid ? b.get(pid) : undefined;
+            if (!parent) {
+              const fs = (n.fs as number | undefined) ?? DEFAULTS.mind.fs ?? 18;
+              b.add({ ...DEFAULTS.mind, ...mindGuess(text, fs, true), ...extra, id, type: 'mind', x: r(n.x as number), y: r(n.y as number), z: ++z, fs, text } as Item);
+            } else {
+              // As a node is added in PlanX (see addMindNode in editor/mindOps.ts): out from its parent the
+              // way it grows, its parent's branches that way re-centred on it.
+              const items = b.list(), get = (i: string) => b.get(i);
+              const depth = (it: Item): number => (it.parent ? 1 + depth(b.get(it.parent) ?? it) : 0);
+              const fs = (n.fs as number | undefined) ?? (depth(parent) === 0 ? 14 : 12), { w, h } = mindGuess(text, fs, false);
+              const way = n.way as string | undefined;
+              const toward: Toward | undefined = way === 'left' ? -1 : way === 'down' || way === 'up' ? way : undefined;
+              const at = childPlace(parent, items, get, w, h, toward);
+              b.add({
+                ...DEFAULTS.mind, ...extra, id, type: 'mind', x: r(at.x), y: r(at.y), w, h, z: ++z, fs, text, parent: parent.id,
+                ...((way === 'down' || parent.down) && { down: true }), ...((way === 'up' || parent.up) && { up: true }),
+              } as Item);
+              addChild(id, b.list()).forEach((pt, k) => b.update(k, pt));
+            }
+            ids.push(id);
+            if (typeof n.ref === 'string') refs.set(n.ref, id);
+          }
+        });
         return { ids };
       }
       case 'delete_items': {

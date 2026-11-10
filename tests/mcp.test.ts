@@ -27,7 +27,7 @@ describe('MCP connector', () => {
     const init = answer({ jsonrpc: '2.0', id: 0, method: 'initialize', params: { protocolVersion: '2025-06-18' } }, use) as { result: { protocolVersion: string } };
     expect(init.result.protocolVersion).toBe('2025-06-18');
     const list = answer({ jsonrpc: '2.0', id: 1, method: 'tools/list' }, use) as { result: { tools: { name: string }[] } };
-    expect(list.result.tools.map((t) => t.name)).toEqual(['read_board', 'update_items', 'add_items', 'delete_items', 'add_links']);
+    expect(list.result.tools.map((t) => t.name)).toEqual(['read_board', 'update_items', 'add_items', 'add_mind_nodes', 'delete_items', 'add_links']);
     expect(answer({ jsonrpc: '2.0', method: 'notifications/initialized' }, use)).toBeNull();
     expect(answerAll([{ jsonrpc: '2.0', method: 'notifications/initialized' }], use)).toBeNull();
   });
@@ -64,5 +64,28 @@ describe('MCP connector', () => {
     tool(use, 'delete_items', { board: 'b1', ids: [ids[0]] });
     expect(b.get(ids[0])).toBeUndefined();
     expect(b.linkList()).toEqual([]);
+  });
+  it('grows a mind map: a central topic, its branches either way and theirs, laid out; nothing on a bad node', () => {
+    const { b, use } = setup();
+    const { ids } = JSON.parse(tool(use, 'add_mind_nodes', { board: 'b1', nodes: [
+      { ref: 'r', text: 'Кофейня', x: 0, y: 500 },
+      { ref: 'm', parent: 'r', text: 'Меню' }, { parent: 'r', text: 'Место' },
+      { parent: 'r', text: 'Деньги', way: 'left' }, { parent: 'm', text: 'Кофе' },
+    ] }).text);
+    const [r, m, p, f, k] = ids.map((i: string) => b.get(i)!);
+    expect(r).toMatchObject({ type: 'mind', text: 'Кофейня', x: 0, y: 500, fs: 18 });
+    expect(r.parent).toBeUndefined();
+    expect(m).toMatchObject({ type: 'mind', parent: r.id, fs: 14 });
+    expect(k).toMatchObject({ parent: m.id, fs: 12 });
+    expect(m.x).toBeGreaterThan(r.x + r.w);
+    expect(p.y).toBeGreaterThan(m.y);
+    expect(f.x + f.w).toBeLessThan(r.x);
+    expect(k.x).toBeGreaterThan(m.x + m.w);
+    // Onto a node already there.
+    expect(tool(use, 'add_mind_nodes', { board: 'b1', nodes: [{ parent: p.id, text: 'Аренда' }] }).error).toBe(false);
+    const n = b.list().length;
+    expect(tool(use, 'add_mind_nodes', { board: 'b1', nodes: [{ parent: r.id, text: 'Ок' }, { parent: 'a', text: 'Не узел' }] }).error).toBe(true);
+    expect(tool(use, 'add_mind_nodes', { board: 'b1', nodes: [{ text: 'Без места' }] }).error).toBe(true);
+    expect(b.list().length).toBe(n);
   });
 });
