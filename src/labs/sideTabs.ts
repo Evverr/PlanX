@@ -26,6 +26,8 @@ const BIG = 1.4, AWAY = 3;
 /** Out whole, it keeps the pointer over this many times the room (area) it took to come out, that room
  *  stretched ALONG times more along the frame. */
 const HOLD = 1.5, ALONG = 1.5;
+/** That room this much further out from the frame (of how far it reaches), its base still at the frame. */
+const FURTHER = 0.2;
 /** For now: where the pointer brings the ball out (green) and keeps it (blue) shown on the board. */
 const SHOW_ZONES = true;
 /** How near the ball on the frame a side doesn't stretch (no resize cursor there), on screen. */
@@ -68,8 +70,9 @@ function tabAtZ(it: Item, w: Point, z: number, was: TabAims | null): Side | null
     const off = (w.x - by.x) * n.x + (w.y - by.y) * n.y, along = Math.abs((w.x - by.x) * n.y - (w.y - by.y) * n.x);
     // Out already: more room round it (longer along the frame), so it isn't lost by a slip of the hand.
     const k = was?.[side] === ON ? Math.sqrt(HOLD) : 1, ra = r * BIG * k, rl = was?.[side] === ON ? ra * ALONG : ra;
+    const m = was?.[side] === ON ? mid + (mid + ra) * FURTHER : mid;
     // Round it, as an oval; and from the frame to its middle as wide (no notches where it meets the frame).
-    if (((off - mid) / ra) ** 2 + (along / rl) ** 2 <= 1 || (off <= mid && along <= rl) || Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) * k) return side;
+    if (((off - m) / ra) ** 2 + (along / rl) ** 2 <= 1 || (off <= m && along <= rl) || Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) * k) return side;
   }
   return null;
 }
