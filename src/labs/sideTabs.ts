@@ -20,8 +20,8 @@ const BALL_R = 7.5;
 const REST = 0.25, BY = 0.5, ON = 1.2;
 /** How far off the item the pointer still counts as on it, and how near the ball it's by it, on screen. */
 const OFF = 10, NEAR = 28;
-/** Out whole (the pointer by it), the ball this many times bigger. */
-const BIG = 1.4;
+/** Out whole (the pointer by it), the ball this many times bigger, and this much further off the frame (px on screen). */
+const BIG = 1.4, AWAY = 1;
 /** How near the ball on the frame a side doesn't stretch (no resize cursor there), on screen. */
 const NO_STRETCH = 20;
 /** How long the ball takes to grow or shrink to its new size, in ms. */
@@ -52,7 +52,7 @@ export function tabAt(ed: Editor, it: Item, w: Point): Side | null {
   const z = ed.cam.z, r = radius(z);
   for (const side of SIDES) {
     if (!past(it, side, w, FRAME_OFF / z)) continue;
-    const by = framePoint(it, side, z), out = sidePoint(it, side, FRAME_OFF / z + r * (2 * ON - 1));
+    const by = framePoint(it, side, z), out = sidePoint(it, side, (FRAME_OFF + AWAY) / z + r * (2 * ON - 1));
     if (Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) || Math.hypot(w.x - out.x, w.y - out.y) <= r * BIG) return side;
   }
   return null;
@@ -110,8 +110,8 @@ export function drawTabs(ctx: CanvasRenderingContext2D, it: Item, zoom: number, 
   for (const side of SIDES) {
     const v = easeTo(`${it.id}:${side}`, want[side], now);
     // Its middle as far past the frame as it shows (v of its width), only what's past the frame drawn.
-    const f = framePoint(it, side, zoom), c = sidePoint(it, side, FRAME_OFF / zoom + r * (2 * v - 1));
     const out = Math.max(0, Math.min(1, (v - BY) / (ON - BY))), grow = 1 + (BIG - 1) * out;
+    const f = framePoint(it, side, zoom), c = sidePoint(it, side, (FRAME_OFF + AWAY * out) / zoom + r * (2 * v - 1));
     ctx.save();
     ctx.beginPath();
     const big = 1e4;
