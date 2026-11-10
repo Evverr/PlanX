@@ -23,8 +23,11 @@ const OFF = 10, NEAR = 28;
 /** Out whole (the pointer by it), the ball this many times bigger, and this much further off the frame's middle (px
  *  on screen): two pixels clear of its line. */
 const BIG = 1.4, AWAY = 3;
-/** Out whole, it keeps the pointer over this many times the room (area) it took to come out. */
-const HOLD = 1.5;
+/** Out whole, it keeps the pointer over this many times the room (area) it took to come out, that room
+ *  stretched ALONG times more along the frame. */
+const HOLD = 1.5, ALONG = 1.5;
+/** For now: where the pointer brings the ball out (green) and keeps it (blue) shown on the board. */
+const SHOW_ZONES = true;
 /** How near the ball on the frame a side doesn't stretch (no resize cursor there), on screen. */
 const NO_STRETCH = 20;
 /** How long the ball takes to grow or shrink to its new size, in ms. */
@@ -51,14 +54,20 @@ const past = (it: Item, side: Side, w: Point, off: number) =>
 
 /** The side whose ball is under the point, if any: past the item's frame, by it on the frame or on it
  *  wholly out (inside the frame, the item's). */
-export function tabAt(ed: Editor, it: Item, w: Point): Side | null {
-  const z = ed.cam.z, r = radius(z);
+export const tabAt = (ed: Editor, it: Item, w: Point): Side | null => tabAtZ(it, w, ed.cam.z, ed.tabAims);
+
+/** The same at zoom `z`, the balls out as `was` has them. */
+function tabAtZ(it: Item, w: Point, z: number, was: TabAims | null): Side | null {
+  const r = radius(z);
   for (const side of SIDES) {
     if (!past(it, side, w, FRAME_OFF / z)) continue;
-    // (Out already: more room round it, so it isn't lost by a slip of the hand.)
-    const k = ed.tabAims?.[side] === ON ? Math.sqrt(HOLD) : 1;
     const by = framePoint(it, side, z), out = sidePoint(it, side, (FRAME_OFF + AWAY) / z + r * (2 * ON - 1));
-    if (Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) * k || Math.hypot(w.x - out.x, w.y - out.y) <= r * BIG * k) return side;
+    // Out already: more room round it (longer along the frame), so it isn't lost by a slip of the hand.
+    if (was?.[side] === ON) {
+      const k = Math.sqrt(HOLD), across = side === 'left' || side === 'right' ? w.x - out.x : w.y - out.y, along = side === 'left' || side === 'right' ? w.y - out.y : w.x - out.x;
+      const ra = r * BIG * k, rl = ra * ALONG;
+      if (Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) * k || (across / ra) ** 2 + (along / rl) ** 2 <= 1) return side;
+    } else if (Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) || Math.hypot(w.x - out.x, w.y - out.y) <= r * BIG) return side;
   }
   return null;
 }
@@ -68,10 +77,12 @@ const resting = (): TabAims => ({ top: REST, right: REST, bottom: REST, left: RE
 
 /** How much each side's ball should show, by where the pointer is: off the item (further than OFF) all at
  *  rest; on or by it, the side it's nearest more, half by its ball, all of it on it. */
-export function tabAims(ed: Editor, it: Item, w: Point | null): TabAims {
-  const out = resting(), z = ed.cam.z, pad = OFF / z;
+export const tabAims = (ed: Editor, it: Item, w: Point | null): TabAims => aimsZ(it, w, ed.cam.z, ed.tabAims);
+
+function aimsZ(it: Item, w: Point | null, z: number, was: TabAims | null): TabAims {
+  const out = resting(), pad = OFF / z;
   // (On a ball, wholly out past OFF too: it stays.)
-  const on = w && tabAt(ed, it, w);
+  const on = w && tabAtZ(it, w, z, was);
   if (on) { out[on] = ON; return out; }
   if (!w || w.x < it.x - pad || w.x > it.x + it.w + pad || w.y < it.y - pad || w.y > it.y + it.h + pad) return out;
   const d: TabAims = { left: Math.abs(w.x - it.x), right: Math.abs(it.x + it.w - w.x), top: Math.abs(w.y - it.y), bottom: Math.abs(it.y + it.h - w.y) };
@@ -110,6 +121,7 @@ function easeTo(key: string, to: number, now: number): number {
  *  much as `aims` says, easing there; the one wholly out (the pointer on it) bigger. */
 export function drawTabs(ctx: CanvasRenderingContext2D, it: Item, zoom: number, color: string, alpha: number, aims: TabAims | null): void {
   const r = radius(zoom), now = performance.now(), want = aims ?? resting();
+  if (SHOW_ZONES) drawZones(ctx, it, zoom);
   ctx.save();
   ctx.fillStyle = color;
   for (const side of SIDES) {
@@ -130,6 +142,23 @@ export function drawTabs(ctx: CanvasRenderingContext2D, it: Item, zoom: number, 
     ctx.globalAlpha = alpha + (0.8 - alpha) * out;
     ctx.fill();
     ctx.restore();
+  }
+  ctx.restore();
+}
+
+/** Where the pointer brings each ball out (green), and, once out, keeps it (blue), sampled every 2 px. */
+function drawZones(ctx: CanvasRenderingContext2D, it: Item, zoom: number): void {
+  const step = 2 / zoom, span = 60 / zoom;
+  ctx.save();
+  for (const side of SIDES) {
+    const c = framePoint(it, side, zoom), held = { ...resting(), [side]: ON };
+    for (let x = c.x - span; x <= c.x + span; x += step) for (let y = c.y - span; y <= c.y + span; y += step) {
+      const w = { x: x + step / 2, y: y + step / 2 };
+      const comes = aimsZ(it, w, zoom, null)[side] === ON, keeps = aimsZ(it, w, zoom, held)[side] === ON;
+      if (!comes && !keeps) continue;
+      ctx.fillStyle = comes ? 'rgba(0,190,90,0.35)' : 'rgba(0,120,255,0.2)';
+      ctx.fillRect(x, y, step, step);
+    }
   }
   ctx.restore();
 }
