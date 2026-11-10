@@ -34,6 +34,8 @@ const SHOW_ZONES = false;
 const NO_STRETCH = 20;
 /** How long the ball takes to grow or shrink to its new size, in ms. */
 const EASE = 120;
+/** Going back in, this many times slower. */
+const BACK = 2;
 /** How far the frame stands off the item's side (as the renderer's outline), on screen. */
 const FRAME_OFF = 3;
 
@@ -124,15 +126,16 @@ let redraw: () => void = () => {};
 /** What draws the board again while they ease (the editor's). */
 export const setTabsRedraw = (fn: () => void): void => { redraw = fn; };
 
+const long = (t: { from: number; to: number }) => (t.to < t.from ? EASE * BACK : EASE);
 function easeTo(key: string, to: number, now: number): number {
   const at = (t: { from: number; to: number; at: number }) => {
-    const k = Math.min(1, (now - t.at) / EASE), e = 1 - (1 - k) * (1 - k);
+    const k = Math.min(1, (now - t.at) / long(t)), e = 1 - (1 - k) * (1 - k);
     return t.from + (t.to - t.from) * e;
   };
   let t = shown.get(key);
   if (!t) shown.set(key, (t = { from: to, to, at: now }));
   else if (t.to !== to) shown.set(key, (t = { from: at(t), to, at: now }));
-  if (now - t.at < EASE) redraw();
+  if (now - t.at < long(t)) redraw();
   return at(t);
 }
 
