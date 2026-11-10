@@ -580,7 +580,9 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       const l = board.getLink(g.id), target = g.target ? board.get(g.target) : undefined;
       // («Линия в пустоту», src/labs: the end taken was an unseen point: it goes once the end's on an item.)
       const held = l && board.get(g.start ? l.from : l.to), point = held?.pt ? held : undefined;
-      if (l && g.going && target) {
+      // (An unseen point's end let go on the line's own other item: nothing to turn round to, it stays.)
+      if (l && g.going && target && point && target.id === (g.start ? l.to : l.from)) { /* as it was */ }
+      else if (l && g.going && target) {
         board.transact(() => {
           relinkTo(ed, l, target, g.to, !!g.start);
           if (point && !board.linkList().some((k) => k.id !== l.id && (k.from === point.id || k.to === point.id))) board.remove([point.id]);

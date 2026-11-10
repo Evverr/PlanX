@@ -20,8 +20,8 @@ const BALL_R = 7.5;
 const REST = 0.25, BY = 0.5, ON = 1.2;
 /** How far off the item the pointer still counts as on it, and how near the ball it's by it, on screen. */
 const OFF = 10, NEAR = 28;
-/** With the pointer on its middle (this much of its area), the ball this many times bigger. */
-const CORE = 0.8, BIG = 1.4;
+/** Out whole (the pointer by it), the ball this many times bigger. */
+const BIG = 1.4;
 /** How near the ball on the frame a side doesn't stretch (no resize cursor there), on screen. */
 const NO_STRETCH = 20;
 /** How long the ball takes to grow or shrink to its new size, in ms. */
@@ -58,8 +58,7 @@ export function tabAt(ed: Editor, it: Item, w: Point): Side | null {
   return null;
 }
 
-/** How much each side's ball shows, and the one with the pointer on its middle (bigger). */
-export type TabAims = Record<Side, number> & { big?: Side };
+export type TabAims = Record<Side, number>;
 const resting = (): TabAims => ({ top: REST, right: REST, bottom: REST, left: REST });
 
 /** How much each side's ball should show, by where the pointer is: off the item (further than OFF) all at
@@ -68,12 +67,7 @@ export function tabAims(ed: Editor, it: Item, w: Point | null): TabAims {
   const out = resting(), z = ed.cam.z, pad = OFF / z;
   // (On a ball, wholly out past OFF too: it stays.)
   const on = w && tabAt(ed, it, w);
-  if (on) {
-    out[on] = ON;
-    const c = sidePoint(it, on, FRAME_OFF / z + radius(z) * (2 * ON - 1));
-    if (Math.hypot(w.x - c.x, w.y - c.y) <= radius(z) * Math.sqrt(CORE)) out.big = on;
-    return out;
-  }
+  if (on) { out[on] = ON; return out; }
   if (!w || w.x < it.x - pad || w.x > it.x + it.w + pad || w.y < it.y - pad || w.y > it.y + it.h + pad) return out;
   const d: TabAims = { left: Math.abs(w.x - it.x), right: Math.abs(it.x + it.w - w.x), top: Math.abs(w.y - it.y), bottom: Math.abs(it.y + it.h - w.y) };
   const side = SIDES.reduce((a, b) => (d[b] < d[a] ? b : a));
@@ -83,7 +77,7 @@ export function tabAims(ed: Editor, it: Item, w: Point | null): TabAims {
   return out;
 }
 
-export const sameAims = (a: TabAims | null, b: TabAims | null): boolean => (!a || !b ? a === b : a.big === b.big && SIDES.every((s) => a[s] === b[s]));
+export const sameAims = (a: TabAims | null, b: TabAims | null): boolean => (!a || !b ? a === b : SIDES.every((s) => a[s] === b[s]));
 
 /** Whether the point is by a ball on the frame (its middle, a side): no stretching there, the ball nearby. */
 export const nearTab = (ed: Editor, it: Item, w: Point): boolean =>
@@ -108,17 +102,16 @@ function easeTo(key: string, to: number, now: number): number {
 }
 
 /** The balls on the picked one's frame (on the board, as the frame is drawn): each showing past it as
- *  much as `aims` says, easing there; the one wholly out (the pointer on it) with a white edge, bigger
- *  with the pointer on its middle. */
+ *  much as `aims` says, easing there; the one wholly out (the pointer on it) bigger, with a white edge. */
 export function drawTabs(ctx: CanvasRenderingContext2D, it: Item, zoom: number, color: string, alpha: number, aims: TabAims | null): void {
   const r = radius(zoom), now = performance.now(), want = aims ?? resting();
   ctx.save();
   ctx.fillStyle = color;
   for (const side of SIDES) {
-    const v = easeTo(`${it.id}:${side}`, want[side], now), grow = easeTo(`${it.id}:${side}:big`, want.big === side ? BIG : 1, now);
+    const v = easeTo(`${it.id}:${side}`, want[side], now);
     // Its middle as far past the frame as it shows (v of its width), only what's past the frame drawn.
     const f = framePoint(it, side, zoom), c = sidePoint(it, side, FRAME_OFF / zoom + r * (2 * v - 1));
-    const out = Math.max(0, Math.min(1, (v - BY) / (ON - BY)));
+    const out = Math.max(0, Math.min(1, (v - BY) / (ON - BY))), grow = 1 + (BIG - 1) * out;
     ctx.save();
     ctx.beginPath();
     const big = 1e4;

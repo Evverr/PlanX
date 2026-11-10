@@ -919,6 +919,9 @@ export const checks = {
     await p.drag(await at(700, 380), await at(760, 480));
     await sleep(300);
     expect(await state(), 'its end moved').toBe('point 760,480');
+    await p.drag(await at(760, 480), await at(380, 380));
+    await sleep(300);
+    expect(await state(), 'let go on its own item: as it was').toBe('point 760,480');
     await p.ev(`(() => { planx.editor.setSelection([planx.board.linkList()[0].id]); planx.editor.deleteSelection(); })()`);
     expect(await p.ev(`planx.board.list().filter((i) => i.pt).length + ' ' + planx.board.linkList().length`), 'gone with its line').toBe('0 0');
   },
