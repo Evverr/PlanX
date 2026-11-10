@@ -330,7 +330,13 @@ export function linkShape(link: Link, getItem: (id: string) => Item | undefined)
     // Out of its side and into the other square to it (never along it): a bit straight out of each first.
     const p = endAt(a, ps, 0, link.fromSide ? link.fromAt : 0.5), q = endAt(b, qs, 0, link.toSide ? link.toAt : 0.5), S = 24;
     const out = { x: p.x + NORMAL[ps].x * S, y: p.y + NORMAL[ps].y * S }, into = { x: q.x + NORMAL[qs].x * S, y: q.y + NORMAL[qs].y * S };
-    return { pts: squared([p, out, ...via, into, q], ps === 'left' || ps === 'right') };
+    // (Turning once to its bends from the bit out, and once from them to the bit in, so as to go straight on
+    // out of it and into it: no knee of its own there.)
+    const level = (sd: Side) => sd === 'left' || sd === 'right', first = via[0], last = via[via.length - 1];
+    const off = (u: Point, v: Point) => Math.abs(u.x - v.x) > 0.5 && Math.abs(u.y - v.y) > 0.5;
+    const start = off(out, first) ? [level(ps) ? { x: first.x, y: out.y } : { x: out.x, y: first.y }] : [];
+    const end = off(last, into) ? [level(qs) ? { x: last.x, y: into.y } : { x: into.x, y: last.y }] : [];
+    return { pts: squared([p, out, ...start, ...via, ...end, into, q], level(ps)) };
   }
   if (link.via?.length) {
     const via = link.via, p = link.fromSide ? endAt(a, link.fromSide, 0, link.fromAt) : edgePoint(a, via[0]);
