@@ -20,8 +20,9 @@ const BALL_R = 7.5;
 const REST = 0.25, BY = 0.5, ON = 1.2;
 /** How far off the item the pointer still counts as on it, and how near the ball it's by it, on screen. */
 const OFF = 10, NEAR = 28;
-/** Out whole (the pointer by it), the ball this many times bigger, and this much further off the frame (px on screen). */
-const BIG = 1.4, AWAY = 1;
+/** Out whole (the pointer by it), the ball this many times bigger, and this much further off the frame's middle (px
+ *  on screen): a pixel clear of its line. */
+const BIG = 1.4, AWAY = 2;
 /** How near the ball on the frame a side doesn't stretch (no resize cursor there), on screen. */
 const NO_STRETCH = 20;
 /** How long the ball takes to grow or shrink to its new size, in ms. */
