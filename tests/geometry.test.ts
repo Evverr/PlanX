@@ -185,3 +185,12 @@ describe('right-angled links kept apart', () => {
     expect(b.pts[0].y).toBe(20);
   });
 });
+
+describe('elbowRoute back past where it set out', () => {
+  it('goes round between them, halfway down, not back through either', () => {
+    // Out of the right side at (100, 50), into the left side at (60, 150) of one starting before it ends.
+    expect(elbowRoute({ x: 100, y: 50 }, 'right', { x: 60, y: 150 }, 'left')).toEqual([
+      { x: 100, y: 50 }, { x: 124, y: 50 }, { x: 124, y: 100 }, { x: 36, y: 100 }, { x: 36, y: 150 }, { x: 60, y: 150 },
+    ]);
+  });
+});

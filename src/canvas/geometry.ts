@@ -427,7 +427,11 @@ export function elbowRoute(p: Point, ps: Side, q: Point, qs: Side): Point[] {
   const S = 24, n1 = NORMAL[ps], n2 = NORMAL[qs];
   const a = { x: p.x + n1.x * S, y: p.y + n1.y * S }, b = { x: q.x + n2.x * S, y: q.y + n2.y * S };
   const across1 = n1.y === 0, across2 = n2.y === 0;
-  const mid = across1 && across2 ? [{ x: (a.x + b.x) / 2, y: a.y }, { x: (a.x + b.x) / 2, y: b.y }]
+  // Out of opposite sides, the other end back past where it set out (the next task on a timeline, starting
+  // before this one ends): round between them, halfway down (or across), not back through either.
+  const back = n1.x === -n2.x && n1.y === -n2.y && (across1 ? (b.x - a.x) * n1.x : (b.y - a.y) * n1.y) < 0;
+  const mid = back ? (across1 ? [{ x: a.x, y: (a.y + b.y) / 2 }, { x: b.x, y: (a.y + b.y) / 2 }] : [{ x: (a.x + b.x) / 2, y: a.y }, { x: (a.x + b.x) / 2, y: b.y }])
+    : across1 && across2 ? [{ x: (a.x + b.x) / 2, y: a.y }, { x: (a.x + b.x) / 2, y: b.y }]
     : !across1 && !across2 ? [{ x: a.x, y: (a.y + b.y) / 2 }, { x: b.x, y: (a.y + b.y) / 2 }]
     : across1 ? [{ x: b.x, y: a.y }] : [{ x: a.x, y: b.y }];
   const all = [p, a, ...mid, b, q], out: Point[] = [];
