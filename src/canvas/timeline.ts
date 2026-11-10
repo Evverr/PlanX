@@ -49,15 +49,19 @@ export const TL_STEPS = [1, 2, 4, 6];
 /** How many times the usual size its writing may be (see Item.tfs). */
 export const TL_FONTS = [1, 2, 3, 4];
 /** «Адаптивный текст» (Item.tfa): zoomed out, its writing grows by 1/zoom to the POWER (1: as big on the
- *  screen whatever the zoom, 0: not at all), up to MAX times its own size; zoomed in, it stays. */
-const ADAPT_POWER = 1, ADAPT_MAX = 4;
+ *  screen whatever the zoom, 0: not at all), up to MAX times its own size, and that SOFTER times less
+ *  (never under its own); zoomed in, it stays. */
+const ADAPT_POWER = 1, ADAPT_MAX = 4, ADAPT_SOFTER = 1.5;
+/** Its day numbers this big on the screen (px) or less, its writing's gone, its head half as tall; from
+ *  FADE_FROM, they fade and it shrinks there. */
+const FADE_TO = 4, FADE_FROM = 6;
 /** How many times the usual size its writing is drawn at this zoom: its own (tfs), grown if adaptive, but
  *  never so much its head takes the card (room left for its lines). */
 const writingAt = (it: Item, z: number): number => {
   const own = it.tfs ?? 1;
   if (!it.tfa) return own;
   const most = (it.h - BOTTOM - 20 - linesY(0)) / (NAME_FS + NUMBER_FS);
-  return Math.max(own, Math.min(own * Math.min(ADAPT_MAX, Math.pow(1 / z, ADAPT_POWER)), most));
+  return Math.max(own, Math.min(own * Math.min(ADAPT_MAX, Math.pow(1 / z, ADAPT_POWER)) / ADAPT_SOFTER, most));
 };
 export const dayOf = (it: Item): number => DAY * (it.ts ?? 1);
 
@@ -75,8 +79,11 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, it: Item, colors: { 
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, 10);
   ctx.fill();
-  const k = writingAt(it, z), start = tlStart(it), days = tlDays(it), day = dayOf(it), top = it.y + linesY(k), bottom = it.y + it.h - BOTTOM;
-  const now = new Date(), thisYear = now.getFullYear(), legible = NUMBER_FS * k * z >= 4;
+  const k = writingAt(it, z);
+  // Adaptive, too small to read: its writing fades, its head down to half (see FADE_TO).
+  const seen = it.tfa ? Math.max(0, Math.min(1, (NUMBER_FS * k * z - FADE_TO) / (FADE_FROM - FADE_TO))) : 1;
+  const start = tlStart(it), days = tlDays(it), day = dayOf(it), top = it.y + linesY(k) * (0.5 + seen / 2), bottom = it.y + it.h - BOTTOM;
+  const now = new Date(), thisYear = now.getFullYear(), legible = NUMBER_FS * k * z >= FADE_TO;
   // Day numbers too wide for their days: every second, third… (and today's).
   ctx.font = font(NUMBER_FS * k, 400, 'inter');
   const every = Math.max(1, Math.ceil((ctx.measureText('28').width + 4 * k) / day));
@@ -93,7 +100,7 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, it: Item, colors: { 
     ctx.fillRect(first ? x : x - 1, first ? top - 1 : top, Math.max(1, 1 / z), bottom - top + (first ? 1 : 0));
     if (!legible) continue;
     if (now || i % every === 0) {
-      ctx.globalAlpha = now ? 1 : 0.3;
+      ctx.globalAlpha = (now ? 1 : 0.3) * seen;
       ctx.fillStyle = now ? TODAY : colors.ink;
       ctx.font = font(NUMBER_FS * k, now ? 600 : 400, 'inter');
       ctx.textAlign = 'center';
@@ -102,7 +109,7 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, it: Item, colors: { 
     // The month's name over its first day (or the card's, for the month it starts in), with its year
     // when it's not this one.
     if (first || i === 0) {
-      ctx.globalAlpha = 0.6;
+      ctx.globalAlpha = 0.6 * seen;
       ctx.fillStyle = colors.ink;
       ctx.font = font(NAME_FS * k, 500, 'inter');
       ctx.textAlign = 'left';
