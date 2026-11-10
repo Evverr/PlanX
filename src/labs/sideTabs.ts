@@ -61,13 +61,15 @@ function tabAtZ(it: Item, w: Point, z: number, was: TabAims | null): Side | null
   const r = radius(z);
   for (const side of SIDES) {
     if (!past(it, side, w, FRAME_OFF / z)) continue;
-    const by = framePoint(it, side, z), out = sidePoint(it, side, (FRAME_OFF + AWAY) / z + r * (2 * ON - 1));
+    // (The ball out whole has its middle `mid` past the frame.)
+    const by = framePoint(it, side, z), mid = AWAY / z + r * (2 * ON - 1);
+    // How far out past the frame the point is, and how far along it from the middle.
+    const n = side === 'right' ? { x: 1, y: 0 } : side === 'left' ? { x: -1, y: 0 } : side === 'bottom' ? { x: 0, y: 1 } : { x: 0, y: -1 };
+    const off = (w.x - by.x) * n.x + (w.y - by.y) * n.y, along = Math.abs((w.x - by.x) * n.y - (w.y - by.y) * n.x);
     // Out already: more room round it (longer along the frame), so it isn't lost by a slip of the hand.
-    if (was?.[side] === ON) {
-      const k = Math.sqrt(HOLD), across = side === 'left' || side === 'right' ? w.x - out.x : w.y - out.y, along = side === 'left' || side === 'right' ? w.y - out.y : w.x - out.x;
-      const ra = r * BIG * k, rl = ra * ALONG;
-      if (Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) * k || (across / ra) ** 2 + (along / rl) ** 2 <= 1) return side;
-    } else if (Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) || Math.hypot(w.x - out.x, w.y - out.y) <= r * BIG) return side;
+    const k = was?.[side] === ON ? Math.sqrt(HOLD) : 1, ra = r * BIG * k, rl = was?.[side] === ON ? ra * ALONG : ra;
+    // Round it, as an oval; and from the frame to its middle as wide (no notches where it meets the frame).
+    if (((off - mid) / ra) ** 2 + (along / rl) ** 2 <= 1 || (off <= mid && along <= rl) || Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) * k) return side;
   }
   return null;
 }
