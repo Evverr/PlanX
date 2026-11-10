@@ -18,8 +18,8 @@ const BALL_R = 7.5;
 /** How much of the ball shows past the frame (of its width): at rest, and with the pointer near it or on it
  *  (a whole ball, a little off the frame); BY, where it's caught on the frame. */
 const REST = 0.25, BY = 0.5, ON = 1.2;
-/** How far off the item the pointer still counts as on it, and how near the ball it's by it, on screen. */
-const OFF = 10, NEAR = 28;
+/** How far along the frame each way from its middle the pointer brings the ball out, on screen (see inTent). */
+const NEAR = 28;
 /** Out whole (the pointer by it), the ball this many times bigger, and this much further off the frame's middle (px
  *  on screen): two pixels clear of its line. */
 const BIG = 1.4, AWAY = 3;
@@ -71,35 +71,45 @@ function tabAtZ(it: Item, w: Point, z: number, was: TabAims | null): Side | null
     // Out already: more room round it (longer along the frame), so it isn't lost by a slip of the hand.
     const k = was?.[side] === ON ? Math.sqrt(HOLD) : 1, ra = r * BIG * k, rl = was?.[side] === ON ? ra * ALONG : ra;
     const m = was?.[side] === ON ? mid + (mid + ra) * FURTHER : mid;
-    // Round it, as an oval; and from the frame to its middle at least as wide (no notches where it meets the
-    // frame). Not out yet, from the far corners of the strip by the frame where it comes out (see aimsZ)
-    // narrowing to it: from anywhere it came out, the way straight to it stays in.
-    const strip = (OFF - FRAME_OFF) / z, corner = Math.sqrt(Math.max(0, (NEAR / z) ** 2 - strip ** 2));
-    const base = was?.[side] === ON ? rl : Math.max(rl, corner);
-    const wide = off <= strip ? base : base + (rl - base) * Math.min(1, (off - strip) / Math.max(1e-6, m - strip));
-    if (((off - m) / ra) ** 2 + (along / rl) ** 2 <= 1 || (off <= m && along <= wide) || Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) * k) return side;
+    // Out: round it, as an oval, and from the frame to its middle as wide (no notches where it meets the frame).
+    if (was?.[side] === ON) {
+      if (((off - m) / ra) ** 2 + (along / rl) ** 2 <= 1 || (off <= m && along <= rl) || Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) * k) return side;
+    // Not yet: a tent, NEAR wide along the frame each way, straight from there to round it: from anywhere it
+    // comes out, the way straight to it stays in.
+    } else if (inTent(off, along, NEAR / z, m, ra)) return side;
   }
   return null;
+}
+
+/** Whether a point (`off` past the frame, `along` it from the middle) is in the tent: what holds the frame
+ *  from `wide` one way to as far the other and a circle (`m` past the frame, `ra` round), and all between. */
+function inTent(off: number, along: number, wide: number, m: number, ra: number): boolean {
+  if ((off - m) ** 2 + along ** 2 <= ra * ra) return true;
+  // Between the frame's middle, its end and the circle's middle.
+  if (off >= 0 && off / m + along / wide <= 1) return true;
+  // Straight from the frame's end or middle to somewhere in the circle: P = Q + λ(X − Q), X in it, 0 < λ ≤ 1.
+  const from = (qa: number) => {
+    const dx = off, dy = along - qa, vx = m, vy = -qa, a = vx * vx + vy * vy - ra * ra, b = dx * vx + dy * vy, c = dx * dx + dy * dy;
+    if (a <= 0) return true;
+    const disc = b * b - a * c;
+    if (disc < 0) return false;
+    const lo = (b - Math.sqrt(disc)) / a, hi = (b + Math.sqrt(disc)) / a;
+    return lo <= 1 && hi > 0;
+  };
+  return from(wide) || from(0);
 }
 
 export type TabAims = Record<Side, number>;
 const resting = (): TabAims => ({ top: REST, right: REST, bottom: REST, left: REST });
 
-/** How much each side's ball should show, by where the pointer is: off the item (further than OFF) all at
- *  rest; on or by it, the side it's nearest more, half by its ball, all of it on it. */
+/** How much each side's ball should show, by where the pointer is: all of it with the pointer by it (see
+ *  tabAt), else at rest. */
 export const tabAims = (ed: Editor, it: Item, w: Point | null): TabAims => aimsZ(it, w, ed.cam.z, ed.tabAims);
 
 function aimsZ(it: Item, w: Point | null, z: number, was: TabAims | null): TabAims {
-  const out = resting(), pad = OFF / z;
-  // (On a ball, wholly out past OFF too: it stays.)
+  const out = resting();
   const on = w && tabAtZ(it, w, z, was);
-  if (on) { out[on] = ON; return out; }
-  if (!w || w.x < it.x - pad || w.x > it.x + it.w + pad || w.y < it.y - pad || w.y > it.y + it.h + pad) return out;
-  const d: TabAims = { left: Math.abs(w.x - it.x), right: Math.abs(it.x + it.w - w.x), top: Math.abs(w.y - it.y), bottom: Math.abs(it.y + it.h - w.y) };
-  const side = SIDES.reduce((a, b) => (d[b] < d[a] ? b : a));
-  const p = framePoint(it, side, z), far = Math.hypot(w.x - p.x, w.y - p.y);
-  // (Whole only with the pointer past the frame that side.)
-  out[side] = far <= NEAR / z && past(it, side, w, FRAME_OFF / z) ? ON : REST;
+  if (on) out[on] = ON;
   return out;
 }
 
