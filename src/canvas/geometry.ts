@@ -338,7 +338,7 @@ export function linkShape(link: Link, getItem: (id: string) => Item | undefined)
   const ps = link.fromSide ?? nearestSide(a, center(b)), qs = link.toSide ?? nearestSide(b, center(a));
   const p = link.fromSide || link.style === 'elbow' ? sidePoint(a, ps, 0, link.fromSide ? link.fromAt : 0.5) : linkEnds(link, get)![0];
   const q = link.toSide || link.style === 'elbow' ? sidePoint(b, qs, 0, link.toSide ? link.toAt : 0.5) : linkEnds(link, get)![1];
-  return { pts: link.style === 'straight' ? [p, q] : elbowRoute(p, ps, q, qs) };
+  return { pts: link.style === 'straight' ? [p, q] : around(elbowRoute(p, ps, q, qs), ps, qs, a, b) };
 }
 
 /** Points made a right-angled route: a corner put in where two don't line up (turning the other way
@@ -420,6 +420,49 @@ function halfway(pts: Point[]): Point {
     left -= lengths[i];
   }
   return pts[pts.length - 1];
+}
+
+/** How far clear of its two items a right-angled route keeps (see around). */
+const CLEAR = 8;
+
+/** Whether a straight, level or upright stretch runs through the rectangle (grown by `by`), not just along
+ *  its edge. */
+function crosses(p: Point, q: Point, r: Rect, by: number): boolean {
+  const x0 = r.x - by, x1 = r.x + r.w + by, y0 = r.y - by, y1 = r.y + r.h + by;
+  const lo = (u: number, v: number) => Math.min(u, v), hi = (u: number, v: number) => Math.max(u, v);
+  if (Math.abs(p.y - q.y) < 0.01) return p.y > y0 && p.y < y1 && hi(p.x, q.x) > x0 && lo(p.x, q.x) < x1;
+  return p.x > x0 && p.x < x1 && hi(p.y, q.y) > y0 && lo(p.y, q.y) < y1;
+}
+
+/**
+ * A right-angled route between two items running through either of them (the next task on a timeline
+ * below it and behind, say): instead, the shortest way round them, out of the same sides and into them,
+ * with as few turns as it takes. Its first and last points stay (on the items), and the bits out of them.
+ */
+export function around(route: Point[], ps: Side, qs: Side, from: Rect, to: Rect): Point[] {
+  const through = (pts: Point[]) => pts.slice(1, -2).some((pt, i) => crosses(pt, pts[i + 2], from, CLEAR) || crosses(pt, pts[i + 2], to, CLEAR));
+  if (!through(route)) return route;
+  const S = 24, p = route[0], q = route[route.length - 1];
+  const a = { x: p.x + NORMAL[ps].x * S, y: p.y + NORMAL[ps].y * S }, b = { x: q.x + NORMAL[qs].x * S, y: q.y + NORMAL[qs].y * S };
+  // Where it may run: halfway between them (first, as the likelier of two as short), at either end's, or
+  // beside either item.
+  const xs = [(from.x + from.w + to.x) / 2, (to.x + to.w + from.x) / 2, a.x, b.x, from.x - S, from.x + from.w + S, to.x - S, to.x + to.w + S];
+  const ys = [(from.y + from.h + to.y) / 2, (to.y + to.h + from.y) / 2, a.y, b.y, from.y - S, from.y + from.h + S, to.y - S, to.y + to.h + S];
+  const ways: Point[][] = [];
+  for (const x of xs) ways.push([{ x, y: a.y }, { x, y: b.y }]);
+  for (const y of ys) ways.push([{ x: a.x, y }, { x: b.x, y }]);
+  for (const x of xs) for (const y of ys) ways.push([{ x: a.x, y }, { x, y }, { x, y: b.y }], [{ x, y: a.y }, { x, y }, { x: b.x, y }]);
+  let best: Point[] | null = null, least = Infinity;
+  for (const w of ways) {
+    // (Each stretch looked at as it is, before those in line are joined: none going back over the bit out.)
+    const raw = [p, a, ...w, b, q];
+    if (through(raw)) continue;
+    const pts = straightened(raw);
+    // Shortest, a turn counting as 40 more.
+    const cost = pts.slice(1).reduce((n, pt, i) => n + Math.abs(pt.x - pts[i].x) + Math.abs(pt.y - pts[i].y), 0) + pts.length * 40;
+    if (cost < least) { least = cost; best = pts; }
+  }
+  return best ?? route;
 }
 
 /** Right angles from p out of side `ps` to q into side `qs`, without points in line between others. */
