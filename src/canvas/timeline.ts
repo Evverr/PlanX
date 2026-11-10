@@ -51,7 +51,7 @@ export const TL_FONTS = [1, 2, 3, 4];
 /** «Адаптивный текст» (Item.tfa): zoomed out, its writing grows by 1/zoom to the POWER (1: as big on the
  *  screen whatever the zoom, 0: not at all), up to MAX times its own size, and that SOFTER times less
  *  (never under its own); zoomed in, it stays. */
-const ADAPT_POWER = 1, ADAPT_MAX = 4, ADAPT_SOFTER = 1.5;
+const ADAPT_POWER = 1, ADAPT_MAX = 3, ADAPT_SOFTER = 1.5;
 /** Its day numbers this big on the screen (px) or less, its writing's gone, its head half as tall; from
  *  FADE_FROM, they fade and it shrinks there. */
 const FADE_TO = 4, FADE_FROM = 6;
