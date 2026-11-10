@@ -1035,6 +1035,8 @@ function head(ctx: CanvasRenderingContext2D, tip: Point, ang: number, arm: numbe
 /** How long a line's arrowhead arms are, on the screen: by its width as usual; given a thickness of
  *  its own, the usual size up to 3 px, then growing only a little. */
 const headArm = (px: number, thick?: number) => (thick === undefined ? px * 3.8 : 1.7 * 3.8 + Math.max(0, thick - 3) * 0.9);
+/** Zoomed out, the heads a little smaller on the screen (as the square root of the zoom), not as small as the board. */
+const headZoom = (z: number) => Math.min(1, Math.sqrt(z));
 /** Its dashes on the screen: their round ends eat into the gaps, so a thick line's are a little wider. */
 const dashesFor = (dash: number[], px: number) => dash.map((d, i) => (i % 2 ? d + Math.max(0, px - 1.7) * 1.3 : d));
 
@@ -1045,7 +1047,7 @@ function arrow(ctx: CanvasRenderingContext2D, [a, c1, c2, b]: Bezier, color: str
   const ang = Math.atan2(b.y - from.y, b.x - from.x), ang0 = Math.atan2(a.y - back.y, a.x - back.x);
   // Pull a tip back by half the line width so the rounded cap just touches the target.
   const px = thick ?? linkWidth(z), width = px / z;
-  const arm = headArm(px, thick) / z, sx = Math.cos(ang) * width / 2, sy = Math.sin(ang) * width / 2;
+  const arm = headArm(px, thick) * headZoom(z) / z, sx = Math.cos(ang) * width / 2, sy = Math.sin(ang) * width / 2;
   const tip = heads.end ? { x: b.x - sx, y: b.y - sy } : b;
   const tip0 = heads.start ? { x: a.x - Math.cos(ang0) * width / 2, y: a.y - Math.sin(ang0) * width / 2 } : a;
   ctx.strokeStyle = color;
@@ -1074,7 +1076,7 @@ function linkArrow(ctx: CanvasRenderingContext2D, shape: LinkShape, color: strin
   if (shape.curve) { arrow(ctx, shape.curve, color, z, dash, heads, thick); return; }
   const pts = shape.pts, b = pts[pts.length - 1], from = pts[pts.length - 2], a = pts[0], back = pts[1];
   const ang = Math.atan2(b.y - from.y, b.x - from.x), ang0 = Math.atan2(a.y - back.y, a.x - back.x);
-  const px = thick ?? linkWidth(z), width = px / z, arm = headArm(px, thick) / z;
+  const px = thick ?? linkWidth(z), width = px / z, arm = headArm(px, thick) * headZoom(z) / z;
   const tip = heads.end ? { x: b.x - Math.cos(ang) * width / 2, y: b.y - Math.sin(ang) * width / 2 } : b;
   const tip0 = heads.start ? { x: a.x - Math.cos(ang0) * width / 2, y: a.y - Math.sin(ang0) * width / 2 } : a;
   ctx.strokeStyle = color;
