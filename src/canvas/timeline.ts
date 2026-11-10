@@ -79,6 +79,9 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, it: Item, colors: { 
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, 10);
   ctx.fill();
+  // What's drawn on it, cut at its edges (a month's name over its last days, say).
+  ctx.save();
+  ctx.clip();
   const k = writingAt(it, z);
   // Adaptive, too small to read: its writing fades, its head down to half (see FADE_TO).
   const seen = it.tfa ? Math.max(0, Math.min(1, (NUMBER_FS * k * z - FADE_TO) / (FADE_FROM - FADE_TO))) : 1;
@@ -116,5 +119,5 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, it: Item, colors: { 
       ctx.fillText(`${MONTHS[d.getMonth()]}${d.getFullYear() !== thisYear ? ` ${d.getFullYear()}` : ''}`.toUpperCase(), x, it.y + NAME_Y);
     }
   }
-  ctx.globalAlpha = 1;
+  ctx.restore();
 }

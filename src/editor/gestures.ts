@@ -64,6 +64,21 @@ const NEAR_GUIDES = 200;
 const ROTATE_SNAP = 3;
 /** What's resized to whole and half days on a timeline. */
 const SNAPS_TO_DAYS = new Set(['task', 'sticky', 'rect', 'ellipse', 'polygon']);
+/** «Угловые линии на таймлайне» (src/labs): moved, the right-angled lines between what's on a timeline
+ *  (out of the right side, as they're made there) go into the other's left side if it starts after this
+ *  one does, else round into its right side. (Not those with bends of their own, or led to a place on a side.) */
+function timelineSides(ed: Editor, moved: string[]): void {
+  if (!labOn('tlLinks')) return;
+  const board = ed.board, ids = new Set(moved);
+  for (const l of board.linkList()) {
+    if ((!ids.has(l.from) && !ids.has(l.to)) || l.style !== 'elbow' || l.fromSide !== 'right' || (l.toSide !== 'left' && l.toSide !== 'right') || l.via?.length || l.toAt !== undefined) continue;
+    const a = board.get(l.from), b = board.get(l.to);
+    if (!a || !b || !timelineOf(ed, a) || !timelineOf(ed, b)) continue;
+    const side = b.x >= a.x ? 'left' : 'right';
+    if (side !== l.toSide) board.updateLink(l.id, { toSide: side });
+  }
+}
+
 /** The timeline an item is on: the one holding it, else one its middle is over. */
 function timelineOf(ed: Editor, it: Item): Item | undefined {
   const all = ed.shown(), c = { x: it.x + it.w / 2, y: it.y + it.h / 2 };
@@ -438,6 +453,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
           if (!root.mfree) board.transact(() => g.orig.forEach((o, k) => board.update(k, { x: o.x, y: o.y })));
           else if (!root.mhand) board.update(root.id, { mhand: true });
         }
+        timelineSides(ed, [...g.orig.keys()]);
         board.endGesture();
         noteMindMoved(ed, [...ed.selection]);
       } else if (g.url) {
@@ -545,11 +561,12 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // middle when near that), pinned by its sides then even if drawn without.
         const { side, at } = anchorAt(target, g.to, 10 / ed.cam.z), src = board.get(g.from);
         // Both on a timeline, the tool not set another way («Угловые линии на таймлайне», src/labs): right
-        // angles, out of its right side into the other's left (or the other way, it being to the left).
+        // angles, out of its right side into the other's left (its right if it starts before this one does;
+        // the other way, it being to the left).
         const tl = !ed.linkStyle && labOn('tlLinks') && src && timelineOf(ed, src) && timelineOf(ed, board.get(g.target)!);
         const fs: Side = g.fromSide === 'top' || g.fromSide === 'bottom' ? g.fromSide : g.fromSide ?? (src && center(target).x < center(linkBox(src)).x ? 'left' : 'right');
         const l: Link = tl
-          ? { id: uid(), from: g.from, to: g.target, fromSide: fs, toSide: fs === 'right' ? 'left' : fs === 'left' ? 'right' : side, style: 'elbow' }
+          ? { id: uid(), from: g.from, to: g.target, fromSide: fs, toSide: fs === 'right' ? (target.x >= src!.x ? 'left' : 'right') : fs === 'left' ? 'right' : side, style: 'elbow' }
           : g.fromSide || at !== 0.5
           ? { id: uid(), from: g.from, to: g.target, fromSide: g.fromSide ?? (src ? nearestSide(src, center(target)) : 'right'), toSide: side, ...(at !== 0.5 && { toAt: at }) }
           : { id: uid(), from: g.from, to: g.target };

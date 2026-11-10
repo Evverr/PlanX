@@ -491,7 +491,10 @@ export function elbowRoute(p: Point, ps: Side, q: Point, qs: Side): Point[] {
   // Out of opposite sides, the other end back past where it set out (the next task on a timeline, starting
   // before this one ends): round between them, halfway down (or across), not back through either.
   const back = n1.x === -n2.x && n1.y === -n2.y && (across1 ? (b.x - a.x) * n1.x : (b.y - a.y) * n1.y) < 0;
+  // Out of and into sides facing the same way: out as far as the further of them, round and back in.
+  const same = n1.x === n2.x && n1.y === n2.y, far = (u: number, v: number, d: number) => (d > 0 ? Math.max(u, v) : Math.min(u, v));
   const mid = back ? (across1 ? [{ x: a.x, y: (a.y + b.y) / 2 }, { x: b.x, y: (a.y + b.y) / 2 }] : [{ x: (a.x + b.x) / 2, y: a.y }, { x: (a.x + b.x) / 2, y: b.y }])
+    : same ? (across1 ? [{ x: far(a.x, b.x, n1.x), y: a.y }, { x: far(a.x, b.x, n1.x), y: b.y }] : [{ x: a.x, y: far(a.y, b.y, n1.y) }, { x: b.x, y: far(a.y, b.y, n1.y) }])
     : across1 && across2 ? [{ x: (a.x + b.x) / 2, y: a.y }, { x: (a.x + b.x) / 2, y: b.y }]
     : !across1 && !across2 ? [{ x: a.x, y: (a.y + b.y) / 2 }, { x: b.x, y: (a.y + b.y) / 2 }]
     // Out across, into a side up or down (or the other way round): one turn, where they meet; that
