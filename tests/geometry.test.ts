@@ -194,3 +194,12 @@ describe('elbowRoute back past where it set out', () => {
     ]);
   });
 });
+
+describe('elbowRoute out across, into a side below behind it', () => {
+  it('turns at the other corner, not back through what it leaves', () => {
+    // Out of the right side at (750, 150), into the bottom of one above and behind it at (577, 60).
+    expect(elbowRoute({ x: 750, y: 150 }, 'right', { x: 577, y: 60 }, 'bottom')).toEqual([
+      { x: 750, y: 150 }, { x: 774, y: 150 }, { x: 774, y: 84 }, { x: 577, y: 84 }, { x: 577, y: 60 },
+    ]);
+  });
+});
