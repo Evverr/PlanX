@@ -433,7 +433,11 @@ export function elbowRoute(p: Point, ps: Side, q: Point, qs: Side): Point[] {
   const mid = back ? (across1 ? [{ x: a.x, y: (a.y + b.y) / 2 }, { x: b.x, y: (a.y + b.y) / 2 }] : [{ x: (a.x + b.x) / 2, y: a.y }, { x: (a.x + b.x) / 2, y: b.y }])
     : across1 && across2 ? [{ x: (a.x + b.x) / 2, y: a.y }, { x: (a.x + b.x) / 2, y: b.y }]
     : !across1 && !across2 ? [{ x: a.x, y: (a.y + b.y) / 2 }, { x: b.x, y: (a.y + b.y) / 2 }]
-    : across1 ? [{ x: b.x, y: a.y }] : [{ x: a.x, y: b.y }];
+    // Out across, into a side up or down (or the other way round): one turn, where they meet; that
+    // corner back behind where it set out, or coming at the other side from behind (it'd run back
+    // through what it leaves, say), the other corner.
+    : across1 ? [(b.x - a.x) * n1.x >= 0 && (a.y - b.y) * n2.y >= 0 ? { x: b.x, y: a.y } : { x: a.x, y: b.y }]
+    : [(b.y - a.y) * n1.y >= 0 && (a.x - b.x) * n2.x >= 0 ? { x: a.x, y: b.y } : { x: b.x, y: a.y }];
   const all = [p, a, ...mid, b, q], out: Point[] = [];
   for (const pt of all) {
     const last = out[out.length - 1];
