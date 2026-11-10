@@ -102,7 +102,7 @@ function easeTo(key: string, to: number, now: number): number {
 }
 
 /** The balls on the picked one's frame (on the board, as the frame is drawn): each showing past it as
- *  much as `aims` says, easing there; the one wholly out (the pointer on it) bigger, with a white edge. */
+ *  much as `aims` says, easing there; the one wholly out (the pointer on it) bigger. */
 export function drawTabs(ctx: CanvasRenderingContext2D, it: Item, zoom: number, color: string, alpha: number, aims: TabAims | null): void {
   const r = radius(zoom), now = performance.now(), want = aims ?? resting();
   ctx.save();
@@ -124,12 +124,6 @@ export function drawTabs(ctx: CanvasRenderingContext2D, it: Item, zoom: number, 
     ctx.arc(c.x, c.y, r * grow, 0, Math.PI * 2);
     ctx.globalAlpha = alpha + (0.8 - alpha) * out;
     ctx.fill();
-    if (out > 0) {
-      ctx.globalAlpha = out;
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2 / zoom;
-      ctx.stroke();
-    }
     ctx.restore();
   }
   ctx.restore();
