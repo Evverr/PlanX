@@ -232,7 +232,8 @@ export function press(ed: Editor, e: PointerEvent): void {
     return;
   }
   // «Полукруги на рамке» (src/labs): a half circle: a copy that way on a click, a link when dragged.
-  const tab = tabsFor(single ?? undefined, ed.editingId) ? tabAt(ed, single!, w) : null;
+  // (Not on its resize handle: that comes first.)
+  const tab = tabsFor(single ?? undefined, ed.editingId) && !onHandle(ed, single!, w) ? tabAt(ed, single!, w) : null;
   if (single && tab) {
     ed.gesture = { type: 'tab', id: single.id, side: tab, start: w };
     return;

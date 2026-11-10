@@ -284,10 +284,12 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   const picked = ed.selection.size === 1 ? ed.board.get([...ed.selection][0]) : undefined;
   // A locked item has no handles to take.
   const single = isLocked(picked) ? undefined : picked;
-  // («Полукруги на рамке», src/labs: its half circles, before anything else there.)
-  const tab = tabsFor(single, ed.editingId) ? tabAt(ed, single, w) : null;
+  // («Полукруги на рамке», src/labs: its half circles, before anything else there but its resize handle:
+  // on that, they keep still.)
+  const balls = tabsFor(single, ed.editingId) && !onHandle(ed, single, w);
+  const tab = balls ? tabAt(ed, single!, w) : null;
   if (tab !== ed.hotTab) { ed.hotTab = tab; ed.requestRender(); }
-  const aims = tabsFor(single, ed.editingId) ? tabAims(ed, single, w) : null;
+  const aims = tabsFor(single, ed.editingId) ? (balls ? tabAims(ed, single, w) : tabAims(ed, single, null)) : null;
   if (!sameAims(aims, ed.tabAims)) { ed.tabAims = aims; ed.requestRender(); }
   const dot = single && !ed.editingId && !tab ? dotAt(ed, single, w) : null;
   if (dot !== ed.hotDot) { ed.hotDot = dot; ed.requestRender(); }
