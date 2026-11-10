@@ -291,9 +291,10 @@ export function drawStatus(ctx: CanvasRenderingContext2D, x: number, y: number, 
     ctx.stroke();
   } else {
     ctx.beginPath();
-    ctx.arc(x, y, r - 1, 0, Math.PI * 2);
-    ctx.strokeStyle = look.dark ? 'rgba(255,255,255,0.25)' : '#D3D8DE';
-    ctx.lineWidth = 1.5;
+    // (As far out as ever, a pixel thicker inward.)
+    ctx.arc(x, y, r - 1.5, 0, Math.PI * 2);
+    ctx.strokeStyle = look.dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 2.5;
     ctx.stroke();
     if (s === 'doing') {
       ctx.beginPath();
