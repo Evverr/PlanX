@@ -397,7 +397,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   if (!g) { glides.delete(it.id); drawCard(ctx, it, look, typing, hot); return; }
   redraw();
   const { x, y } = it, strong = statusOf(it) === 'done' ? DONE_GREY : strongOf(it.color);
-  const bg = look.dark ? '#26272C' : '#FFFFFF', tint = mix(strong, bg, look.dark ? 0.16 : 0.05);
+  const bg = look.dark ? '#26272C' : '#FFFFFF', tint = mix(strong, bg, look.dark ? 0.16 : 0.08);
   const head = taskLayout(g.more).head;
   // Its body tinted as closed; over it, the one showing more as it is (what's under its header seen as
   // opened as it looks, in its size now); its header in its width now; its edge round all of it.
@@ -420,7 +420,7 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
   ctx.restore();
   ctx.beginPath();
   ctx.roundRect(x + 1, y + 1, g.w - 2, g.h - 2, TASK_RAD - 1);
-  ctx.strokeStyle = `rgba(${rgb(strong.startsWith('#') ? strong : '#003CFF').join(',')}, 0.3)`;
+  ctx.strokeStyle = `rgba(${rgb(strong.startsWith('#') ? strong : '#003CFF').join(',')}, 0.4)`;
   ctx.lineWidth = 2;
   ctx.stroke();
 }
@@ -428,8 +428,8 @@ export function drawTaskCard(ctx: CanvasRenderingContext2D, it: Item, look: Task
 function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typing: number | null | undefined, hot: string | null = null): void {
   // Done, it's grey, darker than the grey given to anything (a colour not given to those still to do).
   const l = taskLayout(it), { x, y } = it, strong = statusOf(it) === 'done' ? DONE_GREY : strongOf(it.color);
-  const bg = look.dark ? '#26272C' : '#FFFFFF', tint = mix(strong, bg, look.dark ? 0.16 : 0.05);
-  const edge = `rgba(${rgb(strong.startsWith('#') ? strong : '#003CFF').join(',')}, 0.3)`;
+  const bg = look.dark ? '#26272C' : '#FFFFFF', tint = mix(strong, bg, look.dark ? 0.16 : 0.08);
+  const edge = `rgba(${rgb(strong.startsWith('#') ? strong : '#003CFF').join(',')}, 0.4)`;
   // The card, its edge 2 wide inside it; its header tinted, the whole of it when closed. Opened, it
   // lies over the board with a shadow.
   ctx.beginPath();
@@ -456,7 +456,7 @@ function drawCard(ctx: CanvasRenderingContext2D, it: Item, look: TaskLook, typin
   const tag = 'ЗАДАЧА', pw = ctx.measureText(tag).width + 12;
   ctx.beginPath();
   ctx.roundRect(x + l.w - 16 - pw, y + 1 - 7, pw, 14, 7);
-  ctx.fillStyle = mix(strong.startsWith('#') ? strong : '#003CFF', bg, 0.3 + 0.15 * litNow(`${it.id}:arrow`, hot === `task:${it.id}:arrow`));
+  ctx.fillStyle = mix(strong.startsWith('#') ? strong : '#003CFF', bg, 0.4 + 0.15 * litNow(`${it.id}:arrow`, hot === `task:${it.id}:arrow`));
   ctx.fill();
   ctx.fillStyle = '#FFFFFF';
   ctx.textAlign = 'center';
