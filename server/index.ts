@@ -18,12 +18,15 @@ import * as decoding from 'lib0/decoding';
 import { Board } from '../src/model/board';
 import { sampleBoard } from '../src/model/sample';
 import { addPoint, isPointId, isPointKind, listPoints, readPoint, removePoint } from './history';
+import { answerAll, type UseBoard } from './mcp';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT ?? process.env.PLANX_PORT ?? 1234);
 const DATA_DIR = path.resolve(process.env.DATA_DIR ?? path.join(ROOT, 'data'));
 const DIST = path.join(ROOT, 'dist');
 const SERVE_APP = process.env.NODE_ENV === 'production';
+/** The secret in Claude's address (/mcp/<it>, see mcp.ts); unset, there's none. */
+const MCP_KEY = process.env.MCP_KEY && process.env.MCP_KEY.length >= 16 ? process.env.MCP_KEY : null;
 
 const MSG_SYNC = 0;
 const MSG_AWARENESS = 1;
@@ -42,6 +45,8 @@ interface Room {
   saveTimer: NodeJS.Timeout | null;
   /** Changed since its last point. */
   changed: boolean;
+  /** The board in it as Claude reads and changes it (see mcp.ts), once it has. */
+  board?: Board;
 }
 
 const rooms = new Map<string, Room>();
@@ -117,14 +122,49 @@ function close(room: Room, conn: WebSocket): void {
   if (!ids) return;
   room.conns.delete(conn);
   awarenessProtocol.removeAwarenessStates(room.awareness, [...ids], null);
-  if (room.conns.size === 0) {
-    // (Everyone's gone: what's been done since the last point isn't left without one.)
-    autoPoint(room, 0);
-    save(room);
-    room.doc.destroy();
-    rooms.delete(room.name);
-  }
+  if (room.conns.size === 0) drop(room);
   conn.close();
+}
+
+/** No one's on it: saved and out of memory. */
+function drop(room: Room): void {
+  // (Everyone's gone: what's been done since the last point isn't left without one.)
+  autoPoint(room, 0);
+  save(room);
+  room.doc.destroy();
+  rooms.delete(room.name);
+}
+
+/** A board for Claude (see mcp.ts): one there is, here or saved; let go after if no one's on it. */
+const useBoard: UseBoard = (name, fn) => {
+  if (!rooms.has(name) && !fs.existsSync(fileFor(name))) return null;
+  const room = getRoom(name);
+  room.board ??= new Board(room.doc);
+  try { return fn(room.board); } finally { if (room.conns.size === 0) drop(room); }
+};
+
+/** Claude's address: POST a JSON-RPC message (or a batch), the answer as plain JSON. */
+function mcp(req: http.IncomingMessage, res: http.ServerResponse, url: URL): boolean {
+  if (!url.pathname.startsWith('/mcp')) return false;
+  if (!MCP_KEY || url.pathname.replace(/\/$/, '') !== `/mcp/${MCP_KEY}`) { res.writeHead(404); res.end(); return true; }
+  if (req.method !== 'POST') { res.writeHead(405, { allow: 'POST' }); res.end(); return true; }
+  let body = '';
+  req.setEncoding('utf8');
+  req.on('data', (c: string) => { body += c; if (body.length > 1_000_000) req.destroy(); });
+  req.on('end', () => {
+    let out: object | null;
+    try { out = answerAll(JSON.parse(body), useBoard); } catch (err) {
+      const bad = err instanceof SyntaxError;
+      if (!bad) console.error('[mcp]', err);
+      res.writeHead(bad ? 400 : 500, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ jsonrpc: '2.0', id: null, error: { code: bad ? -32700 : -32603, message: bad ? 'Parse error' : 'Internal error' } }));
+      return;
+    }
+    if (!out) { res.writeHead(202); res.end(); return; }
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify(out));
+  });
+  return true;
 }
 
 function onConnection(conn: WebSocket, roomName: string): void {
@@ -205,7 +245,9 @@ function history(req: http.IncomingMessage, res: http.ServerResponse, url: URL):
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
-  if (history(req, res, url)) return;
+  if (history(req, res, url) || mcp(req, res, url)) return;
+  // (No sign-in to find out about: Claude's connector asks, and isn't to be given the app instead.)
+  if (url.pathname.startsWith('/.well-known/')) { res.writeHead(404); res.end(); return; }
   if (url.pathname === '/health') {
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify({ ok: true, boards: rooms.size }));
@@ -239,5 +281,5 @@ process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
 server.listen(PORT, () => {
-  console.log(`PlanX sync server on :${PORT}, boards saved in ${DATA_DIR}${SERVE_APP ? ', serving dist/' : ''}`);
+  console.log(`PlanX sync server on :${PORT}, boards saved in ${DATA_DIR}${SERVE_APP ? ', serving dist/' : ''}${MCP_KEY ? ', Claude at /mcp/…' : ''}`);
 });
