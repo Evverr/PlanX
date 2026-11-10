@@ -404,4 +404,4 @@
 .call-ask .row, .call-pop > .row { margin-top: var(--s14); }
 .call-wait { margin-right: auto; align-self: center; opacity: .6; }
 .call-notice { color: #E5484D; }
-.call-btn.on .call-count { color: var(--fmt-on-ink); }
+.call-btn.on .call-count { color: #fff; }
