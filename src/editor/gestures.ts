@@ -282,7 +282,8 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       // (What's in an instance: the instance.)
       const hit = hitItem(ed.shown(), w, ed.cam.z), t = hit?.host ? board.get(hit.host) : hit;
       g.to = w;
-      g.target = t && t.id !== g.from ? t.id : null;
+      // (Not a timeline: a line led over one goes to what's on it, or stays where it's let go.)
+      g.target = t && t.id !== g.from && !t.tl ? t.id : null;
       ed.requestRender();
       return;
     }
@@ -318,7 +319,7 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       if (t?.id !== held && far) g.away = true;
       g.to = w;
       // (On its other end's item too: it turns round, the arrow going into that.)
-      g.target = t && (g.away || far) && (t.id !== other || t.id !== held) ? t.id : null;
+      g.target = t && !t.tl && (g.away || far) && (t.id !== other || t.id !== held) ? t.id : null;
       ed.requestRender();
       return;
     }
