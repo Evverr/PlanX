@@ -48,6 +48,17 @@ export function timelineSize(start: Date): { w: number; h: number } {
 export const TL_STEPS = [1, 2, 4, 6];
 /** How many times the usual size its writing may be (see Item.tfs). */
 export const TL_FONTS = [1, 2, 3, 4];
+/** «Адаптивный текст» (Item.tfa): zoomed out, its writing grows by 1/zoom to the POWER (1: as big on the
+ *  screen whatever the zoom, 0: not at all), up to MAX times its own size; zoomed in, it stays. */
+const ADAPT_POWER = 1, ADAPT_MAX = 4;
+/** How many times the usual size its writing is drawn at this zoom: its own (tfs), grown if adaptive, but
+ *  never so much its head takes the card (room left for its lines). */
+const writingAt = (it: Item, z: number): number => {
+  const own = it.tfs ?? 1;
+  if (!it.tfa) return own;
+  const most = (it.h - BOTTOM - 20 - linesY(0)) / (NAME_FS + NUMBER_FS);
+  return Math.max(own, Math.min(own * Math.min(ADAPT_MAX, Math.pow(1 / z, ADAPT_POWER)), most));
+};
 export const dayOf = (it: Item): number => DAY * (it.ts ?? 1);
 
 /** How many days its width holds. */
@@ -64,7 +75,7 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, it: Item, colors: { 
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, 10);
   ctx.fill();
-  const k = it.tfs ?? 1, start = tlStart(it), days = tlDays(it), day = dayOf(it), top = it.y + linesY(k), bottom = it.y + it.h - BOTTOM;
+  const k = writingAt(it, z), start = tlStart(it), days = tlDays(it), day = dayOf(it), top = it.y + linesY(k), bottom = it.y + it.h - BOTTOM;
   const now = new Date(), thisYear = now.getFullYear(), legible = NUMBER_FS * k * z >= 4;
   // Day numbers too wide for their days: every second, third… (and today's).
   ctx.font = font(NUMBER_FS * k, 400, 'inter');
