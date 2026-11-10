@@ -24,7 +24,9 @@ export async function start() {
   const vite = spawn('npx', ['vite', '--port', String(APP_PORT), '--strictPort'], { stdio: 'ignore' });
   const profile = mkdtempSync(join(tmpdir(), 'planx-e2e-'));
   const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${DEBUG_PORT}`, `--user-data-dir=${profile}`,
-    '--hide-scrollbars', '--window-size=1200,800', 'about:blank'], { stdio: 'ignore' });
+    '--hide-scrollbars', '--window-size=1200,800',
+    // (A made-up microphone, let without asking, and sound played without a press: for «Аудиозвонок».)
+    '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required', 'about:blank'], { stdio: 'ignore' });
   await until(async () => (await fetch(`http://localhost:${APP_PORT}`)).ok, 'the app');
   await until(async () => (await fetch(`http://localhost:${DEBUG_PORT}/json/version`)).ok, 'Chrome');
   return {
@@ -155,6 +157,22 @@ async function openPage() {
 }
 
 /** A failed check, with what was expected and what came. */
+/** Another tab on that address, as someone else on the board would be (the same browser: what's kept
+ *  in it, the name too, shared): the value of an expression in it, and closing it. */
+export async function openTab(url) {
+  const t = await (await fetch(`http://localhost:${DEBUG_PORT}/json/new?${url}`, { method: 'PUT' })).json();
+  const ws = new WebSocket(t.webSocketDebuggerUrl);
+  await new Promise((r) => { ws.onopen = r; });
+  let id = 0;
+  const wait = new Map();
+  ws.onmessage = (m) => { const d = JSON.parse(m.data); if (wait.has(d.id)) { wait.get(d.id)(d); wait.delete(d.id); } };
+  const cdp = (method, params = {}) => new Promise((r) => { wait.set(++id, r); ws.send(JSON.stringify({ id, method, params })); });
+  return {
+    ev: async (expr) => (await cdp('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true })).result?.result?.value,
+    close: async () => { ws.close(); await fetch(`http://localhost:${DEBUG_PORT}/json/close/${t.id}`); },
+  };
+}
+
 export function expect(actual, label) {
   const fail = (what) => { throw new Error(`${label}: expected ${what}, got ${JSON.stringify(actual)}`); };
   return {

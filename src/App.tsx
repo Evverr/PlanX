@@ -12,6 +12,7 @@ import { TaskKeepPop, TaskMenu, TaskPop, TaskTipBubble } from './ui/TaskPop';
 import { noteBoard, setSideOpen, useSideOpen } from './labs/SideNav';
 import { navigate } from './route';
 import { Discussion } from './labs/Discussion';
+import { CallButton } from './labs/CallButton';
 import { PanelIcon } from './ui/PanelIcon';
 import { asOne } from './labs/multi';
 import { DockButton, useDock } from './ui/panels/dock';
@@ -160,7 +161,7 @@ export function App({ boardId }: { boardId: string }) {
   // Buttons in the top bar and the zoom panel can be rearranged by holding them.
   const topSort = useSortable('planx-order-top2', ['logo', 'sep', 'title', 'menu', 'new', 'clear', 'sep3', 'undo', 'redo'], 'x');
   // (The theme's button is in "Настройки" now; the link dots' switch has its place.)
-  const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'share', 'help', 'links', 'comment', 'fit', 'dock', 'people'], 'x', { theme: 'links' });
+  const zoomSort = useSortable('planx-order-zoom', ['zoom', 'zoom-out', 'zoom-in', 'map', 'sep', 'call', 'share', 'help', 'links', 'comment', 'fit', 'dock', 'people'], 'x', { theme: 'links' });
   const dots = useDotsOn();
 
   // The top bar and the zoom bar can be moved and made shorter by hand (see panels/bar.ts).
@@ -460,6 +461,8 @@ export function App({ boardId }: { boardId: string }) {
             <img src={catFor()} alt="" draggable={false} />
           </button>
         </div>,
+        // «Аудиозвонок» (src/labs): into the board's call, its popup by it. (In a wrapper, to take the ref.)
+        call: labs.call ? <span className="sort-wrap"><CallButton conn={conn} /></span> : undefined,
         share: <button className="ib" title="Скопировать ссылку на доску" aria-label="Поделиться" onClick={share}><PanelIcon name="ai-two-stars" /></button>,
         sep: <div className="sep" />,
         map: <button className={`ib ${minimap ? 'on' : ''}`} title="Карта доски" aria-label="Карта доски" aria-pressed={minimap} data-minimap-toggle

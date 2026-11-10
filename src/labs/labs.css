@@ -385,3 +385,22 @@
 /* (The panel given way, while the body glides from it: no body of its own, what's on it fading as it does.) */
 :root[data-morph-in] :is(.tfmt.leaving, .tfmt.gone, .bar.panel.gone) { background-color: transparent !important; box-shadow: none !important; }
 :root[data-morph-in] :is(.tfmt.leaving, .tfmt.gone, .bar.panel.gone)::before { opacity: 0 !important; }
+
+/* «Аудиозвонок»: the button with how many are in the call, and its popup by it. */
+.call-btn { position: relative; }
+.call-btn .call-count { position: absolute; top: var(--s3); right: var(--s3); min-width: 14px; height: 14px; padding: 0 3px; box-sizing: border-box; border-radius: 7px;
+  background: #2F9E44; color: #fff; font: 600 9px/14px "Inter", var(--ui); text-align: center; pointer-events: none; }
+.call-pop { z-index: 8; width: 260px; box-sizing: border-box; --in-y: calc(-1 * var(--slide)); }
+.call-pop.above { --in-y: var(--slide); }
+.call-pop p { margin: 0 0 var(--s10); }
+.call-people { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s6); }
+.call-people li { display: flex; align-items: center; gap: var(--s8); padding: var(--s4) var(--s8); border-radius: var(--s7); transition: background-color .12s ease-out; }
+.call-people li.speaking { background: rgba(47, 158, 68, .14); }
+.call-people li.joining { opacity: .5; }
+.call-people i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.call-people .call-you { opacity: .5; }
+.call-people .call-muted { margin-left: auto; width: 18px; height: 18px; opacity: .6; }
+.call-ask { margin-top: var(--s14); padding-top: var(--s14); border-top: 1px solid var(--line); }
+.call-ask .row, .call-pop > .row { margin-top: var(--s14); }
+.call-wait { margin-right: auto; align-self: center; opacity: .6; }
+.call-notice { color: #E5484D; }
