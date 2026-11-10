@@ -29,7 +29,7 @@ const HOLD = 1.5, ALONG = 1.5;
 /** That room this much further out from the frame (of how far it reaches), its base still at the frame. */
 const FURTHER = 0.2;
 /** For now: where the pointer brings the ball out (green) and keeps it (blue) shown on the board. */
-const SHOW_ZONES = true;
+const SHOW_ZONES = false;
 /** How near the ball on the frame a side doesn't stretch (no resize cursor there), on screen. */
 const NO_STRETCH = 20;
 /** How long the ball takes to grow or shrink to its new size, in ms. */
