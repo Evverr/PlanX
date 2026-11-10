@@ -1,0 +1,69 @@
+/* «Витрина» (showcase.html): the page's own look, round the app's panels shown on it. */
+html, body.sc-body { height: auto; }
+body.sc-body { overflow: auto; background: var(--surface); }
+.sc { max-width: 1320px; margin: 0 auto; padding: 0 24px 80px; }
+.sc-top { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 24px; padding: 16px 0; background: var(--surface); border-bottom: 1px solid var(--line); }
+.sc-top h1 { margin: 0; font: 600 20px/1.2 var(--display); }
+.sc-top nav { display: flex; flex-wrap: wrap; gap: 4px 16px; flex: 1; }
+.sc-top nav a { color: var(--muted); text-decoration: none; font-size: 14px; }
+.sc-top nav a:hover { color: var(--ink); }
+.sc-section { padding-top: 32px; scroll-margin-top: 64px; }
+.sc-section > h2 { margin: 0 0 16px; font: 600 18px/1.2 var(--display); }
+.sc-lead { max-width: 720px; color: var(--muted); margin: 0 0 16px; }
+.sc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; align-items: start; }
+.sc-card { min-width: 0; }
+.sc-card.wide { grid-column: 1 / -1; }
+.sc-card-head { display: flex; align-items: center; gap: 12px; }
+.sc-card h3 { margin: 0; font: 600 14px/1.3 var(--ui); }
+.sc-where { margin: 2px 0 8px; font-size: 12px; color: var(--muted); }
+.sc-again { margin-left: auto; padding: 2px 8px; border: 1px solid var(--line); border-radius: 6px; background: none; font-size: 12px; color: var(--muted); cursor: pointer; }
+.sc-again:hover { color: var(--ink); }
+
+/* The stage: the board's colour, and a box of its own for what the app fixes to the screen (a
+   transform makes it the containing block of position: fixed), so a popup stays in its card. */
+.sc-stage { position: relative; transform: translateZ(0); overflow: hidden; border-radius: 12px; background: var(--bg); }
+/* In the middle of the card: the app's own placing (by the screen, the board, the rail) put aside. */
+.sc-stage.flow { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 20px; overflow: auto; }
+.sc-stage.flow > :is(.pop, .bar, .tfmt, .board-menu, .draw-panel, .tools-more, .tools, .labs-rail, .color-picker) { position: relative !important; inset: auto !important; transform: none !important; margin: 0 !important; flex: none; }
+.sc-stage.flow > .bar.panel { opacity: 1 !important; }
+/* (Bars sized by the app for the screen: as wide as what's in them here.) */
+.sc-stage.flow > :is(.bar, .tools, .labs-rail) { width: max-content !important; height: max-content !important; max-width: none !important; max-height: none !important; }
+/* (A stage taller than what's in it scrolls from its top.) */
+.sc-stage.flow { align-items: safe center; justify-content: safe center; }
+/* (A modal's dim, in its card.) */
+.sc-stage .modal-dim { position: absolute; }
+.sc-anchor { position: absolute; left: 20px; top: 20px; }
+.sc-anchor > .board-menu { position: relative; left: 0; top: 0; }
+
+.sc-row { display: flex; gap: 12px; align-items: center; }
+.sc-col { display: flex; flex-direction: column; gap: 16px; align-items: center; }
+.sc-col > .pop { position: relative !important; inset: auto !important; transform: none !important; }
+.sc-bar { position: relative !important; border-radius: var(--panel-radius); background: var(--fmt-bg); box-shadow: var(--shadow); }
+.sc-plain { padding: 0; border: 0; background: none; cursor: pointer; }
+.sc-fonts p { margin: 0 0 6px; color: var(--ink); }
+
+.sc-tokens { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 8px 20px; }
+.sc-token { display: grid; grid-template-columns: 36px 1fr auto; grid-template-rows: auto auto; column-gap: 10px; align-items: center; }
+.sc-token i { grid-row: span 2; width: 36px; height: 36px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--line); }
+.sc-token code { font-size: 12px; }
+.sc-token span { font: 11px/1 ui-monospace, monospace; color: var(--muted); text-align: right; }
+.sc-token small { grid-column: 2 / -1; font-size: 12px; color: var(--muted); }
+
+.sc-drift { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 20px; }
+.sc-drift-row { padding: 16px; border-radius: 12px; background: var(--bg); }
+.sc-drift-row h3 { margin: 0 0 8px; font: 600 14px/1.3 var(--ui); }
+.sc-drift-row small { font-weight: 400; color: var(--muted); }
+.sc-drift-row ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 12px; }
+.sc-drift-row code { padding: 1px 6px; border-radius: 4px; background: var(--surface); font-size: 11px; }
+.sc-drift-row span, .sc-drift-row details { color: var(--muted); }
+.sc-drift-row b { font-weight: 600; font-size: 11px; color: var(--ink); }
+.sc-drift-row details { display: inline; }
+.sc-drift-row summary { display: inline; cursor: pointer; margin-left: 4px; }
+.sc-drift-row summary::-webkit-details-marker { display: none; }
+.sc-drift-row details[open] summary::after { content: ", "; }
+
+@media (max-width: 600px) {
+  .sc { padding: 0 16px 60px; }
+  .sc-top { flex-wrap: wrap; gap: 8px 16px; }
+  .sc-grid, .sc-drift { grid-template-columns: 1fr; }
+}

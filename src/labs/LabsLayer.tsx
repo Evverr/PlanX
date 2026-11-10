@@ -336,7 +336,7 @@ function Choice<T extends string | number>({ value, options, onPick }: { value: 
 }
 
 /** Saving the board, or what's selected, as a picture or a PDF (which has nothing see-through). */
-function ExportPop({ editor, format, onCancel, onDone }: { editor: Editor; format: 'png' | 'pdf'; onCancel: () => void; onDone: (ok: boolean) => void }) {
+export function ExportPop({ editor, format, onCancel, onDone }: { editor: Editor; format: 'png' | 'pdf'; onCancel: () => void; onDone: (ok: boolean) => void }) {
   const hasSelection = editor.selectedItems().length > 0;
   const [what, setWhat] = useState<ExportOptions['what']>(hasSelection ? 'selection' : 'all');
   const [scale, setScale] = useState(2);
@@ -365,7 +365,7 @@ function ExportPop({ editor, format, onCancel, onDone }: { editor: Editor; forma
   );
 }
 
-function SearchPop({ editor }: { editor: Editor }) {
+export function SearchPop({ editor }: { editor: Editor }) {
   const [q, setQ] = useState('');
   const [active, setActive] = useState(0);
   const found = useMemo(() => findOnBoard(editor.shown(), q), [q, editor.board.getVersion()]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -426,7 +426,7 @@ function SearchPop({ editor }: { editor: Editor }) {
   );
 }
 
-function TimerPop({ onStart }: { onStart: (minutes: number) => void }) {
+export function TimerPop({ onStart }: { onStart: (minutes: number) => void }) {
   const [custom, setCustom] = useState('');
   const minutes = Number(custom.replace(',', '.'));
   const ok = minutes > 0 && minutes <= 180;
@@ -445,7 +445,7 @@ function TimerPop({ onStart }: { onStart: (minutes: number) => void }) {
   );
 }
 
-function TimerPill({ editor }: { editor: Editor }) {
+export function TimerPill({ editor }: { editor: Editor }) {
   const doc = editor.board.doc;
   const { timer, now } = useTimer(doc);
   const rung = useRef<number | null>(null);
