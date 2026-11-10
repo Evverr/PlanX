@@ -29,7 +29,7 @@ const HOLD = 1.5, ALONG = 1.5;
 /** That room this much further out from the frame (of how far it reaches), its base still at the frame. */
 const FURTHER = 0.2;
 /** For now: where the pointer brings the ball out (green) and keeps it (blue) shown on the board. */
-const SHOW_ZONES = true;
+const SHOW_ZONES = false;
 /** How near the ball on the frame a side doesn't stretch (no resize cursor there), on screen. */
 const NO_STRETCH = 20;
 /** How long the ball takes to grow or shrink to its new size, in ms. */
@@ -71,12 +71,11 @@ function tabAtZ(it: Item, w: Point, z: number, was: TabAims | null): Side | null
     // Out already: more room round it (longer along the frame), so it isn't lost by a slip of the hand.
     const k = was?.[side] === ON ? Math.sqrt(HOLD) : 1, ra = r * BIG * k, rl = was?.[side] === ON ? ra * ALONG : ra;
     const m = was?.[side] === ON ? mid + (mid + ra) * FURTHER : mid;
-    // Out: round it, as an oval, and from the frame to its middle as wide (no notches where it meets the frame).
-    if (was?.[side] === ON) {
-      if (((off - m) / ra) ** 2 + (along / rl) ** 2 <= 1 || (off <= m && along <= rl) || Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) * k) return side;
-    // Not yet: a tent, NEAR wide along the frame each way, straight from there to round it: from anywhere it
-    // comes out, the way straight to it stays in.
-    } else if (inTent(off, along, NEAR / z, m, ra)) return side;
+    // Not out yet: a tent, NEAR wide along the frame each way, straight from there to round it: from anywhere
+    // it comes out, the way straight to it stays in. Out: that too (or it'd go and come back by the tent's
+    // edge, the cursor with it), and round it an oval, from the frame to its middle as wide.
+    if (inTent(off, along, NEAR / z, mid, r * BIG)) return side;
+    if (was?.[side] === ON && (((off - m) / ra) ** 2 + (along / rl) ** 2 <= 1 || (off <= m && along <= rl) || Math.hypot(w.x - by.x, w.y - by.y) <= reach(z) * k)) return side;
   }
   return null;
 }
