@@ -543,7 +543,13 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // Running the way the last one was made to; into the side it's let go by, as far along it (its
         // middle when near that), pinned by its sides then even if drawn without.
         const { side, at } = anchorAt(target, g.to, 10 / ed.cam.z), src = board.get(g.from);
-        const l: Link = g.fromSide || at !== 0.5
+        // Both on a timeline, the tool not set another way («Угловые линии на таймлайне», src/labs): right
+        // angles, out of its right side into the other's left (or the other way, it being to the left).
+        const tl = !ed.linkStyle && labOn('tlLinks') && src && timelineOf(ed, src) && timelineOf(ed, board.get(g.target)!);
+        const fs: Side = g.fromSide === 'top' || g.fromSide === 'bottom' ? g.fromSide : g.fromSide ?? (src && center(target).x < center(linkBox(src)).x ? 'left' : 'right');
+        const l: Link = tl
+          ? { id: uid(), from: g.from, to: g.target, fromSide: fs, toSide: fs === 'right' ? 'left' : fs === 'left' ? 'right' : side, style: 'elbow' }
+          : g.fromSide || at !== 0.5
           ? { id: uid(), from: g.from, to: g.target, fromSide: g.fromSide ?? (src ? nearestSide(src, center(target)) : 'right'), toSide: side, ...(at !== 0.5 && { toAt: at }) }
           : { id: uid(), from: g.from, to: g.target };
         if (ed.linkStyle) l.style = ed.linkStyle;
