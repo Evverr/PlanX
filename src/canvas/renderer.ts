@@ -134,6 +134,9 @@ export interface Scene {
   editingCell: number | null;
   /** The board being worked on (not a picture of it): what's unpicked fades out. */
   live?: boolean;
+  /** What's picked being dragged (or pressed to be, picked by that press): no frame, handle or dots on
+   *  it till it's let go. */
+  dragging?: boolean;
   /** Picked links' colours being set: drawn in them, not in the selection's blue. */
   linksAsThey?: boolean;
   /** Left see-through where nothing is drawn (a picture saved without the board's background). */
@@ -1442,7 +1445,7 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   }
   for (const id of s.selection) {
     const got = s.get(id), it = got && taskShown(got);
-    if (!it || s.nodesOf === id) continue;
+    if (!it || s.nodesOf === id || s.dragging) continue;
     // A mind map node shows it's picked by its "+" buttons alone, which a few picked together don't get.
     // An instance keeps its red title alone, without a selection frame.
     if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) {

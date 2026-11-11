@@ -671,6 +671,7 @@ export class Editor {
       live: true,
       underPicks: this.underlays.size ? (c) => this.underlays.forEach((d) => { c.save(); d(c); c.restore(); }) : undefined,
       guides: g?.type === 'drag' ? g.guides ?? [] : [],
+      dragging: g?.type === 'drag' && (g.moved || !!g.fresh),
       pickedCells: this.cells.length && this.selection.size === 1 ? { id: [...this.selection][0], cells: this.cells } : null,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker', op: this.penStyle(g.tool).op } : null,
     });

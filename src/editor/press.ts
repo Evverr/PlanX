@@ -312,6 +312,8 @@ export function press(ed: Editor, e: PointerEvent): void {
     const again = !dbl && !entering && !e.shiftKey && ed.selection.size === 1 && ed.selection.has(hit.id);
     // A click on a cell of the table already selected picks that cell (on letting go, if not dragged).
     const cell = hit.type === 'table' && ed.selection.size === 1 && ed.selection.has(hit.id);
+    // (Picked by this press: its frame shows once it's let go without being dragged, see Scene.dragging.)
+    const fresh = !e.shiftKey && !ed.selection.has(hit.id);
     if (cell) { /* keeps the table selected */ }
     else if (e.shiftKey) {
       const next = new Set(ed.selection);
@@ -324,7 +326,7 @@ export function press(ed: Editor, e: PointerEvent): void {
     const tap = hit.type === 'task' && !entering && !e.shiftKey && e.button === 0 && ed.editingId !== hit.id && taskButtonAt(hit, w) ? sp : undefined;
     // A subtask pressed: dragged, it goes elsewhere among them ("Перетаскивание подзадач", src/labs).
     const part = tap && labOn('subDrag') ? taskPartAt(hit, w) : null, sub = typeof part === 'object' && part && !part.del ? part.sub : undefined;
-    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(items), moved: false, id: hit.id, dbl, cell, enter, again, url, tap, sub };
+    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(items), moved: false, id: hit.id, dbl, cell, enter, again, url, tap, sub, fresh };
     return;
   }
   ed.lastTap = { id: '', t: 0 };
