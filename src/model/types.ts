@@ -206,6 +206,9 @@ export interface Item {
   /** A rectangle that's a poll («Голосование», src/labs/poll.ts): its question and answers, being set up
    *  (not started yet), and who put it there (their browser's id). Each one's votes are a field of their
    *  own, `pv:<their browser's id>`. */
+  /** A frame that's a kanban («Канбан», src/labs/kanban.ts): its stages, left to right, each its name and
+   *  colour (a key of FILLS). */
+  kb?: Array<{ n: string; c: string }>;
   poll?: boolean;
   pq?: string;
   po?: string[];

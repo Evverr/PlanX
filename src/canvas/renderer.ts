@@ -19,6 +19,7 @@ import { gridKind } from '../labs/boardGrid';
 import { drawCode } from '../labs/codeBlock';
 import { drawForm } from '../labs/formObject';
 import { drawPoll } from '../labs/poll';
+import { drawKanban } from '../labs/kanban';
 import { drawTaskCard, TASK_RAD, taskShown } from './task';
 import { dotsAlways, dotsUnder } from '../labs/linkTool';
 import { drawnLinks } from '../model/textLinks';
@@ -498,6 +499,8 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       break;
     case 'frame': {
       if (it.tl) { drawTimeline(ctx, it, { card: theme.surface, ink: theme.ink }, cam.z); break; }
+      // A kanban («Канбан», src/labs): its stages and columns.
+      if (it.kb) { drawKanban(ctx, it, s.get, theme); break; }
       if (it.fold) { drawFolded(ctx, it, s, editing); break; }
       // An instance shows only its red title after a hollow diamond (to its component), flush with
       // its contents, and that only while it's picked (as a whole or something inside it).

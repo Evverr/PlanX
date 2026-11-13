@@ -142,6 +142,7 @@ export function press(ed: Editor, e: PointerEvent): void {
     case 'timeline':
     case 'form':
     case 'poll':
+    case 'kanban':
       ed.gesture = { type: 'place', at: w, tool: ed.tool };
       return;
     case 'rect':

@@ -40,7 +40,7 @@ export type Gesture =
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point; last?: Point }
   | { type: 'tab'; id: string; side: Side; start: Point }
-  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline' | 'form' | 'poll'; to?: Point }
+  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline' | 'form' | 'poll' | 'kanban'; to?: Point }
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
   | { type: 'relink'; id: string; from: Point; to: Point; target: string | null; away?: boolean; body?: boolean; going?: boolean;
@@ -529,6 +529,7 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
       if (g.tool === 'timeline') { ed.addTimeline(g.at); return; }
       if (g.tool === 'form') { ed.addForm(g.at); return; }
       if (g.tool === 'poll') { ed.addPoll(g.at); return; }
+      if (g.tool === 'kanban') { ed.addKanban(g.at); return; }
       const d = DEFAULTS[g.tool];
       const box = g.to && normRect(g.at, g.to);
       const it = g.tool === 'text'

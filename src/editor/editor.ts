@@ -1,4 +1,4 @@
-import type { Board } from '../model/board';
+import { LOCAL, type Board } from '../model/board';
 import type { Item, ItemType, Link, LinkStyle, Side } from '../model/types';
 import { DEFAULTS, EDITABLE, fillable, HAS_FONT, strokable, uid } from '../model/types';
 import type { PathNode, Point, Rect } from '../canvas/geometry';
@@ -45,6 +45,7 @@ import { zoomsWithKey } from '../labs/wheelZoom';
 import { codeFit, scrollCode } from '../labs/codeBlock';
 import { FORM_H, FORM_RAD, FORM_W } from '../labs/formObject';
 import { POLL_RAD, POLL_W, pollLayout } from '../labs/poll';
+import { FIRST_STAGES, kanbanSize, tidyKanbans } from '../labs/kanban';
 import { closeTask, fitTask, freshTask, renewTasks, taskTextPatch } from '../model/task';
 import { setTaskRedraw } from '../canvas/task';
 import { outSide, setTabsRedraw, towardOffset, type TabAims } from '../labs/sideTabs';
@@ -370,6 +371,14 @@ export class Editor {
     themeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     offs.push(() => themeObs.disconnect());
     offs.push(this.board.subscribe(() => this.onBoardChange()));
+    // «Канбан»: after a change made here (a task opened, typed in, something deleted), its cards in
+    // place again; not while something's dragged (that's done once it's let go), nor for others' changes
+    // (they lay theirs out, the same).
+    const doc = this.board.doc, tidy = (tr: { origin: unknown }) => {
+      if (tr.origin === LOCAL && !this.gesture && labOn('kanban')) queueMicrotask(() => tidyKanbans(this.board));
+    };
+    doc.on('afterTransaction', tidy);
+    offs.push(() => doc.off('afterTransaction', tidy));
     offs.push(onEmojiLoad(() => this.requestRender()));
     offs.push(subscribeLabs(() => this.requestRender()));
     offs.push(onPictureLoad(() => this.requestRender()));
@@ -591,6 +600,15 @@ export class Editor {
     const draft = { poll: true, pd: true, pq: '', po: ['', ''], pa: myId(), text: '', rad: POLL_RAD };
     const h = Math.round(pollLayout({ ...draft, x: 0, y: 0, w: POLL_W, h: 0 } as Item).h);
     const it = this.newItem('rect', Math.round(c.x - POLL_W / 2), Math.round(c.y - h / 2), { ...draft, w: POLL_W, h });
+    this.addItem(it);
+    this.setTool('select');
+    this.setSelection([it.id]);
+  }
+
+  /** «Канбан» (src/labs/kanban.ts), centred on `c`, with its first stages, picked. */
+  addKanban(c: Point): void {
+    const size = kanbanSize(FIRST_STAGES.length);
+    const it = this.newItem('frame', Math.round(c.x - size.w / 2), Math.round(c.y - size.h / 2), { ...size, kb: FIRST_STAGES.map((s) => ({ ...s })), text: 'Канбан', members: [] });
     this.addItem(it);
     this.setTool('select');
     this.setSelection([it.id]);
@@ -1122,6 +1140,7 @@ export class Editor {
     if (tool === 'timeline') { this.addTimeline(this.toWorld(at.x, at.y)); return; }
     if (tool === 'form') { this.addForm(this.toWorld(at.x, at.y)); return; }
     if (tool === 'poll') { this.addPoll(this.toWorld(at.x, at.y)); return; }
+    if (tool === 'kanban') { this.addKanban(this.toWorld(at.x, at.y)); return; }
     const type = (isPoly(tool) ? 'polygon' : tool) as ItemType;
     if (!DEFAULTS[type]) return;
     const extra: Partial<Item> = isPoly(tool) ? { shape: tool, ...(tool === 'triangle' && { va: 'bottom' as const }) } : tool === 'table' ? freshTable() : tool === 'mind' ? { text: MIND_TOPIC } : {};
@@ -1909,6 +1928,8 @@ export class Editor {
       this.setMoving(false);
       endGesture(this, g, e);
       this.setPicking(false);
+      // («Канбан»: what was let go in one, or out of one, in its place.)
+      if (labOn('kanban')) tidyKanbans(this.board);
     }
     // Let go where it was pressed, off the component being changed: done with it (a drag isn't, to bring something into it).
     if (off) { const sp = this.local(e); if (Math.hypot(sp.x - off.x, sp.y - off.y) < 4) this.finishComponentHere(); }

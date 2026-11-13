@@ -722,6 +722,32 @@ export const checks = {
     expect(await p.ev(`document.querySelector('.form-field').value`), 'the value in its field').toBe('Москва');
   },
 
+  async '"Канбан в объектах": a task dragged in stands in the column it\'s let go over, under the one there; dragged out, it\'s free and the gap closes'(p) {
+    await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 0.6 }; e.camChanged(); e.addKanban({ x: 700, y: 400 });
+      b.add(e.newItem('task', 100, 1100, { id: 't1', text: 'Первая' })); b.add(e.newItem('task', 500, 1100, { id: 't2', text: 'Вторая' })); e.setSelection([]); })()`);
+    await sleep(200);
+    const k = await p.ev(`(() => { const f = planx.board.list().find((i) => i.kb); return { id: f.id, x: f.x, y: f.y }; })()`);
+    const at = (id) => p.ev(`(() => { const t = planx.board.get('${id}'); return { x: t.x, y: t.y, w: t.w, h: t.h }; })()`);
+    const drag = async (id, wx, wy) => {
+      const t = await at(id), z = 0.6, from = [(t.x + 40) * z, (t.y + 20) * z];
+      await p.mouse('mousePressed', ...from);
+      for (let s = 1; s <= 6; s++) await p.mouse('mouseMoved', from[0] + ((wx + 40) * z - from[0]) * s / 6, from[1] + ((wy + 20) * z - from[1]) * s / 6);
+      await p.mouse('mouseReleased', (wx + 40) * z, (wy + 20) * z);
+      await sleep(150);
+    };
+    // Into the first column (16 in, under the 56 header), then the second under it.
+    await drag('t1', k.x + 40, k.y + 120);
+    let t1 = await at('t1');
+    expect(t1.x, 'in the first column').toBe(k.x + 16 + 12);
+    expect(t1.y, 'at its top').toBe(k.y + 56 + 12);
+    await drag('t2', k.x + 40, k.y + 200);
+    expect((await at('t2')).y, 'under the first').toBe(k.y + 56 + 12 + t1.h + 12);
+    // Out again: free where it's let go, the other up in its place.
+    await drag('t1', k.x + 100, k.y + 900);
+    expect((await at('t1')).y, 'free where let go').toBe(k.y + 900);
+    expect((await at('t2')).y, 'the gap closed').toBe(k.y + 56 + 12);
+  },
+
   async '"Голосование в объектах": set up in its fields, started, an answer clicked voted for (the shares shown), clicked again unvoted'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.addPoll({ x: 600, y: 360 }); })()`);
     await sleep(300);

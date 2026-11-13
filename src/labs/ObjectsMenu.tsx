@@ -6,7 +6,7 @@ import { labOn } from './labs';
 import { layerRoot } from './sideViewport';
 
 /** The objects there are ("Объекты"): their tool, icon and name. */
-export const OBJECTS: Array<[Tool, string, string]> = [['timeline', 'timeline', 'Таймлайн'], ['form', 'form', 'Форма'], ['poll', 'poll', 'Голосование']];
+export const OBJECTS: Array<[Tool, string, string]> = [['timeline', 'timeline', 'Таймлайн'], ['form', 'form', 'Форма'], ['poll', 'poll', 'Голосование'], ['kanban', 'kanban', 'Канбан']];
 
 /**
  * "Объекты": the menu its rail button opens, beside it, as the board menu looks. Picking one takes
@@ -90,7 +90,7 @@ export function ObjectsMenu({ editor, tool, onPick, onClose }: { editor: Editor;
   );
   return (
     <div ref={ref} className="board-menu objects-menu" role="menu" aria-label="Объекты">
-      {OBJECTS.filter(([t]) => (t !== 'form' || labOn('formObject')) && (t !== 'poll' || labOn('pollObject'))).map(([t, icon, label]) => (
+      {OBJECTS.filter(([t]) => (t !== 'form' || labOn('formObject')) && (t !== 'poll' || labOn('pollObject')) && (t !== 'kanban' || labOn('kanban'))).map(([t, icon, label]) => (
         <div key={t} className="menu-item" onPointerEnter={() => setOpen(null)}>
           <button className={`menu-row ${tool === t ? 'on' : ''}`} role="menuitem" title="Клик — выбрать, или перетащите на доску"
             onPointerDown={(e) => press((at) => (at ? editor.dropItem(t, at) : onPick(t)), e)}>
