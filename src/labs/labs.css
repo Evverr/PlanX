@@ -260,18 +260,18 @@
 .layer-delete .pi { width: 18px; height: 18px; }
 .layer-row:hover .layer-delete { visibility: visible; }
 
-/* "Стекло" (src/labs/glass.ts): the panels and popups 84% their colour, what's behind them blurred 12px.
+/* "Стекло" (src/labs/glass.ts): the panels and popups 89% their colour, what's behind them blurred 12px.
    Those that others open from have it on a layer under what they hold, not on themselves: one blurring
    on itself, what opens from it would blur it alone, the board behind seen sharp. */
 :root[data-glass] :is(.bar, .tools, .tfmt, .tools-more, .draw-panel, .pop, .board-menu, .more-pop, .op-pop) {
   background-color: transparent !important; isolation: isolate; }
 :root[data-glass] :is(.bar, .tools, .tfmt, .tools-more, .draw-panel, .pop, .board-menu, .more-pop, .op-pop)::before {
   content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none;
-  background-color: color-mix(in srgb, var(--surface) 84%, transparent);
+  background-color: color-mix(in srgb, var(--surface) 89%, transparent);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 :root[data-glass] :is(.minimap, .color-picker, .tf-menu, .comment-menu, .comment-card, .tile-menu, .modal, .peek, .labs-pill, .ink-style, .recorder,
   .icon-pick, .peers-more) {
-  background-color: color-mix(in srgb, var(--surface) 84%, transparent) !important;
+  background-color: color-mix(in srgb, var(--surface) 89%, transparent) !important;
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 
 /* «Кнопка T» (textButton.ts): a panel turning into another shows only what's on it, over a body like
@@ -286,7 +286,7 @@
 /* (Evenly, so it's at 30% as the body starts to take the other's size: SHIFT in textButton.ts.) */
 [data-morph-out] { opacity: 0 !important; transition: opacity .07s linear !important; }
 .panel-shell { position: fixed; z-index: 4; pointer-events: none; transition: left .2s ease-in-out, top .2s ease-in-out, width .2s ease-in-out, height .2s ease-in-out, box-shadow .2s ease; }
-:root[data-glass] .panel-shell { background-color: color-mix(in srgb, var(--panel-bg) 84%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+:root[data-glass] .panel-shell { background-color: color-mix(in srgb, var(--panel-bg) 89%, transparent); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 
 /* The text panel's colour and highlight menus: a row of colours and opacity as in «Параметры». */
 .tf-menu.params-menu { display: block; width: round(calc(376px * var(--k)), 2px); padding: var(--s12) var(--s16); box-sizing: border-box; }
