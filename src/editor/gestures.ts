@@ -1,5 +1,5 @@
 import type { Item, Link, Side } from '../model/types';
-import { DEFAULTS, ROTATABLE, uid } from '../model/types';
+import { DEFAULTS, kanbanOf, ROTATABLE, uid } from '../model/types';
 import type { PathNode, Point, Rect } from '../canvas/geometry';
 import { anchorAt, angleOf, boxOf, center, hitItem, linkBox, linkShape, movedStretch, pathCrosses, nearestSide, nearInk, normRect, pointInRect, rectContains, rectsIntersect, resizedFrom, toLocal, turn } from '../canvas/geometry';
 import { itemTextHeight, mindSize } from '../canvas/text';
@@ -21,7 +21,7 @@ import { MIND_TOPIC, type PenTool } from './tools';
 import { clickTypes, onMindText, updateCursor } from './hover';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
-import { columnAt, moveStage, tidyKanbans } from '../labs/kanban';
+import { columnAt, dropTarget, moveStage, tidyKanbans } from '../labs/kanban';
 import { levelIn } from '../labs/groups';
 import { eraseArea, eraserStyle } from '../labs/eraseArea';
 import { nibDrag, nibRelease } from '../labs/nib';
@@ -145,7 +145,10 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       // held, none: put where it's let go.
       let sx = 0, sy = 0;
       g.guides = undefined;
-      const free = e.metaKey || e.ctrlKey, near = !e.shiftKey && labOn('nearGuides') && board.get(g.id)?.type !== 'mind';
+      // (Nor a card in a kanban or over one, «Канбан»: its column places it.)
+      const card = board.get(g.id), o0 = g.orig.get(g.id), all = board.list();
+      const carded = labOn('kanban') && !!card && (!!kanbanOf(all, card.id) || (!!o0 && !!dropTarget(all, { ...card, x: o0.x + dx, y: o0.y + dy })));
+      const free = e.metaKey || e.ctrlKey || carded, near = !e.shiftKey && labOn('nearGuides') && card?.type !== 'mind';
       if (!free && (e.shiftKey || near)) {
         const moving = [...g.orig].map(([id, o]) => { const it = board.get(id); return it && { ...it, x: o.x + dx, y: o.y + dy }; }).filter((i): i is Item => !!i);
         const bs = moving.map(boxOf), view = ed.viewRect();

@@ -1588,7 +1588,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   }
   for (const id of s.selection) {
     const got = s.get(id), it = got && taskShown(got);
-    if (!it || s.nodesOf === id) continue;
+    // («Канбан»: a card taken up, tilted, shows no frame: the column lit and the blue line show where it goes.)
+    if (!it || s.nodesOf === id || (s.live && s.lifted?.includes(id))) continue;
     // A mind map node shows it's picked by its "+" buttons alone, which a few picked together don't get.
     // An instance keeps its red title alone, without a selection frame.
     if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) {
