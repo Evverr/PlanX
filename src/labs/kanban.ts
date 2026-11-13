@@ -1,8 +1,8 @@
 import type { Board } from '../model/board';
-import { FILLS, type Item } from '../model/types';
+import { FILLS, KANBAN_LANE, type Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { font } from '../canvas/text';
-import { TASK_W } from '../canvas/task';
+import { taskSize } from '../canvas/task';
 import { membersOf } from '../editor/frames';
 
 /**
@@ -19,9 +19,9 @@ export interface Stage { n: string; c: string }
 /** Its stages when it's put on the board. */
 export const FIRST_STAGES: Stage[] = [{ n: 'Не начато', c: 'gray' }, { n: 'В работе', c: 'blue' }, { n: 'Готово', c: 'green' }];
 
-/** In board units: room round it, its header, a column (a task wide and a margin each side), between
- *  columns, between cards, the room for its «+» on the right, how tall a column is at least. */
-const PAD = 16, HEAD = 56, IN = 12, COL_W = TASK_W + IN * 2, COL_GAP = 16, CARD_GAP = 12, ADD_W = 40, MIN_H = 240;
+/** In board units: room round it, its header, a column (a card's width, KANBAN_LANE, and a margin each
+ *  side), between columns, between cards, the room for its «+» on the right, how tall a column is at least. */
+const PAD = 16, HEAD = 56, IN = 12, COL_W = KANBAN_LANE + IN * 2, COL_GAP = 16, CARD_GAP = 12, ADD_W = 40, MIN_H = 240;
 export const KANBAN_RAD = 12;
 
 /** What goes into its cells: tasks, and rectangles that are only that (not a block of code, a form…). */
@@ -54,9 +54,10 @@ export function kanbanLayout(board: Board, f: Item, items: Item[]): Map<string, 
     list.sort((a, b) => a.y - b.y || (a.id < b.id ? -1 : 1));
     let y = cols[i].y + IN;
     for (const c of list) {
-      const w = c.type === 'rect' ? COL_W - IN * 2 : c.w, at = { x: cols[i].x + IN, y, w };
-      if (at.x !== c.x || at.y !== c.y || at.w !== c.w) out.set(c.id, at);
-      y += c.h + CARD_GAP;
+      // As wide as the column, a task as tall as it then comes out (its text wrapping anew).
+      const h = c.type === 'task' && c.w !== KANBAN_LANE ? taskSize(c, KANBAN_LANE).h : c.h, at = { x: cols[i].x + IN, y, w: KANBAN_LANE, h };
+      if (at.x !== c.x || at.y !== c.y || at.w !== c.w || at.h !== c.h) out.set(c.id, at);
+      y += h + CARD_GAP;
     }
     tall = Math.max(tall, y - CARD_GAP - cols[i].y - IN);
   });

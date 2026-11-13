@@ -1,5 +1,5 @@
 import type { Board } from './board';
-import type { Item, TaskStatus } from './types';
+import { inKanban, KANBAN_LANE, type Item, type TaskStatus } from './types';
 import { remapLinks } from './textLinks';
 import { taskSize, TASK_OPEN_W, TASK_W } from '../canvas/task';
 
@@ -24,10 +24,12 @@ export function openZ(board: Board): number {
 /** Opened to its description or all of it, or closed: wider opened, back to its width closed. Opened,
  *  up over the board (see openZ); closed (kept open or not before), back where it lay. */
 export function setView(board: Board, it: Item, tv: Item['tv']): void {
-  const w = tv ? Math.max(it.w, it.tv ? it.w : TASK_OPEN_W) : it.cw ?? TASK_W;
+  // (In a kanban's column, as wide as it open or closed: it grows down alone, see labs/kanban.ts.)
+  const lane = inKanban(board.list(), it.id);
+  const w = lane ? KANBAN_LANE : tv ? Math.max(it.w, it.tv ? it.w : TASK_OPEN_W) : it.cw ?? TASK_W;
   const next = { ...it, tv, w };
   const z = tv && !it.tv ? { oz: it.z, z: openZ(board) } : !tv && it.tv ? { oz: undefined, z: it.oz ?? it.z } : {};
-  board.update(it.id, { tv, w, h: taskSize(next).h, cw: tv && !it.tv ? it.w : tv ? it.cw : undefined, ...z });
+  board.update(it.id, { tv, w, h: taskSize(next).h, cw: lane ? undefined : tv && !it.tv ? it.w : tv ? it.cw : undefined, ...z });
 }
 
 /** Kept open («Не сворачивать»): not closed by Esc, Cmd+Enter or a click elsewhere (up over the board

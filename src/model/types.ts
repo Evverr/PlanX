@@ -203,12 +203,12 @@ export interface Item {
   form?: boolean;
   fv?: string[];
   fd?: boolean;
-  /** A rectangle that's a poll («Голосование», src/labs/poll.ts): its question and answers, being set up
-   *  (not started yet), and who put it there (their browser's id). Each one's votes are a field of their
-   *  own, `pv:<their browser's id>`. */
   /** A frame that's a kanban («Канбан», src/labs/kanban.ts): its stages, left to right, each its name and
    *  colour (a key of FILLS). */
   kb?: Array<{ n: string; c: string }>;
+  /** A rectangle that's a poll («Голосование», src/labs/poll.ts): its question and answers, being set up
+   *  (not started yet), and who put it there (their browser's id). Each one's votes are a field of their
+   *  own, `pv:<their browser's id>`. */
   poll?: boolean;
   pq?: string;
   po?: string[];
@@ -361,6 +361,11 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   polygon: { w: 160, h: 150, color: 'purple', fs: 16, text: '' },
   mind: { w: 200, h: 56, fs: 18, text: '' },
 };
+
+/** How wide a card is in a kanban's column («Канбан», src/labs/kanban.ts), a task open or closed. */
+export const KANBAN_LANE = 356;
+/** Whether an item's a card in a kanban's column (held by a frame with stages). */
+export const inKanban = (items: Item[], id: string): boolean => items.some((f) => f.kb && f.members?.includes(id));
 
 export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse', 'polygon', 'task', 'mind'];
 /** What has an outline whose colour can be set apart from the fill. */
