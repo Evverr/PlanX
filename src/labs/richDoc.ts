@@ -38,6 +38,47 @@ export function toHtml(it: Item): string {
   }).join('');
 }
 
+/** Pasted HTML (copied here, or from anywhere) as the field's own: paragraphs (a heading's level from
+ *  <h1>…<h3> or a paragraph of ours), and in them only what a document has, bold, italic, underlined,
+ *  struck through and coloured, by the tags or the inline styles it comes with; the rest (fonts, sizes,
+ *  backgrounds, tables, pictures) left out, their text kept. */
+export function cleanPaste(html: string, fs: number): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html'), out: string[] = [];
+  let line = '', level = 0;
+  const flush = () => { out.push(`<div data-h="${level}" style="${headingStyle(level, fs, !out.length)}">${line || '<br>'}</div>`); line = ''; level = 0; };
+  const BLOCK = /^(DIV|P|LI|H[1-6]|TR|BLOCKQUOTE|PRE|UL|OL|TABLE|SECTION|ARTICLE)$/;
+  const walk = (node: Node, st: { b?: boolean; i?: boolean; u?: boolean; x?: boolean; c?: string }) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const t = esc((node.textContent ?? '').replace(/\s+/g, ' '));
+      if (!t.trim() && !line) return;
+      const css = [st.b && 'font-weight:700', st.i && 'font-style:italic', (st.u || st.x) && `text-decoration:${[st.u && 'underline', st.x && 'line-through'].filter(Boolean).join(' ')}`,
+        st.c && `color:${st.c}`].filter(Boolean).join(';');
+      line += css ? `<span style="${css}">${t}</span>` : t;
+      return;
+    }
+    if (!(node instanceof HTMLElement)) return;
+    const tag = node.tagName, s = node.style, next = { ...st };
+    if (tag === 'BR') { flush(); return; }
+    if (/^(SCRIPT|STYLE|IMG|SVG|VIDEO|IFRAME|HEAD|META)$/.test(tag)) return;
+    if (tag === 'B' || tag === 'STRONG' || (parseInt(s.fontWeight) || (s.fontWeight === 'bold' ? 700 : 0)) >= 600) next.b = true;
+    if (s.fontWeight && (parseInt(s.fontWeight) || 0) > 0 && parseInt(s.fontWeight) < 600) next.b = false;
+    if (tag === 'I' || tag === 'EM' || s.fontStyle === 'italic') next.i = true;
+    if (tag === 'U' || s.textDecoration.includes('underline') || s.textDecorationLine.includes('underline')) next.u = true;
+    if (tag === 'S' || tag === 'STRIKE' || tag === 'DEL' || s.textDecoration.includes('line-through') || s.textDecorationLine.includes('line-through')) next.x = true;
+    if (s.color) next.c = s.color;
+    const block = BLOCK.test(tag), h = /^H([1-3])$/.exec(tag)?.[1] ?? (node.dataset.h && node.dataset.h !== '0' ? node.dataset.h : undefined);
+    if (block && line) flush();
+    if (h) level = Number(h);
+    // (A heading's text bold as it is.)
+    if (h) next.b = false;
+    node.childNodes.forEach((c) => walk(c, next));
+    if (block && (line || h)) flush();
+  };
+  walk(doc.body, {});
+  if (line) flush();
+  return out.join('');
+}
+
 /** '#rrggbb' of a CSS colour ('rgb(…)'), a key of TEXT_COLORS when it's one of them. */
 function colorKey(css: string): string {
   const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(css);

@@ -3,7 +3,7 @@ import type { Editor } from '../editor/editor';
 import { PAGE, type Item } from '../model/types';
 import { fontOf, FONTS, LINE_HEIGHT } from '../canvas/text';
 import { PAGE_TEXT } from './docPage';
-import { cssColor, fromDom, headingStyle, toHtml } from './richDoc';
+import { cleanPaste, cssColor, fromDom, headingStyle, toHtml } from './richDoc';
 
 /**
  * «Документ» typed in as it looks: a field the browser edits laid over the sheet's text (scaled with the
@@ -33,6 +33,15 @@ export function richStyle(key: 'b' | 'i' | 'u' | 'x' | 'c', value?: string): boo
   if (key === 'c') document.execCommand('foreColor', false, value ? cssColor(value) : getComputedStyle(active!.el).color);
   else document.execCommand({ b: 'bold', i: 'italic', u: 'underline', x: 'strikeThrough' }[key]);
   return true;
+}
+
+/** The paragraph the caret's in (the field itself pointed at, its child there). */
+function paragraphAt(root: HTMLElement): HTMLElement | null {
+  const sel = getSelection();
+  let n: Node | null = sel?.anchorNode ?? null;
+  if (n === root) return (root.childNodes[Math.max(0, (sel?.anchorOffset ?? 1) - 1)] as HTMLElement) ?? null;
+  while (n && n.parentNode !== root) n = n.parentNode;
+  return n as HTMLElement | null;
 }
 
 /** The paragraphs what's picked is in (the caret's). */
@@ -66,7 +75,7 @@ export function richState(): { b: boolean; i: boolean; u: boolean; x: boolean; h
 }
 
 export function RichEditor({ editor, item }: { editor: Editor; item: Item }) {
-  const ref = useRef<HTMLDivElement>(null), done = useRef(false), id = item.id, fs = item.fs ?? 16;
+  const ref = useRef<HTMLDivElement>(null), done = useRef(false), plain = useRef(false), id = item.id, fs = item.fs ?? 16;
 
   /** Done with it: its text and styles kept (as typed text is, see commitText). */
   const commit = () => {
@@ -114,9 +123,32 @@ export function RichEditor({ editor, item }: { editor: Editor; item: Item }) {
       }}
       onBlur={commit}
       onPaste={(e) => {
-        // Pasted as plain text: what it's styled with elsewhere left out.
+        // Pasted with what a document has of its styling (cleanPaste); Cmd+Shift+V (or nothing but text
+        // copied) as plain text.
         e.preventDefault();
-        document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+        const html = plain.current ? '' : e.clipboardData.getData('text/html');
+        plain.current = false;
+        const clean = html && cleanPaste(html, fs), tpl = document.createElement('div');
+        tpl.innerHTML = clean || '';
+        const blocks = [...tpl.children] as HTMLElement[];
+        if (blocks.length === 1 && blocks[0].dataset.h === '0') document.execCommand('insertHTML', false, blocks[0].innerHTML);
+        else if (blocks.length && ref.current) {
+          // Paragraphs, or a heading: put in as paragraphs of their own where the caret is (the paragraph
+          // it's in split there), the caret after them.
+          const root = ref.current;
+          if (!getSelection()?.isCollapsed) document.execCommand('delete');
+          document.execCommand('insertParagraph');
+          const after = paragraphAt(root), before = after?.previousElementSibling;
+          blocks.forEach((b) => root.insertBefore(b, after ?? null));
+          if (before && !before.textContent) before.remove();
+          if (after && !after.textContent) after.remove();
+          const last = blocks[blocks.length - 1], r = document.createRange();
+          r.selectNodeContents(last);
+          r.collapse(false);
+          getSelection()?.removeAllRanges();
+          getSelection()?.addRange(r);
+        }
+        else document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
       }}
       onInput={() => {
         // A new paragraph after a heading (Enter at its end): plain text.
@@ -130,6 +162,8 @@ export function RichEditor({ editor, item }: { editor: Editor; item: Item }) {
         if (e.key === 'Escape') { e.preventDefault(); commit(); }
         else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); commit(); editor.setSelection([]); }
         else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyX') { e.preventDefault(); richStyle('x'); }
+        // (Cmd+Shift+V: the paste that comes next as plain text.)
+        else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyV') plain.current = true;
       }}
     />
   );

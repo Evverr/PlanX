@@ -845,6 +845,23 @@ export const checks = {
     expect(it, 'kept').toBe(JSON.stringify({ text: 'Договор\nПервое важное слово и обычный текст', rs: [{ s: 7, e: 8, h: 2 }, { s: 8, e: 14, c: 'red' }, { s: 15, e: 21, b: true }] }));
   },
 
+  async '"Документ": pasted with its styling (bold, italic, headings; fonts and sizes left out), lines as paragraphs of their own, a piece of a line into the line'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.dropItem('page', { x: 600, y: 600 }); })()`);
+    await sleep(200);
+    const id = await p.ev(`planx.board.list().find((i) => i.type === 'page').id`);
+    await p.ev(`(() => { planx.board.update('${id}', { text: 'Было' }); planx.editor.startEditing('${id}', null, 'end'); })()`);
+    await sleep(400);
+    const paste = (html, text) => p.ev(`(() => { const dt = new DataTransfer(); dt.setData('text/html', ${JSON.stringify(html)}); dt.setData('text/plain', ${JSON.stringify(text)}); document.querySelector('.rich-edit').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); })()`);
+    await paste('<meta charset="utf-8"><div data-h="0"><span style="font-weight:700; font-family: Onest; font-size: 16px;">Жирная строка</span></div><div data-h="0" style="font-weight: 400;">Обычная строка</div>', 'Жирная строка\nОбычная строка');
+    await paste('<h2 style="font-family: Times">Заголовок с сайта</h2><p style="font-size: 30px; background: yellow">Абзац <em>курсивом</em></p>', '');
+    await paste('<span style="font-weight:700">вставка в строку</span>', 'вставка в строку');
+    await sleep(100);
+    await p.ev(`document.querySelector('.rich-edit').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+    await sleep(200);
+    expect(await p.ev(`planx.board.get('${id}').text`), 'its text').toBe('Было\nЖирная строка\nОбычная строка\nЗаголовок с сайта\nАбзац курсивомвставка в строку');
+    expect(await p.ev(`JSON.stringify(planx.board.get('${id}').rs)`), 'its styles').toBe(JSON.stringify([{ s: 5, e: 18, b: true }, { s: 51, e: 52, h: 2 }, { s: 58, e: 66, i: true }, { s: 66, e: 82, b: true }]));
+  },
+
   async '"Голосование в объектах": set up in its fields, started, an answer clicked voted for (the shares shown), clicked again unvoted'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.addPoll({ x: 600, y: 360 }); })()`);
     await sleep(300);
