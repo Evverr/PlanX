@@ -4,6 +4,7 @@ import type { Point } from '../canvas/geometry';
 import { font } from '../canvas/text';
 import { taskSize } from '../canvas/task';
 import { membersOf } from '../editor/frames';
+import { labOn } from './labs';
 
 /**
  * «Канбан» (src/labs, one of the "Объекты"): a frame with stages across its top (`kb`), a column under
@@ -42,16 +43,21 @@ function columnOf(f: Item, x: number): number {
 
 /** Where its cards go: each in the column its middle is over, in the order they stand there, one under
  *  another; rectangles the column's width. The frame's own height last. */
+/** Its cards, column by column, in the order they stand. */
+export function cardsByColumn(board: Board, f: Item, items: Item[] = board.list()): Item[][] {
+  const by = (f.kb ?? []).map(() => [] as Item[]);
+  if (!by.length) return by;
+  for (const id of membersOf(board, f, items)) { const c = board.get(id); if (c && snaps(c)) by[columnOf(f, c.x + c.w / 2)].push(c); }
+  // (By their tops: one grown taller stays where it was among them.)
+  by.forEach((list) => list.sort((a, b) => a.y - b.y || (a.id < b.id ? -1 : 1)));
+  return by;
+}
+
 export function kanbanLayout(board: Board, f: Item, items: Item[]): Map<string, Partial<Item>> {
   const out = new Map<string, Partial<Item>>(), cols = columns(f);
   if (!cols.length) return out;
-  const cards = membersOf(board, f, items).map((id) => board.get(id)).filter((i): i is Item => !!i && snaps(i));
-  const by = cols.map(() => [] as Item[]);
-  for (const c of cards) by[columnOf(f, c.x + c.w / 2)].push(c);
   let tall = 0;
-  by.forEach((list, i) => {
-    // (By their tops: one grown taller stays where it was among them.)
-    list.sort((a, b) => a.y - b.y || (a.id < b.id ? -1 : 1));
+  cardsByColumn(board, f, items).forEach((list, i) => {
     let y = cols[i].y + IN;
     for (const c of list) {
       // As wide as the column, a task as tall as it then comes out (its text wrapping anew).
@@ -77,14 +83,78 @@ export function tidyKanbans(board: Board, skip: Set<string> = new Set()): void {
   if (all.size) board.forGood(() => all.forEach((p, id) => board.updateForGood(id, p)));
 }
 
-/** Its «+» on the right of its header (more stages: next step). */
+/** Its «+» on the right of its header, for one more stage. */
 export const addAt = (f: Item): Point => ({ x: f.x + f.w - PAD - ADD_W / 2 + 8, y: f.y + HEAD / 2 });
+
+/** The kanban whose header a point's on, and what of it: a stage (its index) or its «+». */
+export function headerAt(items: Item[], w: Point): { f: Item; part: { stage: number } | 'add' } | null {
+  for (let k = items.length - 1; k >= 0; k--) {
+    const f = items[k];
+    if (!f.kb || w.x < f.x || w.x > f.x + f.w || w.y < f.y || w.y > f.y + HEAD) continue;
+    const a = addAt(f);
+    if (Math.hypot(w.x - a.x, w.y - a.y) <= 16) return { f, part: 'add' };
+    const i = columns(f).findIndex((c) => w.x >= c.x && w.x <= c.x + c.w);
+    return i >= 0 ? { f, part: { stage: i } } : null;
+  }
+  return null;
+}
+
+/** A kanban's header part under the pointer, as the renderer lights it (`kb:<id>:stage:<i>`, `…:add`). */
+export function kanbanHot(items: Item[], w: Point): string | null {
+  const h = labOn('kanban') ? headerAt(items, w) : null;
+  return h ? `kb:${h.f.id}:${h.part === 'add' ? 'add' : `stage:${h.part.stage}`}` : null;
+}
+
+/** The colours a stage can be, in the order new ones take them. */
+export const STAGE_COLORS = ['gray', 'blue', 'green', 'yellow', 'orange', 'pink', 'purple', 'graphite'];
+
+/** One more stage on its right, in the next colour none has yet. */
+export function addStage(board: Board, f: Item): void {
+  const kb = f.kb ?? [], c = STAGE_COLORS.find((k) => !kb.some((s) => s.c === k)) ?? STAGE_COLORS[kb.length % STAGE_COLORS.length];
+  board.update(f.id, { kb: [...kb, { n: 'Новая стадия', c }] });
+  tidyKanbans(board);
+}
+
+/** A stage's name or colour changed. */
+export function setStage(board: Board, f: Item, i: number, patch: Partial<Stage>): void {
+  board.update(f.id, { kb: (f.kb ?? []).map((s, k) => (k === i ? { ...s, ...patch } : s)) });
+}
+
+/** A stage swapped with its neighbour (`dir` −1 left, 1 right), its cards going with it. */
+export function moveStage(board: Board, f: Item, i: number, dir: -1 | 1): void {
+  const kb = [...(f.kb ?? [])], j = i + dir;
+  if (j < 0 || j >= kb.length) return;
+  const by = cardsByColumn(board, f), step = (COL_W + COL_GAP) * dir;
+  [kb[i], kb[j]] = [kb[j], kb[i]];
+  board.transact(() => {
+    board.update(f.id, { kb });
+    by[i].forEach((c) => board.update(c.id, { x: c.x + step }));
+    by[j].forEach((c) => board.update(c.id, { x: c.x - step }));
+  });
+  tidyKanbans(board);
+}
+
+/** A stage taken away with its cards, those on its right moving over; the last one stays. */
+export function deleteStage(board: Board, f: Item, i: number): void {
+  const kb = f.kb ?? [];
+  if (kb.length < 2) return;
+  const by = cardsByColumn(board, f);
+  board.transact(() => {
+    board.remove(by[i].map((c) => c.id));
+    by.slice(i + 1).flat().forEach((c) => board.update(c.id, { x: c.x - COL_W - COL_GAP }));
+    board.update(f.id, { kb: kb.filter((_, k) => k !== i), members: (f.members ?? []).filter((id) => !by[i].some((c) => c.id === id)) });
+  });
+  tidyKanbans(board);
+}
+
+/** Where a stage's pill stands, on the board (for its menu to open under). */
+export const stageAt = (f: Item, i: number) => ({ x: columns(f)[i]?.x ?? f.x, y: f.y + HEAD / 2 + 14 });
 
 interface Look { surface: string; bg: string; line: string; ink: string; muted: string }
 
 /** Draws it: the card, each stage's pill (its colour, its name) and how many are in it, a column under
  *  each (the cells), and the «+». */
-export function drawKanban(ctx: CanvasRenderingContext2D, f: Item, get: (id: string) => Item | undefined, look: Look): void {
+export function drawKanban(ctx: CanvasRenderingContext2D, f: Item, get: (id: string) => Item | undefined, look: Look, hot: string | null = null): void {
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(f.x, f.y, f.w, f.h, KANBAN_RAD);
@@ -111,6 +181,8 @@ export function drawKanban(ctx: CanvasRenderingContext2D, f: Item, get: (id: str
     ctx.roundRect(c.x, py - 14, tw + 20, 28, 8);
     ctx.fillStyle = FILLS[s.c] ?? FILLS.gray;
     ctx.fill();
+    // (Under the pointer, a shade darker: it opens its menu.)
+    if (hot === `stage:${i}`) { ctx.fillStyle = 'rgba(0, 0, 0, .06)'; ctx.fill(); }
     ctx.fillStyle = '#1C1F26';
     ctx.textAlign = 'left';
     ctx.fillText(s.n, c.x + 10, py);
@@ -119,7 +191,7 @@ export function drawKanban(ctx: CanvasRenderingContext2D, f: Item, get: (id: str
     ctx.fillText(String(counts[i]), c.x + tw + 34, py);
   });
   const a = addAt(f);
-  ctx.strokeStyle = look.muted;
+  ctx.strokeStyle = hot === 'add' ? look.ink : look.muted;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.moveTo(a.x - 7, a.y); ctx.lineTo(a.x + 7, a.y);

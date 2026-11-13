@@ -500,7 +500,7 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'frame': {
       if (it.tl) { drawTimeline(ctx, it, { card: theme.surface, ink: theme.ink }, cam.z); break; }
       // A kanban («Канбан», src/labs): its stages and columns.
-      if (it.kb) { drawKanban(ctx, it, s.get, theme); break; }
+      if (it.kb) { drawKanban(ctx, it, s.get, theme, s.hotPlus?.startsWith(`kb:${it.id}:`) ? s.hotPlus.slice(`kb:${it.id}:`.length) : null); break; }
       if (it.fold) { drawFolded(ctx, it, s, editing); break; }
       // An instance shows only its red title after a hollow diamond (to its component), flush with
       // its contents, and that only while it's picked (as a whole or something inside it).

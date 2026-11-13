@@ -7,6 +7,7 @@ import { taskPartAt } from '../canvas/task';
 import { copyCode, onCodeCopy } from '../labs/codeBlock';
 import { onFormButton } from '../labs/formObject';
 import { pollPartAt, pressPoll } from '../labs/poll';
+import { addStage, headerAt } from '../labs/kanban';
 import { toggleAudio } from '../canvas/audio';
 import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, ringAt, tickAt, pickedUnder } from './hover';
 import { grabbableLine } from './tables';
@@ -304,6 +305,13 @@ export function press(ed: Editor, e: PointerEvent): void {
   if (hit?.form && e.button === 0 && !e.shiftKey && onFormButton(hit, w)) {
     ed.board.update(hit.id, { fd: hit.fd ? undefined : true });
     ed.setSelection([hit.id]);
+    return;
+  }
+  // A kanban's «+» (one more stage) or a stage (its menu, KanbanStage.tsx) («Канбан», src/labs).
+  const head = e.button === 0 && !e.shiftKey && labOn('kanban') ? headerAt(ed.board.list(), w) : null;
+  if (head) {
+    if (head.part === 'add') addStage(ed.board, head.f);
+    else window.dispatchEvent(new CustomEvent('planx:stage', { detail: { id: head.f.id, i: head.part.stage } }));
     return;
   }
   // A poll's answer voted for (or not), its «+», its start, «Редактировать» («Голосование», src/labs);

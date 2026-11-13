@@ -274,6 +274,17 @@
   background-color: color-mix(in srgb, var(--surface) 89%, transparent) !important;
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 
+/* «Канбан» (kanban.ts): a stage's menu under its pill. */
+.stage-pop { position: fixed; width: var(--e286); box-sizing: border-box; display: flex; flex-direction: column; gap: var(--s12); }
+.stage-pop .stage-name { width: 100%; box-sizing: border-box; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: var(--s8);
+  padding: var(--s8) var(--s10); font: inherit; }
+.stage-pop .stage-colors { justify-content: space-between; }
+.stage-pop .stage-colors .sw { margin: 0; }
+.stage-pop .stage-row { display: flex; gap: var(--s8); }
+.stage-pop .stage-row .btn { padding: 0 var(--s10); }
+.stage-pop .stage-delete { margin-left: auto; color: var(--danger); }
+.stage-pop .btn:disabled { opacity: .4; cursor: default; }
+
 /* «Быстрое создание»: its window, the field alone for now. */
 .quick-pop .confirm-input { margin-bottom: 0; }
 

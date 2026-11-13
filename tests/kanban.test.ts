@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Board } from '../src/model/board';
 import type { Item } from '../src/model/types';
-import { FIRST_STAGES, columns, kanbanSize, tidyKanbans } from '../src/labs/kanban';
+import { FIRST_STAGES, addStage, columns, deleteStage, kanbanSize, moveStage, tidyKanbans } from '../src/labs/kanban';
 
 const make = () => {
   const b = new Board(), size = kanbanSize(3);
@@ -40,5 +40,28 @@ describe('«Канбан»', () => {
     b.update('k', { members: ['t1', 'r', 's'] });
     tidyKanbans(b, new Set(['r']));
     expect(b.get('t1')!.y).toBe(col[0].y + 12);
+  });
+
+  it('takes one more stage on its right, wider for it, in a colour none has', () => {
+    const { b } = make();
+    tidyKanbans(b);
+    addStage(b, b.get('k')!);
+    const k = b.get('k')!;
+    expect(k.kb!.map((s) => s.c)).toEqual(['gray', 'blue', 'green', 'yellow']);
+    expect(k.w).toBe(kanbanSize(4).w);
+  });
+
+  it('moves a stage with its cards, and deletes one with its cards, those on its right moving over', () => {
+    const { b, col } = make();
+    tidyKanbans(b);
+    moveStage(b, b.get('k')!, 0, 1);
+    expect(b.get('k')!.kb!.map((s) => s.n)).toEqual(['В работе', 'Не начато', 'Готово']);
+    expect(b.get('t1')!.x).toBe(col[1].x + 12);
+    expect(b.get('r')!.x).toBe(col[0].x + 12);
+    deleteStage(b, b.get('k')!, 0);
+    expect(b.get('r')).toBeUndefined();
+    expect(b.get('k')!.kb!.map((s) => s.n)).toEqual(['Не начато', 'Готово']);
+    expect(b.get('t1')!.x).toBe(col[0].x + 12);
+    expect(b.get('k')!.w).toBe(kanbanSize(2).w);
   });
 });

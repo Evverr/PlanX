@@ -748,6 +748,33 @@ export const checks = {
     expect((await at('t2')).y, 'the gap closed').toBe(k.y + 56 + 12);
   },
 
+  async '"Канбан в объектах": its «+» adds a stage; a stage\'s pill opens its menu: renamed, recoloured, moved'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 0.8 }; e.camChanged(); e.addKanban({ x: 700, y: 400 }); e.setSelection([]); })()`);
+    await sleep(200);
+    const k = () => p.ev(`(() => { const f = planx.board.list().find((i) => i.kb); return { x: f.x, y: f.y, w: f.w, kb: f.kb }; })()`);
+    let f = await k();
+    // «+»: at the header's right end.
+    const z = 0.8;
+    await p.click([(f.x + f.w - 16 - 20 + 8) * z, (f.y + 28) * z]);
+    await sleep(150);
+    f = await k();
+    expect(f.kb.length, 'a fourth stage').toBe(4);
+    // The first pill.
+    await p.click([(f.x + 16 + 20) * z, (f.y + 28) * z]);
+    await sleep(200);
+    expect(await p.ev(`!!document.querySelector('.stage-pop')`), 'its menu').toBe(true);
+    await p.ev(`(() => { const i = document.querySelector('.stage-name'); i.select(); document.execCommand('insertText', false, 'Бэклог'); })()`);
+    await p.click(await p.at('.stage-pop .sw[aria-label="Цвет purple"]'));
+    await p.click(await p.at('.stage-pop .btn:nth-child(2)'));
+    await sleep(150);
+    f = await k();
+    expect(f.kb[1].n, 'renamed and moved right').toBe('Бэклог');
+    expect(f.kb[1].c, 'recoloured').toBe('purple');
+    await p.escape();
+    await sleep(100);
+    expect(await p.ev(`!!document.querySelector('.stage-pop:not(.gone)')`), 'Esc closes it').toBe(false);
+  },
+
   async '"Голосование в объектах": set up in its fields, started, an answer clicked voted for (the shares shown), clicked again unvoted'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.addPoll({ x: 600, y: 360 }); })()`);
     await sleep(300);
