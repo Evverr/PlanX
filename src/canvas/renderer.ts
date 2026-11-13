@@ -142,6 +142,8 @@ export interface Scene {
    *  click shows its frame at once. What was picked already keeps its frame and handle as it's moved. */
   dragging?: boolean;
   dragMoved?: boolean;
+  /** «Канбан»: the column a card being dragged would go into (lit as it's over it). */
+  kanbanDrop?: { id: string; col: number } | null;
   /** Picked links' colours being set: drawn in them, not in the selection's blue. */
   linksAsThey?: boolean;
   /** Left see-through where nothing is drawn (a picture saved without the board's background). */
@@ -203,8 +205,22 @@ let handleTurn = { hot: false, from: 0, at: 0 };
 export const dotsMoving = (): boolean => {
   const now = performance.now();
   return now - handleTurn.at < HANDLE_TURN || [...dotTurns.values()].some((t) => now - t.at < DOT_GROW) || [...pillTurns.values()].some((t) => now - t.at < PILLS_SLIDE)
-    || [...unpicked.values()].some((u) => now - u.at < PICK_OUT) || now - dragTurn.at < (dragTurn.hot ? DRAG_IN : DRAG_OUT);
+    || [...unpicked.values()].some((u) => now - u.at < PICK_OUT) || now - dragTurn.at < (dragTurn.hot ? DRAG_IN : DRAG_OUT)
+    || [...dropTurns.values()].some((t) => now - t.at < DROP_FADE);
 };
+/** «Канбан»: its columns lit (or going) as a card's dragged over them, by `<id>:<column>`, in this long. */
+const dropTurns = new Map<string, { hot: boolean; from: number; at: number }>();
+const DROP_FADE = 160;
+/** The column a dragged card's over lit, the one it's left going out. */
+function turnDrop(target: { id: string; col: number } | null | undefined, now: number): void {
+  const key = target ? `${target.id}:${target.col}` : null;
+  for (const [k, t] of dropTurns) {
+    if (k !== key && t.hot) dropTurns.set(k, { hot: false, from: dotLit(t, now, DROP_FADE), at: now });
+    else if (!t.hot && now - t.at >= DROP_FADE) dropTurns.delete(k);
+  }
+  const t = key ? dropTurns.get(key) : undefined;
+  if (key && !t?.hot) dropTurns.set(key, { hot: true, from: t ? dotLit(t, now, DROP_FADE) : 0, at: now });
+}
 /** The faint frame of what's dragged coming (quickly) and going (less so), in ms; how far it's come,
  *  and what it was on (to fade it out there once it's let go and unpicked). */
 const DRAG_IN = 60, DRAG_OUT = 280;
@@ -500,7 +516,11 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'frame': {
       if (it.tl) { drawTimeline(ctx, it, { card: theme.surface, ink: theme.ink }, cam.z); break; }
       // A kanban («Канбан», src/labs): its stages and columns.
-      if (it.kb) { drawKanban(ctx, it, s.get, theme, s.hotPlus?.startsWith(`kb:${it.id}:`) ? s.hotPlus.slice(`kb:${it.id}:`.length) : null); break; }
+      if (it.kb) {
+        const now = performance.now(), lit = (i: number) => { const t = dropTurns.get(`${it.id}:${i}`); return t ? dotLit(t, now, DROP_FADE) : 0; };
+        drawKanban(ctx, it, s.get, theme, s.hotPlus?.startsWith(`kb:${it.id}:`) ? s.hotPlus.slice(`kb:${it.id}:`.length) : null, lit);
+        break;
+      }
       if (it.fold) { drawFolded(ctx, it, s, editing); break; }
       // An instance shows only its red title after a hollow diamond (to its component), flush with
       // its contents, and that only while it's picked (as a whole or something inside it).
@@ -1322,6 +1342,7 @@ let roundMinds = new Set<string>();
 export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   const { cam, theme, dpr } = s;
   tints = siblingTints(s.items);
+  if (s.live) turnDrop(s.kanbanDrop, performance.now());
   roundMinds = new Set(s.items.some((i) => i.mrd) ? s.items.filter((i) => i.type === 'mind' && mindRoot(i, s.get).mrd).map((i) => i.id) : []);
   if (!s.noBackground) textLinkRects = [];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

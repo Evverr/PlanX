@@ -735,10 +735,10 @@ export const checks = {
       await p.mouse('mouseReleased', (wx + 40) * z, (wy + 20) * z);
       await sleep(150);
     };
-    // Into the first column (16 in, under the 56 header), then the second under it.
+    // Into the first column (20 in, under its stage's pill, and the 56 header), then the second under it.
     await drag('t1', k.x + 40, k.y + 120);
     let t1 = await at('t1');
-    expect(t1.x, 'in the first column').toBe(k.x + 16 + 12);
+    expect(t1.x, 'in the first column').toBe(k.x + 20);
     expect(t1.y, 'at its top').toBe(k.y + 56 + 12);
     await drag('t2', k.x + 40, k.y + 200);
     expect((await at('t2')).y, 'under the first').toBe(k.y + 56 + 12 + t1.h + 12);
@@ -773,6 +773,16 @@ export const checks = {
     await p.escape();
     await sleep(100);
     expect(await p.ev(`!!document.querySelector('.stage-pop:not(.gone)')`), 'Esc closes it').toBe(false);
+    // Pressed on a stage and dragged: the whole kanban goes, no menu.
+    f = await k();
+    const from = [(f.x + 20 + 20) * z, (f.y + 28) * z];
+    await p.mouse('mousePressed', ...from);
+    for (let s = 1; s <= 5; s++) await p.mouse('mouseMoved', from[0] + s * 10, from[1] + s * 10);
+    await p.mouse('mouseReleased', from[0] + 50, from[1] + 50);
+    await sleep(150);
+    const moved = await k();
+    expect(Math.round(moved.x - f.x), 'dragged by its stage').toBe(Math.round(50 / z));
+    expect(await p.ev(`!!document.querySelector('.stage-pop:not(.gone)')`), 'no menu once dragged').toBe(false);
   },
 
   async '"Голосование в объектах": set up in its fields, started, an answer clicked voted for (the shares shown), clicked again unvoted'(p) {

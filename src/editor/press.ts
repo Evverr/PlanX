@@ -310,8 +310,13 @@ export function press(ed: Editor, e: PointerEvent): void {
   // A kanban's «+» (one more stage) or a stage (its menu, KanbanStage.tsx) («Канбан», src/labs).
   const head = e.button === 0 && !e.shiftKey && labOn('kanban') ? headerAt(ed.board.list(), w) : null;
   if (head) {
-    if (head.part === 'add') addStage(ed.board, head.f);
-    else window.dispatchEvent(new CustomEvent('planx:stage', { detail: { id: head.f.id, i: head.part.stage } }));
+    if (head.part === 'add') { addStage(ed.board, head.f); return; }
+    // By a stage, the whole kanban's dragged (picked by this press, as anything dragged off: its faint
+    // frame, what was picked before picked again once let go); let go where pressed, its menu opens.
+    const was = [...ed.selection];
+    ed.setPicking(true);
+    ed.setSelection([head.f.id]);
+    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(ed.board.list()), moved: false, id: head.f.id, dbl: false, fresh: true, was, stage: head.part.stage };
     return;
   }
   // A poll's answer voted for (or not), its «+», its start, «Редактировать» («Голосование», src/labs);

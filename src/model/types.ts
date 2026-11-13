@@ -362,10 +362,20 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   mind: { w: 200, h: 56, fs: 18, text: '' },
 };
 
-/** How wide a card is in a kanban's column («Канбан», src/labs/kanban.ts), a task open or closed. */
-export const KANBAN_LANE = 356;
-/** Whether an item's a card in a kanban's column (held by a frame with stages). */
-export const inKanban = (items: Item[], id: string): boolean => items.some((f) => f.kb && f.members?.includes(id));
+/** A kanban («Канбан», src/labs/kanban.ts), in board units: the room round it (on the left, 4 more), its
+ *  header, over a column's first card, between columns, the room for its «+», a column's width when it's
+ *  put on the board and at least. */
+export const KB = { PAD: 16, LEFT: 20, HEAD: 56, IN: 12, GAP: 16, ADD: 40, COL: 356, MIN_COL: 200 };
+/** Its columns' width: as wide as it is, shared between them. */
+export function kanbanCol(f: Item): number {
+  const n = f.kb?.length || 1;
+  return Math.max(KB.MIN_COL, (f.w - KB.LEFT - KB.PAD - KB.ADD - (n - 1) * KB.GAP) / n);
+}
+/** How wide a card is in its columns, a task open or closed: the column's width, its left side under its
+ *  stage's pill's. */
+export const kanbanLane = (f: Item): number => Math.round(kanbanCol(f));
+/** The kanban an item's a card of (held by a frame with stages), if any. */
+export const kanbanOf = (items: Item[], id: string): Item | undefined => items.find((f) => f.kb && f.members?.includes(id));
 
 export const COLORABLE: ItemType[] = ['sticky', 'rect', 'ellipse', 'polygon', 'task', 'mind'];
 /** What has an outline whose colour can be set apart from the fill. */

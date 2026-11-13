@@ -19,9 +19,9 @@ describe('«Канбан»', () => {
   it('stands each card in its column, in the order let go, one under another; a rectangle as wide as the column; a sticker left as it is', () => {
     const { b, col } = make();
     tidyKanbans(b);
-    expect(b.get('t2')).toMatchObject({ x: col[0].x + 12, y: col[0].y + 12 });
-    expect(b.get('t1')).toMatchObject({ x: col[0].x + 12, y: col[0].y + 12 + 52 + 12 });
-    expect(b.get('r')).toMatchObject({ x: col[1].x + 12, y: col[1].y + 12, w: col[1].w - 24 });
+    expect(b.get('t2')).toMatchObject({ x: col[0].x, y: col[0].y + 12 });
+    expect(b.get('t1')).toMatchObject({ x: col[0].x, y: col[0].y + 12 + 52 + 12 });
+    expect(b.get('r')).toMatchObject({ x: col[1].x, y: col[1].y + 12, w: col[1].w });
     expect(b.get('s')).toMatchObject({ x: col[2].x + 30, y: 200 });
   });
 
@@ -56,12 +56,12 @@ describe('«Канбан»', () => {
     tidyKanbans(b);
     moveStage(b, b.get('k')!, 0, 1);
     expect(b.get('k')!.kb!.map((s) => s.n)).toEqual(['В работе', 'Не начато', 'Готово']);
-    expect(b.get('t1')!.x).toBe(col[1].x + 12);
-    expect(b.get('r')!.x).toBe(col[0].x + 12);
+    expect(b.get('t1')!.x).toBe(col[1].x);
+    expect(b.get('r')!.x).toBe(col[0].x);
     deleteStage(b, b.get('k')!, 0);
     expect(b.get('r')).toBeUndefined();
     expect(b.get('k')!.kb!.map((s) => s.n)).toEqual(['Не начато', 'Готово']);
-    expect(b.get('t1')!.x).toBe(col[0].x + 12);
+    expect(b.get('t1')!.x).toBe(col[0].x);
     expect(b.get('k')!.w).toBe(kanbanSize(2).w);
   });
 });

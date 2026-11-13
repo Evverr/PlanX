@@ -45,7 +45,7 @@ import { zoomsWithKey } from '../labs/wheelZoom';
 import { codeFit, scrollCode } from '../labs/codeBlock';
 import { FORM_H, FORM_RAD, FORM_W } from '../labs/formObject';
 import { POLL_RAD, POLL_W, pollLayout } from '../labs/poll';
-import { FIRST_STAGES, kanbanSize, tidyKanbans } from '../labs/kanban';
+import { FIRST_STAGES, dropTarget, kanbanSize, tidyKanbans } from '../labs/kanban';
 import { closeTask, fitTask, freshTask, renewTasks, taskTextPatch } from '../model/task';
 import { setTaskRedraw } from '../canvas/task';
 import { outSide, setTabsRedraw, towardOffset, type TabAims } from '../labs/sideTabs';
@@ -375,7 +375,8 @@ export class Editor {
     // place again; not while something's dragged (that's done once it's let go), nor for others' changes
     // (they lay theirs out, the same).
     const doc = this.board.doc, tidy = (tr: { origin: unknown }) => {
-      if (tr.origin === LOCAL && !this.gesture && labOn('kanban')) queueMicrotask(() => tidyKanbans(this.board));
+      // (An undo here too: a kanban stretched back, its cards with it.)
+      if ((tr.origin === LOCAL || tr.origin === this.board.undoManager) && !this.gesture && labOn('kanban')) queueMicrotask(() => tidyKanbans(this.board));
     };
     doc.on('afterTransaction', tidy);
     offs.push(() => doc.off('afterTransaction', tidy));
@@ -712,6 +713,7 @@ export class Editor {
       // (Only what this press picked: what was picked already keeps its frame and handle as it's moved.)
       dragging: g?.type === 'drag' && !!g.fresh,
       dragMoved: g?.type === 'drag' && !!g.fresh && g.moved,
+      kanbanDrop: g?.type === 'drag' && g.moved && labOn('kanban') ? dropTarget(this.board.list(), this.board.get(g.id)) : null,
       pickedCells: this.cells.length && this.selection.size === 1 ? { id: [...this.selection][0], cells: this.cells } : null,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker', op: this.penStyle(g.tool).op } : null,
     });

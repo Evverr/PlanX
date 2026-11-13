@@ -1,5 +1,5 @@
 import type { Board } from './board';
-import { inKanban, KANBAN_LANE, type Item, type TaskStatus } from './types';
+import { kanbanLane, kanbanOf, type Item, type TaskStatus } from './types';
 import { remapLinks } from './textLinks';
 import { taskSize, TASK_OPEN_W, TASK_W } from '../canvas/task';
 
@@ -25,8 +25,8 @@ export function openZ(board: Board): number {
  *  up over the board (see openZ); closed (kept open or not before), back where it lay. */
 export function setView(board: Board, it: Item, tv: Item['tv']): void {
   // (In a kanban's column, as wide as it open or closed: it grows down alone, see labs/kanban.ts.)
-  const lane = inKanban(board.list(), it.id);
-  const w = lane ? KANBAN_LANE : tv ? Math.max(it.w, it.tv ? it.w : TASK_OPEN_W) : it.cw ?? TASK_W;
+  const kb = kanbanOf(board.list(), it.id), lane = kb && kanbanLane(kb);
+  const w = lane || (tv ? Math.max(it.w, it.tv ? it.w : TASK_OPEN_W) : it.cw ?? TASK_W);
   const next = { ...it, tv, w };
   const z = tv && !it.tv ? { oz: it.z, z: openZ(board) } : !tv && it.tv ? { oz: undefined, z: it.oz ?? it.z } : {};
   board.update(it.id, { tv, w, h: taskSize(next).h, cw: lane ? undefined : tv && !it.tv ? it.w : tv ? it.cw : undefined, ...z });

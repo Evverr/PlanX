@@ -21,6 +21,7 @@ import { MIND_TOPIC, type PenTool } from './tools';
 import { clickTypes, onMindText, updateCursor } from './hover';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
+import { tidyKanbans } from '../labs/kanban';
 import { levelIn } from '../labs/groups';
 import { eraseArea, eraserStyle } from '../labs/eraseArea';
 import { nibDrag, nibRelease } from '../labs/nib';
@@ -35,7 +36,7 @@ import { under } from '../labs/clickThrough';
 export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; fresh?: boolean; was?: string[]; sub?: number; subTo?: number; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string; tap?: Point; mindTo?: string | null; mindWay?: Way }
+  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; fresh?: boolean; was?: string[]; stage?: number; sub?: number; subTo?: number; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string; tap?: Point; mindTo?: string | null; mindWay?: Way }
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' | 'tl' | 'bl' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point; last?: Point }
@@ -242,6 +243,8 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         board.update(g.id, { ...size, x: Math.round(at.x), y: Math.round(at.y) });
         moves.forEach((pt, k) => board.update(k, pt));
       });
+      // A kanban («Канбан», src/labs): its columns and cards stretched with it as it goes.
+      if (it.kb && labOn('kanban')) tidyKanbans(board);
       return;
     }
     case 'rotate': {
@@ -460,6 +463,11 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // Picked by the press that dragged it: let go, not picked (no frame, no panel; a click picks it), what
         // was picked before picked again, its panel back.
         if (g.fresh) ed.setSelection((g.was ?? []).filter((id) => board.get(id) || board.getLink(id)));
+      } else if (g.stage !== undefined) {
+        // A kanban's stage clicked, not dragged by it («Канбан», src/labs): what was picked before picked
+        // again, and the stage's menu.
+        ed.setSelection(g.was ?? []);
+        window.dispatchEvent(new CustomEvent('planx:stage', { detail: { id: g.id, i: g.stage } }));
       } else if (g.url) {
         // A link on a part of its text, clicked ("Ссылка в тексте", src/labs): opened in a new tab.
         window.open(g.url, '_blank', 'noopener');

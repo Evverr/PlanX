@@ -1,5 +1,5 @@
 import type { Board } from '../model/board';
-import { FILLS, KANBAN_LANE, type Item } from '../model/types';
+import { FILLS, KB, kanbanCol, kanbanLane, type Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { font } from '../canvas/text';
 import { taskSize } from '../canvas/task';
@@ -20,29 +20,28 @@ export interface Stage { n: string; c: string }
 /** Its stages when it's put on the board. */
 export const FIRST_STAGES: Stage[] = [{ n: 'Не начато', c: 'gray' }, { n: 'В работе', c: 'blue' }, { n: 'Готово', c: 'green' }];
 
-/** In board units: room round it, its header, a column (a card's width, KANBAN_LANE, and a margin each
- *  side), between columns, between cards, the room for its «+» on the right, how tall a column is at least. */
-const PAD = 16, HEAD = 56, IN = 12, COL_W = KANBAN_LANE + IN * 2, COL_GAP = 16, CARD_GAP = 12, ADD_W = 40, MIN_H = 240;
+/** In board units (KB in model/types.ts besides): between cards, how tall a column is at least. Its
+ *  stages' pills: corners as a mind map node's. */
+const { PAD, LEFT, HEAD, IN, GAP: COL_GAP, ADD: ADD_W } = KB, CARD_GAP = 12, MIN_H = 240, PILL_RAD = 10;
 export const KANBAN_RAD = 12;
 
 /** What goes into its cells: tasks, and rectangles that are only that (not a block of code, a form…). */
 export const snaps = (it: Item): boolean => it.type === 'task' || (it.type === 'rect' && !it.code && !it.form && !it.poll);
 
-/** Its columns, on the board. */
+/** Its columns, on the board: as wide as it is, shared between them (stretched with it). */
 export function columns(f: Item): Array<{ x: number; y: number; w: number; h: number }> {
-  return (f.kb ?? []).map((_, i) => ({ x: f.x + PAD + i * (COL_W + COL_GAP), y: f.y + HEAD, w: COL_W, h: f.h - HEAD - PAD }));
+  const w = kanbanCol(f);
+  return (f.kb ?? []).map((_, i) => ({ x: f.x + LEFT + i * (w + COL_GAP), y: f.y + HEAD, w, h: f.h - HEAD - PAD }));
 }
-/** Its size for `n` stages and its longest column `tall`. */
-export const kanbanSize = (n: number, tall = 0) => ({ w: PAD * 2 + n * COL_W + (n - 1) * COL_GAP + ADD_W, h: HEAD + Math.max(MIN_H, tall + IN * 2) + PAD });
+/** Its size with `n` columns `col` wide and its longest column `tall`: as it's put there, and at least. */
+export const kanbanSize = (n: number, tall = 0, col = KB.COL) => ({ w: LEFT + PAD + n * col + (n - 1) * COL_GAP + ADD_W, h: HEAD + Math.max(MIN_H, tall + IN * 2) + PAD });
 
 /** The column a point's over (the nearest, between them). */
-function columnOf(f: Item, x: number): number {
+export function columnOf(f: Item, x: number): number {
   const n = f.kb?.length ?? 0;
-  return Math.max(0, Math.min(n - 1, Math.floor((x - f.x - PAD + COL_GAP / 2) / (COL_W + COL_GAP))));
+  return Math.max(0, Math.min(n - 1, Math.floor((x - f.x - LEFT + COL_GAP / 2) / (kanbanCol(f) + COL_GAP))));
 }
 
-/** Where its cards go: each in the column its middle is over, in the order they stand there, one under
- *  another; rectangles the column's width. The frame's own height last. */
 /** Its cards, column by column, in the order they stand. */
 export function cardsByColumn(board: Board, f: Item, items: Item[] = board.list()): Item[][] {
   const by = (f.kb ?? []).map(() => [] as Item[]);
@@ -53,21 +52,24 @@ export function cardsByColumn(board: Board, f: Item, items: Item[] = board.list(
   return by;
 }
 
+/** Where its cards go: each in the column its middle is over, in the order they stand there, one under
+ *  another, as wide as the column. The frame no smaller than they and its columns need (stretched
+ *  bigger, it stays so). */
 export function kanbanLayout(board: Board, f: Item, items: Item[]): Map<string, Partial<Item>> {
-  const out = new Map<string, Partial<Item>>(), cols = columns(f);
+  const out = new Map<string, Partial<Item>>(), cols = columns(f), lane = kanbanLane(f);
   if (!cols.length) return out;
   let tall = 0;
   cardsByColumn(board, f, items).forEach((list, i) => {
     let y = cols[i].y + IN;
     for (const c of list) {
-      // As wide as the column, a task as tall as it then comes out (its text wrapping anew).
-      const h = c.type === 'task' && c.w !== KANBAN_LANE ? taskSize(c, KANBAN_LANE).h : c.h, at = { x: cols[i].x + IN, y, w: KANBAN_LANE, h };
+      // A task as tall as it then comes out (its text wrapping anew).
+      const h = c.type === 'task' && c.w !== lane ? taskSize(c, lane).h : c.h, at = { x: Math.round(cols[i].x), y, w: lane, h };
       if (at.x !== c.x || at.y !== c.y || at.w !== c.w || at.h !== c.h) out.set(c.id, at);
       y += h + CARD_GAP;
     }
     tall = Math.max(tall, y - CARD_GAP - cols[i].y - IN);
   });
-  const size = kanbanSize(cols.length, tall);
+  const least = kanbanSize(cols.length, tall, KB.MIN_COL), size = { w: Math.max(f.w, least.w), h: Math.max(f.h, least.h) };
   if (size.h !== f.h || size.w !== f.w) out.set(f.id, size);
   return out;
 }
@@ -81,6 +83,14 @@ export function tidyKanbans(board: Board, skip: Set<string> = new Set()): void {
     for (const [id, p] of kanbanLayout(board, f, items)) if (!skip.has(id)) all.set(id, p);
   }
   if (all.size) board.forGood(() => all.forEach((p, id) => board.updateForGood(id, p)));
+}
+
+/** The kanban column a card being dragged would go into, let go now: the one its middle's over. */
+export function dropTarget(items: Item[], it: Item | undefined): { id: string; col: number } | null {
+  if (!it || !snaps(it)) return null;
+  const cx = it.x + it.w / 2, cy = it.y + it.h / 2;
+  const f = items.find((k) => k.kb && cx >= k.x && cx <= k.x + k.w && cy >= k.y && cy <= k.y + k.h);
+  return f ? { id: f.id, col: columnOf(f, cx) } : null;
 }
 
 /** Its «+» on the right of its header, for one more stage. */
@@ -111,7 +121,8 @@ export const STAGE_COLORS = ['gray', 'blue', 'green', 'yellow', 'orange', 'pink'
 /** One more stage on its right, in the next colour none has yet. */
 export function addStage(board: Board, f: Item): void {
   const kb = f.kb ?? [], c = STAGE_COLORS.find((k) => !kb.some((s) => s.c === k)) ?? STAGE_COLORS[kb.length % STAGE_COLORS.length];
-  board.update(f.id, { kb: [...kb, { n: 'Новая стадия', c }] });
+  // (Wider by a column as wide as the others.)
+  board.update(f.id, { kb: [...kb, { n: 'Новая стадия', c }], w: Math.round(f.w + kanbanCol(f) + COL_GAP) });
   tidyKanbans(board);
 }
 
@@ -124,7 +135,7 @@ export function setStage(board: Board, f: Item, i: number, patch: Partial<Stage>
 export function moveStage(board: Board, f: Item, i: number, dir: -1 | 1): void {
   const kb = [...(f.kb ?? [])], j = i + dir;
   if (j < 0 || j >= kb.length) return;
-  const by = cardsByColumn(board, f), step = (COL_W + COL_GAP) * dir;
+  const by = cardsByColumn(board, f), step = (kanbanCol(f) + COL_GAP) * dir;
   [kb[i], kb[j]] = [kb[j], kb[i]];
   board.transact(() => {
     board.update(f.id, { kb });
@@ -141,8 +152,10 @@ export function deleteStage(board: Board, f: Item, i: number): void {
   const by = cardsByColumn(board, f);
   board.transact(() => {
     board.remove(by[i].map((c) => c.id));
-    by.slice(i + 1).flat().forEach((c) => board.update(c.id, { x: c.x - COL_W - COL_GAP }));
-    board.update(f.id, { kb: kb.filter((_, k) => k !== i), members: (f.members ?? []).filter((id) => !by[i].some((c) => c.id === id)) });
+    const col = kanbanCol(f) + COL_GAP;
+    by.slice(i + 1).flat().forEach((c) => board.update(c.id, { x: c.x - col }));
+    // (Narrower by that column, the others as wide as they were.)
+    board.update(f.id, { kb: kb.filter((_, k) => k !== i), w: Math.round(f.w - col), members: (f.members ?? []).filter((id) => !by[i].some((c) => c.id === id)) });
   });
   tidyKanbans(board);
 }
@@ -154,7 +167,8 @@ interface Look { surface: string; bg: string; line: string; ink: string; muted: 
 
 /** Draws it: the card, each stage's pill (its colour, its name) and how many are in it, a column under
  *  each (the cells), and the «+». */
-export function drawKanban(ctx: CanvasRenderingContext2D, f: Item, get: (id: string) => Item | undefined, look: Look, hot: string | null = null): void {
+export function drawKanban(ctx: CanvasRenderingContext2D, f: Item, get: (id: string) => Item | undefined, look: Look, hot: string | null = null,
+  lit: (col: number) => number = () => 0): void {
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(f.x, f.y, f.w, f.h, KANBAN_RAD);
@@ -165,20 +179,28 @@ export function drawKanban(ctx: CanvasRenderingContext2D, f: Item, get: (id: str
   ctx.stroke();
   // (It always keeps a list of what it holds: it's made with one.)
   const cols = columns(f), counts = cols.map(() => 0);
+  // The column a card's dragged over: a light grey (a third of the board's grey), coming and going; a little
+  // wider than its cards, under its stage too.
+  cols.forEach((c, i) => {
+    const k = lit(i);
+    if (k <= 0) return;
+    ctx.beginPath();
+    ctx.roundRect(c.x - COL_GAP / 2, f.y + 8, c.w + COL_GAP, f.h - 16, 10);
+    ctx.globalAlpha = k / 3;
+    ctx.fillStyle = look.bg;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  });
   for (const id of f.members ?? []) { const it = get(id); if (it && snaps(it)) counts[columnOf(f, it.x + it.w / 2)]++; }
   ctx.textBaseline = 'middle';
   (f.kb ?? []).forEach((s, i) => {
+    // (The columns aren't drawn: all on the white, the stages over them show where they are.)
     const c = cols[i];
-    // The column: a faint cell under the header.
-    ctx.beginPath();
-    ctx.roundRect(c.x, c.y, c.w, c.h, 10);
-    ctx.fillStyle = look.bg;
-    ctx.fill();
     // The stage: its pill, then how many.
     ctx.font = font(15, 500);
     const tw = ctx.measureText(s.n).width, py = f.y + HEAD / 2;
     ctx.beginPath();
-    ctx.roundRect(c.x, py - 14, tw + 20, 28, 8);
+    ctx.roundRect(c.x, py - 14, tw + 20, 28, PILL_RAD);
     ctx.fillStyle = FILLS[s.c] ?? FILLS.gray;
     ctx.fill();
     // (Under the pointer, a shade darker: it opens its menu.)
