@@ -859,6 +859,7 @@ export const checks = {
     await p.ev(`document.querySelector('.rich-edit').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
     await sleep(200);
     expect(await p.ev(`planx.board.get('${id}').text`), 'its text').toBe('Было\nЖирная строка\nОбычная строка\nЗаголовок с сайта\nАбзац курсивомвставка в строку');
+    expect(await p.ev(`planx.board.list().length`), 'nothing pasted on the board besides').toBe(1);
     expect(await p.ev(`JSON.stringify(planx.board.get('${id}').rs)`), 'its styles').toBe(JSON.stringify([{ s: 5, e: 18, b: true }, { s: 51, e: 52, h: 2 }, { s: 58, e: 66, i: true }, { s: 66, e: 82, b: true }]));
   },
 

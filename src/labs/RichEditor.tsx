@@ -134,7 +134,9 @@ export function RichEditor({ editor, item }: { editor: Editor; item: Item }) {
       onPaste={(e) => {
         // Pasted with what a document has of its styling (cleanPaste); Cmd+Shift+V (or nothing but text
         // copied) as plain text.
+        // (Taken here alone: not on to the board, which would paste it there too.)
         e.preventDefault();
+        e.stopPropagation();
         const html = plain.current ? '' : e.clipboardData.getData('text/html');
         plain.current = false;
         const clean = html && cleanPaste(html, fs), tpl = document.createElement('div');

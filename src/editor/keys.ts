@@ -103,7 +103,8 @@ export const CLIP_MARK = 'planx-copy:';
  *  as one added from the panel does; otherwise what was copied on the board. Not while typing. */
 export function onPaste(ed: Editor, e: ClipboardEvent): void {
   const t = e.target as HTMLElement | null;
-  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  // (Nor what's been pasted already where it was typed in: a document's field, say.)
+  if (e.defaultPrevented || (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable))) return;
   const files = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith('image/'));
   const text = e.clipboardData?.getData('text/plain') ?? '';
   e.preventDefault();
