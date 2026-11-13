@@ -134,10 +134,11 @@ export interface Scene {
   editingCell: number | null;
   /** The board being worked on (not a picture of it): what's unpicked fades out. */
   live?: boolean;
-  /** What's picked by the press that's dragging it (or may): its frame faint (DRAG_FRAME), no handle or
-   *  dots, and it's unpicked once let go after a drag (see endGesture). What was picked already keeps its
-   *  frame and handle as it's moved. */
+  /** What's picked by the press that's dragging it (or may): no handle or dots; no frame till it moves
+   *  (`dragMoved`), then a faint one (DRAG_FRAME); unpicked once let go after a drag (see endGesture), a
+   *  click shows its frame at once. What was picked already keeps its frame and handle as it's moved. */
   dragging?: boolean;
+  dragMoved?: boolean;
   /** Picked links' colours being set: drawn in them, not in the selection's blue. */
   linksAsThey?: boolean;
   /** Left see-through where nothing is drawn (a picture saved without the board's background). */
@@ -1457,8 +1458,8 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     ctx.globalAlpha = 1;
   }
   // The faint frame of what's dragged, coming and going (let go and unpicked, going there).
-  if (s.live && dragTurn.hot !== !!s.dragging) dragTurn = { hot: !!s.dragging, from: dotLit(dragTurn, now, dragTurn.hot ? DRAG_IN : DRAG_OUT), at: now };
-  if (s.live && s.dragging) dragged = [...s.selection];
+  if (s.live && dragTurn.hot !== !!s.dragMoved) dragTurn = { hot: !!s.dragMoved, from: dotLit(dragTurn, now, dragTurn.hot ? DRAG_IN : DRAG_OUT), at: now };
+  if (s.live && s.dragMoved) dragged = [...s.selection];
   const dragLit = s.live ? dotLit(dragTurn, now, dragTurn.hot ? DRAG_IN : DRAG_OUT) : 1;
   if (s.live && !s.dragging && dragLit > 0) for (const id of dragged) {
     const got = s.selection.has(id) ? undefined : s.get(id), it = got && taskShown(got);

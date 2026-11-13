@@ -673,6 +673,7 @@ export class Editor {
       guides: g?.type === 'drag' ? g.guides ?? [] : [],
       // (Only what this press picked: what was picked already keeps its frame and handle as it's moved.)
       dragging: g?.type === 'drag' && !!g.fresh,
+      dragMoved: g?.type === 'drag' && !!g.fresh && g.moved,
       pickedCells: this.cells.length && this.selection.size === 1 ? { id: [...this.selection][0], cells: this.cells } : null,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker', op: this.penStyle(g.tool).op } : null,
     });
