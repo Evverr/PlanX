@@ -19,7 +19,7 @@ import { DockButton, useDock } from './ui/panels/dock';
 import { Minimap } from './ui/Minimap';
 import { AudioRecorder } from './ui/AudioRecorder';
 import { catFor } from './emoji/emoji';
-import { readPictures } from './canvas/pictures';
+import { MAX_DOC_MB, readFiles } from './labs/docx';
 import { cellItem } from './model/table';
 import { useSortable } from './ui/sortable';
 import { Tooltips } from './ui/Tooltips';
@@ -364,7 +364,7 @@ export function App({ boardId }: { boardId: string }) {
         onDrop={(e) => {
           e.preventDefault();
           const at = { x: e.clientX, y: e.clientY };
-          void readPictures(e.dataTransfer.files).then((pics) => editor.addPictures(pics, at));
+          void readFiles(e.dataTransfer.files, (name) => setToast(`«${name}» больше ${MAX_DOC_MB} МБ, такой не добавить`)).then((pics) => editor.addPictures(pics, at));
         }} />
 
       <header ref={topSort.ref} className={`bar topbar sortable ${docked ? 'docked' : ''} ${topSort.sorting ? 'sorting' : ''}`} {...topSort.container}

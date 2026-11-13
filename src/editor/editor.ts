@@ -915,7 +915,7 @@ export class Editor {
     const items = pics.map((p, i) => {
       const k = Math.min(1 / this.cam.z, max / Math.max(p.w, p.h));
       const w = Math.max(16, Math.round(p.w * k)), h = Math.max(16, Math.round(p.h * k));
-      return this.newItem('image', c.x - w / 2 + i * 24, c.y - h / 2 + i * 24, { w, h, src: p.src });
+      return this.newItem('image', c.x - w / 2 + i * 24, c.y - h / 2 + i * 24, { w, h, src: p.src, ...(p.doc && { doc: p.doc, dn: p.dn }) });
     });
     this.board.beginGesture();
     items.forEach((it) => this.addItem(it));

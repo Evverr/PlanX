@@ -25,6 +25,7 @@ import { levelIn } from '../labs/groups';
 import { eraseArea, eraserStyle } from '../labs/eraseArea';
 import { nibDrag, nibRelease } from '../labs/nib';
 import { editablePath, moveNode, startNodeEdit } from '../labs/paths';
+import { openDoc } from '../labs/docx';
 import { openSwap, swapKind } from '../labs/swap';
 import { pushedBelow } from '../labs/textPush';
 import { dayKey, dayOf, halfDay, TL_PAD, tlDays, tlStart } from '../canvas/timeline';
@@ -481,6 +482,8 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // clicked in, or that alone.
         const inner = labOn('groups') && it ? levelIn(board.list(), ed.selection, it) : null;
         if (inner) { ed.setSelection(inner, false); return; }
+        // A Word document's page ("Документы Word"): the document opens whole.
+        if (labOn('docx') && it?.doc) { openDoc(it.id); return; }
         // A path drawn with "Перо" (src/labs): its nodes to change.
         if (labOn('nib') && editablePath(it)) { startNodeEdit(ed, it.id); return; }
         // "Замена двойным кликом": an emoji, an icon or a shape shows its neighbours, a shape opening for
