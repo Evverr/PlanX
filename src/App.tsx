@@ -34,6 +34,7 @@ import type { Item, Link } from './model/types';
 import { Labs } from './labs/LabsLayer';
 import { labOn, useLabs } from './labs/labs';
 import { morphFrom, morphPanel } from './labs/textButton';
+import { nearPicks } from './labs/panelGlide';
 import { toggleDots, useDotsOn } from './labs/linkTool';
 import { joinDropped } from './labs/linkJoint';
 import { HelpPop } from './ui/HelpPop';
@@ -213,7 +214,13 @@ export function App({ boardId }: { boardId: string }) {
   useEffect(() => { document.title = board.title ? `${board.title} · PlanX` : 'PlanX'; }, [board.title]);
 
   // (For the panels, so none yet while it's still being picked: they come once, on letting go.)
-  const selItems = ui.picking ? [] : ui.selection.map((id) => board.get(id)).filter((i) => !!i);
+  const picked = ui.selection.map((id) => board.get(id)).filter((i) => !!i);
+  // («Панель переезжает»: picking something near what was, the panel stays over what was till it's let
+  // go, then glides to it, see below.)
+  const lastPicked = useRef<string[]>([]), before = lastPicked.current.map((id) => board.get(id)).filter((i) => !!i);
+  const glides = labOn('panelOver') && labOn('panelGlide');
+  const selItems = !ui.picking ? picked : glides && nearPicks(before, picked, ui.cam.z) ? before : [];
+  useEffect(() => { if (!ui.picking) lastPicked.current = ui.selection; });
   const linkCount = ui.picking ? 0 : ui.selection.filter((id) => board.getLink(id)).length;
   const editing = ui.editingId ? board.get(ui.editingId) : undefined;
   // Several picked with text ("Несколько сразу", src/labs): the panel takes them as one.
@@ -320,15 +327,19 @@ export function App({ boardId }: { boardId: string }) {
   // The text panel and the selection panel turning into one another, as by the T ("Кнопка T", src/labs),
   // rather than one going and the other coming: typing starting with the text panel coming, or ending with
   // the selection panel back, the same picked. Where each stood is kept for the next time.
-  const morphWas = useRef<{ sel: string; text: boolean; textAt: DOMRect | null; panelAt: DOMRect | null } | null>(null);
+  const morphWas = useRef<{ sel: string; text: boolean; textAt: DOMRect | null; panelAt: DOMRect | null; overAt: DOMRect | null } | null>(null);
   useLayoutEffect(() => {
     const was = morphWas.current, text = panelOn && !tMode;
     const at = (q: string) => document.querySelector<HTMLElement>(q)?.getBoundingClientRect() ?? null;
     if (was && selKey && was.sel === selKey && !tMode && was.text !== text) {
       if (text && was.panelAt && at('.tfmt:not(.gone):not(.leaving)')) morphFrom(was.panelAt, 'tfmt');
       else if (!text && was.textAt && at('.bar.panel:not(.gone)')) morphFrom(was.textAt, 'panel');
+    } else if (glides && was?.overAt && was.sel && selKey && was.sel !== selKey && !was.text && !text && !tMode
+      && nearPicks(was.sel.split(',').map((id) => board.get(id)).filter((i) => !!i), selItems, ui.cam.z) && at('.bar.panel.panel-over:not(.gone)')) {
+      // «Панель переезжает»: picked near what was, the panel over it glides there.
+      morphFrom(was.overAt, 'panel');
     }
-    morphWas.current = { sel: selKey, text, textAt: at('.tfmt:not(.gone):not(.leaving)'), panelAt: at('.bar.panel:not(.gone)') };
+    morphWas.current = { sel: selKey, text, textAt: at('.tfmt:not(.gone):not(.leaving)'), panelAt: at('.bar.panel:not(.gone)'), overAt: at('.bar.panel.panel-over:not(.gone)') };
   });
   if (overWent.current.shown && !overShown) overWent.current.at = performance.now();
   overWent.current.shown = overShown;

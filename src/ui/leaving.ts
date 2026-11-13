@@ -28,6 +28,8 @@ export function fadeOutPopups(): void {
     for (const rec of records) {
       if (!rec.target.isConnected) continue;
       // (One taken off with what holds it, the panel it opens from, goes with it.)
+      // (Not one another's turning into: that's a body gliding from one to the other, see textButton.ts.)
+      if (document.documentElement.dataset.morphIn) continue;
       for (const n of rec.removedNodes) if (n instanceof HTMLElement && !n.classList.contains('gone') && n.matches(POPUPS)) fadeOut(n, rec.target, rec.nextSibling);
     }
   }).observe(document.body, { childList: true, subtree: true });
