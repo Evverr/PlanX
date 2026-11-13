@@ -663,6 +663,15 @@ export const checks = {
     expect(await p.ev(`planx.board.list().filter((i) => i.type === 'image').length`) - n0, 'a picture').toBe(1);
   },
 
+  async 'text copied elsewhere is pasted as a text, not what was copied on a board before'(p) {
+    await p.ev(`localStorage.setItem('planx-clipboard', JSON.stringify({ items: [{ id: 'old', type: 'sticky', x: 0, y: 0, w: 100, h: 100, z: 1, text: 'старое' }], links: [] }))`);
+    const n0 = await p.ev(`planx.board.list().length`);
+    await p.ev(`(() => { const dt = new DataTransfer(); dt.setData('text/plain', 'Мой текст'); window.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); })()`);
+    await sleep(200);
+    expect(await p.ev(`planx.board.list().length`) - n0, 'one thing').toBe(1);
+    expect(await p.ev(`(() => { const t = planx.board.list().at(-1); return t.type + ':' + t.text; })()`), 'the text').toBe('text:Мой текст');
+  },
+
   async 'what is copied goes on the system clipboard as text, and is pasted from it (another board, another window) under the pointer'(p) {
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('sticky', 100, 100, { id: 's1', w: 100, h: 100 })); b.add(e.newItem('sticky', 300, 100, { id: 's2', w: 100, h: 100 }));

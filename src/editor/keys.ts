@@ -109,5 +109,8 @@ export function onPaste(ed: Editor, e: ClipboardEvent): void {
   e.preventDefault();
   if (text.startsWith(CLIP_MARK)) ed.pasteHere(text.slice(CLIP_MARK.length));
   else if (files.length) void readPictures(files).then((pics) => ed.addPictures(pics));
+  // Text copied anywhere else: put on the board as text (not what was last copied on a board, long
+  // ago maybe); that only with nothing on the clipboard to go by.
+  else if (text.trim()) ed.pasteText(text);
   else ed.pasteHere();
 }

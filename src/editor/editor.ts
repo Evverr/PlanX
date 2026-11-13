@@ -1412,6 +1412,15 @@ export class Editor {
 
   /** Ctrl+V: what was copied (or `text`, copied elsewhere) pasted with its middle under the pointer, or
    *  in the middle of the screen with the pointer off the board; again at the same spot, a step further. */
+  /** Text copied anywhere, pasted on the board as a text, under the pointer (in the screen's middle), picked. */
+  pasteText(text: string): void {
+    const sp = this.pointerAt ?? { x: this.width / 2, y: this.height / 2 }, w = this.toWorld(sp.x, sp.y);
+    const it = this.newItem('text', Math.round(w.x), Math.round(w.y), { text: text.replace(/\r\n?/g, '\n').trim(), w: 360 });
+    it.h = itemTextHeight(it);
+    this.addItem(it);
+    this.setSelection([it.id]);
+  }
+
   pasteHere(text?: string): void {
     if (text) this.clipboard = text;
     const sp = this.pointerAt ?? { x: this.width / 2, y: this.height / 2 };
