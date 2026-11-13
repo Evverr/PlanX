@@ -616,6 +616,9 @@ export const checks = {
   },
 
   async 'clearing the board plays the picture, and it goes'(p) {
+    // («Быстрое создание» takes its place on the top bar.)
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('quickCreate', false))()`);
+    await sleep(100);
     await p.make('sticky', [600, 380]);
     await p.click(await p.at('.topbar button[aria-label="Очистить доску"]'));
     await p.click(await p.at('.confirm .btn.primary'));
@@ -623,6 +626,7 @@ export const checks = {
     expect(await p.ev('planx.board.list().length'), 'the board is empty').toBe(0);
     await sleep(2300);
     expect(!!(await p.rect('.clear-fx')), 'and goes').toBeFalsy();
+    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('quickCreate', true))()`);
   },
 
   async 'text typed onto three lines keeps them all in sight when made bold while typing'(p) {

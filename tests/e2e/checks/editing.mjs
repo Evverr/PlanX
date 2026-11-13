@@ -16,6 +16,8 @@ export const checks = {
     let s = await item(p, id);
     expect(s.x - s0.x, 'moved right').toBeNear(100, 1);
     const moved = { x: s.x, y: s.y };
+    // (Dragged off as it was picked by that press, it's not picked once let go: a click picks it.)
+    await p.click(await screen(p, s.x + 80, s.y + 80));
     // Its handle, just past the lower right corner.
     await p.drag(await screen(p, s.x + s.w + 3, s.y + s.h + 3), await screen(p, s.x + s.w + 63, s.y + s.h + 63));
     s = await item(p, id);

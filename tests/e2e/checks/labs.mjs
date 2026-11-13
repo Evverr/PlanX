@@ -1972,7 +1972,7 @@ export const checks = {
     const c = await p.ev(`planx.board.get('${comp.id}')`);
     expect(`${c.text} ${c.obj} ${!!c.stowed} ${await p.ev(`planx.board.list().filter((i) => i.inst === '${comp.id}').length`)}`, 'named, an object, an instance in its place').toBe('Карточка true true 1');
     await p.click(await p.at('.tools [data-key="objects"]'));
-    expect(await p.ev(`[...document.querySelectorAll('.objects-menu > .menu-item > .menu-row span')].map((e) => e.textContent).join(' | ')`), 'the menu').toBe('Таймлайн | Мои объекты');
+    expect(await p.ev(`[...document.querySelectorAll('.objects-menu > .menu-item > .menu-row span')].map((e) => e.textContent).join(' | ')`), 'the menu').toBe('Таймлайн | Форма | Голосование | Канбан | Мои объекты');
     const mineRow = await p.ev(`(() => { const r = [...document.querySelectorAll('.objects-menu .menu-row')].find((b) => b.textContent === 'Мои объекты').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
     await p.mouse('mouseMoved', ...mineRow);
     await sleep(150);
@@ -1997,7 +1997,7 @@ export const checks = {
     await sleep(150);
     expect(await p.ev(`(localStorage.getItem('planx-my-objects') ?? '[]') + ' ' + !!planx.board.get('${comp.id}').obj + ' ' + planx.board.list().filter((i) => i.inst === '${comp.id}').length`), 'off the list, its instances there').toBe('[] true 3');
     await p.click(await p.at('.tools [data-key="objects"]'));
-    expect(await p.ev(`[...document.querySelectorAll('.objects-menu > .menu-item > .menu-row span')].map((e) => e.textContent).join(' | ')`), 'among the board\'s own now').toBe('Таймлайн | Объекты документа');
+    expect(await p.ev(`[...document.querySelectorAll('.objects-menu > .menu-item > .menu-row span')].map((e) => e.textContent).join(' | ')`), 'among the board\'s own now').toBe('Таймлайн | Форма | Голосование | Канбан | Объекты документа');
   },
 
   async '"Мои объекты" are kept in the browser: put on another board, a copy of the component comes along; another\'s object is kept with «+»'(p) {
@@ -2034,7 +2034,7 @@ export const checks = {
     await p.click(await p.at('.objects-mine .menu-take'));
     await sleep(150);
     expect(await p.ev(`JSON.parse(localStorage.getItem('planx-my-objects')).map((o) => o.name).join()`), 'kept').toBe('Карточка,Чужой');
-    expect(await p.ev(`[...document.querySelectorAll('.objects-menu > .menu-item > .menu-row span')].map((e) => e.textContent).join(' | ')`), 'no longer the board\'s own only').toBe('Таймлайн | Мои объекты');
+    expect(await p.ev(`[...document.querySelectorAll('.objects-menu > .menu-item > .menu-row span')].map((e) => e.textContent).join(' | ')`), 'no longer the board\'s own only').toBe('Таймлайн | Форма | Голосование | Канбан | Мои объекты');
     await p.ev(`localStorage.removeItem('planx-my-objects')`);
   },
 
@@ -2156,7 +2156,7 @@ export const checks = {
     await p.click(await p.at('.params-tabs button:nth-child(2)'));
     await sleep(100);
     expect(await p.ev(`[...document.querySelectorAll('.params-pop .menu-row')].map((b) => b.textContent + ':' + b.getAttribute('aria-checked')).join()`), 'right only at first')
-      .toBe('Вправо:true,Влево:false,Вверх:false,Вниз:false,Передвигать вручную:false,Боковая полоса:true,Бэкграунд:true');
+      .toBe('Вправо:true,Влево:false,Вверх:false,Вниз:false,Передвигать вручную:false,Боковая полоса:true,Бэкграунд:true,Круглые края:false');
     await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.params-pop .menu-row')].find((b) => b.textContent === 'Вверх').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));
     expect(await p.ev(`JSON.stringify(planx.board.get('m').mw)`), 'up too').toBe('["right","up"]');
     for (const label of ['Боковая полоса', 'Бэкграунд']) await p.click(await p.ev(`(() => { const r = [...document.querySelectorAll('.params-pop .menu-row')].find((b) => b.textContent === '${label}').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`));

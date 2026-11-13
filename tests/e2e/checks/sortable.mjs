@@ -33,8 +33,8 @@ export const checks = {
     const from = k0.find((k) => k[0] === 'sticky'), to = k0.find((k) => k[0] === 'task');
     await carry(p, from.slice(1), [to.slice(1)]);
     const k1 = (await mainKeys(p, '.tools')).map((k) => k[0]);
-    // Brought to the task's middle, it passes the two before it (text and shapes), not the task.
-    expect(k1.indexOf('sticky') - k0.findIndex((k) => k[0] === 'sticky'), 'sticky moved down two places').toBe(2);
+    // Brought to the task's middle, it passes the three before it (text, document and shapes), not the task.
+    expect(k1.indexOf('sticky') - k0.findIndex((k) => k[0] === 'sticky'), 'sticky moved down three places').toBe(3);
     expect((await settled(p)).moved, 'nothing left shifted').toBe(0);
     await p.reload();
     expect((await mainKeys(p, '.tools')).map((k) => k[0]).join(), 'kept after reload').toBe(k1.join());
