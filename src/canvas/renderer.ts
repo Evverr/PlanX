@@ -196,8 +196,12 @@ let handleTurn = { hot: false, from: 0, at: 0 };
 export const dotsMoving = (): boolean => {
   const now = performance.now();
   return now - handleTurn.at < HANDLE_TURN || [...dotTurns.values()].some((t) => now - t.at < DOT_GROW) || [...pillTurns.values()].some((t) => now - t.at < PILLS_SLIDE)
-    || [...unpicked.values()].some((u) => now - u.at < PICK_OUT);
+    || [...unpicked.values()].some((u) => now - u.at < PICK_OUT) || now - dragTurn.at < (dragTurn.hot ? DRAG_IN : DRAG_OUT);
 };
+/** The faint frame of what's dragged coming (quickly) and going (less so), in ms; how far it's come,
+ *  and what it was on (to fade it out there once it's let go and unpicked). */
+const DRAG_IN = 100, DRAG_OUT = 200;
+let dragTurn = { hot: false, from: 0, at: 0 }, dragged: string[] = [];
 /** What's no longer picked fades out (its frame, its handle and dots) as a panel does, in this long. */
 const PICK_OUT = 80;
 /** What was picked at the last frame, and since when each no longer is (with whether it had its dots). */
@@ -1446,13 +1450,24 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     }
     ctx.globalAlpha = 1;
   }
+  // The faint frame of what's dragged, coming and going (let go and unpicked, going there).
+  if (s.live && dragTurn.hot !== !!s.dragging) dragTurn = { hot: !!s.dragging, from: dotLit(dragTurn, now, dragTurn.hot ? DRAG_IN : DRAG_OUT), at: now };
+  if (s.live && s.dragging) dragged = [...s.selection];
+  const dragLit = s.live ? dotLit(dragTurn, now, dragTurn.hot ? DRAG_IN : DRAG_OUT) : 1;
+  if (s.live && !s.dragging && dragLit > 0) for (const id of dragged) {
+    const got = s.selection.has(id) ? undefined : s.get(id), it = got && taskShown(got);
+    if (!it || it.type === 'mind' || it.inst || it.host) continue;
+    ctx.globalAlpha = DRAG_FRAME * dragLit;
+    outline(ctx, it, cam.z, theme.pick, [], PICK_LINE, PICK_RAD);
+    ctx.globalAlpha = 1;
+  }
   for (const id of s.selection) {
     const got = s.get(id), it = got && taskShown(got);
     if (!it || s.nodesOf === id) continue;
     // A mind map node shows it's picked by its "+" buttons alone, which a few picked together don't get.
     // An instance keeps its red title alone, without a selection frame.
     if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) {
-      ctx.globalAlpha = s.dragging ? DRAG_FRAME : PICK_FRAME;
+      ctx.globalAlpha = s.dragging ? DRAG_FRAME * dragLit : PICK_FRAME;
       ctx.save();
       hiddenUnder(ctx, it, s, view);
       outline(ctx, it, cam.z, theme.pick, [], PICK_LINE, PICK_RAD);
