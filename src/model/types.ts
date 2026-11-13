@@ -41,6 +41,10 @@ export interface Item {
   iw?: number;
   /** Picture or recording as a data URL, image and audio items only. */
   src?: string;
+  /** A picture that's a Word document's first page ("Документы Word", src/labs/docx.ts): the file as a
+   *  data URL, and its name. */
+  doc?: string;
+  dn?: string;
   /** A picture that's one of the game stickers (see canvas/doodles.ts), by its id. */
   doodle?: string;
   /** Mind map nodes: the node this one branches from; the central topic has none (see model/mind.ts). */
