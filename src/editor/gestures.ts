@@ -456,6 +456,8 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         timelineSides(ed, [...g.orig.keys()]);
         board.endGesture();
         noteMindMoved(ed, [...ed.selection]);
+        // Picked by the press that dragged it: let go, not picked (no frame, no panel); a click picks it.
+        if (g.fresh) ed.setSelection([]);
       } else if (g.url) {
         // A link on a part of its text, clicked ("Ссылка в тексте", src/labs): opened in a new tab.
         window.open(g.url, '_blank', 'noopener');

@@ -134,8 +134,8 @@ export interface Scene {
   editingCell: number | null;
   /** The board being worked on (not a picture of it): what's unpicked fades out. */
   live?: boolean;
-  /** What's picked being dragged (or pressed to be, picked by that press): no frame, handle or dots on
-   *  it till it's let go. */
+  /** What's picked being dragged (or pressed to be, picked by that press): its frame faint (DRAG_FRAME),
+   *  no handle or dots (picked by that press, it's unpicked once let go: see endGesture). */
   dragging?: boolean;
   /** Picked links' colours being set: drawn in them, not in the selection's blue. */
   linksAsThey?: boolean;
@@ -181,6 +181,8 @@ const DOT_FADE = 0.3, DOT_HOT_FADE = 0.8, DOT_HOT_R = 7.5, DOT_GROW = 160 / 3;
 /** What's picked: its frame's strength; its handle's, and with the pointer on it; their line and the
  *  frame's least corner radius. */
 export const PICK_FRAME = 0.8; const PICK_FADE = 0.3, PICK_HOT_FADE = 0.8, PICK_LINE = 1.5, PICK_RAD = 4;
+/** The frame of what's being dragged: faint. */
+const DRAG_FRAME = 0.2;
 /** How far each dot is on its way to lit (1) or not (0), and since when, by item and side. */
 const dotTurns = new Map<string, { hot: boolean; from: number; at: number }>();
 const dotLit = (t: { hot: boolean; from: number; at: number }, now: number, ms = DOT_GROW) => {
@@ -1420,8 +1422,9 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   const now = performance.now();
   if (s.live) for (const id of picked) if (!s.selection.has(id) && !unpicked.has(id)) unpicked.set(id, { at: now, dots: id === pickedAlone });
   for (const id of s.selection) unpicked.delete(id);
-  if (s.live) picked = new Set(s.selection);
-  if (s.live) pickedAlone = s.selection.size === 1 && s.showHandle ? [...s.selection][0] : null;
+  // (Dragged, it shows as not picked: nothing to fade out once it's let go and so unpicked.)
+  if (s.live) picked = new Set(s.dragging ? [] : s.selection);
+  if (s.live) pickedAlone = s.selection.size === 1 && s.showHandle && !s.dragging ? [...s.selection][0] : null;
   if (s.live) for (const [id, u] of unpicked) {
     // (A task gliding open or closed, as it's drawn now.)
     const k = (now - u.at) / PICK_OUT, got = s.get(id), it = got && taskShown(got);
@@ -1445,17 +1448,19 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   }
   for (const id of s.selection) {
     const got = s.get(id), it = got && taskShown(got);
-    if (!it || s.nodesOf === id || s.dragging) continue;
+    if (!it || s.nodesOf === id) continue;
     // A mind map node shows it's picked by its "+" buttons alone, which a few picked together don't get.
     // An instance keeps its red title alone, without a selection frame.
     if ((it.type !== 'mind' || s.selection.size > 1) && !it.inst) {
-      ctx.globalAlpha = PICK_FRAME;
+      ctx.globalAlpha = s.dragging ? DRAG_FRAME : PICK_FRAME;
       ctx.save();
       hiddenUnder(ctx, it, s, view);
       outline(ctx, it, cam.z, theme.pick, [], PICK_LINE, PICK_RAD);
       ctx.restore();
       ctx.globalAlpha = 1;
     }
+    // Dragged: the frame alone, faint (see Scene.dragging).
+    if (s.dragging) continue;
     // (A picture of the board has it as it is, and leaves the one on the board alone.)
     const handleHot = !!s.hotHandle;
     if (s.live && handleTurn.hot !== handleHot) handleTurn = { hot: handleHot, from: dotLit(handleTurn, now, HANDLE_TURN), at: now };
