@@ -1112,7 +1112,7 @@ export class Editor {
     if (tool === 'form') { this.addForm(this.toWorld(at.x, at.y)); return; }
     const type = (isPoly(tool) ? 'polygon' : tool) as ItemType;
     if (!DEFAULTS[type]) return;
-    const extra: Partial<Item> = isPoly(tool) ? { shape: tool } : tool === 'table' ? freshTable() : tool === 'mind' ? { text: MIND_TOPIC } : {};
+    const extra: Partial<Item> = isPoly(tool) ? { shape: tool, ...(tool === 'triangle' && { va: 'bottom' as const }) } : tool === 'table' ? freshTable() : tool === 'mind' ? { text: MIND_TOPIC } : {};
     if (type === 'mind') Object.assign(extra, mindSize({ ...DEFAULTS.mind, ...extra } as Item));
     const c = this.toWorld(at.x, at.y), d = { ...DEFAULTS[type], ...extra };
     const it = this.newItem(type, c.x - d.w / 2, c.y - d.h / 2, extra);

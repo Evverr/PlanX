@@ -156,7 +156,8 @@ export function press(ed: Editor, e: PointerEvent): void {
     case 'frame': {
       board.beginGesture();
       const t = ed.tool;
-      const it = isPoly(t) ? ed.newItem('polygon', w.x, w.y, { w: 1, h: 1, shape: t }) : ed.newItem(t, w.x, w.y, { w: 1, h: 1 });
+      // (A triangle's text at its bottom, where it's widest.)
+      const it = isPoly(t) ? ed.newItem('polygon', w.x, w.y, { w: 1, h: 1, shape: t, ...(t === 'triangle' && { va: 'bottom' as const }) }) : ed.newItem(t, w.x, w.y, { w: 1, h: 1 });
       board.add(it);
       ed.gesture = { type: 'create', id: it.id, origin: w };
       return;
