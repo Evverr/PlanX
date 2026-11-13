@@ -14,14 +14,46 @@ import { font } from '../canvas/text';
 export const FORM_W = 320;
 const PAD = 16, ROW = 40, GAP = 12, OVER_BUTTON = 16;
 export const FORM_RAD = 12, FIELD_RAD = 8, FIELD_PAD = 12, FORM_FS = 14;
-export const FORM_H = PAD + ROW * 2 + GAP + OVER_BUTTON + ROW + PAD;
+/** A button as the app's own (.btn in popups.css): 32 high, corners 7, its text Inter 600 12. */
+export const BTN_H = 32;
+const BTN_RAD = 7, BTN_FS = 12;
+export const FORM_H = PAD + ROW * 2 + GAP + OVER_BUTTON + BTN_H + PAD;
 /** What the empty fields say. */
 export const HINTS = ['Значение 1', 'Значение 2'];
 
 /** Where field `i` (0, 1) is, on the board. */
 export const fieldBox = (it: Item, i: number) => ({ x: it.x + PAD, y: it.y + PAD + i * (ROW + GAP), w: it.w - PAD * 2, h: ROW });
 /** Where its button is. */
-export const buttonBox = (it: Item) => ({ x: it.x + PAD, y: it.y + PAD + ROW * 2 + GAP + OVER_BUTTON, w: it.w - PAD * 2, h: ROW });
+export const buttonBox = (it: Item) => ({ x: it.x + PAD, y: it.y + PAD + ROW * 2 + GAP + OVER_BUTTON, w: it.w - PAD * 2, h: BTN_H });
+
+/** Draws a button as the app's: the main one in the blue gradient at 90%, white on it; the other outlined
+ *  in the panels' line, in their ink. `hot` under the pointer; `faint`, not pressable yet. */
+export function drawButton(ctx: CanvasRenderingContext2D, b: { x: number; y: number; w: number; h: number }, label: string, main: boolean,
+  look: { line: string; ink: string }, hot = false, faint = false): void {
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(b.x, b.y, b.w, b.h, BTN_RAD);
+  ctx.globalAlpha = (faint ? 0.4 : 1) * 0.9;
+  if (main) {
+    const g = ctx.createLinearGradient(0, b.y, 0, b.y + b.h);
+    g.addColorStop(0, '#549BFF');
+    g.addColorStop(1, '#005FE3');
+    ctx.fillStyle = g;
+    ctx.fill();
+  } else {
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = look.line;
+    ctx.stroke();
+  }
+  if (hot && !faint) { ctx.globalAlpha = 1; ctx.fillStyle = main ? 'rgba(0, 0, 0, .1)' : 'rgba(0, 0, 0, .05)'; ctx.fill(); }
+  ctx.globalAlpha = faint ? 0.6 : 1;
+  ctx.font = font(BTN_FS, 600, 'inter');
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = main ? '#fff' : look.ink;
+  ctx.fillText(label, b.x + b.w / 2, b.y + b.h / 2);
+  ctx.restore();
+}
 /** Whether a point on the board is on its button. */
 export function onFormButton(it: Item, w: Point): boolean {
   const b = buttonBox(it);
@@ -66,24 +98,6 @@ export function drawForm(ctx: CanvasRenderingContext2D, it: Item, look: Look, k:
     ctx.fillText(empty ? (it.fd ? '—' : HINTS[i]) : values[i], f.x + (it.fd ? 0 : FIELD_PAD), f.y + f.h / 2);
     ctx.restore();
   }
-  // «Заполнить» in the accent, white on it; «Редактировать» as a plain button.
-  const b = buttonBox(it);
-  ctx.beginPath();
-  ctx.roundRect(b.x, b.y, b.w, b.h, FIELD_RAD);
-  if (it.fd) {
-    ctx.fillStyle = look.bg;
-    ctx.fill();
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = look.line;
-    ctx.stroke();
-  } else {
-    ctx.fillStyle = look.accent;
-    ctx.fill();
-  }
-  if (hot) { ctx.fillStyle = 'rgba(0, 0, 0, .08)'; ctx.fill(); }
-  ctx.font = font(FORM_FS, 600);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = it.fd ? look.ink : '#fff';
-  ctx.fillText(it.fd ? 'Редактировать' : 'Заполнить', b.x + b.w / 2, b.y + b.h / 2);
-  ctx.textAlign = 'left';
+  // «Заполнить» the app's main button; «Редактировать» its other one.
+  drawButton(ctx, buttonBox(it), it.fd ? 'Редактировать' : 'Заполнить', !it.fd, look, hot);
 }

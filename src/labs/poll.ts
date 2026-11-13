@@ -3,6 +3,7 @@ import type { Item } from '../model/types';
 import type { Point } from '../canvas/geometry';
 import { font, wrapText } from '../canvas/text';
 import { myId } from './labs';
+import { BTN_H, drawButton } from './formObject';
 
 /**
  * «Голосование» (src/labs, one of the "Объекты"): a poll on the board. Whoever puts it there sets it up
@@ -62,8 +63,8 @@ export function pollLayout(it: Item) {
     for (let i = 0; i <= n; i++) { fields.push({ x, y, w, h: FIELD }); y += FIELD + (i === 0 ? 12 : FIELD_GAP); }
     const add = { x, y, w, h: ADD_H };
     y += ADD_H + 12;
-    const start = { x, y, w, h: FIELD };
-    return { draft: true as const, fields, add, start, h: y + FIELD + PAD - it.y };
+    const start = { x, y, w, h: BTN_H };
+    return { draft: true as const, fields, add, start, h: y + BTN_H + PAD - it.y };
   }
   const lines = titleLines(it);
   let y = it.y + PAD + lines.length * TITLE_LH + 16;
@@ -155,15 +156,9 @@ export function drawPoll(ctx: CanvasRenderingContext2D, it: Item, look: Look, k:
     ctx.globalAlpha = hot === 'add' ? 1 : 0.8;
     text('+ Добавить вариант', l.add.x, l.add.y + l.add.h / 2, POLL_FS, 500, look.accent);
     ctx.globalAlpha = 1;
+    // The app's main button, faint till two answers are typed in.
     const ready = answers.filter((a) => a.trim()).length >= 2;
-    ctx.beginPath();
-    ctx.roundRect(l.start.x, l.start.y, l.start.w, l.start.h, POLL_FIELD_RAD);
-    ctx.globalAlpha = ready ? 1 : 0.4;
-    ctx.fillStyle = look.accent;
-    ctx.fill();
-    if (ready && hot === 'start') { ctx.fillStyle = 'rgba(0, 0, 0, .08)'; ctx.fill(); }
-    text('Запустить', l.start.x + l.start.w / 2, l.start.y + l.start.h / 2, POLL_FS, 600, '#fff', 'center');
-    ctx.globalAlpha = 1;
+    drawButton(ctx, l.start, 'Запустить', true, look, hot === 'start', !ready);
     return;
   }
   l.lines.forEach((line, i) => text(line, l.rows[0]?.x ?? it.x + PAD, it.y + PAD + i * TITLE_LH + TITLE_LH / 2, TITLE_FS, 600, look.ink));
