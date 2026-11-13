@@ -739,13 +739,13 @@ export const checks = {
     await drag('t1', k.x + 40, k.y + 120);
     let t1 = await at('t1');
     expect(t1.x, 'in the first column').toBe(k.x + 20);
-    expect(t1.y, 'at its top').toBe(k.y + 56 + 12);
+    expect(t1.y, 'at its top').toBe(k.y + 58 + 16);
     await drag('t2', k.x + 40, k.y + 200);
-    expect((await at('t2')).y, 'under the first').toBe(k.y + 56 + 12 + t1.h + 12);
+    expect((await at('t2')).y, 'under the first').toBe(k.y + 58 + 16 + t1.h + 12);
     // Out again: free where it's let go, the other up in its place.
     await drag('t1', k.x + 100, k.y + 900);
     expect((await at('t1')).y, 'free where let go').toBe(k.y + 900);
-    expect((await at('t2')).y, 'the gap closed').toBe(k.y + 56 + 12);
+    expect((await at('t2')).y, 'the gap closed').toBe(k.y + 58 + 16);
   },
 
   async '"Канбан в объектах": its «+» adds a stage; a stage\'s pill opens its menu: renamed, recoloured, moved'(p) {
@@ -765,17 +765,24 @@ export const checks = {
     expect(await p.ev(`!!document.querySelector('.stage-pop')`), 'its menu').toBe(true);
     await p.ev(`(() => { const i = document.querySelector('.stage-name'); i.select(); document.execCommand('insertText', false, 'Бэклог'); })()`);
     await p.click(await p.at('.stage-pop .sw[aria-label="Цвет purple"]'));
-    await p.click(await p.at('.stage-pop .btn:nth-child(2)'));
     await sleep(150);
     f = await k();
-    expect(f.kb[1].n, 'renamed and moved right').toBe('Бэклог');
-    expect(f.kb[1].c, 'recoloured').toBe('purple');
+    expect(f.kb[0].n, 'renamed').toBe('Бэклог');
+    expect(f.kb[0].c, 'recoloured').toBe('purple');
     await p.escape();
     await sleep(100);
     expect(await p.ev(`!!document.querySelector('.stage-pop:not(.gone)')`), 'Esc closes it').toBe(false);
-    // Pressed on a stage and dragged: the whole kanban goes, no menu.
+    // Its pill dragged along the header into the next column: it goes there, no menu.
+    const pill = [(f.x + 20 + 20) * z, (f.y + 28) * z];
+    await p.mouse('mousePressed', ...pill);
+    for (let s = 1; s <= 6; s++) await p.mouse('mouseMoved', pill[0] + s * 70, pill[1]);
+    await p.mouse('mouseReleased', pill[0] + 420, pill[1]);
+    await sleep(150);
     f = await k();
-    const from = [(f.x + 20 + 20) * z, (f.y + 28) * z];
+    expect(f.kb[1].n, 'moved right').toBe('Бэклог');
+    expect(await p.ev(`!!document.querySelector('.stage-pop:not(.gone)')`), 'no menu once dragged').toBe(false);
+    // The header right of a pill: the whole kanban dragged.
+    const from = [(f.x + 20 + 250) * z, (f.y + 28) * z];
     await p.mouse('mousePressed', ...from);
     for (let s = 1; s <= 5; s++) await p.mouse('mouseMoved', from[0] + s * 10, from[1] + s * 10);
     await p.mouse('mouseReleased', from[0] + 50, from[1] + 50);

@@ -19,9 +19,9 @@ describe('«Канбан»', () => {
   it('stands each card in its column, in the order let go, one under another; a rectangle as wide as the column; a sticker left as it is', () => {
     const { b, col } = make();
     tidyKanbans(b);
-    expect(b.get('t2')).toMatchObject({ x: col[0].x, y: col[0].y + 12 });
-    expect(b.get('t1')).toMatchObject({ x: col[0].x, y: col[0].y + 12 + 52 + 12 });
-    expect(b.get('r')).toMatchObject({ x: col[1].x, y: col[1].y + 12, w: col[1].w });
+    expect(b.get('t2')).toMatchObject({ x: col[0].x, y: col[0].y + 16 });
+    expect(b.get('t1')).toMatchObject({ x: col[0].x, y: col[0].y + 16 + 52 + 12 });
+    expect(b.get('r')).toMatchObject({ x: col[1].x, y: col[1].y + 16, w: col[1].w });
     expect(b.get('s')).toMatchObject({ x: col[2].x + 30, y: 200 });
   });
 
@@ -30,7 +30,7 @@ describe('«Канбан»', () => {
     tidyKanbans(b);
     b.update('t2', { h: 400 });
     tidyKanbans(b);
-    expect(b.get('t1')!.y).toBe(col[0].y + 12 + 400 + 12);
+    expect(b.get('t1')!.y).toBe(col[0].y + 16 + 400 + 12);
     expect(b.get('k')!.h).toBe(kanbanSize(3, 400 + 12 + 52).h);
   });
 
@@ -39,7 +39,7 @@ describe('«Канбан»', () => {
     tidyKanbans(b);
     b.update('k', { members: ['t1', 'r', 's'] });
     tidyKanbans(b, new Set(['r']));
-    expect(b.get('t1')!.y).toBe(col[0].y + 12);
+    expect(b.get('t1')!.y).toBe(col[0].y + 16);
   });
 
   it('takes one more stage on its right, wider for it, in a colour none has', () => {

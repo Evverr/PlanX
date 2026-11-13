@@ -363,9 +363,9 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
 };
 
 /** A kanban («Канбан», src/labs/kanban.ts), in board units: the room round it (on the left, 4 more), its
- *  header, over a column's first card, between columns, the room for its «+», a column's width when it's
- *  put on the board and at least. */
-export const KB = { PAD: 16, LEFT: 20, HEAD: 56, IN: 12, GAP: 16, ADD: 40, COL: 356, MIN_COL: 200 };
+ *  header down to the line under its stages (16 under their pills), from that line to a column's first
+ *  card, between columns, the room for its «+», a column's width when it's put on the board and at least. */
+export const KB = { PAD: 16, LEFT: 20, HEAD: 58, IN: 16, GAP: 16, ADD: 40, COL: 356, MIN_COL: 200 };
 /** Its columns' width: as wide as it is, shared between them. */
 export function kanbanCol(f: Item): number {
   const n = f.kb?.length || 1;

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Editor } from '../editor/editor';
-import { FILLS } from '../model/types';
-import { STAGE_COLORS, cardsByColumn, deleteStage, moveStage, setStage, stageAt } from './kanban';
+import { STAGE_COLORS, STAGE_TINTS, cardsByColumn, deleteStage, setStage, stageAt } from './kanban';
 
 /**
  * «Канбан» (kanban.ts): a stage's menu, opened by a click on its pill, under it: its name to type over,
- * its colour, moving it left or right (its cards along), and deleting it (asked first when it holds cards).
+ * its colour, and deleting it (asked first when it holds cards). It's moved left or right by its pill
+ * dragged along the header (see stageDrag in editor/gestures.ts).
  */
 export function KanbanStage({ editor, zoom }: { editor: Editor; zoom: number }) {
   const [at, setAt] = useState<{ id: string; i: number } | null>(null);
@@ -30,7 +30,6 @@ export function KanbanStage({ editor, zoom }: { editor: Editor; zoom: number }) 
   const r = editor.canvas?.getBoundingClientRect();
   if (!at || !f || !stage || !r) return null;
   const p = stageAt(f, at.i), n = f.kb!.length, cam = editor.cam;
-  const go = (dir: -1 | 1) => { moveStage(editor.board, f, at.i, dir); setAt({ ...at, i: at.i + dir }); };
   const drop = () => {
     const cards = cardsByColumn(editor.board, f)[at.i].length;
     setAt(null);
@@ -47,13 +46,11 @@ export function KanbanStage({ editor, zoom }: { editor: Editor; zoom: number }) 
         onChange={(e) => setStage(editor.board, f, at.i, { n: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') setAt(null); }} />
       <div className="sw-group stage-colors">
         {STAGE_COLORS.map((c) => (
-          <button key={c} className={`sw ${stage.c === c ? 'on' : ''}`} style={{ background: FILLS[c] }} aria-label={`Цвет ${c}`} title="Цвет стадии"
+          <button key={c} className={`sw ${stage.c === c ? 'on' : ''}`} style={{ background: STAGE_TINTS[c] }} aria-label={`Цвет ${c}`} title="Цвет стадии"
             onClick={() => setStage(editor.board, f, at.i, { c })} />
         ))}
       </div>
       <div className="stage-row">
-        <button className="btn" disabled={at.i === 0} onClick={() => go(-1)}>← Влево</button>
-        <button className="btn" disabled={at.i === n - 1} onClick={() => go(1)}>Вправо →</button>
         <button className="btn stage-delete" disabled={n < 2} onClick={drop}>Удалить</button>
       </div>
     </div>,

@@ -21,7 +21,7 @@ import { MIND_TOPIC, type PenTool } from './tools';
 import { clickTypes, onMindText, updateCursor } from './hover';
 import type { Editor } from './editor';
 import { isLocked, labOn } from '../labs/labs';
-import { tidyKanbans } from '../labs/kanban';
+import { columnAt, moveStage, tidyKanbans } from '../labs/kanban';
 import { levelIn } from '../labs/groups';
 import { eraseArea, eraserStyle } from '../labs/eraseArea';
 import { nibDrag, nibRelease } from '../labs/nib';
@@ -36,12 +36,14 @@ import { under } from '../labs/clickThrough';
 export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; fresh?: boolean; was?: string[]; stage?: number; sub?: number; subTo?: number; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string; tap?: Point; mindTo?: string | null; mindWay?: Way }
+  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; fresh?: boolean; was?: string[]; sub?: number; subTo?: number; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string; tap?: Point; mindTo?: string | null; mindWay?: Way }
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' | 'tl' | 'bl' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point; last?: Point }
   | { type: 'tab'; id: string; side: Side; start: Point }
   | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline' | 'form' | 'poll' | 'kanban'; to?: Point }
+  /** «Канбан»: a stage's pill pressed (`i` where its column is now), dragged along the header. */
+  | { type: 'stageDrag'; id: string; i: number; start: Point; moved: boolean }
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }
   | { type: 'link'; from: string; fromSide: Side | null; to: Point; target: string | null }
   | { type: 'relink'; id: string; from: Point; to: Point; target: string | null; away?: boolean; body?: boolean; going?: boolean;
@@ -245,6 +247,17 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
       });
       // A kanban («Канбан», src/labs): its columns and cards stretched with it as it goes.
       if (it.kb && labOn('kanban')) tidyKanbans(board);
+      return;
+    }
+    case 'stageDrag': {
+      // A stage dragged along its kanban's header: over another column, it swaps places with the one next to
+      // it that way, its cards along, a step at a time.
+      if (!g.moved && Math.hypot(w.x - g.start.x, w.y - g.start.y) * ed.cam.z < 4) return;
+      g.moved = true;
+      const f = board.get(g.id);
+      if (!f) return;
+      const to = columnAt(f, w.x);
+      if (to !== g.i) { const dir = to > g.i ? 1 : -1; moveStage(board, f, g.i, dir); g.i += dir; }
       return;
     }
     case 'rotate': {
@@ -463,11 +476,6 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // Picked by the press that dragged it: let go, not picked (no frame, no panel; a click picks it), what
         // was picked before picked again, its panel back.
         if (g.fresh) ed.setSelection((g.was ?? []).filter((id) => board.get(id) || board.getLink(id)));
-      } else if (g.stage !== undefined) {
-        // A kanban's stage clicked, not dragged by it («Канбан», src/labs): what was picked before picked
-        // again, and the stage's menu.
-        ed.setSelection(g.was ?? []);
-        window.dispatchEvent(new CustomEvent('planx:stage', { detail: { id: g.id, i: g.stage } }));
       } else if (g.url) {
         // A link on a part of its text, clicked ("Ссылка в тексте", src/labs): opened in a new tab.
         window.open(g.url, '_blank', 'noopener');
@@ -527,6 +535,10 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         // after its text; on its edge, it's only picked (to be deleted, say).
         ed.startEditing(g.id, null, 'end');
       }
+      return;
+    case 'stageDrag':
+      // Let go where it was pressed: the stage's menu.
+      if (!g.moved) window.dispatchEvent(new CustomEvent('planx:stage', { detail: { id: g.id, i: g.i } }));
       return;
     case 'resize':
     case 'rotate':

@@ -311,12 +311,14 @@ export function press(ed: Editor, e: PointerEvent): void {
   const head = e.button === 0 && !e.shiftKey && labOn('kanban') ? headerAt(ed.board.list(), w) : null;
   if (head) {
     if (head.part === 'add') { addStage(ed.board, head.f); return; }
-    // By a stage, the whole kanban's dragged (picked by this press, as anything dragged off: its faint
-    // frame, what was picked before picked again once let go); let go where pressed, its menu opens.
+    // A stage's pill: dragged along the header, its column goes with it; let go where pressed, its menu.
+    if (head.part !== 'head') { ed.gesture = { type: 'stageDrag', id: head.f.id, i: head.part.stage, start: w, moved: false }; return; }
+    // Elsewhere on the header, the whole kanban's dragged (picked by this press, as anything dragged off:
+    // its faint frame, what was picked before picked again once let go).
     const was = [...ed.selection];
     ed.setPicking(true);
     ed.setSelection([head.f.id]);
-    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(ed.board.list()), moved: false, id: head.f.id, dbl: false, fresh: true, was, stage: head.part.stage };
+    ed.gesture = { type: 'drag', start: w, orig: ed.dragSet(ed.board.list()), moved: false, id: head.f.id, dbl: false, fresh: true, was };
     return;
   }
   // A poll's answer voted for (or not), its «+», its start, «Редактировать» («Голосование», src/labs);
