@@ -35,6 +35,8 @@ import { Labs } from './labs/LabsLayer';
 import { labOn, useLabs } from './labs/labs';
 import { morphFrom, morphPanel } from './labs/textButton';
 import { FormFields } from './labs/FormFields';
+import { PollFields } from './labs/PollFields';
+import { isAuthor } from './labs/poll';
 import { toggleDots, useDotsOn } from './labs/linkTool';
 import { joinDropped } from './labs/linkJoint';
 import { HelpPop } from './ui/HelpPop';
@@ -522,6 +524,8 @@ export function App({ boardId }: { boardId: string }) {
       {overOn && place === 'over' && <SelectionPanel key={`over:${overKey.current}`} editor={editor} items={selItems} cells={ui.cells} linkCount={0} docked={false} over after={!!panelItem || swapped} onText={toText} />}
       {/* «Форма» (src/labs): its fields over it while it's picked, not filled, nor moved. */}
       {selItems.length === 1 && selItems[0].form && !selItems[0].fd && !ui.moving && <FormFields editor={editor} item={selItems[0]} zoom={ui.cam.z} />}
+      {/* «Голосование» (src/labs): its fields over it while it's being set up, picked, by who put it there. */}
+      {selItems.length === 1 && selItems[0].poll && selItems[0].pd && isAuthor(selItems[0]) && !ui.moving && <PollFields editor={editor} item={selItems[0]} zoom={ui.cam.z} />}
       {/* A table cell is typed into as if it were an item of its own, the size of the cell. */}
       {editing && (editing.type === 'table' && ui.editingCell !== null
         ? <TextEditor key={`${editing.id}:${ui.editingCell}`} editor={editor} item={cellItem(editing, ui.editingCell)} />

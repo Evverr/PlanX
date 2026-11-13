@@ -203,6 +203,14 @@ export interface Item {
   form?: boolean;
   fv?: string[];
   fd?: boolean;
+  /** A rectangle that's a poll («Голосование», src/labs/poll.ts): its question and answers, being set up
+   *  (not started yet), and who put it there (their browser's id). Each one's votes are a field of their
+   *  own, `pv:<their browser's id>`. */
+  poll?: boolean;
+  pq?: string;
+  po?: string[];
+  pd?: boolean;
+  pa?: string;
   /** The address the item leads to (src/labs, "Ссылка в тексте"). */
   url?: string;
   /** Links on parts of its text, by character (see model/textLinks.ts). */

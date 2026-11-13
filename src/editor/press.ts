@@ -6,6 +6,7 @@ import { tabAt, tabsFor } from '../labs/sideTabs';
 import { taskPartAt } from '../canvas/task';
 import { copyCode, onCodeCopy } from '../labs/codeBlock';
 import { onFormButton } from '../labs/formObject';
+import { pollPartAt, pressPoll } from '../labs/poll';
 import { toggleAudio } from '../canvas/audio';
 import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, ringAt, tickAt, pickedUnder } from './hover';
 import { grabbableLine } from './tables';
@@ -140,6 +141,7 @@ export function press(ed: Editor, e: PointerEvent): void {
     case 'mind':
     case 'timeline':
     case 'form':
+    case 'poll':
       ed.gesture = { type: 'place', at: w, tool: ed.tool };
       return;
     case 'rect':
@@ -301,6 +303,14 @@ export function press(ed: Editor, e: PointerEvent): void {
   if (hit?.form && e.button === 0 && !e.shiftKey && onFormButton(hit, w)) {
     ed.board.update(hit.id, { fd: hit.fd ? undefined : true });
     ed.setSelection([hit.id]);
+    return;
+  }
+  // A poll's answer voted for (or not), its «+», its start, «Редактировать» («Голосование», src/labs);
+  // setting it up, it's picked (its fields over it, see PollFields).
+  const pollPart = hit?.poll && e.button === 0 && !e.shiftKey ? pollPartAt(hit, w) : null;
+  if (hit && pollPart) {
+    pressPoll(ed.board, hit, pollPart);
+    if (typeof pollPart !== 'object') ed.setSelection([hit.id]);
     return;
   }
   // An audio note's button plays it (or stops it) instead of picking it up.

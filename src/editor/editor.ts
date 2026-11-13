@@ -35,7 +35,7 @@ import { showGrips } from '../labs/tableMove';
 import { carryCellFormat, noteCellFormat } from '../labs/tableLook';
 import { holds as mindTidyOn, mindTidyKept, restartMindTidy, resumeMindTidy } from '../labs/tidyMind';
 import { clearComments } from '../labs/comments';
-import { heldInPlace, isLocked, labOn, subscribeLabs } from '../labs/labs';
+import { heldInPlace, isLocked, labOn, myId, subscribeLabs } from '../labs/labs';
 import { grouped, ungrouped, withGroups } from '../labs/groups';
 import { keepMyObject, myObjects } from '../labs/myObjects';
 import { finishNib, nibPoints } from '../labs/nib';
@@ -44,6 +44,7 @@ import { hiddenByLayers, layersVersion, newItemLayer } from '../labs/layers';
 import { zoomsWithKey } from '../labs/wheelZoom';
 import { codeFit, scrollCode } from '../labs/codeBlock';
 import { FORM_H, FORM_RAD, FORM_W } from '../labs/formObject';
+import { POLL_RAD, POLL_W, pollLayout } from '../labs/poll';
 import { closeTask, fitTask, freshTask, renewTasks, taskTextPatch } from '../model/task';
 import { setTaskRedraw } from '../canvas/task';
 import { outSide, setTabsRedraw, towardOffset, type TabAims } from '../labs/sideTabs';
@@ -585,6 +586,16 @@ export class Editor {
     this.setSelection([it.id]);
   }
 
+  /** «Голосование» (src/labs/poll.ts), centred on `c`, being set up by whoever put it there, picked. */
+  addPoll(c: Point): void {
+    const draft = { poll: true, pd: true, pq: '', po: ['', ''], pa: myId(), text: '', rad: POLL_RAD };
+    const h = Math.round(pollLayout({ ...draft, x: 0, y: 0, w: POLL_W, h: 0 } as Item).h);
+    const it = this.newItem('rect', Math.round(c.x - POLL_W / 2), Math.round(c.y - h / 2), { ...draft, w: POLL_W, h });
+    this.addItem(it);
+    this.setTool('select');
+    this.setSelection([it.id]);
+  }
+
   requestRender(): void {
     if (this.raf || !this.ctx) return;
     this.raf = requestAnimationFrame(() => {
@@ -1110,6 +1121,7 @@ export class Editor {
   dropItem(tool: Tool, at: Point): void {
     if (tool === 'timeline') { this.addTimeline(this.toWorld(at.x, at.y)); return; }
     if (tool === 'form') { this.addForm(this.toWorld(at.x, at.y)); return; }
+    if (tool === 'poll') { this.addPoll(this.toWorld(at.x, at.y)); return; }
     const type = (isPoly(tool) ? 'polygon' : tool) as ItemType;
     if (!DEFAULTS[type]) return;
     const extra: Partial<Item> = isPoly(tool) ? { shape: tool, ...(tool === 'triangle' && { va: 'bottom' as const }) } : tool === 'table' ? freshTable() : tool === 'mind' ? { text: MIND_TOPIC } : {};
@@ -1540,7 +1552,7 @@ export class Editor {
   startEditing(id: string, cell?: number | null, caret: 'all' | 'end' = 'all'): void {
     const it = this.board.get(id);
     // (Nor a shape with no typing in it, «Без текста», nor a form: it's typed into by its fields.)
-    if (!it || !EDITABLE.includes(it.type) || isLocked(it) || it.nt || it.form) return;
+    if (!it || !EDITABLE.includes(it.type) || isLocked(it) || it.nt || it.form || it.poll) return;
     // Another part of a task typed in: what was typed in the one before kept first.
     if (it.type === 'task' && this.editingId === id && this.editingCell !== (cell ?? null)) window.dispatchEvent(new Event('planx:commit-edit'));
     this.editCaret = caret;

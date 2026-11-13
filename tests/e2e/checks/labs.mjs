@@ -722,6 +722,38 @@ export const checks = {
     expect(await p.ev(`document.querySelector('.form-field').value`), 'the value in its field').toBe('Москва');
   },
 
+  async '"Голосование в объектах": set up in its fields, started, an answer clicked voted for (the shares shown), clicked again unvoted'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.addPoll({ x: 600, y: 360 }); })()`);
+    await sleep(300);
+    const poll = () => p.ev(`(() => { const f = planx.board.list().find((i) => i.poll); return { ...f, votes: Object.keys(f).filter((k) => k.startsWith('pv:')).map((k) => f[k]) }; })()`);
+    expect(await p.ev(`document.querySelectorAll('.form-field').length`), 'the question and two answers').toBe(3);
+    const type = async (i, text) => { const r = await p.ev(`(() => { const b = document.querySelectorAll('.form-field')[${i}].getBoundingClientRect(); return [b.left + 20, b.top + 10]; })()`); await p.click(r); await p.ev(`document.execCommand('insertText', false, ${JSON.stringify(text)})`); };
+    await type(0, 'Тренировка в 10:00 с тренером?');
+    await type(1, 'буду');
+    await type(2, 'не смогу');
+    let it = await poll();
+    expect(it.pq, 'the question').toBe('Тренировка в 10:00 с тренером?');
+    expect(JSON.stringify(it.po), 'the answers').toBe(JSON.stringify(['буду', 'не смогу']));
+    // «Запустить»: the last 40 above its bottom room.
+    await p.click([it.x + it.w / 2, it.y + it.h - 20 - 20]);
+    await sleep(150);
+    it = await poll();
+    expect(it.pd, 'started').toBe(undefined);
+    expect(await p.ev(`document.querySelectorAll('.form-field').length`), 'no fields once started').toBe(0);
+    // The first answer's row: under the question's line.
+    const row = (i) => [it.x + it.w / 2, it.y + 20 + 24 + 16 + i * 54 + 22];
+    await p.click(row(0));
+    await sleep(100);
+    expect(JSON.stringify((await poll()).votes), 'voted').toBe(JSON.stringify([[0]]));
+    await p.click(row(1));
+    await sleep(100);
+    expect(JSON.stringify((await poll()).votes), 'both').toBe(JSON.stringify([[0, 1]]));
+    await p.click(row(0));
+    await p.click(row(1));
+    await sleep(100);
+    expect(JSON.stringify((await poll()).votes), 'unvoted').toBe(JSON.stringify([]));
+  },
+
   async '"Перестроение панели": off at first; on, picking something else, near or far, the same panel over it is by it at once (no copy of it fading out, its buttons kept)'(p) {
     expect(await p.ev(`(async () => (await import('/src/labs/labs.ts')).labOn('panelGlide'))()`), 'off at first').toBe(false);
     await p.ev(`(async () => { const l = await import('/src/labs/labs.ts'); l.setLab('panelOver', true); l.setLab('panelGlide', true); })()`);

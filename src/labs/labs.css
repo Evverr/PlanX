@@ -282,6 +282,7 @@
   font-family: var(--ui); font-weight: 400; outline: none; }
 .form-field:focus { border-color: var(--accent); }
 .form-field::placeholder { color: var(--muted); }
+.form-field.poll-question { font-weight: 600; }
 
 /* «Перестроение панели» (see overKey in App): the panel over what's picked by what's picked next at once,
    what comes on it there (not what it had: that's there already) fading in. */

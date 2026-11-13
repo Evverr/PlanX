@@ -10,6 +10,7 @@ import { instanceGlyph, instancePlus } from '../model/components';
 import { taskButtonAt } from './tasks';
 import { onCodeCopy } from '../labs/codeBlock';
 import { onFormButton } from '../labs/formObject';
+import { pollHot } from '../labs/poll';
 import { branchBase, buttonKey, foldBadge, foldedWays, mindButtons, mindWay, ringRadius, type MindButtonAt, type Way } from '../model/mind';
 import { frameButtonAt } from './frames';
 import { rotateCursor } from './cursors';
@@ -324,7 +325,8 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   const ring = ringAt(ed, w), ringFirst = ring && (!plus || ring.d < Math.hypot(w.x - plus.x, w.y - plus.y));
   const hot = ringFirst ? `ring:${ring.id}:${ring.way}` : plus ? buttonKey(plus) : tick ? `tick:${tick.id}` : glyph ?? (tp === 'arrow' || tp === 'more' || tp === 'menu' || tp === 'pin' ? `task:${over!.id}:${tp}` : typeof tp === 'object' && tp ? `task:${over!.id}:${tp.del ? 'del' : 'sub'}:${tp.sub}` : null)
     ?? (over?.code && ed.editingId !== over.id && onCodeCopy(over, w) ? `code:${over.id}` : null)
-    ?? (over?.form && onFormButton(over, w) ? `form:${over.id}` : null);
+    ?? (over?.form && onFormButton(over, w) ? `form:${over.id}` : null)
+    ?? (over?.poll ? pollHot(over, w) : null);
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (linkHandleAt(ed, w)) cursor = 'move';
