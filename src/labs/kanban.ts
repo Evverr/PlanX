@@ -127,7 +127,7 @@ export const gliding = (now: number): boolean => [...glides.values()].some((g) =
 /** The kanban column a card being dragged would go into, let go now (the one its middle's over), and
  *  where among its cards: the line between them it'd go in at (`y`, across `x`…`x + w`). `skip`: what's
  *  being dragged. */
-export function dropTarget(items: Item[], it: Item | undefined, skip: Set<string> = new Set()): { id: string; col: number; x: number; w: number; y: number } | null {
+export function dropTarget(items: Item[], it: Item | undefined, skip: Set<string> = new Set()): { id: string; col: number; x: number; w: number; y: number | null } | null {
   if (!it || !snaps(it)) return null;
   const cx = it.x + it.w / 2, cy = it.y + it.h / 2;
   const f = items.find((k) => k.kb && cx >= k.x && cx <= k.x + k.w && cy >= k.y && cy <= k.y + k.h);
@@ -135,9 +135,9 @@ export function dropTarget(items: Item[], it: Item | undefined, skip: Set<string
   const col = columnOf(f, cx), c = columns(f)[col], held = new Set(f.members ?? []);
   // (As they'll stand: by their tops, the one let go among them by its own.)
   const cards = items.filter((o) => held.has(o.id) && !skip.has(o.id) && snaps(o) && columnOf(f, o.x + o.w / 2) === col).sort((a, b) => a.y - b.y);
-  const before = cards.filter((o) => o.y < it.y), last = before[before.length - 1];
-  const y = last ? last.y + last.h + CARD_GAP / 2 : c.y + IN - CARD_GAP / 2;
-  return { id: f.id, col, x: c.x, w: c.w, y };
+  // (Between two of them only: not over the first, nor under the last.)
+  const before = cards.filter((o) => o.y < it.y), last = before[before.length - 1], next = cards[before.length];
+  return { id: f.id, col, x: c.x, w: c.w, y: last && next ? last.y + last.h + CARD_GAP / 2 : null };
 }
 
 /** Its «+» on the right of its header, for one more stage. */

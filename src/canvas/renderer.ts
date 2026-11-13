@@ -144,7 +144,7 @@ export interface Scene {
   dragMoved?: boolean;
   /** «Канбан»: the column a card being dragged would go into (lit as it's over it), and the line between
    *  its cards where it'd go in (drawn blue). */
-  kanbanDrop?: { id: string; col: number; x: number; w: number; y: number } | null;
+  kanbanDrop?: { id: string; col: number; x: number; w: number; y: number | null } | null;
   /** «Канбан»: cards taken up (dragged over a kanban or out of one): drawn a little tilted, see-through. */
   lifted?: string[];
   /** Picked links' colours being set: drawn in them, not in the selection's blue. */
@@ -1398,9 +1398,9 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
     }
   }
   if (lifted) drawLifted(ctx, s, lifted);
-  // «Канбан»: where a card being dragged would go in, a blue line between the cards there.
-  if (s.kanbanDrop) {
-    const d = s.kanbanDrop;
+  // «Канбан»: where a card being dragged would go in, a blue line between the cards there (only between two).
+  if (s.kanbanDrop?.y != null) {
+    const d = s.kanbanDrop as { x: number; w: number; y: number };
     ctx.beginPath();
     ctx.moveTo(d.x, d.y);
     ctx.lineTo(d.x + d.w, d.y);
