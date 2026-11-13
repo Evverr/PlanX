@@ -64,14 +64,18 @@ export const LABS: Lab[] = [
   { id: 'lineEnd', label: 'Линия в пустоту', icon: 'path', hint: 'Линию, отпущенную мимо объекта, не удаляет: её конец остаётся там (у невидимой точки); его можно перетащить и на объект' },
   { id: 'tlLinks', label: 'Угловые линии на таймлайне', icon: 'line-elbow', hint: 'Линия между объектами на таймлайне — с прямыми углами, из правой стороны в левую следующего; если он левее, обходит снизу между ними' },
   { id: 'call', label: 'Аудиозвонок', icon: 'phone-up', hint: 'Кнопка звонка на правой панели: все на доске, кто нажал, слышат друг друга. До трёх человек, следующий просится, и любой в звонке может его пустить' },
-  { id: 'panelGlide', label: 'Панель переезжает', icon: 'more-vertical-m', hint: 'Выбрал объект рядом с прежним (ближе 100 пикселей): панель над ним не гаснет и не появляется заново, а плавно переезжает к новому, перестраивая иконки. Вместе с «Панелью над элементом»' },
+  { id: 'panelGlide', label: 'Перестроение панели', icon: 'more-vertical-m', hint: 'Выбрал объект рядом с прежним (ближе 100 пикселей): панель над ним не гаснет и не появляется заново, а плавно переезжает к новому; одинаковые иконки остаются, новые проявляются после переезда. Вместе с «Панелью над элементом»' },
   { id: 'swap', label: 'Замена двойным кликом', icon: 'repeat', hint: 'Двойной клик по эмодзи или иконке: выбрать другую на её место, и в копии компонента тоже' },
 ];
 
 const KEY = 'planx-labs';
 
-/** What's switched off; anything not listed is on, so a new feature shows up switched on. */
-let off = new Set<LabId>(readJSON<LabId[]>(KEY) ?? []);
+/** Those that show up switched off, till they're switched on (which is kept apart, under ON_KEY). */
+const START_OFF: LabId[] = ['panelGlide'];
+const ON_KEY = 'planx-labs-on';
+let onFirst = new Set<LabId>(readJSON<LabId[]>(ON_KEY) ?? []);
+/** What's switched off; anything not listed is on, so a new feature shows up switched on (but START_OFF). */
+let off = new Set<LabId>([...(readJSON<LabId[]>(KEY) ?? []), ...START_OFF.filter((id) => !onFirst.has(id))]);
 let snapshot: Record<LabId, boolean> = makeSnapshot();
 const listeners = new Set<() => void>();
 
@@ -87,6 +91,7 @@ export function setLab(id: LabId, on: boolean): void {
   off = new Set(off);
   if (on) off.delete(id); else off.add(id);
   writeJSON(KEY, [...off]);
+  if (START_OFF.includes(id)) { onFirst = new Set(onFirst); if (on) onFirst.add(id); else onFirst.delete(id); writeJSON(ON_KEY, [...onFirst]); }
   snapshot = makeSnapshot();
   listeners.forEach((fn) => fn());
 }

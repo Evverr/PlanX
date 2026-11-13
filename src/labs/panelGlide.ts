@@ -1,10 +1,14 @@
 import type { Item } from '../model/types';
 
 /**
- * «Панель переезжает» (src/labs): with «Панель над элементом», picking something near what was picked, the
+ * «Перестроение панели» (src/labs): with «Панель над элементом», picking something near what was picked, the
  * panel over it doesn't go and come back by the new one: it stays while the new one's being picked, and
- * glides there once it's let go, its buttons changed as the T changes them (see morphFrom in textButton.ts).
+ * once it's let go the same panel glides there (see overKey in App), the buttons both have staying as they
+ * are and the new ones fading in once it's there (labs.css).
  */
+
+/** How long it takes to glide there, in ms (labs.css too). */
+export const GLIDE_MS = 200;
 
 /** How near, on the screen, the next pick has to be to the last for the panel to glide: the gap between
  *  the boxes round them, in pixels. */

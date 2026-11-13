@@ -274,6 +274,11 @@
   background-color: color-mix(in srgb, var(--surface) 89%, transparent) !important;
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 
+/* «Перестроение панели» (panelGlide.ts): the panel over what's picked gliding to what's picked next, and
+   what comes on it (not what it had: that's there already) fading in once it's there. */
+.panel-over[data-gliding] { transition: left .2s ease-in-out, top .2s ease-in-out; }
+:root[data-panel-glide] .panel-over > * { animation: fade-in .16s ease-out .2s backwards; }
+
 /* «Кнопка T» (textButton.ts): a panel turning into another shows only what's on it, over a body like
    theirs that takes the one's width and then the other's; the other comes in unseen, its coming in
    done at once, till its buttons fade in. */

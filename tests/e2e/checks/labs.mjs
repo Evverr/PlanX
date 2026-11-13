@@ -700,34 +700,37 @@ export const checks = {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
   },
 
-  async '"Панель переезжает": picking something near what was, the panel over it glides there (no copy of it fading out); picking something far, it goes and comes back as ever'(p) {
+  async '"Перестроение панели": off at first; on, picking something near what was, the same panel over it glides there (no copy of it fading out, its buttons kept); picking something far, it goes and comes back as ever'(p) {
+    expect(await p.ev(`(async () => (await import('/src/labs/labs.ts')).labOn('panelGlide'))()`), 'off at first').toBe(false);
     await p.ev(`(async () => { const l = await import('/src/labs/labs.ts'); l.setLab('panelOver', true); l.setLab('panelGlide', true); })()`);
     // a and b 60 apart; c 260 under a.
     await p.ev(`(() => { const e = planx.editor, b = planx.board; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged();
       b.add(e.newItem('rect', 300, 300, { id: 'a', w: 240, h: 140 })); b.add(e.newItem('rect', 600, 300, { id: 'b', w: 240, h: 140 }));
       b.add(e.newItem('rect', 300, 700, { id: 'c', w: 240, h: 100 })); })()`);
-    const ghosts = () => p.ev(`document.querySelectorAll('.panel-over.gone').length`), shell = () => p.ev(`!!document.querySelector('.panel-shell')`);
+    const ghosts = () => p.ev(`document.querySelectorAll('.panel-over.gone').length`);
+    const mid = async () => { const r = await p.rect('.panel-over:not(.gone)'); return Math.round((r.l + r.r) / 2); };
     await p.click([420, 370]);
     await sleep(500);
-    expect(Math.round(((await p.rect('.panel-over:not(.gone)')).l + (await p.rect('.panel-over:not(.gone)')).r) / 2), 'over a').toBe(420);
-    await p.click([720, 370]);
-    await sleep(60);
-    expect(await shell(), 'gliding').toBe(true);
+    expect(await mid(), 'over a').toBe(420);
+    // (Marked, to tell it's the same one after; its first button too.)
+    await p.ev(`(() => { const o = document.querySelector('.panel-over:not(.gone)'); o.dataset.was = '1'; o.querySelectorAll(':scope > button').forEach((b) => { b.dataset.was = '1'; }); })()`);
+    await p.mouse('mousePressed', 720, 370);
+    await p.mouse('mouseReleased', 720, 370);
+    await sleep(30);
     expect(await ghosts(), 'no copy fading out').toBe(0);
-    await sleep(600);
-    const at = await p.rect('.panel-over:not(.gone)');
-    expect(Math.round((at.l + at.r) / 2), 'over b').toBe(720);
-    expect(await shell(), 'there').toBe(false);
-    // (Far: it goes as soon as it's pressed, as ever, and the new one comes by c.)
+    expect(await p.ev(`'gliding' in document.querySelector('.panel-over:not(.gone)').dataset`), 'gliding').toBe(true);
+    await sleep(500);
+    expect(await mid(), 'over b').toBe(720);
+    expect(await p.ev(`(() => { const o = document.querySelector('.panel-over[data-was]'), all = o ? o.querySelectorAll(':scope > button') : []; return all.length > 0 && [...all].every((b) => b.dataset.was); })()`), 'the same panel, its buttons kept').toBe(true);
+    // (Far: it goes as soon as it's pressed, as ever, and a new one comes by c.)
     await p.mouse('mousePressed', 420, 750);
     await sleep(30);
     expect(await ghosts(), 'far: the old one fading out').toBe(1);
     await p.mouse('mouseReleased', 420, 750);
-    await sleep(60);
-    expect(await shell(), 'far: not gliding').toBe(false);
-    await sleep(600);
-    expect((await p.rect('.panel-over:not(.gone)')).b < 700, 'far: the new one over c').toBe(true);
-    await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
+    await sleep(700);
+    expect(await p.ev(`document.querySelector('.panel-over:not(.gone)').dataset.was`), 'far: a new one').toBe(undefined);
+    expect((await p.rect('.panel-over:not(.gone)')).b < 700, 'far: over c').toBe(true);
+    await p.ev(`(async () => { const l = await import('/src/labs/labs.ts'); l.setLab('panelOver', false); l.setLab('panelGlide', false); })()`);
   },
 
   async '"Панель над элементом": the selection panel over what\'s picked, not at the bottom; under it near the top, what opens from it opening down; staying by it while it\'s moved or the board is; at the bottom for what\'s picked big or partly off the screen'(p) {

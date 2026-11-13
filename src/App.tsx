@@ -34,7 +34,7 @@ import type { Item, Link } from './model/types';
 import { Labs } from './labs/LabsLayer';
 import { labOn, useLabs } from './labs/labs';
 import { morphFrom, morphPanel } from './labs/textButton';
-import { nearPicks } from './labs/panelGlide';
+import { GLIDE_MS, nearPicks } from './labs/panelGlide';
 import { toggleDots, useDotsOn } from './labs/linkTool';
 import { joinDropped } from './labs/linkJoint';
 import { HelpPop } from './ui/HelpPop';
@@ -215,7 +215,7 @@ export function App({ boardId }: { boardId: string }) {
 
   // (For the panels, so none yet while it's still being picked: they come once, on letting go.)
   const picked = ui.selection.map((id) => board.get(id)).filter((i) => !!i);
-  // («Панель переезжает»: picking something near what was, the panel stays over what was till it's let
+  // («Перестроение панели»: picking something near what was, the panel stays over what was till it's let
   // go, then glides to it, see below.)
   const lastPicked = useRef<string[]>([]), before = lastPicked.current.map((id) => board.get(id)).filter((i) => !!i);
   const glides = labOn('panelOver') && labOn('panelGlide');
@@ -327,19 +327,35 @@ export function App({ boardId }: { boardId: string }) {
   // The text panel and the selection panel turning into one another, as by the T ("Кнопка T", src/labs),
   // rather than one going and the other coming: typing starting with the text panel coming, or ending with
   // the selection panel back, the same picked. Where each stood is kept for the next time.
-  const morphWas = useRef<{ sel: string; text: boolean; textAt: DOMRect | null; panelAt: DOMRect | null; overAt: DOMRect | null } | null>(null);
+  const morphWas = useRef<{ sel: string; text: boolean; textAt: DOMRect | null; panelAt: DOMRect | null } | null>(null);
+  // «Перестроение панели» (src/labs): the panel over what's picked keeps being the same one (its key kept)
+  // when what's picked next is near what was, so it glides there, the buttons both have staying as they
+  // are and the new ones fading in once it's there (labs.css).
+  const overKey = useRef(''), overSel = useRef(''), glided = useRef(false), glideEnd = useRef(0);
+  useEffect(() => { document.documentElement.toggleAttribute('data-panel-glide', glides); }, [glides]);
+  if (selKey !== overSel.current) {
+    const near = glides && !!overSel.current && !!selKey && nearPicks(overSel.current.split(',').map((id) => board.get(id)).filter((i) => !!i), selItems, ui.cam.z);
+    if (!near) overKey.current = selKey;
+    glided.current = near;
+    overSel.current = selKey;
+  }
   useLayoutEffect(() => {
     const was = morphWas.current, text = panelOn && !tMode;
     const at = (q: string) => document.querySelector<HTMLElement>(q)?.getBoundingClientRect() ?? null;
     if (was && selKey && was.sel === selKey && !tMode && was.text !== text) {
       if (text && was.panelAt && at('.tfmt:not(.gone):not(.leaving)')) morphFrom(was.panelAt, 'tfmt');
       else if (!text && was.textAt && at('.bar.panel:not(.gone)')) morphFrom(was.textAt, 'panel');
-    } else if (glides && was?.overAt && was.sel && selKey && was.sel !== selKey && !was.text && !text && !tMode
-      && nearPicks(was.sel.split(',').map((id) => board.get(id)).filter((i) => !!i), selItems, ui.cam.z) && at('.bar.panel.panel-over:not(.gone)')) {
-      // «Панель переезжает»: picked near what was, the panel over it glides there.
-      morphFrom(was.overAt, 'panel');
     }
-    morphWas.current = { sel: selKey, text, textAt: at('.tfmt:not(.gone):not(.leaving)'), panelAt: at('.bar.panel:not(.gone)'), overAt: at('.bar.panel.panel-over:not(.gone)') };
+    // «Перестроение панели»: picked near what was, the same panel over it glides there (see overKey).
+    const over = document.querySelector<HTMLElement>('.bar.panel.panel-over:not(.gone)');
+    if (glided.current && over) {
+      glided.current = false;
+      // (Marked so, not by a class: React sets those, and would take it off.)
+      over.dataset.gliding = '';
+      clearTimeout(glideEnd.current);
+      glideEnd.current = window.setTimeout(() => delete over.dataset.gliding, GLIDE_MS);
+    }
+    morphWas.current = { sel: selKey, text, textAt: at('.tfmt:not(.gone):not(.leaving)'), panelAt: at('.bar.panel:not(.gone)') };
   });
   if (overWent.current.shown && !overShown) overWent.current.at = performance.now();
   overWent.current.shown = overShown;
@@ -511,7 +527,7 @@ export function App({ boardId }: { boardId: string }) {
       {/* "Панель над элементом" (src/labs): over what's picked instead, but where it'd be in the way there (see panelPlace). */}
       {staysTyping && !tMode && (!labs.panelOver || place === 'bottom') && <SelectionPanel editor={editor} items={selItems} cells={ui.cells} linkCount={linkCount} docked={docked} onText={toText} />}
       {/* Something else picked: the one by the last fades out, a new one comes in by it once that's gone. */}
-      {overOn && place === 'over' && <SelectionPanel key={`over:${selKey}`} editor={editor} items={selItems} cells={ui.cells} linkCount={0} docked={false} over after={!!panelItem || swapped} onText={toText} />}
+      {overOn && place === 'over' && <SelectionPanel key={`over:${overKey.current}`} editor={editor} items={selItems} cells={ui.cells} linkCount={0} docked={false} over after={!!panelItem || swapped} onText={toText} />}
       {/* A table cell is typed into as if it were an item of its own, the size of the cell. */}
       {editing && (editing.type === 'table' && ui.editingCell !== null
         ? <TextEditor key={`${editing.id}:${ui.editingCell}`} editor={editor} item={cellItem(editing, ui.editingCell)} />
