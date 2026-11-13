@@ -333,7 +333,7 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
   else if (single && sideAt(ed, single, w)) cursor = sideAt(ed, single, w) === 'h' || sideAt(ed, single, w) === 't' ? 'ns-resize' : 'ew-resize';
   else if (single && onRotate(ed, single, w)) cursor = rotateCursor((single.rot ?? 0) + 90);
   else if (line) cursor = line.axis === 'col' ? 'col-resize' : 'row-resize';
-  else if (linkEndAt(ed, w)) cursor = 'grab';
+  // (Its ends as the rest of it: it's taken anywhere along it.)
   else if (link) cursor = 'pointer';
   else {
     const hit = pickedUnder(ed, w) ?? hitItem(ed.shown(), w, ed.cam.z);
