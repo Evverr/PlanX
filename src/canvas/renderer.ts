@@ -324,6 +324,8 @@ function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: s
   // Links on parts of it (see model/textLinks.ts): those parts blue; each line found in the text as
   // drawn, to know which characters it holds.
   const links = it.links?.length ? drawnLinks(it.text ?? '', it.ls, it.links) : null;
+  // Styles on parts of it («Документ»): those parts bold, italic, underlined, struck through, in a colour.
+  const runs = it.rs?.length ? drawnLinks(it.text ?? '', it.ls, it.rs) : null;
   let from = 0;
   // Seen through as much as it's made to be.
   const textAlpha = it.to ?? 1;
@@ -353,22 +355,37 @@ function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: s
       ctx.globalAlpha = textAlpha;
     };
     if (line && it.url) { const tw = ctx.measureText(line).width; underline(align === 'center' ? x - tw / 2 : align === 'right' ? x - tw : x, tw, ink); }
-    const at = text.indexOf(line, from), on = links?.filter((k) => k.s < at + line.length && k.e > at);
+    const at = text.indexOf(line, from), on = links?.filter((k) => k.s < at + line.length && k.e > at) ?? [];
+    const styled = runs?.filter((k) => k.s < at + line.length && k.e > at) ?? [];
     from = at + line.length;
-    if (!on?.length) ctx.fillText(line, x, base);
+    if (!on.length && !styled.length) ctx.fillText(line, x, base);
     else {
-      // Piece by piece from its left end, each link's piece blue (and noted, to be Cmd+clicked).
-      const left = x - ctx.measureText(line).width * (align === 'center' ? 0.5 : align === 'right' ? 1 : 0);
-      const cuts = [...new Set([0, line.length, ...on.flatMap((k) => [k.s - at, k.e - at]).filter((c) => c > 0 && c < line.length)])].sort((a, b) => a - b);
+      // Piece by piece from its left end, each in its own style (its own width), each link's piece blue
+      // (and noted, to be Cmd+clicked).
+      const cuts = [...new Set([0, line.length, ...[...on, ...styled].flatMap((k) => [k.s - at, k.e - at]).filter((c) => c > 0 && c < line.length)])].sort((a, b) => a - b);
+      const pieces = cuts.slice(0, -1).map((c, i) => {
+        const run = styled.find((k) => k.s - at <= c && k.e - at >= cuts[i + 1]);
+        const pf = run?.b || run?.i ? font(l.size, run.b ? 700 : st.weight, st.family, !!run.i || st.italic) : f;
+        ctx.font = pf;
+        const piece = line.slice(c, cuts[i + 1]);
+        return { piece, run, pf, w: ctx.measureText(piece).width, link: on.find((k) => k.s - at <= c && k.e - at >= cuts[i + 1]) };
+      });
+      const tw = pieces.reduce((t, p) => t + p.w, 0);
+      let px = x - tw * (align === 'center' ? 0.5 : align === 'right' ? 1 : 0);
       ctx.textAlign = 'left';
-      for (let i = 0; i + 1 < cuts.length; i++) {
-        const piece = line.slice(cuts[i], cuts[i + 1]), px = left + ctx.measureText(line.slice(0, cuts[i])).width;
-        const link = on.find((k) => k.s - at <= cuts[i] && k.e - at >= cuts[i + 1]);
-        ctx.fillStyle = link ? shade(LINK_INK, s.theme.dim) : ink;
-        ctx.fillText(piece, px, base);
-        if (link) underline(px, ctx.measureText(piece).width, shade(LINK_INK, s.theme.dim));
-        if (link && !it.rot) textLinkRects.push({ x: px, y, w: ctx.measureText(piece).width, h: l.lineHeight, url: link.url });
+      for (const p of pieces) {
+        const own = p.run?.c && (p.run.c.startsWith('#') ? p.run.c : TEXT_COLORS[p.run.c]);
+        const color = p.link ? shade(LINK_INK, s.theme.dim) : own ? shade(own, s.theme.dim) : ink;
+        ctx.font = p.pf;
+        ctx.fillStyle = color;
+        ctx.fillText(p.piece, px, base);
+        if (p.run?.u) ctx.fillRect(px, mid + l.size * 0.42, p.w, rule);
+        if (p.run?.x) ctx.fillRect(px, mid + l.size * 0.04 - rule / 2, p.w, rule);
+        if (p.link) underline(px, p.w, color);
+        if (p.link && !it.rot) textLinkRects.push({ x: px, y, w: p.w, h: l.lineHeight, url: p.link.url });
+        px += p.w;
       }
+      ctx.font = f;
       ctx.textAlign = align;
     }
     y = mid + l.lineHeight / 2;
@@ -623,8 +640,9 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       ctx.restore();
       const pages = pagesOf(it), n = pageShown(it, pages.length), r = pages[n];
       if (!editing && r) {
-        const links = it.links?.filter((l) => l.e > r.s && l.s < r.e).map((l) => ({ ...l, s: Math.max(0, l.s - r.s), e: l.e - r.s }));
-        drawText(ctx, { ...it, x: it.x + PAGE.LEFT, y: it.y + PAGE.TOP, w: PAGE_TEXT.w, h: PAGE_TEXT.h, text: (it.text ?? '').slice(r.s, r.e), links, ls: undefined }, 0, theme.ink, false, s, 0);
+        // (Its links and styles on that page, from its start.)
+        const onPage = <T extends { s: number; e: number }>(list?: T[]) => list?.filter((l) => l.e > r.s && l.s < r.e).map((l) => ({ ...l, s: Math.max(0, l.s - r.s), e: l.e - r.s }));
+        drawText(ctx, { ...it, x: it.x + PAGE.LEFT, y: it.y + PAGE.TOP, w: PAGE_TEXT.w, h: PAGE_TEXT.h, text: (it.text ?? '').slice(r.s, r.e), links: onPage(it.links), rs: onPage(it.rs), ls: undefined }, 0, theme.ink, false, s, 0);
       }
       drawPager(ctx, it, n, pages.length, theme, s.hotPlus);
       break;

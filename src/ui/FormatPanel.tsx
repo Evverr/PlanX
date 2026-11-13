@@ -14,6 +14,7 @@ import { EDGE, fitPopovers } from '../layout';
 import { useLabs } from '../labs/labs';
 import { ItemMenuButton } from '../labs/ContextMenu';
 import { linkPartPatch, linkPatch } from '../labs/textLink';
+import { remapLinks, runsHave, setRun, type RunStyle } from '../model/textLinks';
 
 function Btn({ icon, label, on, off, swatch, menu, onClick }: {
   icon: IconName; label: string; on?: boolean; off?: boolean; swatch?: string; menu?: boolean; onClick?: () => void;
@@ -180,6 +181,28 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
   const heading = HEADINGS.find(([, size]) => size === fs && bold);
   const align = task ? item.ta ?? 'left' : alignOf(item);
   const textColor = hex(item.tc, TEXT_COLORS);
+  // «Документ» (src/labs): with part of its text picked as it's typed in, bold, italic, underline, strike
+  // and colour go on that part alone (see TextRun in model/textLinks.ts), the text as typed kept with them.
+  // (Shown again as what's picked in it changes, for its buttons to show what's on it.)
+  const [, reselect] = useReducer((n: number) => n + 1, 0);
+  useEffect(() => {
+    if (item.type !== 'page') return;
+    document.addEventListener('selectionchange', reselect);
+    return () => document.removeEventListener('selectionchange', reselect);
+  }, [item.type]);
+  const picked = item.type === 'page' ? pickedPart(editor, item) : null;
+  const runsOf = (p: Part) => remapLinks(item.text ?? '', p.text, item.rs);
+  const partHas = (key: keyof RunStyle, value?: string) => !!picked && runsHave(runsOf(picked), picked.s, picked.e, key, value);
+  /** Sets (or takes off) a style on the part picked (as it's picked now); false with none picked (the
+   *  whole text's then). */
+  const stylePart = (key: keyof RunStyle, value?: string): boolean => {
+    const now = item.type === 'page' ? pickedPart(editor, item) : null;
+    if (!now) return false;
+    const runs = runsOf(now), on = key === 'c' ? value !== undefined : !runsHave(runs, now.s, now.e, key);
+    editor.board.update(item.id, { text: now.text, rs: setRun(runs, now.s, now.e, key, on, value) });
+    setMenu(null);
+    return true;
+  };
   const mark = hex(item.mk, MARK_COLORS);
 
   return (
@@ -214,15 +237,15 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
           <Pick value={fs ? String(fs) : '—'} label="Размер" onClick={() => toggle('size')} />
         </Drop></span>,
         gap3: <div className="fsep" />,
-        bold: <span className="sort-wrap"><Btn icon="bold" label="Жирный" on={bold} onClick={() => set({ fw: bold ? 400 : 700 })} /></span>,
-        italic: <span className="sort-wrap"><Btn icon="italic" label="Курсив" on={item.fi} onClick={() => set({ fi: item.fi ? undefined : true })} /></span>,
-        underline: <span className="sort-wrap"><Btn icon="underline" label="Подчёркнутый" on={item.fu} onClick={() => set({ fu: item.fu ? undefined : true })} /></span>,
-        strike: <span className="sort-wrap"><Btn icon="strike" label="Зачёркнутый" on={item.fx} onClick={() => set({ fx: item.fx ? undefined : true })} /></span>,
+        bold: <span className="sort-wrap"><Btn icon="bold" label="Жирный" on={picked ? partHas('b') : bold} onClick={() => stylePart('b') || set({ fw: bold ? 400 : 700 })} /></span>,
+        italic: <span className="sort-wrap"><Btn icon="italic" label="Курсив" on={picked ? partHas('i') : item.fi} onClick={() => stylePart('i') || set({ fi: item.fi ? undefined : true })} /></span>,
+        underline: <span className="sort-wrap"><Btn icon="underline" label="Подчёркнутый" on={picked ? partHas('u') : item.fu} onClick={() => stylePart('u') || set({ fu: item.fu ? undefined : true })} /></span>,
+        strike: <span className="sort-wrap"><Btn icon="strike" label="Зачёркнутый" on={picked ? partHas('x') : item.fx} onClick={() => stylePart('x') || set({ fx: item.fx ? undefined : true })} /></span>,
         sep: <div className="fsep line" />,
         // The text's colour and its highlight: the same row of colours and opacity as in «Параметры».
         color: <span className="sort-wrap"><Drop open={menu === 'color'} params menu={
           <ColorRow editor={editor} label="Цвет текста" colors={Object.fromEntries(Object.entries(TEXT_COLORS).map(([k, v]) => [k, v || 'var(--ink)']))}
-            current={item.tc ?? 'ink'} opacity={item.to ?? 1} onColor={(c) => set({ tc: c === 'ink' ? undefined : c }, true)} onOpacity={(v) => editor.setOpacity('text', v ?? 1)} />}>
+            current={item.tc ?? 'ink'} opacity={item.to ?? 1} onColor={(c) => stylePart('c', c === 'ink' ? undefined : c) || set({ tc: c === 'ink' ? undefined : c }, true)} onOpacity={(v) => editor.setOpacity('text', v ?? 1)} />}>
           <Btn icon="color" label="Цвет текста" swatch={textColor ?? 'var(--fmt-ink)'} on={menu === 'color'} onClick={() => toggle('color')} />
         </Drop></span>,
         mark: <span className="sort-wrap"><Drop open={menu === 'mark'} params menu={

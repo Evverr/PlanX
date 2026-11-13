@@ -810,6 +810,30 @@ export const checks = {
     expect((await shown())[0], 'back').toBe(0);
   },
 
+  async '"Документ": words picked as it\'s typed in made bold or coloured on the text panel, those words alone'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 40, y: 20, z: 0.8 }; e.camChanged(); e.dropItem('page', { x: 420, y: 500 }); })()`);
+    await sleep(200);
+    const id = await p.ev(`planx.board.list().find((i) => i.type === 'page').id`);
+    await p.ev(`(() => { planx.board.update('${id}', { text: 'Первое важное слово и обычный текст' }); planx.editor.startEditing('${id}', null, 'end'); })()`);
+    await sleep(400);
+    // «важное» picked in the field, then bold.
+    await p.ev(`(() => { const t = document.querySelector('textarea.text-edit'); t.focus(); t.setSelectionRange(7, 13); t.dispatchEvent(new Event('select')); document.dispatchEvent(new Event('selectionchange')); })()`);
+    await sleep(200);
+    await p.click(await p.at('.tfmt button[aria-label="Жирный"]'));
+    await sleep(150);
+    let rs = await p.ev(`JSON.stringify(planx.board.get('${id}').rs ?? null)`);
+    expect(rs, 'that word bold').toBe(JSON.stringify([{ s: 7, e: 13, b: true }]));
+    expect(await p.ev(`planx.board.get('${id}').fw ?? null`), 'not the whole text').toBe(null);
+    await p.ev(`(() => { const t = document.querySelector('textarea.text-edit'); t.focus(); t.setSelectionRange(0, 6); })()`);
+    await sleep(150);
+    await p.click(await p.at('.tfmt button[aria-label="Цвет текста"]'));
+    await sleep(150);
+    await p.click(await p.at('.params-colors button[aria-label="Цвет текста: red"]'));
+    await sleep(150);
+    rs = await p.ev(`JSON.stringify(planx.board.get('${id}').rs ?? null)`);
+    expect(rs, 'the first word red too').toBe(JSON.stringify([{ s: 0, e: 6, c: 'red' }, { s: 7, e: 13, b: true }]));
+  },
+
   async '"Голосование в объектах": set up in its fields, started, an answer clicked voted for (the shares shown), clicked again unvoted'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.addPoll({ x: 600, y: 360 }); })()`);
     await sleep(300);

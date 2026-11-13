@@ -1640,7 +1640,7 @@ export class Editor {
         this.selection.delete(id);
       } else if (value !== (it.text ?? '')) {
         // Links on parts of it move with what's typed (see model/textLinks.ts).
-        const patch: Partial<Item> = { text: value, ...mindFit(this, it, value), ...(it.fold && { w: foldedSize(value).w }), ...(it.links && { links: remapLinks(it.text ?? '', value, it.links) }) };
+        const patch: Partial<Item> = { text: value, ...mindFit(this, it, value), ...(it.fold && { w: foldedSize(value).w }), ...(it.links && { links: remapLinks(it.text ?? '', value, it.links) }), ...(it.rs && { rs: remapLinks(it.text ?? '', value, it.rs) }) };
         const h = fitHeight(it, value);
         if (h) Object.assign(patch, { h }, it.rot && resizedAt(it, it.w, h));
         if (it.code) Object.assign(patch, codeFit(it, value, this.codeRoom(it)));

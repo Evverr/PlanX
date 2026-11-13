@@ -8,7 +8,7 @@ export interface TextLink { s: number; e: number; url: string }
 
 /** The links kept on new text: those after a change shift with it, those in what was cut out go,
  *  those it was typed into stretch round it. */
-export function remapLinks(before: string, after: string, links: TextLink[] | undefined): TextLink[] | undefined {
+export function remapLinks<T extends { s: number; e: number }>(before: string, after: string, links: T[] | undefined): T[] | undefined {
   if (!links?.length || before === after) return links;
   let start = 0;
   while (start < before.length && start < after.length && before[start] === after[start]) start++;
@@ -34,7 +34,7 @@ export function setLink(links: TextLink[] | undefined, s: number, e: number, url
 }
 
 /** The links on the text as drawn, where a list puts a bullet or number before each paragraph. */
-export function drawnLinks(text: string, list: ListKind | undefined, links: TextLink[]): TextLink[] {
+export function drawnLinks<T extends { s: number; e: number }>(text: string, list: ListKind | undefined, links: T[]): T[] {
   if (!list) return links;
   // Where each paragraph starts, and how much went before it by then.
   const starts: Array<[number, number]> = [];
@@ -46,4 +46,50 @@ export function drawnLinks(text: string, list: ListKind | undefined, links: Text
   });
   const to = (i: number) => { let add = 0; for (const [from, a] of starts) if (from <= i) add = a; return i + add; };
   return links.map((l) => ({ ...l, s: to(l.s), e: to(l.e) }));
+}
+
+/** A style on part of an item's text («Документ», src/labs/docPage.ts): bold, italic, underlined, struck
+ *  through, its colour (a key of TEXT_COLORS or '#rrggbb'). Kept by character as the links are, moving
+ *  with the text as it's typed in (remapLinks). */
+export interface TextRun { s: number; e: number; b?: boolean; i?: boolean; u?: boolean; x?: boolean; c?: string }
+export type RunStyle = Omit<TextRun, 's' | 'e'>;
+
+/** The style on each character of s…e, from the runs. */
+function stylesIn(runs: TextRun[] | undefined, s: number, e: number, extra: number[] = []): Array<{ s: number; e: number; st: RunStyle }> {
+  const cuts = [...new Set([s, e, ...[...(runs ?? []).flatMap((r) => [r.s, r.e]), ...extra].filter((c) => c > s && c < e)])].sort((a, b) => a - b);
+  const out: Array<{ s: number; e: number; st: RunStyle }> = [];
+  for (let i = 0; i + 1 < cuts.length; i++) {
+    const st: RunStyle = {};
+    for (const r of runs ?? []) if (r.s <= cuts[i] && r.e >= cuts[i + 1]) Object.assign(st, Object.fromEntries(Object.entries(r).filter(([k]) => k !== 's' && k !== 'e')));
+    out.push({ s: cuts[i], e: cuts[i + 1], st });
+  }
+  return out;
+}
+
+/** Whether all of s…e has `key` set (to `value`, for a colour). */
+export function runsHave(runs: TextRun[] | undefined, s: number, e: number, key: keyof RunStyle, value?: string): boolean {
+  return e > s && stylesIn(runs, s, e).every((p) => (value === undefined ? !!p.st[key] : p.st[key] === value));
+}
+
+/** The runs with `key` set on s…e (to `value`), or taken off there (`value` undefined for a colour, `on`
+ *  false for the rest); next to each other with the same style, made one. */
+export function setRun(runs: TextRun[] | undefined, s: number, e: number, key: keyof RunStyle, on: boolean, value?: string): TextRun[] | undefined {
+  if (e <= s) return runs;
+  const end = Math.max(e, ...(runs ?? []).map((r) => r.e));
+  const all = stylesIn(runs, Math.min(s, ...(runs ?? []).map((r) => r.s)), end, [s, e]).map((p) => {
+    if (p.e <= s || p.s >= e) return p;
+    const st = { ...p.st } as Record<string, unknown>;
+    if (on) st[key] = key === 'c' ? value : true; else delete st[key];
+    return { ...p, st: st as RunStyle };
+  });
+  // (Styles told apart by what's set in them, whatever the order.)
+  const styleKey = (st: RunStyle) => JSON.stringify(Object.entries(st).filter(([, v]) => v !== undefined).sort());
+  const out: TextRun[] = [];
+  for (const p of all) {
+    if (!Object.keys(p.st).length) continue;
+    const last = out[out.length - 1];
+    if (last && last.e === p.s && styleKey({ ...last, s: undefined, e: undefined } as RunStyle) === styleKey(p.st)) last.e = p.e;
+    else out.push({ s: p.s, e: p.e, ...p.st });
+  }
+  return out.length ? out : undefined;
 }
