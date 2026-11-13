@@ -203,7 +203,7 @@ export const dotsMoving = (): boolean => {
 };
 /** The faint frame of what's dragged coming (quickly) and going (less so), in ms; how far it's come,
  *  and what it was on (to fade it out there once it's let go and unpicked). */
-const DRAG_IN = 100, DRAG_OUT = 200;
+const DRAG_IN = 100, DRAG_OUT = 400;
 let dragTurn = { hot: false, from: 0, at: 0 }, dragged: string[] = [];
 /** What's no longer picked fades out (its frame, its handle and dots) as a panel does, in this long. */
 const PICK_OUT = 80;

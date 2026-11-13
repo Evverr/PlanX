@@ -77,6 +77,8 @@
 :is(.op-pop, .tf-any, .ink-style, .params-row, .params-opacity) input[type="range"]::-moz-range-thumb { width: var(--e18); height: var(--e18); border: 0; border-radius: 50%; background: var(--fmt-on-ink); }
 /* The palette's popover: the fill/outline switch, the colours, the opacity slider, lines between. */
 .op-pop.palette-pop { gap: 0; padding: 0 var(--s12); }
+/* Over the panel's own buttons, with what opens from it (any colour's picker falling over them). */
+.op-pop { z-index: 9; }
 .op-pop.palette-pop .paint-target { gap: var(--s2); }
 .op-pop.palette-pop .sep { margin: 0 var(--s8); }
 .op-pop.palette-pop input[type="range"] { width: var(--e110); margin-right: var(--s10); }
