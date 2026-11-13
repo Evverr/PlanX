@@ -274,6 +274,9 @@
   background-color: color-mix(in srgb, var(--surface) 89%, transparent) !important;
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
 
+/* «Быстрое создание»: its window, the field alone for now. */
+.quick-pop .confirm-input { margin-bottom: 0; }
+
 /* «Форма» (formObject.ts): its fields over it, as it draws them (FormFields.tsx sets their size by the zoom). */
 .form-field { position: fixed; z-index: 3; box-sizing: border-box; margin: 0; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
   font-family: var(--ui); font-weight: 400; outline: none; }

@@ -46,7 +46,7 @@ import { shelfUrlFor, useShelfTracking } from './shelf/track';
 /** Where a board copied into a new tab waits for it, followed by the new board's id. */
 const COPY_KEY = 'planx-copy:';
 
-type Pop = 'clear' | 'icons' | 'help' | 'name' | null;
+type Pop = 'clear' | 'quick' | 'icons' | 'help' | 'name' | null;
 
 
 /** How long the text panel takes to fade out (format.css: half its fading in). */
@@ -442,7 +442,10 @@ export function App({ boardId }: { boardId: string }) {
           undo: <button className="ib" title="Отменить (Ctrl+Z)" aria-label="Отменить" disabled={!ui.canUndo} onClick={() => editor.undo()}><PanelIcon name="undo-on" /></button>,
           redo: <button className="ib" title="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть" disabled={!ui.canRedo} onClick={() => editor.redo()}><PanelIcon name="redo-on" /></button>,
           new: <button className="ib" title="Копия доски в новой вкладке" aria-label="Копия доски" onClick={openNewBoard}><PanelIcon name="plus" /></button>,
-          clear: <button className={`ib ${pop === 'clear' ? 'on' : ''}`} title="Очистить доску" aria-label="Очистить доску" onClick={() => toggle('clear')}><PanelIcon name="cross" /></button>,
+          // («Быстрое создание», src/labs: its lightning in the clearing's place.)
+          clear: labs.quickCreate
+            ? <button className={`ib ${pop === 'quick' ? 'on' : ''}`} title="Быстрое создание" aria-label="Быстрое создание" onClick={() => toggle('quick')}><PanelIcon name="lightning-plus" /></button>
+            : <button className={`ib ${pop === 'clear' ? 'on' : ''}`} title="Очистить доску" aria-label="Очистить доску" onClick={() => toggle('clear')}><PanelIcon name="cross" /></button>,
         }, topBar.space, topBar.place)}
       </header>
 
@@ -548,6 +551,14 @@ export function App({ boardId }: { boardId: string }) {
             <button className="btn" onClick={() => setPop(null)}>Отмена</button>
             <button className="btn primary" onClick={() => { editor.clearBoard(); setPop(null); setCleared(Date.now()); }}>Очистить</button>
           </div>
+        </div>
+      )}
+
+      {/* «Быстрое создание» (src/labs): for now the field alone; what it makes comes later. */}
+      {pop === 'quick' && (
+        <div className="pop confirm quick-pop" role="dialog" aria-label="Быстрое создание">
+          <input className="confirm-input" autoFocus placeholder="Что создать?" aria-label="Что создать?"
+            onKeyDown={(e) => { if (e.key === 'Escape') setPop(null); }} />
         </div>
       )}
 

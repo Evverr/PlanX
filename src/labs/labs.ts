@@ -7,7 +7,7 @@ import { readJSON, readText, writeJSON, writeText } from '../storage';
  * browser. Everything they need lives in this folder; the app only asks labOn() where a feature
  * changes what it does, so one that isn't kept comes out by deleting its file and those few lines.
  */
-export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib' | 'softEraser' | 'layers' | 'solidTool' | 'history' | 'panelOver' | 'zoomFade' | 'zoomKeys' | 'tableMove' | 'textButton' | 'tableCut' | 'linkJoint' | 'tableLook' | 'imageCrop' | 'boardGrid' | 'linkTool' | 'customize' | 'codeBlock' | 'taskFull' | 'sideNav' | 'discussion' | 'groups' | 'subDrag' | 'nearGuides' | 'textBox' | 'sideTabs' | 'lineEnd' | 'tlLinks' | 'call' | 'panelGlide' | 'formObject';
+export type LabId = 'export' | 'pdf' | 'tidy' | 'lock' | 'search' | 'timer' | 'reactions' | 'laser' | 'follow' | 'cursors' | 'swap' | 'textPush' | 'wishlist' | 'clickThrough' | 'multi' | 'textLink' | 'objects' | 'contextMenu' | 'lineTool' | 'boardImport' | 'comments' | 'zoomBox' | 'align' | 'nib' | 'softEraser' | 'layers' | 'solidTool' | 'history' | 'panelOver' | 'zoomFade' | 'zoomKeys' | 'tableMove' | 'textButton' | 'tableCut' | 'linkJoint' | 'tableLook' | 'imageCrop' | 'boardGrid' | 'linkTool' | 'customize' | 'codeBlock' | 'taskFull' | 'sideNav' | 'discussion' | 'groups' | 'subDrag' | 'nearGuides' | 'textBox' | 'sideTabs' | 'lineEnd' | 'tlLinks' | 'call' | 'panelGlide' | 'formObject' | 'quickCreate';
 
 export interface Lab { id: LabId; label: string; icon: string; hint: string }
 
@@ -65,6 +65,7 @@ export const LABS: Lab[] = [
   { id: 'tlLinks', label: 'Угловые линии на таймлайне', icon: 'line-elbow', hint: 'Линия между объектами на таймлайне — с прямыми углами, из правой стороны в левую следующего; если он левее, обходит снизу между ними' },
   { id: 'call', label: 'Аудиозвонок', icon: 'phone-up', hint: 'Кнопка звонка на правой панели: все на доске, кто нажал, слышат друг друга. До трёх человек, следующий просится, и любой в звонке может его пустить' },
   { id: 'panelGlide', label: 'Перестроение панели', icon: 'more-vertical-m', hint: 'Выбрал объект рядом с прежним (ближе 100 пикселей): панель над ним не гаснет и не появляется заново, а плавно переезжает к новому; одинаковые иконки остаются, новые проявляются после переезда. Вместе с «Панелью над элементом»' },
+  { id: 'quickCreate', label: 'Быстрое создание', icon: 'lightning-plus', hint: 'Молния в верхнем меню вместо «Очистить доску»: окно быстрого создания (пока только поле ввода)' },
   { id: 'formObject', label: 'Форма в объектах', icon: 'form', hint: 'В «Объектах» — форма: два поля и кнопка «Заполнить». Заполнил — значения остаются текстом, кнопка становится «Редактировать»' },
   { id: 'swap', label: 'Замена двойным кликом', icon: 'repeat', hint: 'Двойной клик по эмодзи или иконке: выбрать другую на её место, и в копии компонента тоже' },
 ];
