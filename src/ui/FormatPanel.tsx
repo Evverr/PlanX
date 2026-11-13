@@ -15,7 +15,7 @@ import { useLabs } from '../labs/labs';
 import { ItemMenuButton } from '../labs/ContextMenu';
 import { linkPartPatch, linkPatch } from '../labs/textLink';
 import { headingAt, remapLinks, runsHave, setHeading, setRun, type RunStyle } from '../model/textLinks';
-import { richActive, richHeading, richState, richStyle } from '../labs/RichEditor';
+import { richActive, richHeading, richList, richState, richStyle } from '../labs/RichEditor';
 
 function Btn({ icon, label, on, off, swatch, menu, onClick }: {
   icon: IconName; label: string; on?: boolean; off?: boolean; swatch?: string; menu?: boolean; onClick?: () => void;
@@ -195,7 +195,7 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
   const rich = item.type === 'page' && editor.editingId === item.id && richActive() ? richState() : null;
   const picked = !rich && item.type === 'page' ? pickedPart(editor, item) : null;
   const runsOf = (p: Part) => remapLinks(item.text ?? '', p.text, item.rs);
-  const partHas = (key: keyof RunStyle, value?: string) => (rich ? key !== 'c' && key !== 'h' && rich[key]
+  const partHas = (key: keyof RunStyle, value?: string) => (rich ? key !== 'c' && key !== 'h' && key !== 'l' && rich[key]
     : !!picked && runsHave(runsOf(picked), picked.s, picked.e, key, value));
   /** Where the caret is in a document being typed in (or what's picked there). */
   const caretIn = (): Part | null => {
@@ -216,7 +216,7 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
   /** Sets (or takes off) a style on the part picked (as it's picked now); false with none picked (the
    *  whole text's then). */
   const stylePart = (key: keyof RunStyle, value?: string): boolean => {
-    if (rich && key !== 'h' && richStyle(key, value)) { setMenu(null); return true; }
+    if (rich && key !== 'h' && key !== 'l' && richStyle(key, value)) { setMenu(null); return true; }
     const now = item.type === 'page' ? pickedPart(editor, item) : null;
     if (!now) return false;
     const runs = runsOf(now), on = key === 'c' ? value !== undefined : !runsHave(runs, now.s, now.e, key);
@@ -293,10 +293,12 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
         sep3: <div className="fsep line" />,
         list: <span className="sort-wrap"><Drop open={menu === 'list'} menu={<div className="tf-row">
           {LISTS.map(([kind, icon, label]) => (
-            <Btn key={kind} icon={icon} label={label} on={item.ls === kind} onClick={() => set({ ls: item.ls === kind ? undefined : kind })} />
+            // (In a document typed in as it looks, the caret's paragraphs': see richList.)
+            <Btn key={kind} icon={icon} label={label} on={rich ? rich.l === kind : item.ls === kind}
+              onClick={() => { if (rich && richList(kind)) { setMenu(null); return; } set({ ls: item.ls === kind ? undefined : kind }); }} />
           ))}
         </div>}>
-          <Btn icon={item.ls === 'number' ? 'numbered-list' : 'list'} label="Список" menu on={!!item.ls || menu === 'list'} onClick={() => toggle('list')} />
+          <Btn icon={(rich ? rich.l : item.ls) === 'number' ? 'numbered-list' : 'list'} label="Список" menu on={!!(rich ? rich.l : item.ls) || menu === 'list'} onClick={() => toggle('list')} />
         </Drop></span>,
         // "Ссылка в тексте" (src/labs): an address for the item, typed in its menu.
         // A part of the text picked while typing in it: just that part; else the whole item.

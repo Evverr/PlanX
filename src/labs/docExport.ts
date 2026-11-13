@@ -1,6 +1,6 @@
 import type { Editor } from '../editor/editor';
 import { PAGE, type Item } from '../model/types';
-import { headingAt, type TextRun } from '../model/textLinks';
+import { headingAt, paraAt, type TextRun } from '../model/textLinks';
 import { drawScene } from '../canvas/renderer';
 import { fileName, saveFile } from '../files';
 import { pdfOfPages } from './exportPdf';
@@ -34,8 +34,15 @@ export function docMarkdown(it: Item): string {
   }
   // Each paragraph on its own, a heading's after its #s.
   let at = 0;
-  const heads = text.split('\n').map((p) => { const h = headingAt(text, runs, at); at += p.length + 1; return h; });
-  return out.split('\n').map((p, i) => (heads[i] && p.trim() ? `${'#'.repeat(heads[i])} ${p.replace(/^\*\*(.*)\*\*$/, '$1')}` : p)).join('\n\n') + '\n';
+  const paras = text.split('\n').map((p) => { const k = { h: headingAt(text, runs, at), l: paraAt(text, runs, at, 'l') }; at += p.length + 1; return k; });
+  // A list's items one under another (numbered from 1 as they follow one another), the rest a blank line apart.
+  let n = 0;
+  return out.split('\n').map((p, i) => {
+    const { h, l } = paras[i];
+    n = l === 'number' ? n + 1 : 0;
+    const line = h && p.trim() ? `${'#'.repeat(h)} ${p.replace(/^\*\*(.*)\*\*$/, '$1')}` : l ? `${l === 'number' ? `${n}.` : '-'} ${p}` : p;
+    return i === 0 ? line : `${l && paras[i - 1].l ? '\n' : '\n\n'}${line}`;
+  }).join('') + '\n';
 }
 
 /** Saves it as Markdown, named after its first line. */

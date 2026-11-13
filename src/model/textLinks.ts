@@ -51,7 +51,7 @@ export function drawnLinks<T extends { s: number; e: number }>(text: string, lis
 /** A style on part of an item's text («Документ», src/labs/docPage.ts): bold, italic, underlined, struck
  *  through, its colour (a key of TEXT_COLORS or '#rrggbb'). Kept by character as the links are, moving
  *  with the text as it's typed in (remapLinks). */
-export interface TextRun { s: number; e: number; b?: boolean; i?: boolean; u?: boolean; x?: boolean; c?: string; h?: number }
+export interface TextRun { s: number; e: number; b?: boolean; i?: boolean; u?: boolean; x?: boolean; c?: string; h?: number; l?: string }
 export type RunStyle = Omit<TextRun, 's' | 'e'>;
 
 /** The style on each character of s…e, from the runs. */
@@ -79,7 +79,7 @@ export function setRun(runs: TextRun[] | undefined, s: number, e: number, key: k
   const all = stylesIn(runs, Math.min(s, ...(runs ?? []).map((r) => r.s)), end, [s, e]).map((p) => {
     if (p.e <= s || p.s >= e) return p;
     const st = { ...p.st } as Record<string, unknown>;
-    if (on) st[key] = key === 'c' || key === 'h' ? value : true; else delete st[key];
+    if (on) st[key] = key === 'c' || key === 'h' || key === 'l' ? value : true; else delete st[key];
     return { ...p, st: st as RunStyle };
   });
   // (Styles told apart by what's set in them, whatever the order.)
@@ -98,21 +98,28 @@ export function setRun(runs: TextRun[] | undefined, s: number, e: number, key: k
  *  of the text for the last), so it stays with it whatever's typed in it. */
 const anchorOf = (text: string, at: number) => { const n = text.indexOf('\n', at); return n < 0 ? text.length : n; };
 
-/** The heading level (1…3, 0 for none) of the paragraph a character's in. */
-export function headingAt(text: string, runs: TextRun[] | undefined, at: number): number {
+/** What a paragraph is, kept on the character after it (anchorOf): its heading level (`h`: 1…3) or its
+ *  list (`l`: 'bullet', 'number'). */
+type ParaKey = 'h' | 'l';
+/** That of the paragraph a character's in (undefined for none). */
+export function paraAt<K extends ParaKey>(text: string, runs: TextRun[] | undefined, at: number, key: K): TextRun[K] | undefined {
   const a = anchorOf(text, at);
-  return runs?.find((r) => r.h && r.s <= a && r.e > a)?.h ?? 0;
+  return runs?.find((r) => r[key] && r.s <= a && r.e > a)?.[key];
 }
-
-/** The paragraphs s…e is in made headings of `level` (0: plain text again). */
-export function setHeading(text: string, runs: TextRun[] | undefined, s: number, e: number, level: number): TextRun[] | undefined {
+/** The paragraphs s…e is in made so (undefined: not so). */
+export function setPara(text: string, runs: TextRun[] | undefined, s: number, e: number, key: ParaKey, value: string | number | undefined): TextRun[] | undefined {
   let out = runs;
   for (let at = text.lastIndexOf('\n', s - 1) + 1; ; ) {
     const a = anchorOf(text, at);
-    out = setRun(out, a, a + 1, 'h', false);
-    if (level) out = setRun(out, a, a + 1, 'h', true, level);
+    out = setRun(out, a, a + 1, key, false);
+    if (value) out = setRun(out, a, a + 1, key, true, value);
     if (a >= e || a >= text.length) break;
     at = a + 1;
   }
   return out;
 }
+
+/** The heading level (1…3, 0 for none) of the paragraph a character's in. */
+export const headingAt = (text: string, runs: TextRun[] | undefined, at: number): number => paraAt(text, runs, at, 'h') ?? 0;
+/** The paragraphs s…e is in made headings of `level` (0: plain text again). */
+export const setHeading = (text: string, runs: TextRun[] | undefined, s: number, e: number, level: number) => setPara(text, runs, s, e, 'h', level || undefined);

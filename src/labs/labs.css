@@ -290,6 +290,14 @@
   background: var(--surface); color: var(--ink); transform-origin: 0 0; white-space: pre-wrap; overflow-wrap: anywhere; scrollbar-width: none; }
 .rich-edit > div { min-height: 1lh; }
 .rich-edit:focus, .rich-edit:focus-visible { outline: none; box-shadow: none; }
+/* A list's items: 28 in (LIST_IN in docPage.ts), the marker in that room; a numbered list counting on
+   while its items follow one another. */
+.rich-edit > div[data-l] { position: relative; padding-left: 28px; }
+.rich-edit > div[data-l]::before { position: absolute; left: 4px; }
+.rich-edit > div[data-l="bullet"]::before { content: "•"; }
+.rich-edit > div[data-l="number"] { counter-increment: rich-n; }
+.rich-edit > div:not([data-l="number"]) + div[data-l="number"], .rich-edit > div[data-l="number"]:first-child { counter-reset: rich-n; }
+.rich-edit > div[data-l="number"]::before { content: counter(rich-n) "."; }
 
 /* «Быстрое создание»: its window, the field alone for now. */
 .quick-pop .confirm-input { margin-bottom: 0; }

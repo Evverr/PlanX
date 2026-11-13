@@ -21,9 +21,13 @@ const shown = new Map<string, number>();
 /** A heading's size against the text's own (1, 2, 3), and the room over one that isn't a page's first. */
 export const HEADING_SIZE = [1, 1.75, 1.375, 1.125], HEADING_GAP = 0.6;
 
+/** A list's paragraphs: how far in their lines stand (their marker in that room, at its left). */
+export const LIST_IN = 28;
+
 /** A line as laid out: where it starts and ends in the text, its paragraph's size (a heading's level, 0
- *  for none), and on its page, how far down its top is. */
-export interface DocLine { s: number; e: number; size: number; h: number; page: number; y: number }
+ *  for none), on its page how far down its top is; in a list, how far in it stands, and on its
+ *  paragraph's first line, its marker («•» or its number with a dot). */
+export interface DocLine { s: number; e: number; size: number; h: number; page: number; y: number; indent: number; mark?: string }
 
 let measure: CanvasRenderingContext2D | null = null;
 const laidOut = new Map<string, { key: string; lines: DocLine[] }>();
@@ -53,19 +57,25 @@ export function docLines(it: Item): DocLine[] {
     return w;
   };
   const lines: DocLine[] = [];
-  let page = 0, y = 0, at = 0;
+  let page = 0, y = 0, at = 0, n = 0, indent = 0, mark: string | undefined;
   const put = (s: number, e: number, size: number, h: number, first: boolean) => {
     const tall = size * LINE_HEIGHT, gap = h && first && y > 0 ? size * HEADING_GAP : 0;
     if (y + gap + tall > PAGE_TEXT.h && y > 0) { page++; y = 0; }
     else y += gap;
-    lines.push({ s, e, size, h, page, y });
+    lines.push({ s, e, size, h, page, y, indent, ...(first && mark && { mark }) });
     y += tall;
   };
   for (const para of text.split('\n')) {
     const s0 = at, e0 = at + para.length;
     at = e0 + 1;
-    // (Its level kept on the character after it: see setHeading in model/textLinks.ts.)
+    // (Its level and list kept on the character after it: see setPara in model/textLinks.ts.)
     const h = runs.find((r) => r.h && r.s <= e0 && r.e > e0)?.h ?? 0, size = Math.round(fs * HEADING_SIZE[h]);
+    const list = runs.find((r) => r.l && r.s <= e0 && r.e > e0)?.l;
+    // A numbered list counts on while its paragraphs follow one another.
+    n = list === 'number' ? n + 1 : 0;
+    indent = list ? LIST_IN : 0;
+    mark = list === 'number' ? `${n}.` : list ? '•' : undefined;
+    const room = PAGE_TEXT.w - indent;
     if (s0 === e0) { put(s0, e0, size, h, true); continue; }
     let ls = s0, first = true;
     while (ls < e0) {
@@ -75,13 +85,13 @@ export function docLines(it: Item): DocLine[] {
         let j = i;
         while (j < e0 && text[j] === ' ') j++;
         while (j < e0 && text[j] !== ' ') j++;
-        if (width(ls, j, size, h > 0) > PAGE_TEXT.w && end > ls) break;
+        if (width(ls, j, size, h > 0) > room && end > ls) break;
         end = j;
         i = j;
-        if (width(ls, end, size, h > 0) > PAGE_TEXT.w) {
+        if (width(ls, end, size, h > 0) > room) {
           // (A single word wider than the line: cut where it no longer fits.)
           let k = ls + 1;
-          while (k < end && width(ls, k + 1, size, h > 0) <= PAGE_TEXT.w) k++;
+          while (k < end && width(ls, k + 1, size, h > 0) <= room) k++;
           end = k;
           break;
         }
@@ -120,9 +130,12 @@ export function drawDocPage(ctx: CanvasRenderingContext2D, it: Item, n: number, 
       return { t, r, f, w: ctx.measureText(t).width, link: links.find((k) => k.s <= c && k.e >= e) };
     });
     const lw = pieces.reduce((s, p) => s + p.w, 0);
-    let x = it.x + PAGE.LEFT + (align === 'center' ? (PAGE_TEXT.w - lw) / 2 : align === 'right' ? PAGE_TEXT.w - lw : 0);
+    const room = PAGE_TEXT.w - l.indent;
+    let x = it.x + PAGE.LEFT + l.indent + (align === 'center' ? (room - lw) / 2 : align === 'right' ? room - lw : 0);
     ctx.font = font(l.size, l.h ? 700 : st.weight, st.family, st.italic);
     const fm = ctx.measureText('Hg'), base = top + (tall - fm.fontBoundingBoxAscent - fm.fontBoundingBoxDescent) / 2 + fm.fontBoundingBoxAscent, mid = top + tall / 2;
+    // A list's marker in the room on its left.
+    if (l.mark) { ctx.fillStyle = ink; ctx.fillText(l.mark, it.x + PAGE.LEFT + 4, base); }
     for (const p of pieces) {
       const color = p.link ? look.link : p.r.c ? look.tint(p.r.c) : ink;
       ctx.font = p.f;

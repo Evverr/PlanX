@@ -66,12 +66,21 @@ export function richHeading(level: number): boolean {
   return true;
 }
 
-/** What's on what's picked: bold, italic, underlined, struck through, and the caret's paragraph's level. */
-export function richState(): { b: boolean; i: boolean; u: boolean; x: boolean; h: number } | null {
+/** The paragraphs what's picked is in made a list (`kind` 'bullet' or 'number'), or not one any more
+ *  (all of them that list already). */
+export function richList(kind: string): boolean {
+  if (!restore() || !active) return false;
+  const ps = pickedParagraphs(), off = ps.length > 0 && ps.every((p) => p.dataset.l === kind);
+  for (const p of ps) { if (off) delete p.dataset.l; else p.dataset.l = kind; }
+  return true;
+}
+
+/** What's on what's picked: bold, italic, underlined, struck through, the caret's paragraph's level and list. */
+export function richState(): { b: boolean; i: boolean; u: boolean; x: boolean; h: number; l: string | undefined } | null {
   if (!active) return null;
   const q = (c: string) => { try { return document.queryCommandState(c); } catch { return false; } };
-  const h = Number(pickedParagraphs()[0]?.dataset.h) || 0;
-  return { b: h ? false : q('bold'), i: q('italic'), u: q('underline'), x: q('strikeThrough'), h };
+  const p = pickedParagraphs()[0], h = Number(p?.dataset.h) || 0;
+  return { b: h ? false : q('bold'), i: q('italic'), u: q('underline'), x: q('strikeThrough'), h, l: p?.dataset.l };
 }
 
 export function RichEditor({ editor, item }: { editor: Editor; item: Item }) {
@@ -159,6 +168,15 @@ export function RichEditor({ editor, item }: { editor: Editor; item: Item }) {
         if (para?.dataset && para.dataset.h !== '0' && !para.textContent && para.previousElementSibling) { para.dataset.h = '0'; para.removeAttribute('style'); }
       }}
       onKeyDown={(e) => {
+        // In a list: Enter in an empty item ends the list there, Backspace at an item's start takes it out
+        // of the list (as in Word).
+        const para = ref.current && paragraphAt(ref.current), sel = getSelection();
+        const atStart = !!para && !!sel?.isCollapsed && (() => { const r = document.createRange(); r.selectNodeContents(para); r.setEnd(sel.anchorNode!, sel.anchorOffset); return !r.toString(); })();
+        if (para?.dataset.l && ((e.key === 'Enter' && !e.shiftKey && !para.textContent) || (e.key === 'Backspace' && atStart))) {
+          e.preventDefault();
+          delete para.dataset.l;
+          return;
+        }
         if (e.key === 'Escape') { e.preventDefault(); commit(); }
         else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); commit(); editor.setSelection([]); }
         else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyX') { e.preventDefault(); richStyle('x'); }

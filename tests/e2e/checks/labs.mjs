@@ -862,6 +862,30 @@ export const checks = {
     expect(await p.ev(`JSON.stringify(planx.board.get('${id}').rs)`), 'its styles').toBe(JSON.stringify([{ s: 5, e: 18, b: true }, { s: 51, e: 52, h: 2 }, { s: 58, e: 66, i: true }, { s: 66, e: 82, b: true }]));
   },
 
+  async '"Документ": a numbered list by the text panel\'s list, going on with Enter, ended by Enter in an empty item'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.dropItem('page', { x: 600, y: 600 }); })()`);
+    await sleep(200);
+    const id = await p.ev(`planx.board.list().find((i) => i.type === 'page').id`);
+    await p.ev(`(() => { const it = planx.board.get('${id}'); planx.board.update('${id}', { text: 'Шаги' }); const e = planx.editor; e.cam = { x: 150 - (it.x + 100), y: 110 - (it.y + 60), z: 1 }; e.camChanged(); e.startEditing('${id}', null, 'end'); })()`);
+    await sleep(400);
+    const key = async (k, code, text) => { await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code, windowsVirtualKeyCode: k === 'Enter' ? 13 : 0, text }); await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: k, code }); };
+    await key('Enter', 'Enter', '\r');
+    await p.cdp('Input.insertText', { text: 'первый шаг' });
+    await p.click(await p.at('.tfmt button[aria-label="Список"]'));
+    await sleep(150);
+    await p.click(await p.at('.tf-row button[aria-label="Нумерованный список"]'));
+    await sleep(150);
+    await key('Enter', 'Enter', '\r');
+    await p.cdp('Input.insertText', { text: 'второй шаг' });
+    await key('Enter', 'Enter', '\r');
+    await key('Enter', 'Enter', '\r');
+    await p.cdp('Input.insertText', { text: 'После списка.' });
+    await key('Escape', 'Escape');
+    await sleep(300);
+    expect(await p.ev(`planx.board.get('${id}').text`), 'its text').toBe('Шаги\nпервый шаг\nвторой шаг\nПосле списка.');
+    expect(await p.ev(`JSON.stringify(planx.board.get('${id}').rs)`), 'two items in the list').toBe(JSON.stringify([{ s: 15, e: 16, l: 'number' }, { s: 26, e: 27, l: 'number' }]));
+  },
+
   async '"Голосование в объектах": set up in its fields, started, an answer clicked voted for (the shares shown), clicked again unvoted'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.addPoll({ x: 600, y: 360 }); })()`);
     await sleep(300);

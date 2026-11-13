@@ -1,5 +1,5 @@
 import { TEXT_COLORS, type Item } from '../model/types';
-import { headingAt, setHeading, setRun, type RunStyle, type TextRun } from '../model/textLinks';
+import { headingAt, paraAt, setHeading, setPara, setRun, type RunStyle, type TextRun } from '../model/textLinks';
 import { HEADING_GAP, HEADING_SIZE } from './docPage';
 
 /**
@@ -24,7 +24,7 @@ export function toHtml(it: Item): string {
   const text = it.text ?? '', runs = (it.rs ?? []) as TextRun[], fs = it.fs ?? 16;
   let at = 0;
   return text.split('\n').map((para, n) => {
-    const s0 = at, h = headingAt(text, runs, s0);
+    const s0 = at, h = headingAt(text, runs, s0), l = paraAt(text, runs, s0, 'l');
     at += para.length + 1;
     const cuts = [...new Set([0, para.length, ...runs.flatMap((r) => [r.s - s0, r.e - s0]).filter((c) => c > 0 && c < para.length)])].sort((a, b) => a - b);
     const inner = cuts.slice(0, -1).map((c, i) => {
@@ -34,7 +34,7 @@ export function toHtml(it: Item): string {
       const t = esc(para.slice(c, e));
       return css ? `<span style="${css}">${t}</span>` : t;
     }).join('');
-    return `<div data-h="${h}" style="${headingStyle(h, fs, n === 0)}">${inner || '<br>'}</div>`;
+    return `<div data-h="${h}"${l ? ` data-l="${l}"` : ''} style="${headingStyle(h, fs, n === 0)}">${inner || '<br>'}</div>`;
   }).join('');
 }
 
@@ -44,8 +44,8 @@ export function toHtml(it: Item): string {
  *  backgrounds, tables, pictures) left out, their text kept. */
 export function cleanPaste(html: string, fs: number): string {
   const doc = new DOMParser().parseFromString(html, 'text/html'), out: string[] = [];
-  let line = '', level = 0;
-  const flush = () => { out.push(`<div data-h="${level}" style="${headingStyle(level, fs, !out.length)}">${line || '<br>'}</div>`); line = ''; level = 0; };
+  let line = '', level = 0, list = '';
+  const flush = () => { out.push(`<div data-h="${level}"${list ? ` data-l="${list}"` : ''} style="${headingStyle(level, fs, !out.length)}">${line || '<br>'}</div>`); line = ''; level = 0; list = ''; };
   const BLOCK = /^(DIV|P|LI|H[1-6]|TR|BLOCKQUOTE|PRE|UL|OL|TABLE|SECTION|ARTICLE)$/;
   const walk = (node: Node, st: { b?: boolean; i?: boolean; u?: boolean; x?: boolean; c?: string }) => {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -69,6 +69,9 @@ export function cleanPaste(html: string, fs: number): string {
     const block = BLOCK.test(tag), h = /^H([1-3])$/.exec(tag)?.[1] ?? (node.dataset.h && node.dataset.h !== '0' ? node.dataset.h : undefined);
     if (block && line) flush();
     if (h) level = Number(h);
+    // A list's item (of ours, or of a list pasted: numbered in an <ol>).
+    const l = tag === 'LI' ? (node.closest('ol') ? 'number' : 'bullet') : node.dataset.l;
+    if (l === 'bullet' || l === 'number') list = l;
     // (A heading's text bold as it is.)
     if (h) next.b = false;
     node.childNodes.forEach((c) => walk(c, next));
@@ -90,7 +93,7 @@ function colorKey(css: string): string {
 /** The text and its styles as the field has them now: `ink` the text's own colour (no colour of its own). */
 export function fromDom(root: HTMLElement, ink: string): { text: string; rs: TextRun[] | undefined } {
   let text = '';
-  const marks: Array<{ s: number; e: number; st: RunStyle }> = [], heads: Array<[number, number]> = [];
+  const marks: Array<{ s: number; e: number; st: RunStyle }> = [], heads: Array<[number, number]> = [], lists: Array<[number, string]> = [];
   const own = colorKey(ink);
   /** The look of a piece of text by the element it's in, up to its paragraph. */
   const look = (el: Element, para: Element, heading: boolean): RunStyle => {
@@ -135,9 +138,12 @@ export function fromDom(root: HTMLElement, ink: string): { text: string; rs: Tex
     };
     para.childNodes.forEach(walk);
     if (h) heads.push([start, h]);
+    const l = (para as HTMLElement).dataset.l;
+    if (l === 'bullet' || l === 'number') lists.push([start, l]);
   });
   let rs: TextRun[] | undefined;
   for (const m of marks) for (const [k, v] of Object.entries(m.st)) rs = setRun(rs, m.s, m.e, k as keyof RunStyle, true, v as string | number);
   for (const [at, h] of heads) rs = setHeading(text, rs, at, at, h);
+  for (const [at, l] of lists) rs = setPara(text, rs, at, at, 'l', l);
   return { text, rs };
 }
