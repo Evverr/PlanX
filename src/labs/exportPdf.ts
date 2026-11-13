@@ -13,6 +13,11 @@ const MAX_PAGE = 14400;
 
 /** A PDF of one page `pageW` × `pageH` points with a JPEG picture `w` × `h` pixels filling it. */
 export function pdfOf(jpeg: Uint8Array, w: number, h: number, pageW: number, pageH: number): Uint8Array {
+  return pdfOfPages([{ jpeg, w, h }], pageW, pageH);
+}
+
+/** A PDF of pages `pageW` × `pageH` points, a JPEG picture filling each («Документ»: one for each of its pages). */
+export function pdfOfPages(pictures: Array<{ jpeg: Uint8Array; w: number; h: number }>, pageW: number, pageH: number): Uint8Array {
   const enc = new TextEncoder(), parts: Uint8Array[] = [], offsets: number[] = [];
   let at = 0;
   const put = (b: Uint8Array | string) => { const u = typeof b === 'string' ? enc.encode(b) : b; parts.push(u); at += u.length; };
@@ -23,16 +28,21 @@ export function pdfOf(jpeg: Uint8Array, w: number, h: number, pageW: number, pag
     put('endobj\n');
   };
   const pw = +pageW.toFixed(2), ph = +pageH.toFixed(2), draw = enc.encode(`q ${pw} 0 0 ${ph} 0 0 cm /Im0 Do Q`);
+  // Each page three objects from 3 on: the page, its picture, what draws it.
+  const page = (i: number) => 3 + i * 3, count = pictures.length, size = 3 + count * 3;
   put('%PDF-1.4\n');
   obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
-  obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
-  obj(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
-  obj(4, `<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>`, jpeg);
-  obj(5, `<< /Length ${draw.length} >>`, draw);
+  obj(2, `<< /Type /Pages /Kids [${pictures.map((_, i) => `${page(i)} 0 R`).join(' ')}] /Count ${count} >>`);
+  pictures.forEach(({ jpeg, w, h }, i) => {
+    const p = page(i);
+    obj(p, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 ${p + 1} 0 R >> >> /Contents ${p + 2} 0 R >>`);
+    obj(p + 1, `<< /Type /XObject /Subtype /Image /Width ${w} /Height ${h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>`, jpeg);
+    obj(p + 2, `<< /Length ${draw.length} >>`, draw);
+  });
   // Where each object starts, 20 bytes a line, and where that table starts.
   const xref = at;
-  put(`xref\n0 6\n0000000000 65535 f \n${offsets.slice(1).map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`);
-  put(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+  put(`xref\n0 ${size}\n0000000000 65535 f \n${offsets.slice(1).map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`);
+  put(`trailer\n<< /Size ${size} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
   const out = new Uint8Array(at);
   let i = 0;
   for (const p of parts) { out.set(p, i); i += p.length; }

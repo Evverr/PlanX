@@ -11,6 +11,7 @@ import { crowds, EDGE, fitPopovers, shownRects } from '../layout';
 import { useLabs } from '../labs/labs';
 import { AlignButton, LockButton, ReactButton, TidyButton } from '../labs/SelectionLabs';
 import { CodeLang } from '../labs/CodeLang';
+import { DocSave } from '../labs/DocSave';
 import { ItemMenuButton, LinkParams } from '../labs/ContextMenu';
 import { boxOf, instanceBounds } from '../canvas/geometry';
 import { placeOver } from './FormatPanel';
@@ -23,7 +24,7 @@ const same = (vals: Array<string | undefined>): string | null => (vals.length &&
 /** Rearrangeable buttons; the bin comes last until moved. */
 /** "2 объекта", "5 объектов", "21 объект". */
 const objects = (n: number) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'объект' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'объекта' : 'объектов'}`;
-const ORDER = ['fold', 'grouped', 'lang', 'sepLang', 'colors', 'text', 'notext', 'align', 'tidy', 'rows', 'cols', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
+const ORDER = ['fold', 'grouped', 'lang', 'sepLang', 'docSave', 'sepDoc', 'colors', 'text', 'notext', 'align', 'tidy', 'rows', 'cols', 'crop', 'lines', 'component', 'detach', 'front', 'back', 'duplicate', 'lock', 'react', 'trash'];
 
 /**
  * A palette button and the popover of colour controls it opens above it, centred on the button and
@@ -431,6 +432,9 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
         // A block of code's language ("Код", src/labs).
         lang: labs.codeBlock && items.length === 1 && items[0].code ? <CodeLang key={items[0].id} editor={editor} item={items[0]} /> : undefined,
         sepLang: labs.codeBlock && items.length === 1 && items[0].code ? <div className="sep" /> : undefined,
+        // A document saved as a file ("Документ", src/labs).
+        docSave: labs.docPage && items.length === 1 && items[0].type === 'page' ? <DocSave key={items[0].id} editor={editor} item={items[0]} /> : undefined,
+        sepDoc: labs.docPage && items.length === 1 && items[0].type === 'page' ? <div className="sep" /> : undefined,
         // All the colours are under the palette: a table's own when it's selected alone.
         // (Picking something else closes the palette: the key changes with the selection.)
         colors: tables.length === 1 && items.length === 1 ? <TableColors key={tables[0].id} editor={editor} table={tables[0]} cells={cells} />

@@ -37,6 +37,12 @@ export function pagesOf(it: Item): Array<{ s: number; e: number }> {
 
 /** The page it shows here (within those it has). */
 export const pageShown = (it: Item, count = pagesOf(it).length): number => Math.min(shown.get(it.id) ?? 0, count - 1);
+/** Shows page `n` of a sheet here; the page it showed before. */
+export function showPage(id: string, n: number): number {
+  const was = shown.get(id) ?? 0;
+  shown.set(id, n);
+  return was;
+}
 export function turnPage(it: Item, dir: -1 | 1): void {
   const n = pagesOf(it).length;
   shown.set(it.id, Math.max(0, Math.min(n - 1, pageShown(it, n) + dir)));

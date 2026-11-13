@@ -20,7 +20,7 @@ export function exportItems(ed: Editor, what: ExportOptions['what']): { items: I
 }
 
 /** The light theme's colours whatever the screen shows, for a picture on white. */
-function lightTheme(): Theme {
+export function lightTheme(): Theme {
   const root = document.documentElement, was = root.dataset.theme;
   if (was === 'light') return readTheme();
   root.dataset.theme = 'light';
