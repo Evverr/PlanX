@@ -14,7 +14,7 @@ import { EDGE, fitPopovers } from '../layout';
 import { useLabs } from '../labs/labs';
 import { ItemMenuButton } from '../labs/ContextMenu';
 import { linkPartPatch, linkPatch } from '../labs/textLink';
-import { remapLinks, runsHave, setRun, type RunStyle } from '../model/textLinks';
+import { headingAt, remapLinks, runsHave, setHeading, setRun, type RunStyle } from '../model/textLinks';
 
 function Btn({ icon, label, on, off, swatch, menu, onClick }: {
   icon: IconName; label: string; on?: boolean; off?: boolean; swatch?: string; menu?: boolean; onClick?: () => void;
@@ -193,6 +193,21 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
   const picked = item.type === 'page' ? pickedPart(editor, item) : null;
   const runsOf = (p: Part) => remapLinks(item.text ?? '', p.text, item.rs);
   const partHas = (key: keyof RunStyle, value?: string) => !!picked && runsHave(runsOf(picked), picked.s, picked.e, key, value);
+  /** Where the caret is in a document being typed in (or what's picked there). */
+  const caretIn = (): Part | null => {
+    const el = document.querySelector<HTMLTextAreaElement>('textarea.text-edit');
+    return item.type === 'page' && el && editor.editingId === item.id ? { s: el.selectionStart, e: el.selectionEnd, text: el.value } : null;
+  };
+  const caret = caretIn(), level = caret ? headingAt(caret.text, runsOf(caret), caret.s) : null;
+  /** Makes the paragraphs the caret's in (or what's picked) headings of `n` (0: plain); false with no
+   *  document being typed in (the whole text's style then). */
+  const headPart = (n: number): boolean => {
+    const now = caretIn();
+    if (!now) return false;
+    editor.board.update(item.id, { text: now.text, rs: setHeading(now.text, runsOf(now), now.s, now.e, n) });
+    setMenu(null);
+    return true;
+  };
   /** Sets (or takes off) a style on the part picked (as it's picked now); false with none picked (the
    *  whole text's then). */
   const stylePart = (key: keyof RunStyle, value?: string): boolean => {
@@ -221,13 +236,14 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
         </Drop></span>,
         gap: <div className="fsep" />,
         style: <span className="sort-wrap"><Drop open={menu === 'style'} menu={<>
-          <button className={`tf-item ${heading ? '' : 'on'}`} onClick={() => set({ fs: task ? undefined : DEFAULTS[item.type].fs, fw: undefined })}>Обычный</button>
-          {HEADINGS.map(([label, size]) => (
-            <button key={label} className={`tf-item ${heading?.[0] === label ? 'on' : ''}`} style={{ fontSize: Math.round(size * 0.55), fontWeight: 700 }}
-              onClick={() => set({ fs: size, fw: 700 })}>{label}</button>
+          {/* (In a document being typed in, the caret's paragraph's: see headPart.) */}
+          <button className={`tf-item ${(level ?? (heading ? 1 : 0)) ? '' : 'on'}`} onClick={() => headPart(0) || set({ fs: task ? undefined : DEFAULTS[item.type].fs, fw: undefined })}>Обычный</button>
+          {HEADINGS.map(([label, size], i) => (
+            <button key={label} className={`tf-item ${(level !== null ? level === i + 1 : heading?.[0] === label) ? 'on' : ''}`} style={{ fontSize: Math.round(size * 0.55), fontWeight: 700 }}
+              onClick={() => headPart(i + 1) || set({ fs: size, fw: 700 })}>{label}</button>
           ))}
         </>}>
-          <Pick value={heading?.[0] ?? 'Обычный'} label="Стиль" onClick={() => toggle('style')} />
+          <Pick value={level !== null ? (level ? HEADINGS[level - 1][0] : 'Обычный') : heading?.[0] ?? 'Обычный'} label="Стиль" onClick={() => toggle('style')} />
         </Drop></span>,
         gap2: <div className="fsep" />,
         size: <span className="sort-wrap"><Drop open={menu === 'size'} menu={SIZES.map((s) => (

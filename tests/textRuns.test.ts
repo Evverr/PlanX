@@ -30,3 +30,23 @@ describe('styles on parts of the text («Документ»)', () => {
     expect(remapLinks('Hello world', 'Hello wonderful world', r)).toEqual([{ s: 6, e: 21, b: true }]);
   });
 });
+
+describe('headings in a document', () => {
+  it('marks the caret\'s paragraph (on the character after it), keeps it as it\'s typed in, takes it off', async () => {
+    const { headingAt, setHeading } = await import('../src/model/textLinks');
+    const text = 'Заголовок\nТекст';
+    let r = setHeading(text, undefined, 3, 3, 1);
+    expect(r).toEqual([{ s: 9, e: 10, h: 1 }]);
+    expect(headingAt(text, r, 0)).toBe(1);
+    expect(headingAt(text, r, 12)).toBe(0);
+    // Typed into: still a heading.
+    const typed = 'Большой Заголовок\nТекст';
+    r = remapLinks(text, typed, r);
+    expect(headingAt(typed, r, 0)).toBe(1);
+    // The last paragraph too (its mark past the end), and both at once.
+    r = setHeading(typed, r, 0, typed.length, 2);
+    expect(headingAt(typed, r, 0)).toBe(2);
+    expect(headingAt(typed, r, typed.length - 1)).toBe(2);
+    expect(setHeading(typed, r, 0, typed.length, 0)).toBeUndefined();
+  });
+});

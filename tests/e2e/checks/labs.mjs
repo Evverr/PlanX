@@ -834,6 +834,21 @@ export const checks = {
     expect(rs, 'the first word red too').toBe(JSON.stringify([{ s: 0, e: 6, c: 'red' }, { s: 7, e: 13, b: true }]));
   },
 
+  async '"Документ": the caret\'s paragraph made a heading by the text panel\'s style'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 40, y: 20, z: 0.8 }; e.camChanged(); e.dropItem('page', { x: 420, y: 500 }); })()`);
+    await sleep(200);
+    const id = await p.ev(`planx.board.list().find((i) => i.type === 'page').id`);
+    await p.ev(`(() => { planx.board.update('${id}', { text: 'Договор\\nТекст договора' }); planx.editor.startEditing('${id}', null, 'end'); })()`);
+    await sleep(400);
+    await p.ev(`(() => { const t = document.querySelector('textarea.text-edit'); t.focus(); t.setSelectionRange(2, 2); })()`);
+    await sleep(150);
+    await p.click(await p.at('.tfmt button[aria-label^="Стиль"]'));
+    await sleep(150);
+    await p.click(await p.at('.tf-menu .tf-item:nth-child(2)'));
+    await sleep(150);
+    expect(await p.ev(`JSON.stringify(planx.board.get('${id}').rs ?? null)`), 'its first paragraph a heading').toBe(JSON.stringify([{ s: 7, e: 8, h: 1 }]));
+  },
+
   async '"Голосование в объектах": set up in its fields, started, an answer clicked voted for (the shares shown), clicked again unvoted'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.addPoll({ x: 600, y: 360 }); })()`);
     await sleep(300);

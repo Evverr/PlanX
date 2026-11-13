@@ -1,6 +1,6 @@
 import './compat';
 import type { Item, Link, LinkStyle, Side } from '../model/types';
-import { MARKER_OPACITY, alignOf, DEFAULTS, FILLS, PAGE, textPad, textPadY, ICON_COLORS, INK_COLORS, MARK_COLORS, STROKE_COLORS, TEXT_COLORS } from '../model/types';
+import { MARKER_OPACITY, alignOf, DEFAULTS, FILLS, textPad, textPadY, ICON_COLORS, INK_COLORS, MARK_COLORS, STROKE_COLORS, TEXT_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
@@ -20,7 +20,7 @@ import { drawCode } from '../labs/codeBlock';
 import { drawForm } from '../labs/formObject';
 import { drawPoll } from '../labs/poll';
 import { drawKanban, glideOffset, gliding } from '../labs/kanban';
-import { drawPager, pageShown, pagesOf, PAGE_TEXT } from '../labs/docPage';
+import { drawDocPage, drawPager, pageCount, pageShown } from '../labs/docPage';
 import { drawTaskCard, TASK_RAD, taskShown } from './task';
 import { dotsAlways, dotsUnder } from '../labs/linkTool';
 import { drawnLinks } from '../model/textLinks';
@@ -638,13 +638,14 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
       ctx.fillStyle = theme.surface;
       ctx.fillRect(it.x, it.y, it.w, it.h);
       ctx.restore();
-      const pages = pagesOf(it), n = pageShown(it, pages.length), r = pages[n];
-      if (!editing && r) {
-        // (Its links and styles on that page, from its start.)
-        const onPage = <T extends { s: number; e: number }>(list?: T[]) => list?.filter((l) => l.e > r.s && l.s < r.e).map((l) => ({ ...l, s: Math.max(0, l.s - r.s), e: l.e - r.s }));
-        drawText(ctx, { ...it, x: it.x + PAGE.LEFT, y: it.y + PAGE.TOP, w: PAGE_TEXT.w, h: PAGE_TEXT.h, text: (it.text ?? '').slice(r.s, r.e), links: onPage(it.links), rs: onPage(it.rs), ls: undefined }, 0, theme.ink, false, s, 0);
+      const of = pageCount(it), n = pageShown(it, of);
+      if (!editing && (it.fs ?? 16) * s.cam.z >= 2.5) {
+        drawDocPage(ctx, it, n, {
+          ink: theme.ink, link: shade(LINK_INK, theme.dim), onLink: it.rot ? undefined : (r) => textLinkRects.push(r),
+          tint: (c) => shade(c.startsWith('#') ? c : TEXT_COLORS[c] || theme.ink, theme.dim),
+        });
       }
-      drawPager(ctx, it, n, pages.length, theme, s.hotPlus);
+      drawPager(ctx, it, n, of, theme, s.hotPlus);
       break;
     }
     case 'ink':

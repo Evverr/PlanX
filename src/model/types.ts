@@ -220,7 +220,7 @@ export interface Item {
   links?: Array<{ s: number; e: number; url: string }>;
   /** Styles on parts of its text, by character, a document's («Документ»: bold, italic, underlined, struck
    *  through, a colour; see model/textLinks.ts). */
-  rs?: Array<{ s: number; e: number; b?: boolean; i?: boolean; u?: boolean; x?: boolean; c?: string }>;
+  rs?: Array<{ s: number; e: number; b?: boolean; i?: boolean; u?: boolean; x?: boolean; c?: string; h?: number }>;
   /** Locked in place: not moved, resized, typed in or deleted (src/labs, "Замок"). */
   lock?: boolean;
   /** Reactions: for each emoji id, who put it, by their browser's id (src/labs, "Реакции"). */

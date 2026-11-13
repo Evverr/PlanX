@@ -51,7 +51,7 @@ export function drawnLinks<T extends { s: number; e: number }>(text: string, lis
 /** A style on part of an item's text («Документ», src/labs/docPage.ts): bold, italic, underlined, struck
  *  through, its colour (a key of TEXT_COLORS or '#rrggbb'). Kept by character as the links are, moving
  *  with the text as it's typed in (remapLinks). */
-export interface TextRun { s: number; e: number; b?: boolean; i?: boolean; u?: boolean; x?: boolean; c?: string }
+export interface TextRun { s: number; e: number; b?: boolean; i?: boolean; u?: boolean; x?: boolean; c?: string; h?: number }
 export type RunStyle = Omit<TextRun, 's' | 'e'>;
 
 /** The style on each character of s…e, from the runs. */
@@ -67,19 +67,19 @@ function stylesIn(runs: TextRun[] | undefined, s: number, e: number, extra: numb
 }
 
 /** Whether all of s…e has `key` set (to `value`, for a colour). */
-export function runsHave(runs: TextRun[] | undefined, s: number, e: number, key: keyof RunStyle, value?: string): boolean {
+export function runsHave(runs: TextRun[] | undefined, s: number, e: number, key: keyof RunStyle, value?: string | number): boolean {
   return e > s && stylesIn(runs, s, e).every((p) => (value === undefined ? !!p.st[key] : p.st[key] === value));
 }
 
 /** The runs with `key` set on s…e (to `value`), or taken off there (`value` undefined for a colour, `on`
  *  false for the rest); next to each other with the same style, made one. */
-export function setRun(runs: TextRun[] | undefined, s: number, e: number, key: keyof RunStyle, on: boolean, value?: string): TextRun[] | undefined {
+export function setRun(runs: TextRun[] | undefined, s: number, e: number, key: keyof RunStyle, on: boolean, value?: string | number): TextRun[] | undefined {
   if (e <= s) return runs;
   const end = Math.max(e, ...(runs ?? []).map((r) => r.e));
   const all = stylesIn(runs, Math.min(s, ...(runs ?? []).map((r) => r.s)), end, [s, e]).map((p) => {
     if (p.e <= s || p.s >= e) return p;
     const st = { ...p.st } as Record<string, unknown>;
-    if (on) st[key] = key === 'c' ? value : true; else delete st[key];
+    if (on) st[key] = key === 'c' || key === 'h' ? value : true; else delete st[key];
     return { ...p, st: st as RunStyle };
   });
   // (Styles told apart by what's set in them, whatever the order.)
@@ -92,4 +92,27 @@ export function setRun(runs: TextRun[] | undefined, s: number, e: number, key: k
     else out.push({ s: p.s, e: p.e, ...p.st });
   }
   return out.length ? out : undefined;
+}
+
+/** Where a paragraph's heading level is kept: the character after it (its line break, or past the end
+ *  of the text for the last), so it stays with it whatever's typed in it. */
+const anchorOf = (text: string, at: number) => { const n = text.indexOf('\n', at); return n < 0 ? text.length : n; };
+
+/** The heading level (1…3, 0 for none) of the paragraph a character's in. */
+export function headingAt(text: string, runs: TextRun[] | undefined, at: number): number {
+  const a = anchorOf(text, at);
+  return runs?.find((r) => r.h && r.s <= a && r.e > a)?.h ?? 0;
+}
+
+/** The paragraphs s…e is in made headings of `level` (0: plain text again). */
+export function setHeading(text: string, runs: TextRun[] | undefined, s: number, e: number, level: number): TextRun[] | undefined {
+  let out = runs;
+  for (let at = text.lastIndexOf('\n', s - 1) + 1; ; ) {
+    const a = anchorOf(text, at);
+    out = setRun(out, a, a + 1, 'h', false);
+    if (level) out = setRun(out, a, a + 1, 'h', true, level);
+    if (a >= e || a >= text.length) break;
+    at = a + 1;
+  }
+  return out;
 }

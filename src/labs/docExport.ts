@@ -1,6 +1,6 @@
 import type { Editor } from '../editor/editor';
 import { PAGE, type Item } from '../model/types';
-import type { TextRun } from '../model/textLinks';
+import { headingAt, type TextRun } from '../model/textLinks';
 import { drawScene } from '../canvas/renderer';
 import { fileName, saveFile } from '../files';
 import { pdfOfPages } from './exportPdf';
@@ -32,7 +32,10 @@ export function docMarkdown(it: Item): string {
       return m[1] + core + m[3];
     }).join('\n');
   }
-  return out.split('\n').join('\n\n') + '\n';
+  // Each paragraph on its own, a heading's after its #s.
+  let at = 0;
+  const heads = text.split('\n').map((p) => { const h = headingAt(text, runs, at); at += p.length + 1; return h; });
+  return out.split('\n').map((p, i) => (heads[i] && p.trim() ? `${'#'.repeat(heads[i])} ${p.replace(/^\*\*(.*)\*\*$/, '$1')}` : p)).join('\n\n') + '\n';
 }
 
 /** Saves it as Markdown, named after its first line. */
