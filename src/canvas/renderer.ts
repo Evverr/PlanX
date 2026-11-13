@@ -298,7 +298,7 @@ function drawText(ctx: CanvasRenderingContext2D, it: Item, pad: number, color: s
   const rule = Math.max(1, l.size / 14);
   const total = l.lines.length * l.lineHeight;
   const x = align === 'center' ? it.x + it.w / 2 : align === 'right' ? it.x + it.w - pad : it.x + pad;
-  let y = shrink && it.va !== 'top' ? it.y + it.h / 2 - total / 2 : it.y + padY;
+  let y = !shrink || it.va === 'top' ? it.y + padY : it.va === 'bottom' ? it.y + it.h - padY - total : it.y + it.h / 2 - total / 2;
   // Links on parts of it (see model/textLinks.ts): those parts blue; each line found in the text as
   // drawn, to know which characters it holds.
   const links = it.links?.length ? drawnLinks(it.text ?? '', it.ls, it.links) : null;

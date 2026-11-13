@@ -102,7 +102,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
       el.style.fontSize = `${size}px`;
       const content = Math.min(textBlockHeight(el.value, width, size, fontOf(item)), item.h - padY * 2);
       el.style.height = `${content}px`;
-      top = item.va === 'top' ? 0 : ((item.h - padY * 2 - content) / 2) * z;
+      top = item.va === 'top' ? 0 : ((item.h - padY * 2 - content) / (item.va === 'bottom' ? 1 : 2)) * z;
       el.style.marginTop = `${top}px`;
     }
     const c = editor.toScreen(center(item)), dx = c.x - p.x, dy = c.y - p.y - top;
@@ -161,7 +161,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
           el.style.fontSize = `${size}px`;
           const content = Math.min(textBlockHeight(el.value, width, size, fontOf(item)), item.h - padY * 2);
           el.style.height = `${content}px`;
-          if (item.va !== 'top') el.style.marginTop = `${((item.h - padY * 2 - content) / 2) * z}px`;
+          if (item.va !== 'top') el.style.marginTop = `${((item.h - padY * 2 - content) / (item.va === 'bottom' ? 1 : 2)) * z}px`;
         }
       }}
       onBlur={commit}

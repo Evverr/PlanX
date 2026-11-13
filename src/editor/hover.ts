@@ -256,7 +256,7 @@ export function clickTypes(it: Item | null | undefined, w: Point): boolean {
   // Its lines as laid out across it: down from its top, or in its middle.
   const pad = textPad(it), padY = textPadY(it), width = it.w - pad * 2;
   const th = Math.min(it.h - padY * 2, textBlockHeight(withList(it.text, it.ls), width, it.fs ?? DEFAULTS[it.type].fs ?? 16, fontOf(it)));
-  const top = it.va === 'top' ? it.y + padY : it.y + (it.h - th) / 2;
+  const top = it.va === 'top' ? it.y + padY : it.va === 'bottom' ? it.y + it.h - padY - th : it.y + (it.h - th) / 2;
   return w.x >= it.x + pad && w.x <= it.x + it.w - pad && w.y >= top && w.y <= top + th;
 }
 

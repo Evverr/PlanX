@@ -84,6 +84,8 @@ const SIZES = [10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 64, 72, 96];
 const HEADINGS: Array<[string, number]> = [['Заголовок 1', 40], ['Заголовок 2', 30], ['Заголовок 3', 22]];
 const ALIGN_ICONS: Record<TextAlign, IconName> = { left: 'align-left', center: 'align-center', right: 'align-right' };
 const ALIGN_LABELS: Record<TextAlign, string> = { left: 'По левому краю', center: 'По центру', right: 'По правому краю' };
+/** In a sticker or a shape, the text at its top, in its middle (unset) or at its bottom. */
+const VALIGNS: Array<[Item['va'], IconName, string]> = [['top', 'align-items-top', 'Прижать кверху'], [undefined, 'align-items-middle', 'Посередине'], ['bottom', 'align-items-bottom', 'Прижать книзу']];
 const LISTS: Array<[ListKind, IconName, string]> = [['bullet', 'bulleted-list', 'Маркированный список'], ['number', 'numbered-list', 'Нумерованный список']];
 
 const hex = (c: string | undefined, table: Record<string, string>) => (c ? (c.startsWith('#') ? c : table[c]) : undefined);
@@ -233,6 +235,13 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
           {(['left', 'center', 'right'] as TextAlign[]).map((a) => (
             <Btn key={a} icon={ALIGN_ICONS[a]} label={ALIGN_LABELS[a]} on={align === a} onClick={() => set({ ta: a })} />
           ))}
+          {/* (Up and down, in what has room round its text: a sticker, a shape.) */}
+          {['sticky', 'rect', 'ellipse', 'polygon'].includes(item.type) && !item.code && <>
+            <div className="fsep line" />
+            {VALIGNS.map(([v, icon, label]) => (
+              <Btn key={label} icon={icon} label={label} on={item.va === v} onClick={() => set({ va: v })} />
+            ))}
+          </>}
         </div>}>
           <Btn icon={ALIGN_ICONS[align]} label="Выравнивание" menu on={menu === 'align'} onClick={() => toggle('align')} />
         </Drop></span>,

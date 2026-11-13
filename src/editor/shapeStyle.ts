@@ -28,6 +28,7 @@ export function shapePatch(type: Item['type'], s: Partial<ShapeStyle>): Partial<
   if ('rad' in s && type !== 'ellipse') p.rad = Math.max(0, s.rad ?? 0);
   if ('stroke' in s) p.sc = s.stroke ? undefined : 'none';
   if ('noFill' in s && s.noFill) p.color = 'none';
-  if ('center' in s) p.va = s.center ? undefined : 'top';
+  // (A rectangle's alone: the other shapes have theirs in the middle, as a sticker's.)
+  if ('center' in s && type === 'rect') p.va = s.center ? undefined : 'top';
   return p;
 }

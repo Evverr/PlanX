@@ -28,8 +28,8 @@ export interface Item {
   tc?: string;
   mk?: string;
   ta?: TextAlign;
-  /** Text at the top of a sticker or shape instead of in its middle. */
-  va?: 'top';
+  /** Text at the top (or the bottom) of a sticker or shape instead of in its middle. */
+  va?: 'top' | 'bottom';
   ls?: ListKind;
   /** Icon id from src/icons/icons.json, icon items only. */
   icon?: string;
@@ -333,7 +333,8 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   sticky: { w: 160, h: 160, color: 'yellow', fs: 32, text: '' },
   text: { w: 260, h: 26, fs: 20, text: '' },
   rect: { w: 180, h: 110, color: 'blue', fs: 16, text: '', ta: 'left', va: 'top' },
-  ellipse: { w: 170, h: 110, color: 'green', fs: 16, text: '', ta: 'left', va: 'top' },
+  // (Shapes but the rectangle: their text from the middle, as a sticker's.)
+  ellipse: { w: 170, h: 110, color: 'green', fs: 16, text: '' },
   frame: { w: 520, h: 380, text: 'Фрейм' },
   icon: { w: 64, h: 64, color: 'ink' },
   emoji: { w: 27, h: 27 },
@@ -342,7 +343,7 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   task: { w: 293, h: 52, color: 'blue', fs: 16, text: '' },
   table: { w: 360, h: 120, fs: 14 },
   audio: { w: 300, h: 64 },
-  polygon: { w: 160, h: 150, color: 'purple', fs: 16, text: '', ta: 'left', va: 'top' },
+  polygon: { w: 160, h: 150, color: 'purple', fs: 16, text: '' },
   mind: { w: 200, h: 56, fs: 18, text: '' },
 };
 
