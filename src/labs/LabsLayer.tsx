@@ -16,6 +16,7 @@ import { drawTidy, endTidyDrag, gapAt, moveTidyDrag, setGaps, setHotGap, startTi
 import { findOnBoard, snippet, type Found } from './search';
 import { addMinute, chime, clockText, leftOf, pauseTimer, resumeTimer, startTimer, stopTimer, useTimer } from './timer';
 import { SwapPop } from './SwapPop';
+import { DocViewer } from './DocViewer';
 import { LayersPop } from './LayersPop';
 import { HistoryLookBar, HistoryPop } from './HistoryPop';
 import { ContextMenu } from './ContextMenu';
@@ -304,6 +305,7 @@ export function Labs({ editor, conn, docked }: { editor: Editor; conn: Connectio
       {pop === 'history' && <HistoryPop editor={editor} board={realBoard} onToast={setToast} />}
       {pop === 'timer' && <TimerPop onStart={(min) => { startTimer(editor.board.doc, min * 60000, conn.me.name); setPop(null); }} />}
       {labs.swap && <SwapPop editor={editor} />}
+      {labs.docx && <DocViewer editor={editor} />}
       <ContextMenu editor={editor} onToast={setToast} />
       {labs.comments && <CommentsLayer editor={editor} name={conn.me.name} />}
       <div className="labs-top">

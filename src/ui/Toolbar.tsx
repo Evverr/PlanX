@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from 'react';
 import { SHAPE_TOOLS, type Editor, type Pens, type Tool } from '../editor/editor';
-import { readPictures } from '../canvas/pictures';
+import { readFiles } from '../labs/docx';
 import { DEFAULTS } from '../model/types';
 import { isPoly } from '../editor/tools';
 import { DrawPanel, isDrawTool } from './DrawPanel';
@@ -269,8 +269,8 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
     {variants === 'lines' && <LinePanel editor={editor} tool={tool} onPick={() => setVariants(null)} />}
     {variants === 'objects' && <ObjectsMenu editor={editor} tool={tool} onPick={(t) => { editor.setTool(t); setVariants(null); }} onClose={() => setVariants(null)} />}
     {variants === 'oval' && <ShapePanel editor={editor} tool={tool} zoom={zoom} onPick={() => setVariants(null)} />}
-    <input ref={filePicker} type="file" accept="image/*" multiple hidden
-      onChange={(e) => { const at = pictureAt.current; void readPictures(e.target.files ?? []).then((pics) => editor.addPictures(pics, at)); e.target.value = ''; }} />
+    <input ref={filePicker} type="file" accept={labs.docx ? 'image/*,.docx' : 'image/*'} multiple hidden
+      onChange={(e) => { const at = pictureAt.current; void readFiles(e.target.files ?? []).then((pics) => editor.addPictures(pics, at)); e.target.value = ''; }} />
     {sort.ghost}
     </>
   );

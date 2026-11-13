@@ -68,7 +68,8 @@ export function croppedPicture(it: Item, part: { x: number; y: number; w: number
 /** Longest side a picture is stored at; bigger ones are scaled down so the board stays light. */
 const MAX_SIDE = 1600;
 
-export interface Picture { src: string; w: number; h: number }
+/** `doc` and `dn`: a Word document it's the first page of ("Документы Word", src/labs/docx.ts). */
+export interface Picture { src: string; w: number; h: number; doc?: string; dn?: string }
 
 /** Reads an image file into a picture: scaled down to MAX_SIDE and re-encoded as WebP. */
 export async function readPicture(file: File): Promise<Picture> {

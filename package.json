@@ -16,6 +16,7 @@
     "icons": "python3 scripts/gen_icons.py"
   },
   "dependencies": {
+    "docx-preview": "0.3.7",
     "lib0": "0.2.98",
     "react": "18.3.1",
     "react-dom": "18.3.1",
