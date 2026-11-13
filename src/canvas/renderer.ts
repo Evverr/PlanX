@@ -134,8 +134,9 @@ export interface Scene {
   editingCell: number | null;
   /** The board being worked on (not a picture of it): what's unpicked fades out. */
   live?: boolean;
-  /** What's picked being dragged (or pressed to be, picked by that press): its frame faint (DRAG_FRAME),
-   *  no handle or dots (picked by that press, it's unpicked once let go: see endGesture). */
+  /** What's picked by the press that's dragging it (or may): its frame faint (DRAG_FRAME), no handle or
+   *  dots, and it's unpicked once let go after a drag (see endGesture). What was picked already keeps its
+   *  frame and handle as it's moved. */
   dragging?: boolean;
   /** Picked links' colours being set: drawn in them, not in the selection's blue. */
   linksAsThey?: boolean;
