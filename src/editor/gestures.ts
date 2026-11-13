@@ -34,7 +34,7 @@ import { under } from '../labs/clickThrough';
 export type Gesture =
   | { type: 'pan'; sx: number; sy: number; cx: number; cy: number; tap?: boolean; moved?: boolean }
   | { type: 'pinch'; d0: number; z0: number; anchor: Point }
-  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; fresh?: boolean; sub?: number; subTo?: number; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string; tap?: Point; mindTo?: string | null; mindWay?: Way }
+  | { type: 'drag'; start: Point; orig: Map<string, Point>; moved: boolean; id: string; dbl: boolean; fresh?: boolean; was?: string[]; sub?: number; subTo?: number; pulled?: boolean; guides?: Guide[]; cell?: boolean; enter?: boolean; again?: boolean; vias?: Map<string, Point[]>; url?: string; tap?: Point; mindTo?: string | null; mindWay?: Way }
   | { type: 'resize'; id: string; start: Point; orig: Item; box?: Rect; only?: 'w' | 'h' | 'l' | 't' | 'tl' | 'bl' }
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point; last?: Point }
@@ -456,8 +456,9 @@ export function endGesture(ed: Editor, g: Gesture, e: PointerEvent): void {
         timelineSides(ed, [...g.orig.keys()]);
         board.endGesture();
         noteMindMoved(ed, [...ed.selection]);
-        // Picked by the press that dragged it: let go, not picked (no frame, no panel); a click picks it.
-        if (g.fresh) ed.setSelection([]);
+        // Picked by the press that dragged it: let go, not picked (no frame, no panel; a click picks it), what
+        // was picked before picked again, its panel back.
+        if (g.fresh) ed.setSelection((g.was ?? []).filter((id) => board.get(id) || board.getLink(id)));
       } else if (g.url) {
         // A link on a part of its text, clicked ("Ссылка в тексте", src/labs): opened in a new tab.
         window.open(g.url, '_blank', 'noopener');
