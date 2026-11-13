@@ -5,6 +5,7 @@ import { taskButtonAt } from './tasks';
 import { tabAt, tabsFor } from '../labs/sideTabs';
 import { taskPartAt } from '../canvas/task';
 import { copyCode, onCodeCopy } from '../labs/codeBlock';
+import { onFormButton } from '../labs/formObject';
 import { toggleAudio } from '../canvas/audio';
 import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, ringAt, tickAt, pickedUnder } from './hover';
 import { grabbableLine } from './tables';
@@ -138,6 +139,7 @@ export function press(ed: Editor, e: PointerEvent): void {
     case 'table':
     case 'mind':
     case 'timeline':
+    case 'form':
       ed.gesture = { type: 'place', at: w, tool: ed.tool };
       return;
     case 'rect':
@@ -293,6 +295,13 @@ export function press(ed: Editor, e: PointerEvent): void {
   }
   // A block of code's copy button ("Код", src/labs).
   if (hit?.code && e.button === 0 && !e.shiftKey && ed.editingId !== hit.id && onCodeCopy(hit, w)) { copyCode(hit, () => ed.requestRender()); return; }
+  // A form's button («Форма», src/labs): «Заполнить» keeps the values, «Редактировать» brings the fields
+  // back; it's picked either way (its fields over it while it is, see FormFields).
+  if (hit?.form && e.button === 0 && !e.shiftKey && onFormButton(hit, w)) {
+    ed.board.update(hit.id, { fd: hit.fd ? undefined : true });
+    ed.setSelection([hit.id]);
+    return;
+  }
   // An audio note's button plays it (or stops it) instead of picking it up.
   if (hit?.type === 'audio' && !entering && !e.shiftKey && onAudioButton(hit, w)) {
     toggleAudio(hit, () => ed.requestRender());

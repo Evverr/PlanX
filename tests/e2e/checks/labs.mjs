@@ -700,6 +700,28 @@ export const checks = {
     await p.ev(`(async () => (await import('/src/labs/labs.ts')).setLab('panelOver', false))()`);
   },
 
+  async '"Форма в объектах": its two fields over it while picked, what\'s typed on the board at once; «Заполнить» keeps it without the fields, «Редактировать» brings them back'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.addForm({ x: 600, y: 400 }); })()`);
+    await sleep(300);
+    const form = () => p.ev(`(() => { const f = planx.board.list().find((i) => i.form); return { fv: f.fv, fd: !!f.fd, x: f.x, y: f.y, w: f.w, h: f.h }; })()`);
+    const f0 = await form();
+    expect(await p.ev(`document.querySelectorAll('.form-field').length`), 'two fields').toBe(2);
+    const first = await p.rect('.form-field');
+    expect(first.l, 'the first field over the form').toBe(f0.x + 16);
+    await p.click([first.l + 20, first.t + 10]);
+    await p.ev(`document.execCommand('insertText', false, 'Москва')`);
+    expect((await form()).fv[0], 'on the board at once').toBe('Москва');
+    // The button: its middle, under the fields.
+    await p.click([f0.x + f0.w / 2, f0.y + f0.h - 16 - 20]);
+    await sleep(100);
+    expect((await form()).fd, 'filled').toBe(true);
+    expect(await p.ev(`document.querySelectorAll('.form-field').length`), 'no fields once filled').toBe(0);
+    await p.click([f0.x + f0.w / 2, f0.y + f0.h - 16 - 20]);
+    await sleep(100);
+    expect((await form()).fd, 'editing again').toBe(false);
+    expect(await p.ev(`document.querySelector('.form-field').value`), 'the value in its field').toBe('Москва');
+  },
+
   async '"Перестроение панели": off at first; on, picking something near what was, the same panel over it glides there (no copy of it fading out, its buttons kept); picking something far, it goes and comes back as ever'(p) {
     expect(await p.ev(`(async () => (await import('/src/labs/labs.ts')).labOn('panelGlide'))()`), 'off at first').toBe(false);
     await p.ev(`(async () => { const l = await import('/src/labs/labs.ts'); l.setLab('panelOver', true); l.setLab('panelGlide', true); })()`);

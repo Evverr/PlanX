@@ -17,6 +17,7 @@ import { zoomFade, zoomSize } from '../labs/zoomFade';
 import { gripsOn } from '../labs/tableMove';
 import { gridKind } from '../labs/boardGrid';
 import { drawCode } from '../labs/codeBlock';
+import { drawForm } from '../labs/formObject';
 import { drawTaskCard, TASK_RAD, taskShown } from './task';
 import { dotsAlways, dotsUnder } from '../labs/linkTool';
 import { drawnLinks } from '../model/textLinks';
@@ -456,6 +457,8 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'polygon': {
       // A block of code ("Код", src/labs): a card of its own.
       if (it.code) { drawCode(ctx, it, cam.z, editing, s.hotPlus); break; }
+      // A form («Форма», src/labs): a card of its own too.
+      if (it.form) { drawForm(ctx, it, theme, cam.z * s.dpr, s.hotPlus === `form:${it.id}`); break; }
       const none = it.color === 'none';
       ctx.beginPath();
       if (it.type === 'rect') ctx.roundRect(it.x, it.y, it.w, it.h, Math.min(it.rad ?? CORNER, it.w / 2, it.h / 2));

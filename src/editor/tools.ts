@@ -1,7 +1,7 @@
 import type { PolyShape } from '../model/types';
 import { readJSON } from '../storage';
 
-export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'nib' | 'task' | 'table' | 'mind' | 'timeline' | 'comment' | PolyShape;
+export type Tool = 'select' | 'hand' | 'sticky' | 'text' | 'rect' | 'ellipse' | 'link' | 'frame' | 'pen' | 'marker' | 'eraser' | 'nib' | 'task' | 'table' | 'mind' | 'timeline' | 'form' | 'comment' | PolyShape;
 export type PenTool = 'pen' | 'marker';
 export const DRAW_TOOLS: Tool[] = ['pen', 'marker', 'eraser', 'nib'];
 /** Tools that draw a figure by dragging out its box; the polygons are one item type with a `shape`. */

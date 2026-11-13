@@ -2,10 +2,11 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import type { Editor, Tool } from '../editor/editor';
 import { Glyph } from '../ui/glyphs';
 import { dropMyObject, myObjects } from './myObjects';
+import { labOn } from './labs';
 import { layerRoot } from './sideViewport';
 
 /** The objects there are ("Объекты"): their tool, icon and name. */
-export const OBJECTS: Array<[Tool, string, string]> = [['timeline', 'timeline', 'Таймлайн']];
+export const OBJECTS: Array<[Tool, string, string]> = [['timeline', 'timeline', 'Таймлайн'], ['form', 'form', 'Форма']];
 
 /**
  * "Объекты": the menu its rail button opens, beside it, as the board menu looks. Picking one takes
@@ -89,7 +90,7 @@ export function ObjectsMenu({ editor, tool, onPick, onClose }: { editor: Editor;
   );
   return (
     <div ref={ref} className="board-menu objects-menu" role="menu" aria-label="Объекты">
-      {OBJECTS.map(([t, icon, label]) => (
+      {OBJECTS.filter(([t]) => t !== 'form' || labOn('formObject')).map(([t, icon, label]) => (
         <div key={t} className="menu-item" onPointerEnter={() => setOpen(null)}>
           <button className={`menu-row ${tool === t ? 'on' : ''}`} role="menuitem" title="Клик — выбрать, или перетащите на доску"
             onPointerDown={(e) => press((at) => (at ? editor.dropItem(t, at) : onPick(t)), e)}>

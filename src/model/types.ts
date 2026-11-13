@@ -194,6 +194,11 @@ export interface Item {
   hl?: boolean;
   /** A rectangle that's a block of code ("Код", src/labs): its language, a key of LANGS in labs/codeBlock.ts. */
   code?: string;
+  /** A rectangle that's a form («Форма», src/labs/formObject.ts): its two values, and whether it's filled
+   *  (the values as text, no fields). */
+  form?: boolean;
+  fv?: string[];
+  fd?: boolean;
   /** The address the item leads to (src/labs, "Ссылка в тексте"). */
   url?: string;
   /** Links on parts of its text, by character (see model/textLinks.ts). */

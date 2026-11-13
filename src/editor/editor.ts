@@ -43,6 +43,7 @@ import { nodeEditing, shapedBy } from '../labs/paths';
 import { hiddenByLayers, layersVersion, newItemLayer } from '../labs/layers';
 import { zoomsWithKey } from '../labs/wheelZoom';
 import { codeFit, scrollCode } from '../labs/codeBlock';
+import { FORM_H, FORM_RAD, FORM_W } from '../labs/formObject';
 import { closeTask, fitTask, freshTask, renewTasks, taskTextPatch } from '../model/task';
 import { setTaskRedraw } from '../canvas/task';
 import { outSide, setTabsRedraw, towardOffset, type TabAims } from '../labs/sideTabs';
@@ -576,6 +577,14 @@ export class Editor {
     this.setSelection([it.id]);
   }
 
+  /** «Форма» (src/labs/formObject.ts), centred on `c`, picked (its fields over it). */
+  addForm(c: Point): void {
+    const it = this.newItem('rect', Math.round(c.x - FORM_W / 2), Math.round(c.y - FORM_H / 2), { w: FORM_W, h: FORM_H, rad: FORM_RAD, form: true, fv: ['', ''], text: '' });
+    this.addItem(it);
+    this.setTool('select');
+    this.setSelection([it.id]);
+  }
+
   requestRender(): void {
     if (this.raf || !this.ctx) return;
     this.raf = requestAnimationFrame(() => {
@@ -1100,6 +1109,7 @@ export class Editor {
    *  rail onto the board). Text, tasks and frames open for typing, as when made with the tool. */
   dropItem(tool: Tool, at: Point): void {
     if (tool === 'timeline') { this.addTimeline(this.toWorld(at.x, at.y)); return; }
+    if (tool === 'form') { this.addForm(this.toWorld(at.x, at.y)); return; }
     const type = (isPoly(tool) ? 'polygon' : tool) as ItemType;
     if (!DEFAULTS[type]) return;
     const extra: Partial<Item> = isPoly(tool) ? { shape: tool } : tool === 'table' ? freshTable() : tool === 'mind' ? { text: MIND_TOPIC } : {};
@@ -1529,8 +1539,8 @@ export class Editor {
   /** Opens an item's text for typing; for a table, one cell's (the first unless given). */
   startEditing(id: string, cell?: number | null, caret: 'all' | 'end' = 'all'): void {
     const it = this.board.get(id);
-    // (Nor a shape with no typing in it, «Без текста».)
-    if (!it || !EDITABLE.includes(it.type) || isLocked(it) || it.nt) return;
+    // (Nor a shape with no typing in it, «Без текста», nor a form: it's typed into by its fields.)
+    if (!it || !EDITABLE.includes(it.type) || isLocked(it) || it.nt || it.form) return;
     // Another part of a task typed in: what was typed in the one before kept first.
     if (it.type === 'task' && this.editingId === id && this.editingCell !== (cell ?? null)) window.dispatchEvent(new Event('planx:commit-edit'));
     this.editCaret = caret;
