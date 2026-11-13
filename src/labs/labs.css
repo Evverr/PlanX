@@ -285,6 +285,12 @@
 .stage-pop .stage-delete { margin-left: auto; color: var(--danger); }
 .stage-pop .btn:disabled { opacity: .4; cursor: default; }
 
+/* «Документ» typed in as it looks (RichEditor.tsx): over the sheet's text, on its white, scrolling past a page. */
+.rich-edit { position: fixed; z-index: 4; box-sizing: border-box; margin: 0; padding: 0; border: 0; outline: none; overflow-y: auto; overflow-x: hidden;
+  background: var(--surface); color: var(--ink); transform-origin: 0 0; white-space: pre-wrap; overflow-wrap: anywhere; scrollbar-width: none; }
+.rich-edit > div { min-height: 1lh; }
+.rich-edit:focus, .rich-edit:focus-visible { outline: none; box-shadow: none; }
+
 /* «Быстрое создание»: its window, the field alone for now. */
 .quick-pop .confirm-input { margin-bottom: 0; }
 

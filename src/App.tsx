@@ -37,6 +37,7 @@ import { morphFrom, morphPanel } from './labs/textButton';
 import { FormFields } from './labs/FormFields';
 import { PollFields } from './labs/PollFields';
 import { KanbanStage } from './labs/KanbanStage';
+import { RichEditor } from './labs/RichEditor';
 import { isAuthor } from './labs/poll';
 import { toggleDots, useDotsOn } from './labs/linkTool';
 import { joinDropped } from './labs/linkJoint';
@@ -532,6 +533,8 @@ export function App({ boardId }: { boardId: string }) {
       {/* A table cell is typed into as if it were an item of its own, the size of the cell. */}
       {editing && (editing.type === 'table' && ui.editingCell !== null
         ? <TextEditor key={`${editing.id}:${ui.editingCell}`} editor={editor} item={cellItem(editing, ui.editingCell)} />
+        // («Документ», src/labs: typed in as it looks.)
+        : editing.type === 'page' && labs.docPage ? <RichEditor key={editing.id} editor={editor} item={editing} />
         : <TextEditor key={editing.type === 'task' ? `${editing.id}:${ui.editingCell}` : editing.id} editor={editor} item={editing} />)}
       {/* A task's people and date, picked where its row was pressed. */}
       <TaskPop editor={editor} me={conn.me} peers={peers} />

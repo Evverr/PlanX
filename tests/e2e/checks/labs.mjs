@@ -810,43 +810,39 @@ export const checks = {
     expect((await shown())[0], 'back').toBe(0);
   },
 
-  async '"Документ": words picked as it\'s typed in made bold or coloured on the text panel, those words alone'(p) {
+  async '"Документ": typed in as it looks; words picked made bold or coloured on the text panel (those alone), a paragraph a heading, kept once done'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 40, y: 20, z: 0.8 }; e.camChanged(); e.dropItem('page', { x: 420, y: 500 }); })()`);
     await sleep(200);
     const id = await p.ev(`planx.board.list().find((i) => i.type === 'page').id`);
-    await p.ev(`(() => { planx.board.update('${id}', { text: 'Первое важное слово и обычный текст' }); planx.editor.startEditing('${id}', null, 'end'); })()`);
+    await p.ev(`(() => { planx.board.update('${id}', { text: 'Договор\\nПервое важное слово и обычный текст', rs: [{ s: 7, e: 8, h: 1 }] }); planx.editor.startEditing('${id}', null, 'end'); })()`);
     await sleep(400);
-    // «важное» picked in the field, then bold.
-    await p.ev(`(() => { const t = document.querySelector('textarea.text-edit'); t.focus(); t.setSelectionRange(7, 13); t.dispatchEvent(new Event('select')); document.dispatchEvent(new Event('selectionchange')); })()`);
-    await sleep(200);
+    expect(await p.ev(`!!document.querySelector('.rich-edit')`), 'the field typed in as it looks').toBe(true);
+    expect(await p.ev(`getComputedStyle(document.querySelector('.rich-edit > div')).fontWeight`), 'its heading bold as it\'s typed in').toBe('700');
+    // Picks characters s…e of the n-th paragraph in the field.
+    const pick = (n, s, e) => p.ev(`(() => { const d = document.querySelector('.rich-edit'); d.focus(); const para = d.children[${n}], w = document.createTreeWalker(para, NodeFilter.SHOW_TEXT);
+      const at = (i) => { let t; while ((t = w.nextNode())) { if (i <= t.length) return [t, i]; i -= t.length; } };
+      const a = at(${s}); const w2 = document.createTreeWalker(para, NodeFilter.SHOW_TEXT); let i = ${e}, t, b; while ((t = w2.nextNode())) { if (i <= t.length) { b = [t, i]; break; } i -= t.length; }
+      const r = document.createRange(); r.setStart(a[0], a[1]); r.setEnd(b[0], b[1]); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); })()`);
+    await pick(1, 7, 13);
+    await sleep(150);
     await p.click(await p.at('.tfmt button[aria-label="Жирный"]'));
     await sleep(150);
-    let rs = await p.ev(`JSON.stringify(planx.board.get('${id}').rs ?? null)`);
-    expect(rs, 'that word bold').toBe(JSON.stringify([{ s: 7, e: 13, b: true }]));
-    expect(await p.ev(`planx.board.get('${id}').fw ?? null`), 'not the whole text').toBe(null);
-    await p.ev(`(() => { const t = document.querySelector('textarea.text-edit'); t.focus(); t.setSelectionRange(0, 6); })()`);
-    await sleep(150);
+    expect(await p.ev(`getComputedStyle(document.querySelector('.rich-edit').children[1].querySelector('span, b') ?? document.body).fontWeight`), 'bold as it\'s typed in').toBe('700');
+    await pick(1, 0, 6);
     await p.click(await p.at('.tfmt button[aria-label="Цвет текста"]'));
     await sleep(150);
     await p.click(await p.at('.params-colors button[aria-label="Цвет текста: red"]'));
     await sleep(150);
-    rs = await p.ev(`JSON.stringify(planx.board.get('${id}').rs ?? null)`);
-    expect(rs, 'the first word red too').toBe(JSON.stringify([{ s: 0, e: 6, c: 'red' }, { s: 7, e: 13, b: true }]));
-  },
-
-  async '"Документ": the caret\'s paragraph made a heading by the text panel\'s style'(p) {
-    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 40, y: 20, z: 0.8 }; e.camChanged(); e.dropItem('page', { x: 420, y: 500 }); })()`);
-    await sleep(200);
-    const id = await p.ev(`planx.board.list().find((i) => i.type === 'page').id`);
-    await p.ev(`(() => { planx.board.update('${id}', { text: 'Договор\\nТекст договора' }); planx.editor.startEditing('${id}', null, 'end'); })()`);
-    await sleep(400);
-    await p.ev(`(() => { const t = document.querySelector('textarea.text-edit'); t.focus(); t.setSelectionRange(2, 2); })()`);
-    await sleep(150);
+    // The first paragraph a heading 2 instead of 1, then done with it.
+    await pick(0, 2, 2);
     await p.click(await p.at('.tfmt button[aria-label^="Стиль"]'));
     await sleep(150);
-    await p.click(await p.at('.tf-menu .tf-item:nth-child(2)'));
+    await p.click(await p.at('.tf-menu .tf-item:nth-child(3)'));
     await sleep(150);
-    expect(await p.ev(`JSON.stringify(planx.board.get('${id}').rs ?? null)`), 'its first paragraph a heading').toBe(JSON.stringify([{ s: 7, e: 8, h: 1 }]));
+    await p.ev(`document.querySelector('.rich-edit').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+    await sleep(200);
+    const it = await p.ev(`JSON.stringify({ text: planx.board.get('${id}').text, rs: planx.board.get('${id}').rs })`);
+    expect(it, 'kept').toBe(JSON.stringify({ text: 'Договор\nПервое важное слово и обычный текст', rs: [{ s: 7, e: 8, h: 2 }, { s: 8, e: 14, c: 'red' }, { s: 15, e: 21, b: true }] }));
   },
 
   async '"Голосование в объектах": set up in its fields, started, an answer clicked voted for (the shares shown), clicked again unvoted'(p) {

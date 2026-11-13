@@ -15,6 +15,7 @@ import { useLabs } from '../labs/labs';
 import { ItemMenuButton } from '../labs/ContextMenu';
 import { linkPartPatch, linkPatch } from '../labs/textLink';
 import { headingAt, remapLinks, runsHave, setHeading, setRun, type RunStyle } from '../model/textLinks';
+import { richActive, richHeading, richState, richStyle } from '../labs/RichEditor';
 
 function Btn({ icon, label, on, off, swatch, menu, onClick }: {
   icon: IconName; label: string; on?: boolean; off?: boolean; swatch?: string; menu?: boolean; onClick?: () => void;
@@ -190,18 +191,22 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
     document.addEventListener('selectionchange', reselect);
     return () => document.removeEventListener('selectionchange', reselect);
   }, [item.type]);
-  const picked = item.type === 'page' ? pickedPart(editor, item) : null;
+  // (Typed in as it looks, RichEditor.tsx: on what's picked in that field, as the browser has it.)
+  const rich = item.type === 'page' && editor.editingId === item.id && richActive() ? richState() : null;
+  const picked = !rich && item.type === 'page' ? pickedPart(editor, item) : null;
   const runsOf = (p: Part) => remapLinks(item.text ?? '', p.text, item.rs);
-  const partHas = (key: keyof RunStyle, value?: string) => !!picked && runsHave(runsOf(picked), picked.s, picked.e, key, value);
+  const partHas = (key: keyof RunStyle, value?: string) => (rich ? key !== 'c' && key !== 'h' && rich[key]
+    : !!picked && runsHave(runsOf(picked), picked.s, picked.e, key, value));
   /** Where the caret is in a document being typed in (or what's picked there). */
   const caretIn = (): Part | null => {
     const el = document.querySelector<HTMLTextAreaElement>('textarea.text-edit');
     return item.type === 'page' && el && editor.editingId === item.id ? { s: el.selectionStart, e: el.selectionEnd, text: el.value } : null;
   };
-  const caret = caretIn(), level = caret ? headingAt(caret.text, runsOf(caret), caret.s) : null;
+  const caret = caretIn(), level = rich ? rich.h : caret ? headingAt(caret.text, runsOf(caret), caret.s) : null;
   /** Makes the paragraphs the caret's in (or what's picked) headings of `n` (0: plain); false with no
    *  document being typed in (the whole text's style then). */
   const headPart = (n: number): boolean => {
+    if (rich && richHeading(n)) { setMenu(null); return true; }
     const now = caretIn();
     if (!now) return false;
     editor.board.update(item.id, { text: now.text, rs: setHeading(now.text, runsOf(now), now.s, now.e, n) });
@@ -211,6 +216,7 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
   /** Sets (or takes off) a style on the part picked (as it's picked now); false with none picked (the
    *  whole text's then). */
   const stylePart = (key: keyof RunStyle, value?: string): boolean => {
+    if (rich && key !== 'h' && richStyle(key, value)) { setMenu(null); return true; }
     const now = item.type === 'page' ? pickedPart(editor, item) : null;
     if (!now) return false;
     const runs = runsOf(now), on = key === 'c' ? value !== undefined : !runsHave(runs, now.s, now.e, key);
@@ -253,10 +259,10 @@ export function TextPanel({ editor, item, leaving, after, dock, onBack }: { edit
           <Pick value={fs ? String(fs) : '—'} label="Размер" onClick={() => toggle('size')} />
         </Drop></span>,
         gap3: <div className="fsep" />,
-        bold: <span className="sort-wrap"><Btn icon="bold" label="Жирный" on={picked ? partHas('b') : bold} onClick={() => stylePart('b') || set({ fw: bold ? 400 : 700 })} /></span>,
-        italic: <span className="sort-wrap"><Btn icon="italic" label="Курсив" on={picked ? partHas('i') : item.fi} onClick={() => stylePart('i') || set({ fi: item.fi ? undefined : true })} /></span>,
-        underline: <span className="sort-wrap"><Btn icon="underline" label="Подчёркнутый" on={picked ? partHas('u') : item.fu} onClick={() => stylePart('u') || set({ fu: item.fu ? undefined : true })} /></span>,
-        strike: <span className="sort-wrap"><Btn icon="strike" label="Зачёркнутый" on={picked ? partHas('x') : item.fx} onClick={() => stylePart('x') || set({ fx: item.fx ? undefined : true })} /></span>,
+        bold: <span className="sort-wrap"><Btn icon="bold" label="Жирный" on={picked || rich ? partHas('b') : bold} onClick={() => stylePart('b') || set({ fw: bold ? 400 : 700 })} /></span>,
+        italic: <span className="sort-wrap"><Btn icon="italic" label="Курсив" on={picked || rich ? partHas('i') : item.fi} onClick={() => stylePart('i') || set({ fi: item.fi ? undefined : true })} /></span>,
+        underline: <span className="sort-wrap"><Btn icon="underline" label="Подчёркнутый" on={picked || rich ? partHas('u') : item.fu} onClick={() => stylePart('u') || set({ fu: item.fu ? undefined : true })} /></span>,
+        strike: <span className="sort-wrap"><Btn icon="strike" label="Зачёркнутый" on={picked || rich ? partHas('x') : item.fx} onClick={() => stylePart('x') || set({ fx: item.fx ? undefined : true })} /></span>,
         sep: <div className="fsep line" />,
         // The text's colour and its highlight: the same row of colours and opacity as in «Параметры».
         color: <span className="sort-wrap"><Drop open={menu === 'color'} params menu={
