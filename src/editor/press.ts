@@ -8,6 +8,7 @@ import { copyCode, onCodeCopy } from '../labs/codeBlock';
 import { onFormButton } from '../labs/formObject';
 import { pollPartAt, pressPoll } from '../labs/poll';
 import { addStage, headerAt } from '../labs/kanban';
+import { pagerAt, turnPage } from '../labs/docPage';
 import { toggleAudio } from '../canvas/audio';
 import { anyDotAt, dotAt, inFirstHalf, linkHandleAt, foldBadgeAt, frameButtonUnder, offComponent, sideAt, linkEndAt, onHandle, onInstanceGlyph, onRotate, onTopLeft, onBottomLeft, plusAt, ringAt, tickAt, pickedUnder } from './hover';
 import { grabbableLine } from './tables';
@@ -144,6 +145,7 @@ export function press(ed: Editor, e: PointerEvent): void {
     case 'form':
     case 'poll':
     case 'kanban':
+    case 'page':
       ed.gesture = { type: 'place', at: w, tool: ed.tool };
       return;
     case 'rect':
@@ -308,6 +310,9 @@ export function press(ed: Editor, e: PointerEvent): void {
     return;
   }
   // A kanban's «+» (one more stage) or a stage (its menu, KanbanStage.tsx) («Канбан», src/labs).
+  // A document's pager arrow («Документ», src/labs): its next or last page shown here.
+  const pager = e.button === 0 && labOn('docPage') ? pagerAt(ed.board.list(), w) : null;
+  if (pager) { turnPage(pager.it, pager.dir); ed.requestRender(); return; }
   const head = e.button === 0 && !e.shiftKey && labOn('kanban') ? headerAt(ed.board.list(), w) : null;
   if (head) {
     if (head.part === 'add') { addStage(ed.board, head.f); return; }

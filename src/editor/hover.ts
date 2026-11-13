@@ -1,5 +1,5 @@
 import type { Item, Link, Side } from '../model/types';
-import { DEFAULTS, EDITABLE, ROTATABLE, textPad, textPadY } from '../model/types';
+import { DEFAULTS, EDITABLE, ROTATABLE, textPad, textPadR, textPadY } from '../model/types';
 import { fontOf, textBlockHeight, withList } from '../canvas/text';
 import { taskPartAt } from '../canvas/task';
 import type { Point } from '../canvas/geometry';
@@ -12,6 +12,7 @@ import { onCodeCopy } from '../labs/codeBlock';
 import { onFormButton } from '../labs/formObject';
 import { pollHot } from '../labs/poll';
 import { kanbanHot } from '../labs/kanban';
+import { pagerHot } from '../labs/docPage';
 import { branchBase, buttonKey, foldBadge, foldedWays, mindButtons, mindWay, ringRadius, type MindButtonAt, type Way } from '../model/mind';
 import { frameButtonAt } from './frames';
 import { rotateCursor } from './cursors';
@@ -256,7 +257,7 @@ export function clickTypes(it: Item | null | undefined, w: Point): boolean {
   if (it.type === 'text' || (it.code && it.text)) return true;
   if (!it.text?.trim() || it.rot) return false;
   // Its lines as laid out across it: down from its top, or in its middle.
-  const pad = textPad(it), padY = textPadY(it), width = it.w - pad * 2;
+  const pad = textPad(it), padY = textPadY(it), width = it.w - pad - textPadR(it);
   const th = Math.min(it.h - padY * 2, textBlockHeight(withList(it.text, it.ls), width, it.fs ?? DEFAULTS[it.type].fs ?? 16, fontOf(it)));
   const top = it.va === 'top' ? it.y + padY : it.va === 'bottom' ? it.y + it.h - padY - th : it.y + (it.h - th) / 2;
   return w.x >= it.x + pad && w.x <= it.x + it.w - pad && w.y >= top && w.y <= top + th;
@@ -328,7 +329,8 @@ export function updateCursor(ed: Editor, w: Point, alt: boolean): void {
     ?? (over?.code && ed.editingId !== over.id && onCodeCopy(over, w) ? `code:${over.id}` : null)
     ?? (over?.form && onFormButton(over, w) ? `form:${over.id}` : null)
     ?? (over?.poll ? pollHot(over, w) : null)
-    ?? kanbanHot(ed.board.list(), w);
+    ?? kanbanHot(ed.board.list(), w)
+    ?? (labOn('docPage') ? pagerHot(ed.board.list(), w) : null);
   if (hot !== ed.hotPlus) { ed.hotPlus = hot; ed.requestRender(); }
   if (hot || frameButtonUnder(ed, w) || foldBadgeAt(ed, w)) cursor = 'pointer';
   else if (linkHandleAt(ed, w)) cursor = 'move';

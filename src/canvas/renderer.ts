@@ -1,6 +1,6 @@
 import './compat';
 import type { Item, Link, LinkStyle, Side } from '../model/types';
-import { MARKER_OPACITY, alignOf, DEFAULTS, FILLS, textPad, textPadY, ICON_COLORS, INK_COLORS, MARK_COLORS, STROKE_COLORS, TEXT_COLORS } from '../model/types';
+import { MARKER_OPACITY, alignOf, DEFAULTS, FILLS, PAGE, textPad, textPadY, ICON_COLORS, INK_COLORS, MARK_COLORS, STROKE_COLORS, TEXT_COLORS } from '../model/types';
 import { drawIcon } from '../icons/icons';
 import { drawEmoji } from '../emoji/emoji';
 import { drawPicture } from './pictures';
@@ -20,6 +20,7 @@ import { drawCode } from '../labs/codeBlock';
 import { drawForm } from '../labs/formObject';
 import { drawPoll } from '../labs/poll';
 import { drawKanban, glideOffset, gliding } from '../labs/kanban';
+import { drawPager, pageShown, pagesOf, PAGE_TEXT } from '../labs/docPage';
 import { drawTaskCard, TASK_RAD, taskShown } from './task';
 import { dotsAlways, dotsUnder } from '../labs/linkTool';
 import { drawnLinks } from '../model/textLinks';
@@ -609,6 +610,25 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item, s: Scene) {
     case 'mind':
       drawMind(ctx, it, s, editing);
       break;
+    case 'page': {
+      // «Документ» (src/labs): a sheet of paper, its shadow growing with the zoom; on it the page it shows
+      // here (laid out as a text in the room inside its margins), the pager under it.
+      const k = s.cam.z * s.dpr;
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, .12)';
+      ctx.shadowBlur = 8 * k;
+      ctx.shadowOffsetY = 2 * k;
+      ctx.fillStyle = theme.surface;
+      ctx.fillRect(it.x, it.y, it.w, it.h);
+      ctx.restore();
+      const pages = pagesOf(it), n = pageShown(it, pages.length), r = pages[n];
+      if (!editing && r) {
+        const links = it.links?.filter((l) => l.e > r.s && l.s < r.e).map((l) => ({ ...l, s: Math.max(0, l.s - r.s), e: l.e - r.s }));
+        drawText(ctx, { ...it, x: it.x + PAGE.LEFT, y: it.y + PAGE.TOP, w: PAGE_TEXT.w, h: PAGE_TEXT.h, text: (it.text ?? '').slice(r.s, r.e), links, ls: undefined }, 0, theme.ink, false, s, 0);
+      }
+      drawPager(ctx, it, n, pages.length, theme, s.hotPlus);
+      break;
+    }
     case 'ink':
       strokeInk(ctx, { pts: inkPoints(it), color: it.color ?? 'ink', width: (it.sw ?? 2) * it.w / (it.iw || it.w), hl: !!it.hl, op: it.fo, sharp: it.sharp }, theme);
       break;

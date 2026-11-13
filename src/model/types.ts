@@ -1,4 +1,4 @@
-export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji' | 'ink' | 'image' | 'task' | 'table' | 'audio' | 'polygon' | 'mind';
+export type ItemType = 'sticky' | 'text' | 'rect' | 'ellipse' | 'frame' | 'icon' | 'emoji' | 'ink' | 'image' | 'task' | 'table' | 'audio' | 'polygon' | 'mind' | 'page';
 /** How opaque a highlighter's line is unless set otherwise. */
 export const MARKER_OPACITY = 0.45;
 
@@ -232,16 +232,23 @@ export interface Subtask { t: string; done?: boolean }
 /** Someone on the board, by their name and colour (as their cursor's). */
 export interface Person { n: string; c: string }
 
+/** A document's sheet («Документ», src/labs/docPage.ts): A4 at 96 dpi, its margins as ГОСТ has them (3 cm
+ *  on the left, 1.5 on the right, 2 above and below), how many pages it shows at most. */
+export const PAGE = { W: 794, H: 1123, LEFT: 113, RIGHT: 57, TOP: 76, BOTTOM: 76, MAX: 10 };
+
 /** Font weight of text left as it was made: plain for text, heavier on stickers and shapes. */
-export const baseWeight = (type: ItemType): number => (type === 'text' || type === 'table' ? 400 : type === 'sticky' ? 500 : 600);
-/** Inset of the text in stickers and shapes; figures without square corners keep it further in. */
+export const baseWeight = (type: ItemType): number => (type === 'text' || type === 'table' || type === 'page' ? 400 : type === 'sticky' ? 500 : 600);
+/** Inset of the text in stickers and shapes (on the left); figures without square corners keep it further in. */
 export const textPad = (it: Item): number =>
   it.type === 'sticky' ? 14 : it.type === 'rect' || it.type === 'task' ? 10 : it.type === 'table' ? 16 : it.type === 'mind' ? (it.parent ? 15 : 32)
+    : it.type === 'page' ? PAGE.LEFT
     : it.type === 'ellipse' ? Math.min(it.w, it.h) * 0.15 + 6 : it.type === 'polygon' ? Math.min(it.w, it.h) * 0.22 + 6 : 0;
-/** Room above and below the text: the same as to the sides, but for a central topic (15, not 32) and a
- *  table's cells (8, not 16: a row's 40 high). */
-export const textPadY = (it: Item): number => (it.type === 'mind' ? 8 : it.type === 'table' ? 8 : textPad(it));
-export const alignOf = (it: Item): TextAlign => it.ta ?? (it.type === 'text' || it.type === 'table' || it.type === 'mind' ? 'left' : 'center');
+/** On the right: as on the left, but a document's sheet's narrower margin. */
+export const textPadR = (it: Item): number => (it.type === 'page' ? PAGE.RIGHT : textPad(it));
+/** Room above and below the text: the same as to the sides, but for a central topic (15, not 32), a
+ *  table's cells (8, not 16: a row's 40 high) and a document's sheet. */
+export const textPadY = (it: Item): number => (it.type === 'mind' ? 8 : it.type === 'table' ? 8 : it.type === 'page' ? PAGE.TOP : textPad(it));
+export const alignOf = (it: Item): TextAlign => it.ta ?? (it.type === 'text' || it.type === 'table' || it.type === 'mind' || it.type === 'page' ? 'left' : 'center');
 
 /** Text colours; "ink" is the item's usual text colour. */
 export const TEXT_COLORS: Record<string, string> = {
@@ -360,6 +367,8 @@ export const DEFAULTS: Record<ItemType, Partial<Item> & { w: number; h: number }
   audio: { w: 300, h: 64 },
   polygon: { w: 160, h: 150, color: 'purple', fs: 16, text: '' },
   mind: { w: 200, h: 56, fs: 18, text: '' },
+  // («Документ»: a sheet of A4, its text from the top.)
+  page: { w: PAGE.W, h: PAGE.H, fs: 16, text: '', va: 'top' },
 };
 
 /** A kanban («Канбан», src/labs/kanban.ts), in board units: the room round it (on the left, 4 more), its
@@ -385,11 +394,11 @@ const plainFrame = (it: Item) => it.type === 'frame' && !it.comp && !it.inst && 
 /** Whether an item's fill (or its outline) can be given a colour. */
 export const fillable = (it: Item): boolean => COLORABLE.includes(it.type) || plainFrame(it);
 export const strokable = (it: Item): boolean => STROKABLE.includes(it.type) || plainFrame(it);
-export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'table', 'polygon', 'mind'];
+export const HAS_FONT: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'table', 'polygon', 'mind', 'page'];
 /** What can be turned by its top right corner (a frame along with what it holds). Tables, mind map
  *  nodes and audio notes stay square to the board. */
 export const ROTATABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'polygon', 'icon', 'emoji', 'image', 'ink', 'frame'];
-export const EDITABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'frame', 'task', 'table', 'polygon', 'mind'];
+export const EDITABLE: ItemType[] = ['sticky', 'text', 'rect', 'ellipse', 'frame', 'task', 'table', 'polygon', 'mind', 'page'];
 
 export const uid = (): string =>
   Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);

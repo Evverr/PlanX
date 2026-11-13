@@ -41,7 +41,7 @@ export type Gesture =
   | { type: 'rotate'; id: string; c: Point; a0: number; rot0: number; held: Array<{ id: string; c: Point; rot0: number }> }
   | { type: 'create'; id: string; origin: Point; last?: Point }
   | { type: 'tab'; id: string; side: Side; start: Point }
-  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline' | 'form' | 'poll' | 'kanban'; to?: Point }
+  | { type: 'place'; at: Point; tool: 'sticky' | 'text' | 'task' | 'table' | 'mind' | 'timeline' | 'form' | 'poll' | 'kanban' | 'page'; to?: Point }
   /** «Канбан»: a stage's pill pressed (`i` where its column is now), dragged along the header. */
   | { type: 'stageDrag'; id: string; i: number; start: Point; moved: boolean }
   | { type: 'tableLine'; id: string; start: Point; lines: TableLine[]; cols0: number[]; rows0: number[] }

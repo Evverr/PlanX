@@ -240,7 +240,7 @@ export function App({ boardId }: { boardId: string }) {
     return () => window.removeEventListener('pointerdown', off, true);
   }, [editor]);
   const taskDesc = typingDesc || (selItems.length === 1 && descOf === selItems[0].id);
-  const textItem = selItems.length === 1 && (['text', 'sticky', 'table', 'rect', 'ellipse', 'polygon'].includes(selItems[0].type) && !selItems[0].code || taskDesc) ? selItems[0] : asOne(selItems) ?? undefined;
+  const textItem = selItems.length === 1 && (['text', 'sticky', 'table', 'rect', 'ellipse', 'polygon', 'page'].includes(selItems[0].type) && !selItems[0].code || taskDesc) ? selItems[0] : asOne(selItems) ?? undefined;
   const labs = useLabs();
   // "Кнопка T" (src/labs): the text panel instead of the selection panel, asked for by its T, till the
   // next press on the board (or something else picked).

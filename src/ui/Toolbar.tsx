@@ -26,6 +26,7 @@ const TOOLS: Partial<Record<string, [Tool, PanelIconName, string]>> = {
   task: ['task', 'circle-check', 'Задача'],
   table: ['table', 'columns', 'Таблица'],
   mind: ['mind', 'branch', 'Майнд-карта'],
+  page: ['page', 'file', 'Документ'],
 };
 
 /** Buttons from the mockup that have no feature behind them yet. */
@@ -39,7 +40,7 @@ const SOLID: Partial<Record<PanelIconName, PanelIconName>> = {
 };
 
 /** Everything on the rail, top to bottom, until someone rearranges it. */
-const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'oval', 'task', 'table', 'mind', 'objects', 'frames', 'draw', 'image', 'audio', 'smile', 'lines', 'comments'];
+const DEFAULT_ORDER = ['select', 'hand', 'sep', 'sticky', 'text', 'page', 'oval', 'task', 'table', 'mind', 'objects', 'frames', 'draw', 'image', 'audio', 'smile', 'lines', 'comments'];
 
 /** Rail buttons that make something on the board when dragged off the rail, and their icons. */
 const ICONS: Partial<Record<string, PanelIconName>> = { draw: 'marker', image: 'image', audio: 'microphone', smile: 'smile', frames: 'frame', oval: 'landscape' };
@@ -119,7 +120,7 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
   // A button dragged off the rail turns into what it makes and lands on the board there; buttons
   // that make nothing to preview stay an icon (and the picture button opens its dialog for that spot).
   const toolOf = (key: string): Tool | null =>
-    key === 'frames' ? 'frame' : key === 'oval' ? lastShape.current : key === 'objects' ? lastObject.current : ['sticky', 'text', 'task', 'table', 'mind'].includes(key) ? key as Tool : null;
+    key === 'frames' ? 'frame' : key === 'oval' ? lastShape.current : key === 'objects' ? lastObject.current : ['sticky', 'text', 'task', 'table', 'mind', 'page'].includes(key) ? key as Tool : null;
   const dropOut = {
     preview: (key: string) => {
       const t = toolOf(key), icon = TOOLS[key]?.[1] ?? ICONS[key];
@@ -220,6 +221,8 @@ export function Toolbar({ editor, tool, pens, zoom, docked, iconsOpen, onToggleI
       railButton(k, on, label, icon, onClick, extra, inMenu);
     const t = TOOLS[key], later = LATER[key];
     if (key === 'sep') return <div key={key} {...sort.item(key)} className={`tsep ${sort.lifted(key) ? 'lifted' : ''}`} />;
+    // («Документ», src/labs: its button only while it's switched on.)
+    if (key === 'page' && !labs.docPage) return null;
     if (t) return button(key, tool === t[0], t[2], t[1], () => editor.setTool(t[0]), { 'aria-pressed': tool === t[0] });
     // With two or more items selected, the frame button puts a frame around them instead.
     if (key === 'frames') return button(key, tool === 'frame', 'Фрейм (F)', 'frame',

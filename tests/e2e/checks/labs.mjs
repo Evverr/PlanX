@@ -792,6 +792,24 @@ export const checks = {
     expect(await p.ev(`!!document.querySelector('.stage-pop:not(.gone)')`), 'no menu once dragged').toBe(false);
   },
 
+  async '"Документ": a sheet of A4 from the rail, its text from the top; what doesn\'t fit on a page goes on, the pager under it turning them'(p) {
+    await p.ev(`(() => { const e = planx.editor; e.cam = { x: 40, y: 20, z: 0.6 }; e.camChanged(); e.dropItem('page', { x: 300, y: 380 }); })()`);
+    await sleep(200);
+    const it = await p.ev(`(() => { const f = planx.board.list().find((i) => i.type === 'page'); return { id: f.id, x: f.x, y: f.y, w: f.w, h: f.h }; })()`);
+    expect(`${it.w}×${it.h}`, 'A4').toBe('794×1123');
+    expect(await p.ev(`!!document.querySelector('.tools button[aria-label="Документ"]')`), 'its button on the rail').toBe(true);
+    await p.ev(`(() => { planx.board.update('${it.id}', { text: Array.from({ length: 60 }, (_, i) => 'Строка номер ' + (i + 1) + ' в документе, довольно длинная, чтобы переноситься на следующую строку листа').join('\\n') }); planx.editor.setSelection([]); })()`);
+    await sleep(200);
+    const shown = () => p.ev(`(async () => { const d = await import('/src/labs/docPage.ts'); const it = planx.board.get('${it.id}'); return [d.pageShown(it), d.pagesOf(it).length]; })()`);
+    const [first, of] = await shown();
+    expect(first, 'its first page').toBe(0);
+    expect(of > 1, 'more than one page').toBe(true);
+    await p.click([40 + (it.x + it.w / 2 + 44) * 0.6, 20 + (it.y + it.h + 22) * 0.6]);
+    expect((await shown())[0], 'the next page').toBe(1);
+    await p.click([40 + (it.x + it.w / 2 - 44) * 0.6, 20 + (it.y + it.h + 22) * 0.6]);
+    expect((await shown())[0], 'back').toBe(0);
+  },
+
   async '"Голосование в объектах": set up in its fields, started, an answer clicked voted for (the shares shown), clicked again unvoted'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 0, y: 0, z: 1 }; e.camChanged(); e.addPoll({ x: 600, y: 360 }); })()`);
     await sleep(300);

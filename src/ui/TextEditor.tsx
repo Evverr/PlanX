@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react';
 import type { Editor } from '../editor/editor';
-import { alignOf, TEXT_COLORS, textPad, textPadY, type Item } from '../model/types';
+import { alignOf, TEXT_COLORS, textPad, textPadR, textPadY, type Item } from '../model/types';
 import { fittedSize, fontOf, FONTS, LINE_HEIGHT, textBlockHeight, withList } from '../canvas/text';
 import { FOLD_FS, FOLD_ICON, FOLD_PAD, FOLD_RIGHT, FOLD_TITLE_GAP } from '../model/frame';
 import { center } from '../canvas/geometry';
@@ -83,7 +83,7 @@ export function TextEditor({ editor, item }: { editor: Editor; item: Item }) {
   const fs = field ? field.fs : folded ? FOLD_FS : isFrame ? 15 : item.fs ?? (code ? CODE_FS : 16);
   const pad = code ? CODE_LEFT : textPad(item), padY = code ? CODE_TOP : textPadY(item);
   const width = field ? field.w : folded ? Math.max(160, item.w - FOLD_PAD - FOLD_TITLE_GAP - FOLD_ICON - FOLD_RIGHT)
-    : isFrame ? Math.max(160, item.w * 0.6) : code ? item.w - CODE_LEFT - CODE_PAD : item.w - pad * 2;
+    : isFrame ? Math.max(160, item.w * 0.6) : code ? item.w - CODE_LEFT - CODE_PAD : item.w - pad - textPadR(item);
   const top = field ? field.y : folded ? item.y + (item.h - 26) / 2 : isFrame ? item.y - 30 : item.y + padY;
   const p = editor.toScreen({ x: field ? field.x : item.x + (folded ? FOLD_PAD : isFrame ? 0 : pad), y: top });
 
