@@ -48,7 +48,10 @@
 .panel.raised { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
 .panel.docked.raised { bottom: var(--s60); border-radius: var(--panel-radius); }
 .sw { width: var(--e26); height: var(--e26); border-radius: 50%; border: var(--s2) solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; margin: 0 3.5px; }
-.sw.on { box-shadow: 0 0 0 2px var(--accent); }
+/* The picked one: a square with round corners round it, clear of its circle by a gap (its own edge). */
+.sw.on { position: relative; overflow: visible; }
+/* (Before it: its ::after is the wider spot it's pressed by, see panels.css.) */
+.sw.on::before { content: ""; position: absolute; inset: calc(-1 * var(--s4)); border: var(--s2) solid var(--accent); border-radius: var(--s8); pointer-events: none; }
 .sw-group, .sort-wrap { display: flex; align-items: center; }
 .table-count { gap: var(--s2); font-size: var(--s14); color: var(--fmt-ink); }
 /* A table's rows and columns carry their own separators, wherever they're moved to: a line either
