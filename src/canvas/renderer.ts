@@ -24,7 +24,7 @@ import { drawTimeline } from './timeline';
 import { autoInk } from '../model/color';
 import cursorUrl from './cursor.svg';
 import { anchorAt, coveredAt, solid, angleOf, linkBox, traceStar, audioButton, boxOf, center, curveBetween, edgePoint, elbowRoute, inkPoints, instanceBounds, pathNodes, flattenPath, linkHandles, spreadElbows, polyPoints, linkShape, nearestSide, pointInRect, rectsIntersect, sidePoint, SIDES, type Bezier, type LinkShape } from './geometry';
-import { font, fontOf, layoutText, withList, type FontStyle, type TextLayout } from './text';
+import { font, fontOf, layoutText, LINE_HEIGHT, MIND_PAD_Y, withList, type FontStyle, type TextLayout } from './text';
 
 export interface Camera { x: number; y: number; z: number }
 
@@ -148,8 +148,10 @@ export interface InkStroke { pts: Point[]; color: string; width: number; hl: boo
 /** Corner radius of everything with corners except stickers, in board units. */
 const CORNER = 8;
 const corner = (it: Item) => (it.type === 'rect' ? it.rad ?? CORNER : it.type === 'image' ? it.rad ?? 0 : it.type === 'frame' ? CORNER : it.type === 'task' ? TASK_RAD
-  // A mind map node's: the central topic's rounder.
-  : it.type === 'mind' ? Math.min(it.h / 2, it.parent ? 10 : 14) : 0);
+  // A mind map node's: the central topic's rounder; in a map with round ends, as round as it is on one line.
+  : it.type === 'mind' ? (roundMinds.has(it.id) ? Math.min(it.h, mindLine(it)) / 2 : Math.min(it.h / 2, it.parent ? 10 : 14)) : 0);
+/** How tall a mind map node is on one line (see mindSize). */
+const mindLine = (it: Item) => (Math.ceil((it.fs ?? 16) * LINE_HEIGHT) + MIND_PAD_Y * 2) * (it.parent ? 1 : 4 / 3);
 
 /** Size of the resize handle in screen pixels. */
 export const HANDLE = 12;
@@ -706,7 +708,7 @@ function drawMind(ctx: CanvasRenderingContext2D, it: Item, s: Scene, editing: bo
   // Dimmed in the dark theme like the other fills.
   const { theme } = s, own = nodeColors(it, tints);
   // Its map's "Конфигурация" (on its central topic): cards (else the text alone), strips.
-  const root = mindRoot(it, s.get), card = !root.mnb, strip = !root.mns;
+  const root = mindRoot(it, s.get), card = !root.mnb, strip = !root.mns && !root.mrd;
   ctx.beginPath();
   ctx.roundRect(it.x, it.y, it.w, it.h, corner(it));
   ctx.globalAlpha = fillOpacity(it);
@@ -1303,10 +1305,13 @@ let ghostLayer: HTMLCanvasElement | null = null;
 
 /** Mind map colours parallel branches take from a coloured one, worked out once per drawing. */
 let tints = new Map<string, { color?: string; fill?: string }>();
+/** Mind map nodes in maps with round ends («Круглые края»), worked out once per drawing (see corner). */
+let roundMinds = new Set<string>();
 
 export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   const { cam, theme, dpr } = s;
   tints = siblingTints(s.items);
+  roundMinds = new Set(s.items.some((i) => i.mrd) ? s.items.filter((i) => i.type === 'mind' && mindRoot(i, s.get).mrd).map((i) => i.id) : []);
   if (!s.noBackground) textLinkRects = [];
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   if (!s.noBackground) drawBackground(ctx, s);

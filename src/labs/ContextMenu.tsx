@@ -434,13 +434,19 @@ function MindWays({ it, set }: { it: Item; set: (patch: Partial<Item>) => void }
           <span>Передвигать вручную</span><Switch on={!!it.mfree} />
         </button>
       </div>
+      {/* (A strip and round ends don't go together: either switched on switches the other off.) */}
       {([['mns', 'Боковая полоса'], ['mnb', 'Бэкграунд']] as const).map(([key, label]) => (
         <div key={key} className="menu-item">
-          <button className="menu-row" role="menuitemcheckbox" aria-checked={!it[key]} onClick={() => set({ [key]: it[key] ? undefined : true })}>
+          <button className="menu-row" role="menuitemcheckbox" aria-checked={!it[key]} onClick={() => set({ [key]: it[key] ? undefined : true, ...(key === 'mns' && it.mns && { mrd: undefined }) })}>
             <span>{label}</span><Switch on={!it[key]} />
           </button>
         </div>
       ))}
+      <div className="menu-item">
+        <button className="menu-row" role="menuitemcheckbox" aria-checked={!!it.mrd} onClick={() => set(it.mrd ? { mrd: undefined } : { mrd: true, mns: true })}>
+          <span>Круглые края</span><Switch on={!!it.mrd} />
+        </button>
+      </div>
     </div>
   );
 }

@@ -145,6 +145,9 @@ export interface Item {
    *  card (mnb, the text alone), "Конфигурация". */
   mns?: boolean;
   mnb?: boolean;
+  /** A mind map's central topic: its nodes with round ends («Круглые края»): one line, a pill; more, a
+   *  card as round as that pill's ends; none with a strip. */
+  mrd?: boolean;
   /** A mind map's central topic: some of its nodes moved by hand, so folding no longer lays out the
    *  families round what's folded (see regroup); laid out again by «Авторасположение», it does again. */
   mhand?: boolean;
