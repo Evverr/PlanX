@@ -94,21 +94,50 @@ export function kanbanLayout(board: Board, f: Item, items: Item[]): Map<string, 
 
 /** Lays out every kanban on the board that's out of order, for good (not a step to undo: undoing what was
  *  done lays it out again). `skip`: what's being dragged, left where it is. */
-export function tidyKanbans(board: Board, skip: Set<string> = new Set()): void {
+export function tidyKanbans(board: Board, skip: Set<string> = new Set(), glide = true): void {
   const items = board.list(), all = new Map<string, Partial<Item>>();
   for (const f of items) {
     if (f.type !== 'frame' || !f.kb) continue;
     for (const [id, p] of kanbanLayout(board, f, items)) if (!skip.has(id)) all.set(id, p);
   }
-  if (all.size) board.forGood(() => all.forEach((p, id) => board.updateForGood(id, p)));
+  if (!all.size) return;
+  // The cards moved glide there, from where they're seen now (see glideOffset); not as it's stretched.
+  const now = performance.now();
+  if (glide) for (const [id, p] of all) {
+    const c = board.get(id), was = glideOffset(id, now);
+    if (c?.type !== 'frame' && c && (p.x !== undefined || p.y !== undefined)) glides.set(id, { dx: c.x - (p.x ?? c.x) + (was?.x ?? 0), dy: c.y - (p.y ?? c.y) + (was?.y ?? 0), at: now });
+  }
+  board.forGood(() => all.forEach((p, id) => board.updateForGood(id, p)));
 }
 
-/** The kanban column a card being dragged would go into, let go now: the one its middle's over. */
-export function dropTarget(items: Item[], it: Item | undefined): { id: string; col: number } | null {
+/** Cards gliding to their places in a column, by id: how far off it they were, and since when; in this long. */
+const glides = new Map<string, { dx: number; dy: number; at: number }>();
+const GLIDE_MS = 220;
+/** How far off its place a card's drawn now, gliding there (easing out), if it is. */
+export function glideOffset(id: string, now: number): Point | null {
+  const g = glides.get(id);
+  if (!g) return null;
+  const k = (now - g.at) / GLIDE_MS;
+  if (k >= 1) { glides.delete(id); return null; }
+  const left = (1 - k) ** 3;
+  return { x: g.dx * left, y: g.dy * left };
+}
+export const gliding = (now: number): boolean => [...glides.values()].some((g) => now - g.at < GLIDE_MS);
+
+/** The kanban column a card being dragged would go into, let go now (the one its middle's over), and
+ *  where among its cards: the line between them it'd go in at (`y`, across `x`…`x + w`). `skip`: what's
+ *  being dragged. */
+export function dropTarget(items: Item[], it: Item | undefined, skip: Set<string> = new Set()): { id: string; col: number; x: number; w: number; y: number } | null {
   if (!it || !snaps(it)) return null;
   const cx = it.x + it.w / 2, cy = it.y + it.h / 2;
   const f = items.find((k) => k.kb && cx >= k.x && cx <= k.x + k.w && cy >= k.y && cy <= k.y + k.h);
-  return f ? { id: f.id, col: columnOf(f, cx) } : null;
+  if (!f) return null;
+  const col = columnOf(f, cx), c = columns(f)[col], held = new Set(f.members ?? []);
+  // (As they'll stand: by their tops, the one let go among them by its own.)
+  const cards = items.filter((o) => held.has(o.id) && !skip.has(o.id) && snaps(o) && columnOf(f, o.x + o.w / 2) === col).sort((a, b) => a.y - b.y);
+  const before = cards.filter((o) => o.y < it.y), last = before[before.length - 1];
+  const y = last ? last.y + last.h + CARD_GAP / 2 : c.y + IN - CARD_GAP / 2;
+  return { id: f.id, col, x: c.x, w: c.w, y };
 }
 
 /** Its «+» on the right of its header, for one more stage. */

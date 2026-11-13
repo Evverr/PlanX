@@ -19,7 +19,7 @@ import { gridKind } from '../labs/boardGrid';
 import { drawCode } from '../labs/codeBlock';
 import { drawForm } from '../labs/formObject';
 import { drawPoll } from '../labs/poll';
-import { drawKanban } from '../labs/kanban';
+import { drawKanban, glideOffset, gliding } from '../labs/kanban';
 import { drawTaskCard, TASK_RAD, taskShown } from './task';
 import { dotsAlways, dotsUnder } from '../labs/linkTool';
 import { drawnLinks } from '../model/textLinks';
@@ -142,8 +142,11 @@ export interface Scene {
    *  click shows its frame at once. What was picked already keeps its frame and handle as it's moved. */
   dragging?: boolean;
   dragMoved?: boolean;
-  /** «Канбан»: the column a card being dragged would go into (lit as it's over it). */
-  kanbanDrop?: { id: string; col: number } | null;
+  /** «Канбан»: the column a card being dragged would go into (lit as it's over it), and the line between
+   *  its cards where it'd go in (drawn blue). */
+  kanbanDrop?: { id: string; col: number; x: number; w: number; y: number } | null;
+  /** «Канбан»: cards taken up (dragged over a kanban or out of one): drawn a little tilted, see-through. */
+  lifted?: string[];
   /** Picked links' colours being set: drawn in them, not in the selection's blue. */
   linksAsThey?: boolean;
   /** Left see-through where nothing is drawn (a picture saved without the board's background). */
@@ -206,7 +209,7 @@ export const dotsMoving = (): boolean => {
   const now = performance.now();
   return now - handleTurn.at < HANDLE_TURN || [...dotTurns.values()].some((t) => now - t.at < DOT_GROW) || [...pillTurns.values()].some((t) => now - t.at < PILLS_SLIDE)
     || [...unpicked.values()].some((u) => now - u.at < PICK_OUT) || now - dragTurn.at < (dragTurn.hot ? DRAG_IN : DRAG_OUT)
-    || [...dropTurns.values()].some((t) => now - t.at < DROP_FADE);
+    || [...dropTurns.values()].some((t) => now - t.at < DROP_FADE) || gliding(now);
 };
 /** «Канбан»: its columns lit (or going) as a card's dragged over them, by `<id>:<column>`, in this long. */
 const dropTurns = new Map<string, { hot: boolean; from: number; at: number }>();
@@ -1334,6 +1337,34 @@ function drawDots(ctx: CanvasRenderingContext2D, it: Item, s: Scene, fade = 1) {
 /** «Полукруги на рамке»: the layer the copy a click would make is drawn on (see drawScene). */
 let ghostLayer: HTMLCanvasElement | null = null;
 
+/** «Канбан»: cards taken up, drawn on a layer of their own (drawing sets its own opacities) and laid on at
+ *  70%, each a little tilted about its middle (as a table's row taken out, see labs/tableMove.ts). */
+let liftLayer: HTMLCanvasElement | null = null;
+const LIFT_TILT = -(4 / 3) * Math.PI / 180, LIFT_ALPHA = 0.7;
+function drawLifted(ctx: CanvasRenderingContext2D, s: Scene, ids: Set<string>): void {
+  const c = ctx.canvas;
+  if (!liftLayer || liftLayer.width !== c.width || liftLayer.height !== c.height) { liftLayer = document.createElement('canvas'); liftLayer.width = c.width; liftLayer.height = c.height; }
+  const g = liftLayer.getContext('2d');
+  if (!g) return;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, c.width, c.height);
+  for (const id of ids) {
+    const it = s.get(id);
+    if (!it) continue;
+    const m = center(it);
+    g.setTransform(ctx.getTransform());
+    g.translate(m.x, m.y);
+    g.rotate(LIFT_TILT);
+    g.translate(-m.x, -m.y);
+    drawItem(g, it, s);
+  }
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = LIFT_ALPHA;
+  ctx.drawImage(liftLayer, 0, 0);
+  ctx.restore();
+}
+
 /** Mind map colours parallel branches take from a coloured one, worked out once per drawing. */
 let tints = new Map<string, { color?: string; fill?: string }>();
 /** Mind map nodes in maps with round ends («Круглые края»), worked out once per drawing (see corner). */
@@ -1352,13 +1383,32 @@ export function drawScene(ctx: CanvasRenderingContext2D, s: Scene): void {
   const view: Rect = { x: -cam.x / cam.z - 50, y: -cam.y / cam.z - 50, w: s.width / cam.z + 100, h: s.height / cam.z + 100 };
 
   drawBranches(ctx, s);
+  const now0 = performance.now(), lifted = s.live && s.lifted?.length ? new Set(s.lifted) : null;
   for (const it of s.items) {
     const b = it.inst ? instanceBounds(it, s.items) : boxOf(it), box = it.type === 'frame' ? { x: b.x - 40, y: b.y - 40, w: b.w + 80, h: b.h + 80 } : b;
+    if (lifted?.has(it.id)) continue;
     if (rectsIntersect(box, view)) {
+      // («Канбан»: a card gliding to its place in a column, drawn on its way there.)
+      const glide = s.live ? glideOffset(it.id, now0) : null;
+      if (glide) { ctx.save(); ctx.translate(glide.x, glide.y); }
       // The instance title sits above its contents' board-aligned bounds, including turned copies.
       if (it.inst) drawItem(ctx, it, s);
       else turned(ctx, it, () => drawItem(ctx, it, s));
+      if (glide) ctx.restore();
     }
+  }
+  if (lifted) drawLifted(ctx, s, lifted);
+  // «Канбан»: where a card being dragged would go in, a blue line between the cards there.
+  if (s.kanbanDrop) {
+    const d = s.kanbanDrop;
+    ctx.beginPath();
+    ctx.moveTo(d.x, d.y);
+    ctx.lineTo(d.x + d.w, d.y);
+    ctx.lineWidth = 2 / cam.z;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = SELECT_COLOR;
+    ctx.stroke();
+    ctx.lineCap = 'butt';
   }
 
   // («Полукруги на рамке», src/labs: the copy a click on the ball out would make, at 40%, easing in and out.)

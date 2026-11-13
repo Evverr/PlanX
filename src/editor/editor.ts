@@ -1,6 +1,6 @@
 import { LOCAL, type Board } from '../model/board';
 import type { Item, ItemType, Link, LinkStyle, Side } from '../model/types';
-import { DEFAULTS, EDITABLE, fillable, HAS_FONT, strokable, uid } from '../model/types';
+import { DEFAULTS, EDITABLE, fillable, HAS_FONT, kanbanOf, strokable, uid } from '../model/types';
 import type { PathNode, Point, Rect } from '../canvas/geometry';
 import { boundsOf, boxOf, center, instanceBounds, linkBox, normRect, pointInRect, resizedAt, setInstanceBox } from '../canvas/geometry';
 import { clearTextCache, dotsMoving, drawScene, readTheme, type Camera, type Peer, type Scene, type Theme } from '../canvas/renderer';
@@ -45,7 +45,7 @@ import { zoomsWithKey } from '../labs/wheelZoom';
 import { codeFit, scrollCode } from '../labs/codeBlock';
 import { FORM_H, FORM_RAD, FORM_W } from '../labs/formObject';
 import { POLL_RAD, POLL_W, pollLayout } from '../labs/poll';
-import { FIRST_STAGES, dropTarget, kanbanSize, tidyKanbans } from '../labs/kanban';
+import { FIRST_STAGES, dropTarget, kanbanSize, snaps, tidyKanbans } from '../labs/kanban';
 import { closeTask, fitTask, freshTask, renewTasks, taskTextPatch } from '../model/task';
 import { setTaskRedraw } from '../canvas/task';
 import { outSide, setTabsRedraw, towardOffset, type TabAims } from '../labs/sideTabs';
@@ -627,6 +627,8 @@ export class Editor {
     if (!this.ctx || !this.theme) return;
     refitMind(this);
     const g = this.gesture;
+    // «Канбан»: where a card being dragged over one would go in.
+    const drop = g?.type === 'drag' && g.moved && labOn('kanban') ? dropTarget(this.board.list(), this.board.get(g.id), new Set(g.orig.keys())) : null;
     let linkPreview = null;
     if (g?.type === 'link') {
       const from = this.board.get(g.from), target = g.target ? this.board.get(g.target) : undefined;
@@ -713,7 +715,10 @@ export class Editor {
       // (Only what this press picked: what was picked already keeps its frame and handle as it's moved.)
       dragging: g?.type === 'drag' && !!g.fresh,
       dragMoved: g?.type === 'drag' && !!g.fresh && g.moved,
-      kanbanDrop: g?.type === 'drag' && g.moved && labOn('kanban') ? dropTarget(this.board.list(), this.board.get(g.id)) : null,
+      kanbanDrop: drop,
+      // («Канбан»: a card taken up over one, or out of one, a little tilted, see-through.)
+      lifted: g?.type === 'drag' && g.moved && (drop || (labOn('kanban') && kanbanOf(this.board.list(), g.id)))
+        ? [...g.orig.keys()].filter((id) => { const it = this.board.get(id); return !!it && snaps(it); }) : undefined,
       pickedCells: this.cells.length && this.selection.size === 1 ? { id: [...this.selection][0], cells: this.cells } : null,
       stroke: g?.type === 'draw' ? { pts: g.pts, color: this.penStyle(g.tool).color, width: this.penStyle(g.tool).size / this.cam.z, hl: g.tool === 'marker', op: this.penStyle(g.tool).op } : null,
     });

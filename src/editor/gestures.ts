@@ -246,7 +246,7 @@ export function moveGesture(ed: Editor, g: Gesture, e: PointerEvent, sp: Point, 
         moves.forEach((pt, k) => board.update(k, pt));
       });
       // A kanban («Канбан», src/labs): its columns and cards stretched with it as it goes.
-      if (it.kb && labOn('kanban')) tidyKanbans(board);
+      if (it.kb && labOn('kanban')) tidyKanbans(board, new Set(), false);
       return;
     }
     case 'stageDrag': {
