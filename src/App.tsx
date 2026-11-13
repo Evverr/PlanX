@@ -34,7 +34,6 @@ import type { Item, Link } from './model/types';
 import { Labs } from './labs/LabsLayer';
 import { labOn, useLabs } from './labs/labs';
 import { morphFrom, morphPanel } from './labs/textButton';
-import { GLIDE_MS, nearPicks } from './labs/panelGlide';
 import { FormFields } from './labs/FormFields';
 import { toggleDots, useDotsOn } from './labs/linkTool';
 import { joinDropped } from './labs/linkJoint';
@@ -216,11 +215,11 @@ export function App({ boardId }: { boardId: string }) {
 
   // (For the panels, so none yet while it's still being picked: they come once, on letting go.)
   const picked = ui.selection.map((id) => board.get(id)).filter((i) => !!i);
-  // («Перестроение панели»: picking something near what was, the panel stays over what was till it's let
-  // go, then glides to it, see below.)
+  // («Перестроение панели»: picking something else, the panel stays over what was till it's let go, then
+  // it's by the new one at once, see below.)
   const lastPicked = useRef<string[]>([]), before = lastPicked.current.map((id) => board.get(id)).filter((i) => !!i);
-  const glides = labOn('panelOver') && labOn('panelGlide');
-  const selItems = !ui.picking ? picked : glides && nearPicks(before, picked, ui.cam.z) ? before : [];
+  const rebuilds = labOn('panelOver') && labOn('panelGlide');
+  const selItems = !ui.picking ? picked : rebuilds && before.length && picked.length ? before : [];
   useEffect(() => { if (!ui.picking) lastPicked.current = ui.selection; });
   const linkCount = ui.picking ? 0 : ui.selection.filter((id) => board.getLink(id)).length;
   const editing = ui.editingId ? board.get(ui.editingId) : undefined;
@@ -330,14 +329,12 @@ export function App({ boardId }: { boardId: string }) {
   // the selection panel back, the same picked. Where each stood is kept for the next time.
   const morphWas = useRef<{ sel: string; text: boolean; textAt: DOMRect | null; panelAt: DOMRect | null } | null>(null);
   // «Перестроение панели» (src/labs): the panel over what's picked keeps being the same one (its key kept)
-  // when what's picked next is near what was, so it glides there, the buttons both have staying as they
-  // are and the new ones fading in once it's there (labs.css).
-  const overKey = useRef(''), overSel = useRef(''), glided = useRef(false), glideEnd = useRef(0);
-  useEffect(() => { document.documentElement.toggleAttribute('data-panel-glide', glides); }, [glides]);
+  // when something else is picked, anywhere: it's by the new one at once, the buttons both have staying as
+  // they are and the new ones fading in there (labs.css).
+  const overKey = useRef(''), overSel = useRef('');
+  useEffect(() => { document.documentElement.toggleAttribute('data-panel-glide', rebuilds); }, [rebuilds]);
   if (selKey !== overSel.current) {
-    const near = glides && !!overSel.current && !!selKey && nearPicks(overSel.current.split(',').map((id) => board.get(id)).filter((i) => !!i), selItems, ui.cam.z);
-    if (!near) overKey.current = selKey;
-    glided.current = near;
+    if (!(rebuilds && overSel.current && selKey)) overKey.current = selKey;
     overSel.current = selKey;
   }
   useLayoutEffect(() => {
@@ -346,15 +343,6 @@ export function App({ boardId }: { boardId: string }) {
     if (was && selKey && was.sel === selKey && !tMode && was.text !== text) {
       if (text && was.panelAt && at('.tfmt:not(.gone):not(.leaving)')) morphFrom(was.panelAt, 'tfmt');
       else if (!text && was.textAt && at('.bar.panel:not(.gone)')) morphFrom(was.textAt, 'panel');
-    }
-    // «Перестроение панели»: picked near what was, the same panel over it glides there (see overKey).
-    const over = document.querySelector<HTMLElement>('.bar.panel.panel-over:not(.gone)');
-    if (glided.current && over) {
-      glided.current = false;
-      // (Marked so, not by a class: React sets those, and would take it off.)
-      over.dataset.gliding = '';
-      clearTimeout(glideEnd.current);
-      glideEnd.current = window.setTimeout(() => delete over.dataset.gliding, GLIDE_MS);
     }
     morphWas.current = { sel: selKey, text, textAt: at('.tfmt:not(.gone):not(.leaving)'), panelAt: at('.bar.panel:not(.gone)') };
   });

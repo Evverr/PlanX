@@ -722,7 +722,7 @@ export const checks = {
     expect(await p.ev(`document.querySelector('.form-field').value`), 'the value in its field').toBe('Москва');
   },
 
-  async '"Перестроение панели": off at first; on, picking something near what was, the same panel over it glides there (no copy of it fading out, its buttons kept); picking something far, it goes and comes back as ever'(p) {
+  async '"Перестроение панели": off at first; on, picking something else, near or far, the same panel over it is by it at once (no copy of it fading out, its buttons kept)'(p) {
     expect(await p.ev(`(async () => (await import('/src/labs/labs.ts')).labOn('panelGlide'))()`), 'off at first').toBe(false);
     await p.ev(`(async () => { const l = await import('/src/labs/labs.ts'); l.setLab('panelOver', true); l.setLab('panelGlide', true); })()`);
     // a and b 60 apart; c 260 under a.
@@ -740,18 +740,18 @@ export const checks = {
     await p.mouse('mouseReleased', 720, 370);
     await sleep(30);
     expect(await ghosts(), 'no copy fading out').toBe(0);
-    expect(await p.ev(`'gliding' in document.querySelector('.panel-over:not(.gone)').dataset`), 'gliding').toBe(true);
-    await sleep(500);
+    // There at once, not gliding.
     expect(await mid(), 'over b').toBe(720);
-    expect(await p.ev(`(() => { const o = document.querySelector('.panel-over[data-was]'), all = o ? o.querySelectorAll(':scope > button') : []; return all.length > 0 && [...all].every((b) => b.dataset.was); })()`), 'the same panel, its buttons kept').toBe(true);
-    // (Far: it goes as soon as it's pressed, as ever, and a new one comes by c.)
+    const kept = `(() => { const o = document.querySelector('.panel-over[data-was]'), all = o ? o.querySelectorAll(':scope > button') : []; return all.length > 0 && [...all].every((b) => b.dataset.was); })()`;
+    expect(await p.ev(kept), 'the same panel, its buttons kept').toBe(true);
+    // Far, the same.
     await p.mouse('mousePressed', 420, 750);
     await sleep(30);
-    expect(await ghosts(), 'far: the old one fading out').toBe(1);
+    expect(await ghosts(), 'far: no copy fading out').toBe(0);
     await p.mouse('mouseReleased', 420, 750);
-    await sleep(700);
-    expect(await p.ev(`document.querySelector('.panel-over:not(.gone)').dataset.was`), 'far: a new one').toBe(undefined);
+    await sleep(30);
     expect((await p.rect('.panel-over:not(.gone)')).b < 700, 'far: over c').toBe(true);
+    expect(await p.ev(kept), 'far: the same panel').toBe(true);
     await p.ev(`(async () => { const l = await import('/src/labs/labs.ts'); l.setLab('panelOver', false); l.setLab('panelGlide', false); })()`);
   },
 

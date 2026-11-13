@@ -283,10 +283,9 @@
 .form-field:focus { border-color: var(--accent); }
 .form-field::placeholder { color: var(--muted); }
 
-/* «Перестроение панели» (panelGlide.ts): the panel over what's picked gliding to what's picked next, and
-   what comes on it (not what it had: that's there already) fading in once it's there. */
-.panel-over[data-gliding] { transition: left .2s ease-in-out, top .2s ease-in-out; }
-:root[data-panel-glide] .panel-over > * { animation: fade-in .16s ease-out .2s backwards; }
+/* «Перестроение панели» (see overKey in App): the panel over what's picked by what's picked next at once,
+   what comes on it there (not what it had: that's there already) fading in. */
+:root[data-panel-glide] .panel-over > * { animation: fade-in .16s ease-out; }
 
 /* «Кнопка T» (textButton.ts): a panel turning into another shows only what's on it, over a body like
    theirs that takes the one's width and then the other's; the other comes in unseen, its coming in
