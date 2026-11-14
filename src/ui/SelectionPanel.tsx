@@ -8,7 +8,7 @@ import { PanelIcon, type PanelIconName } from './PanelIcon';
 import { useSortable } from './sortable';
 import { ColorPicker } from './ColorPicker';
 import { crowds, EDGE, fitPopovers, shownRects } from '../layout';
-import { useLabs } from '../labs/labs';
+import { labOn, useLabs } from '../labs/labs';
 import { AlignButton, LockButton, ReactButton, TidyButton } from '../labs/SelectionLabs';
 import { CodeLang } from '../labs/CodeLang';
 import { DocSave } from '../labs/DocSave';
@@ -302,6 +302,23 @@ function selectionRoom(): number {
   return innerWidth - EDGE * 2 - (rail ? rail.width + EDGE : 0);
 }
 
+/** «Перестроение панели»: how long the panel takes going from where it was and coming in by what's picked
+ *  next, in ms (to be tuned). */
+const SWAP_OUT = 80, SWAP_IN = 120;
+/** The panel over what's picked going over to something else: a copy of it where it is fading out, it
+ *  fading in (before it's put by the new one). */
+function swapFade(el: HTMLElement): void {
+  const ghost = el.cloneNode(true) as HTMLElement;
+  // (As one gone: not faded again by ui/leaving.ts once taken away, its own coming in not played.)
+  ghost.classList.add('gone');
+  ghost.style.setProperty('animation', 'none', 'important');
+  ghost.setAttribute('aria-hidden', 'true');
+  ghost.inert = true;
+  el.parentNode?.insertBefore(ghost, el);
+  ghost.animate([{ opacity: 1 }, { opacity: 0 }], { duration: SWAP_OUT, easing: 'ease-out', fill: 'forwards' }).finished.then(() => ghost.remove(), () => ghost.remove());
+  el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: SWAP_IN, easing: 'ease-out' });
+}
+
 export function SelectionPanel({ editor, items, cells, linkCount, docked, over, after, onText }: { editor: Editor; items: Item[]; cells: number[]; linkCount: number; docked: boolean;
   /** The second one, over what's picked as the text panel is over what's typed in ("Панель над элементом", src/labs). */
   over?: boolean;
@@ -322,7 +339,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   const wait = useRef(false), had = useRef(false);
   // Over what's picked, it stays where it is while rows or columns are being added or taken away (the
   // table growing under it), till the pointer leaves it or the board's scrolled.
-  const hold = useRef(false), flipping = useRef(false), want = useRef(false), placed = useRef(false);
+  const hold = useRef(false), flipping = useRef(false), want = useRef(false), placed = useRef(false), lastPick = useRef('');
   // What opens from it (palette, alignment, reactions) turns to its other side when there's no room
   // for it where it opens (lying over the panel, past the window's edge).
   // (Once it's there: with nothing picked it isn't.)
@@ -356,6 +373,11 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
       if (!boxes.length) return;
       const x = Math.min(...boxes.map((b) => b.x)), y = Math.min(...boxes.map((b) => b.y));
       const box = { x, y, w: Math.max(...boxes.map((b) => b.x + b.w)) - x, h: Math.max(...boxes.map((b) => b.y + b.h)) - y };
+      // «Перестроение панели» (src/labs): something else picked, the same panel goes by it: a copy of it
+      // where it was fading out quickly, it fading in by the new one as quickly.
+      const pick = items.map((i) => i.id).join();
+      if (lastPick.current && lastPick.current !== pick && labOn('panelGlide') && placed.current) swapFade(el);
+      lastPick.current = pick;
       // Going over to the other side (dragged up past the top, say): it fades out where it is, then
       // comes back in on that side, as quick as panels go.
       const under = placeOver(editor, el, box, undefined, flipping.current ? down : undefined);
