@@ -261,10 +261,16 @@ export function App({ boardId }: { boardId: string }) {
   // it's let go when moved; it stays away while the item is being moved or resized.
   const [textShown, setTextShown] = useState<string | null>(null);
   const textReady = textItem && (selItems.length > 1 || typedIn === textItem.id) ? textItem.id : null;
+  // Picked and typed in at once (just made: a sheet, a text…): straight to the text panel, the selection
+  // panel never shown before it, nor the wait.
+  const pickedAt = useRef({ key: '', at: 0 }), freshEdit = useRef<string | null>(null), selNow = ui.selection.join();
+  if (pickedAt.current.key !== selNow) { pickedAt.current = { key: selNow, at: performance.now() }; freshEdit.current = null; }
+  if (ui.editingId && ui.selection.length === 1 && ui.selection[0] === ui.editingId && performance.now() - pickedAt.current.at < 150) freshEdit.current = ui.editingId;
+  if (!ui.editingId) freshEdit.current = null;
   useEffect(() => {
     setTextShown(null);
     if (!textReady || ui.moving) return;
-    const t = setTimeout(() => setTextShown(textReady), 280);
+    const t = setTimeout(() => setTextShown(textReady), freshEdit.current === textReady ? 0 : 280);
     return () => clearTimeout(t);
   }, [textReady, ui.moving]);
   // Typing ended (by a press elsewhere, or Esc): the panel goes, and stays away from what that press
@@ -321,7 +327,7 @@ export function App({ boardId }: { boardId: string }) {
   // panel stays for a task's description, its typing gone to the panel's own field: a link's address.)
   const staysTyping = !editing ? !(taskDesc && panelOn) : editing.type === 'mind' || (editing.type === 'task' && ui.editingCell !== 0)
     // (And till the text panel's there for what's typed in: it turns into that, see below.)
-    || (textItem?.id === editing.id && !panelOn);
+    || (textItem?.id === editing.id && !panelOn && freshEdit.current !== editing.id);
   const overOn = labs.panelOver && staysTyping && !tMode, overShown = overOn && place === 'over' && selItems.length > 0;
   const overWent = useRef({ shown: false, at: 0 });
   // What's picked, and whether that's instead of something else picked just now (the panel over it
