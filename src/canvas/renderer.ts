@@ -1226,6 +1226,16 @@ function drawBackground(ctx: CanvasRenderingContext2D, s: Scene) {
   const kind = gridKind();
   if (kind === 'none') return;
   if (kind === 'dots') { drawGridDots(ctx, s); return; }
+  // A plain grid: its lines all alike; ruled: only across, further apart, as on lined paper.
+  if (kind === 'grid' || kind === 'ruled') {
+    let step = kind === 'ruled' ? 28 : 18.5;
+    while (step * cam.z < 9) step *= 4;
+    const px = step * cam.z;
+    ctx.fillStyle = `rgba(${theme.grid}, ${kind === 'ruled' ? 0.04 : 0.024})`;
+    if (kind === 'grid') for (let i = Math.floor(-cam.x / px); i * px + cam.x < W; i++) ctx.fillRect(Math.round(i * px + cam.x), 0, 1, H);
+    for (let j = Math.floor(-cam.y / px); j * px + cam.y < H; j++) ctx.fillRect(0, Math.round(j * px + cam.y), W, 1);
+    return;
+  }
   let step = 18.5;
   while (step * cam.z < 9) step *= 4;
   const big = step * 4, px = step * cam.z;

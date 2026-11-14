@@ -590,15 +590,21 @@ export const checks = {
     await p.escape();
   },
 
-  async '"Фон доски": three dots in the board menu pick lines, dots or nothing on the background'(p) {
+  async '"Фон доски": dots in the board menu pick a double grid, a plain grid, ruled lines, dots or nothing on the background'(p) {
     await p.ev(`(() => { const e = planx.editor; e.cam = { x: 100, y: 100, z: 1 }; e.camChanged(); })()`);
     await p.click(await p.at('.topbar button[aria-label="Меню"]'));
     const pixel = async (x, y) => { await sleep(150); return p.ev(`[...planx.editor.canvas.getContext('2d').getImageData(${x}, ${y}, 1, 1).data].slice(0, 3).join()`); };
     const pick = async (name) => p.ev(`document.querySelector('.size-dot[aria-label="${name}"]').click()`);
     const BG = '242,243,246';
     // By default the lines: one through the corner of the board's point (0, 0).
-    expect(await p.ev(`document.querySelector('.size-dot[aria-label="Линии"]').getAttribute('aria-checked')`), 'lines first').toBe('true');
+    expect(await p.ev(`document.querySelector('.size-dot[aria-label="Двойная клетка"]').getAttribute('aria-checked')`), 'lines first').toBe('true');
     expect(await pixel(100, 150) !== BG, 'a line').toBe(true);
+    // A plain grid: lines down and across; ruled: across only.
+    await pick('Клетка');
+    expect(await pixel(100, 150) !== BG, 'a plain grid: a line down').toBe(true);
+    await pick('Линейка');
+    expect(await pixel(150, 100) !== BG, 'ruled: a line across').toBe(true);
+    expect(await pixel(100, 150), 'ruled: none down').toBe(BG);
     await pick('Точки');
     expect(await pixel(100, 100) !== BG, 'a dot').toBe(true);
     expect(await pixel(100, 110), 'nothing between them').toBe(BG);
@@ -610,7 +616,7 @@ export const checks = {
     await pick('Пусто');
     expect(await pixel(100, 100), 'no dot').toBe(BG);
     expect(await pixel(100, 150), 'no line').toBe(BG);
-    await pick('Линии');
+    await pick('Двойная клетка');
     await p.escape();
   },
 

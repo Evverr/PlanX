@@ -3,10 +3,10 @@ import { readJSON, writeJSON } from '../storage';
 import { labOn } from './labs';
 
 /**
- * "Фон доски": in the board menu, three dots to pick what's drawn on the board's background: lines,
- * dots, or nothing. Kept per browser.
+ * "Фон доски": in the board menu, dots to pick what's drawn on the board's background: a double grid
+ * (lines, darker every fourth), a plain grid, ruled lines across, dots, or nothing. Kept per browser.
  */
-export type GridKind = 'lines' | 'dots' | 'none';
+export type GridKind = 'lines' | 'grid' | 'ruled' | 'dots' | 'none';
 
 const KEY = 'planx-grid';
 let kind: GridKind = readJSON<GridKind>(KEY) ?? 'lines';

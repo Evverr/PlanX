@@ -75,7 +75,7 @@ export function BoardMenu({ level = 0, onShare, onSave, onReset, onSaveBoard, on
       </>}
       {/* "Фон доски" (src/labs). */}
       {level === 0 && labs.boardGrid
-        ? row('apps', 'Фон', { end: <PickDots label="Фон" now={grid} of={[['lines', 'Линии'], ['dots', 'Точки'], ['none', 'Пусто']] as Array<[GridKind, string]>} onPick={setGridKind} /> })
+        ? row('apps', 'Фон', { end: <PickDots label="Фон" now={grid} of={[['lines', 'Двойная клетка'], ['grid', 'Клетка'], ['ruled', 'Линейка'], ['dots', 'Точки'], ['none', 'Пусто']] as Array<[GridKind, string]>} onPick={setGridKind} /> })
         : level > 0 && row('link-settings', 'Оглавление', { light: true, onClick: () => setOn(!on), end: <Switch on={on} /> })}
       {/* "Режим настройки меню" (src/labs). */}
       {level === 0 && labs.customize
