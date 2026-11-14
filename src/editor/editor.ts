@@ -358,6 +358,20 @@ export class Editor {
       if (this.hotDot || this.hotLine || this.linkDots || this.hotHandle) { this.hotDot = null; this.hotLine = null; this.linkDots = null; this.hotHandle = false; this.requestRender(); }
     });
     on(canvas, 'wheel', (e) => this.wheel(e), { passive: false });
+    // Over the fields laid on the board (a form's, a poll's, text typed in): a pinch zooms the board, not
+    // the whole page (which threw them off their places); a form's or a poll's, a scroll moves it too.
+    // (What scrolls itself, a document typed in, keeps its scroll.)
+    on(window, 'wheel', (e) => {
+      const t = e.target as Element | null;
+      if (t === canvas || !t?.closest?.('.form-field, .text-edit, .rich-edit')) return;
+      if (e.ctrlKey || t.closest('.form-field')) this.wheel(e);
+      if (e.ctrlKey) e.preventDefault();
+    }, { passive: false });
+    // (Safari's own pinch, its gestures: the page left as it is.)
+    const still = (e: Event) => e.preventDefault();
+    window.addEventListener('gesturestart', still);
+    window.addEventListener('gesturechange', still);
+    offs.push(() => { window.removeEventListener('gesturestart', still); window.removeEventListener('gesturechange', still); });
     on(window, 'keydown', (e) => onKeyDown(this, e));
     on(window, 'paste', (e) => onPaste(this, e));
     on(window, 'keyup', (e) => { if (e.code === 'Space') this.setSpace(false); if (e.code === 'KeyZ') holdZoomBox(false); });
