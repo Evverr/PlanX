@@ -291,8 +291,10 @@ export function App({ boardId }: { boardId: string }) {
       if (e.target !== editor.canvas) return;
       // (With "Кнопка T", src/labs, it's the T that brings it back.)
       if (!editor.editingId && !labOn('textButton')) setQuiet(null);
-      // Back to the selection panel, turning into it.
-      if (textModeRef.current) morphPanel('.tfmt', 'panel', () => setTextMode(null));
+      // Back to the selection panel, turning into it, if it's still picked once the press is done with
+      // (else the text panel goes as it goes: nothing to turn into, its body would hang there alone).
+      const was = textModeRef.current;
+      if (was) setTimeout(() => { if (editor.selection.has(was.id)) morphPanel('.tfmt', 'panel', () => setTextMode(null)); else setTextMode(null); }, 0);
     };
     window.addEventListener('pointerdown', press, true);
     return () => window.removeEventListener('pointerdown', press, true);
