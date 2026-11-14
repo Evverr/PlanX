@@ -925,7 +925,7 @@ export const checks = {
     expect(JSON.stringify((await poll()).votes), 'unvoted').toBe(JSON.stringify([]));
   },
 
-  async '"Перестроение панели": off at first; on, picking something else, near or far, the same panel over it is by it at once (no copy of it fading out, its buttons kept)'(p) {
+  async '"Перестроение панели": off at first; on, picking something else, near or far, the same panel over it is by it at once (its buttons kept, a copy of it quickly fading out where it was)'(p) {
     expect(await p.ev(`(async () => (await import('/src/labs/labs.ts')).labOn('panelGlide'))()`), 'off at first').toBe(false);
     await p.ev(`(async () => { const l = await import('/src/labs/labs.ts'); l.setLab('panelOver', true); l.setLab('panelGlide', true); })()`);
     // a and b 60 apart; c 260 under a.
@@ -942,15 +942,17 @@ export const checks = {
     await p.mouse('mousePressed', 720, 370);
     await p.mouse('mouseReleased', 720, 370);
     await sleep(30);
-    expect(await ghosts(), 'no copy fading out').toBe(0);
-    // There at once, not gliding.
+    // A copy of it where it was fading out quickly, it by the new one at once, not gliding.
+    expect(await ghosts(), 'a copy fading out where it was').toBe(1);
     expect(await mid(), 'over b').toBe(720);
+    await sleep(150);
+    expect(await ghosts(), 'gone quickly').toBe(0);
     const kept = `(() => { const o = document.querySelector('.panel-over[data-was]'), all = o ? o.querySelectorAll(':scope > button') : []; return all.length > 0 && [...all].every((b) => b.dataset.was); })()`;
     expect(await p.ev(kept), 'the same panel, its buttons kept').toBe(true);
     // Far, the same.
     await p.mouse('mousePressed', 420, 750);
     await sleep(30);
-    expect(await ghosts(), 'far: no copy fading out').toBe(0);
+    expect(await ghosts(), 'far: none yet as it\'s pressed').toBe(0);
     await p.mouse('mouseReleased', 420, 750);
     await sleep(30);
     expect((await p.rect('.panel-over:not(.gone)')).b < 700, 'far: over c').toBe(true);

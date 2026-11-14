@@ -448,6 +448,9 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
     <div ref={sort.ref as React.RefObject<HTMLDivElement>} className={`bar panel sortable ${over ? `panel-over ${down ? 'opens-down' : ''} ${wait.current ? 'after-gone' : ''}` : docked ? 'docked' : ''} ${!over && place.bottom !== null ? 'raised' : ''} ${sort.sorting ? 'sorting' : ''}`}
       style={over ? undefined : { transform: `translateX(calc(-50% + ${place.left}px))`, ...(place.bottom !== null && { bottom: place.bottom }) }}
       role="toolbar" aria-label="Выделенное" {...sort.container}
+      // (Over what's picked it comes in a moment after: once it starts to, it's been seen, and fades out
+      // when it goes; gone before that, it goes unseen, see ui/leaving.ts.)
+      onAnimationStart={(e) => { if (e.target === e.currentTarget) e.currentTarget.dataset.seen = ''; }}
       onPointerLeave={(e) => {
         if (!hold.current) return;
         // Over the table again, gliding there.

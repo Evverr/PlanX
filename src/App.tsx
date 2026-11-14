@@ -360,9 +360,11 @@ export function App({ boardId }: { boardId: string }) {
   overWent.current.shown = overShown;
   const following = useFollowing();
   // The T (on something with text, alone, the text panel not up already, or going): the panel turns into the text panel.
-  // (Not while typing: the text panel comes by itself then, turning out of this one.)
-  const toText = labs.textButton && tItem && !panelOn && !editing
+  // (Typing begun, it stays on the panel till that turns into the text panel by itself, the panel not
+  // narrowed a moment before; pressed then, nothing: the text panel's coming.)
+  const toText = labs.textButton && tItem && !panelOn
     ? () => {
+      if (editor.editingId) return;
       const bar = document.querySelector('.bar.panel:not(.gone)'), r = bar?.getBoundingClientRect();
       const dock = r && !bar!.classList.contains('panel-over') ? { cx: r.left + r.width / 2, bottom: r.bottom } : undefined;
       morphPanel('.bar.panel', 'tfmt', () => setTextMode({ id: tItem.id, dock }));
