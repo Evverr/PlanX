@@ -322,7 +322,7 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
   const wait = useRef(false), had = useRef(false);
   // Over what's picked, it stays where it is while rows or columns are being added or taken away (the
   // table growing under it), till the pointer leaves it or the board's scrolled.
-  const hold = useRef(false), flipping = useRef(false), want = useRef(false);
+  const hold = useRef(false), flipping = useRef(false), want = useRef(false), placed = useRef(false);
   // What opens from it (palette, alignment, reactions) turns to its other side when there's no room
   // for it where it opens (lying over the panel, past the window's edge).
   // (Once it's there: with nothing picked it isn't.)
@@ -360,6 +360,13 @@ export function SelectionPanel({ editor, items, cells, linkCount, docked, over, 
       // comes back in on that side, as quick as panels go.
       const under = placeOver(editor, el, box, undefined, flipping.current ? down : undefined);
       want.current = under;
+      // Placed for the first time (just picked, just made): on its side at once, not gliding over to it from
+      // the other (a sheet taller than the screen: at the screen's bottom from the start).
+      if (!placed.current) {
+        placed.current = true;
+        if (under !== down) setDown(under);
+        return;
+      }
       if (under !== down && !flipping.current) {
         flipping.current = true;
         placeOver(editor, el, box, undefined, down);
