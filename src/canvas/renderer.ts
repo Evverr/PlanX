@@ -1226,10 +1226,11 @@ function drawBackground(ctx: CanvasRenderingContext2D, s: Scene) {
   const kind = gridKind();
   if (kind === 'none') return;
   if (kind === 'dots') { drawGridDots(ctx, s); return; }
-  // A plain grid: its lines all alike; ruled: only across, further apart, as on lined paper.
+  // A plain grid: its lines all alike; ruled: only across, further apart, as on lined paper. Both half as
+  // big again as the double grid's, the line between their steps as they're zoomed out too.
   if (kind === 'grid' || kind === 'ruled') {
-    let step = kind === 'ruled' ? 28 : 18.5;
-    while (step * cam.z < 9) step *= 4;
+    let step = kind === 'ruled' ? 42 : 28;
+    while (step * cam.z < 14) step *= 4;
     const px = step * cam.z;
     ctx.fillStyle = `rgba(${theme.grid}, ${kind === 'ruled' ? 0.04 : 0.024})`;
     if (kind === 'grid') for (let i = Math.floor(-cam.x / px); i * px + cam.x < W; i++) ctx.fillRect(Math.round(i * px + cam.x), 0, 1, H);
